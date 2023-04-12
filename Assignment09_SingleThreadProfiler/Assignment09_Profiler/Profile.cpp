@@ -1,5 +1,5 @@
 #include "Profile.h"
-#include "FileIO.h"
+#include <iostream>
 #include <float.h>
 
 #define NAME_LEN 64
@@ -189,12 +189,15 @@ void ProfileDataOutText(const WCHAR* szFileName)
 	strcat_s(data, OUTPUT_SIZE, 
 		"=====================================\n\n");
 
-	FILE* pFile;
-	OpenFile(szFileName, &pFile, L"wb");
-	WriteFile(&pFile, strlen(data), data);
-	CloseFile(&pFile);
+	FILE* file;
+	errno_t ret;
+	ret = _wfopen_s(&file, szFileName, L"wb");
+	if (ret != 0)
+		wprintf(L"Fail to open %s : %d\n", szFileName, ret);
+	fwrite(data, strlen(data), 1, file);
+	fclose(file);
 
-	wprintf(L"Profile Data Out Success!\n");
+	printf("Profile Data Out Success!\n");
 }
 
 void ProfileReset(void)
@@ -203,6 +206,6 @@ void ProfileReset(void)
 	{
 		memset(&PROFILE_RESULT[i], 0, sizeof(_PROFILE_RESULT));
 	}	
-	wprintf(L"Profile Reset Success!\n");
+	printf("Profile Reset Success!\n");
 }
 

@@ -1,15 +1,14 @@
 #include "AllocMgr.h"
 #include <stdio.h>
 
-
 TotalAllocInfo g_totalAllocInfo;
 vector<AllocInfo> allocInfos;
 
 AllocInfo::AllocInfo(void* ptr, int size, int line, const char* filename)
 {
-	this->_ptr = ptr;
-	this->_size = size;
-	this->_line = line;
+	_ptr = ptr;
+	_size = size;
+	_line = line;
 	strcpy_s(_filename, FILE_NAME, filename);
 	g_totalAllocInfo.size += size;
 	g_totalAllocInfo.count++;
@@ -17,7 +16,7 @@ AllocInfo::AllocInfo(void* ptr, int size, int line, const char* filename)
 
 bool AllocInfo::operator==(void* ptr)
 {
-	return(this->_ptr == ptr);
+	return(_ptr == ptr);
 }
 
 void PrintAlloc(void)
@@ -36,5 +35,4 @@ void PrintAlloc(void)
 	}
 
 	printf("--------------------------------------\n");
-
 }

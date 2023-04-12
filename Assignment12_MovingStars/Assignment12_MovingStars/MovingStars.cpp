@@ -1,9 +1,8 @@
 #include "MovingStars.h"
-#include <tchar.h>
 
-TCHAR oneStar[ONE + 1] = _T("*");
-TCHAR twoStar[TWO + 1] = _T("**");
-TCHAR threeStar[THREE + 1] = _T("***");
+char oneStar[ONE + 1] = "*";
+char twoStar[TWO + 1] = "**";
+char threeStar[THREE + 1] = "***";
 
 void Star::Update()
 { 
@@ -18,7 +17,7 @@ void Star::Update()
 	int i = 0;
 
 	for (; i < _x; i++)
-		_line[i] = _T(' ');
+		_line[i] = ' ';
 
 	for (int j = 0; j < _starSize; j++)
 	{
@@ -27,9 +26,9 @@ void Star::Update()
 	}
 
 	for (; i < MAX; i++)
-		_line[i] = _T(' ');
+		_line[i] = ' ';
 
-	_line[i] = _T('\n');
+	_line[i] = '\n';
 }
 
 void Star::Render()
@@ -38,7 +37,7 @@ void Star::Render()
 		return;
 
 	for (int i = 0; i <= MAX; i++)
-		_tprintf(_T("%c"), _line[i]);
+		printf("%c", _line[i]);
 }
 
 bool Star::CheckDead()

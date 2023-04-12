@@ -1,5 +1,4 @@
 ﻿#include <Windows.h>
-#include <tchar.h>
 #include <stdio.h>
 #include <conio.h>
 #include "MovingStars.h"
@@ -78,7 +77,7 @@ void Render()
 	for (int i = 0; i < STAR_CNT; i++)
 	{
 		if (stars[i] == nullptr)
-			_tprintf(_T("\n"));
+			printf("\n");
 		else
 			stars[i]->Render();
 	}

@@ -1,7 +1,6 @@
 #pragma once
 #include <stdio.h>
 #include <stdlib.h>
-#include <tchar.h>
 
 #define ONE 1
 #define TWO 2
@@ -21,8 +20,8 @@ public:
 	int _x = 0;
 	int _interval = 0;
 	int _starSize = 0;
-	TCHAR* _star;
-	TCHAR _line[MAX + 1] = { _T('\0'),};
+	char* _star;
+	char _line[MAX + 1] = { '\0',};
 };
 
 class Star : public BaseObject

@@ -1,7 +1,6 @@
-﻿#include "FileIO.h"
-#include "PackingMenu.h"
+﻿#include "PackingMenu.h"
 
-int _tmain(int argc, _TCHAR* argv[])
+int main()
 {
 	while (1)
 	{

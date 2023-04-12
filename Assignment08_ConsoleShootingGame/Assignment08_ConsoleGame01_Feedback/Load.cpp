@@ -8,16 +8,8 @@
 
 void UpdateLoad()
 {
-	// input section
-	//GetKeyLoad();
-
 	// logic section
 	LoadGameData();
-
-	// render section
-	// rd_BufferClear();
-	// rd_DataToBuffer();
-	// rd_BufferFlip();
 }
 
 void GetKeyLoad()

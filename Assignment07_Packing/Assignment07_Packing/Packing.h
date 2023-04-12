@@ -1,23 +1,22 @@
 #pragma once
-#include "FileIO.h"
+#include <iostream>
+#include <windows.h>
 
-#define MENU_INPUT 4
 #define FILE_CNT 32
 #define FILE_NAME 32
-#define INPUT 512
-#define TYPE 0x99886655
+
 typedef struct _PACKINFOHEADER
 {
 	DWORD64 type = 0x99886655;
-	DWORD fileNum = 0;
+	int fileNum = 0;
 
 }PACKINFOHEADER;
 
 typedef struct _FILEINFOHEADER
 {
-	DWORD fileSize[FILE_CNT] = { 0, };
-	DWORD offset[FILE_CNT] = { 0, };
-	TCHAR fileName[FILE_CNT][FILE_NAME];
+	int fileSize[FILE_CNT] = { 0, };
+	int offset[FILE_CNT] = { 0, };
+	char fileName[FILE_CNT][FILE_NAME];
 
 }FILEINFOHEADER;
 
@@ -29,23 +28,25 @@ typedef struct _PACKING
 
 }PACKING;
 
-void Pack(TCHAR* packName, TCHAR* inputFilesName);
-void Unpack(TCHAR* packName);
-void ShowFiles(TCHAR* packName);
-void AddPack(TCHAR* packName, TCHAR* inputFilesName);
-void UnpackFiles(TCHAR* packName, TCHAR* inputFilesName);
-void UpdateFile(TCHAR* packName, TCHAR* fileName);
+void Pack(char* packName, char* inputFilesName);
+void Unpack(char* packName);
+void ShowFiles(char* packName);
+void AddPack(char* packName, char* inputFilesName);
+void UnpackFiles(char* packName, char* inputFilesName);
+void UpdateFile(char* packName, char* fileName);
 
 //For Common ================================
-void RemoveChar(TCHAR* fileName);
+void RemoveChar(char* fileName);
 void SetPack(PACKING& pack);
+int GetFileSize(FILE** file);
 
 template <typename T>
-void ChangeDataToChar(char* output, const DWORD& idx, const T& input);
+void ChangeCharToData(const char* input, int idx, T output);
 template <typename T>
-void ChangeDataArrToChar(char* output, const T& input, const DWORD& idx, const DWORD& cnt);
+void ChangeCharToDataArr(const char* input, T output, int idx, int cnt);
 template <typename T>
-void ChangeCharToData(const char* input, const DWORD& idx, T& output);
+void ChangeDataToChar(char* output, int idx, T input);
 template <typename T>
-void ChangeCharToDataArr(const char* input, T& output, const DWORD& idx, const DWORD& cnt);
+void ChangeDataArrToChar(char* output, T input, int idx, int cnt);
+
 

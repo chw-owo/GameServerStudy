@@ -1,21 +1,20 @@
 #include "AllocMgr.h"
-#include "FileIO.h"
+#include "stdio.h"
+#include <windows.h>
 #include <fileapi.h>
-#include <tchar.h>
-#include <vector>
 #include <time.h>
 using namespace std;
 
 #define NUM 8
-#define OUTPUT_FILE_NAME 32
+#define OUTPUT_NAME_SIZE 32
 #define TIME_BUF 128
 
 AllocMgr g_AllocMgr;
 AllocMgr::~AllocMgr()
 {
-	TCHAR buf[FILE_SIZE] = { '\0', };
-	TCHAR data[FILE_SIZE] = { '\0', };
-	TCHAR msg[] = _T("LEAK");
+	char buf[file_SIZE] = { '\0', };
+	char data[file_SIZE] = { '\0', };
+	char msg[] = "LEAK";
 
 	int infoIdx = 0;
 	int bufIdx = 0;
@@ -25,18 +24,18 @@ AllocMgr::~AllocMgr()
 	{
 		if (_allocInfos[infoIdx]._use)
 		{
-			_stprintf_s(buf, _T("%s [%p] [%d] %s : line is %d\n"),
+			sprintf_s(buf, "%s [%p] [%d] %s : line is %d\n",
 				msg, _allocInfos[infoIdx]._ptr, _allocInfos[infoIdx]._size,
 				_allocInfos[infoIdx]._filename, _allocInfos[infoIdx]._line);
 			
 			bufIdx = 0;
-			while (buf[bufIdx] != _T('\n'))
+			while (buf[bufIdx] != '\n')
 			{
 				data[dataIdx] = buf[bufIdx];
 				bufIdx++;
 				dataIdx++;
 			}
-			data[dataIdx] = _T('\n');
+			data[dataIdx] = '\n';
 
 			dataIdx++;
 			i++;
@@ -44,7 +43,7 @@ AllocMgr::~AllocMgr()
 		infoIdx++;
 	}
 
-	MakeLogFile(data);
+	MakeLogfile(data);
 }
 
 void AllocMgr::PushInfo(AllocInfo info)
@@ -80,59 +79,58 @@ bool AllocMgr::FindInfo(void* ptr, AllocInfo* info)
 	return false;
 }
 
-void AllocMgr::WriteLog(const TCHAR* msg, void* ptr, const AllocInfo& info)
+void AllocMgr::WriteLog(const char* msg, void* ptr, const AllocInfo& info)
 {
-	TCHAR data[FILE_SIZE] = { '\0', };
+	char data[file_SIZE] = { '\0', };
 
-	if (msg == _T("NOALLOC") || msg == _T("NOALLOC[]") )
-		_stprintf_s(data, _T("%s [%p]\n"), msg, ptr);
+	if (msg == "NOALLOC" || msg == "NOALLOC[]" )
+		sprintf_s(data, "%s [%p]\n", msg, ptr);
 	else
-		_stprintf_s(data, _T("%s [%p] [%d] %s : line is %d\n"),
+		sprintf_s(data, "%s [%p] [%d] %s : line is %d\n",
 			msg, ptr, info._size, info._filename, info._line);
 
-	MakeLogFile(data);
+	MakeLogfile(data);
 }
 
-void AllocMgr::MakeLogFile(TCHAR data[FILE_SIZE])
+void AllocMgr::MakeLogfile(char data[file_SIZE])
 {
 	time_t timer = time(NULL);
 	struct tm date;
-	TCHAR buf[TIME_BUF] = { _T('\0'), };
+	char buf[TIME_BUF] = { '\0', };
 	localtime_s(&date, &timer);
 
-	TCHAR filename[OUTPUT_FILE_NAME] = { _T('\0'), };
-	_stprintf_s(filename, _T("Alloc_%04d%02d%02d_%02d%02d%02d_*.txt"),
+	char filename[OUTPUT_NAME_SIZE] = { '\0', };
+	sprintf_s(filename, "Alloc_%04d%02d%02d_%02d%02d%02d_*.txt",
 		date.tm_year + 1900, date.tm_mon + 1,
 		date.tm_mday, date.tm_hour, date.tm_min, date.tm_sec);
 
-	char chData[FILE_SIZE];
-	WideCharToMultiByte(CP_ACP, 0, data, FILE_SIZE,
-		chData, FILE_SIZE, NULL, NULL);
-
 	FILE* file;
-	SetFileName(filename);
-	OpenFile(filename, &file, _T("w"));
-	WriteFile(&file, strlen(chData) + 1, chData);
-	CloseFile(&file);
+	SetfileName(filename);
+
+	errno_t ret = fopen_s(&file, filename, "w");
+	if (ret != 0)
+		printf("Fail to open %s : %d\n", filename, ret);
+	fwrite(data, strlen(data) + 1, 1, file);
+	fclose(file);
 }
 
-void SetFileName(TCHAR* filename) 
+void SetfileName(char* filename) 
 {
 	int nameIdx = 0;
 	WIN32_FIND_DATA findData;
-	HANDLE hFile;
-	hFile = FindFirstFile((LPCWSTR)filename, &findData);
+	HANDLE hfile;
+	hfile = FindFirstFile((LPCWSTR)filename, &findData);
 	
-	if (hFile != INVALID_HANDLE_VALUE)
+	if (hfile != INVALID_HANDLE_VALUE)
 		nameIdx++;
 		
-	while (FindNextFile(hFile, &findData))
+	while (FindNextFile(hfile, &findData))
 		nameIdx++;
 
-	FindClose(hFile);
+	FindClose(hfile);
 
-	TCHAR filenameIdx[NUM] = { _T('\0'), };
-	_stprintf_s(filenameIdx, _T("%d.txt"), nameIdx);
+	char filenameIdx[NUM] = { '\0', };
+	sprintf_s(filenameIdx, "%d.txt", nameIdx);
 
 	int idx1 = 0;
 	int idx2 = 0;

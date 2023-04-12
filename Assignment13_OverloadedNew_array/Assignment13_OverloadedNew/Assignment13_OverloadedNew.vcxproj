@@ -135,7 +135,6 @@
   <ItemGroup>
     <ClInclude Include="AllocMgr.h" />
     <ClInclude Include="custom_new.h" />
-    <ClInclude Include="FileIO.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

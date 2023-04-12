@@ -1,19 +1,16 @@
 #pragma once
-#include <tchar.h>
-#include <vector>
 using namespace std;
 
 #define INFO_SIZE 128
-
-#define FILE_NAME 256
-#define FILE_SIZE 1024
+#define NAME_SIZE 256
+#define file_SIZE 1024
 
 struct AllocInfo
 {
 	bool _use = false;
 	void* _ptr = nullptr;
 	int _size = 0;
-	TCHAR _filename[FILE_NAME] = { _T('\0'), };
+	char _filename[NAME_SIZE] = { '\0', };
 	int _line = 0;
 	bool _array = false;
 };
@@ -24,9 +21,9 @@ public:
 	~AllocMgr();
 	void PushInfo(AllocInfo info);
 	bool FindInfo(void* ptr, AllocInfo* info = nullptr);
-	void WriteLog(const TCHAR* msg, 
+	void WriteLog(const char* msg, 
 		void* ptr, const AllocInfo& info);
-	void MakeLogFile(TCHAR data[FILE_SIZE]);
+	void MakeLogfile(char data[file_SIZE]);
 	
 private:
 	int _infoCnt = 0;
@@ -35,5 +32,5 @@ private:
 extern AllocMgr g_AllocMgr;
 
 
-void SetFileName(TCHAR* filename);
+void SetFileName(char* filename);
 

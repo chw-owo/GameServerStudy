@@ -1,7 +1,5 @@
 ﻿#include <iostream>
 #include <conio.h>
-#include <windows.h>
-#include <tchar.h>
 
 #define CNT 7
 
@@ -72,7 +70,7 @@ void Gatcha()
 	}
 }
 
-int _tmain(int argc, _TCHAR* argv[])
+int main()
 {
 	Gatcha();
 	return 0;

@@ -1,28 +1,15 @@
 ﻿#include <windows.h>
 #include <stdio.h>
 #include "Profile.h"
-#include "FileIO.h"
-
-void AlphaBlending();
-void ReadBmpHeader(FILE** file, BITMAPFILEHEADER* bf, BITMAPINFOHEADER* bi);
-void ReadBmpData(FILE** file, int size, char* output);
-void WriteBmpFile(FILE** output, BITMAPFILEHEADER* bf, BITMAPINFOHEADER* bi, int size, char* data);
-
-int main()
-{
-	for(int i = 0; i < 50; i++)
-		AlphaBlending();
-	PRO_OUT(L"output.txt");
-	return 0;
-}
 
 void AlphaBlending()
 {
 	int size;
-	WCHAR fileName1[] = L"sample.bmp";
-	WCHAR fileName2[] = L"sample2.bmp";
-	WCHAR resultFileName[] = L"result.bmp";
+	char fileName1[] = "sample.bmp";
+	char fileName2[] = "sample2.bmp";
+	char resultFileName[] = "result.bmp";
 
+	errno_t ret;
 	FILE* buffer1 = nullptr;
 	FILE* buffer2 = nullptr;
 	FILE* result = nullptr;
@@ -33,8 +20,12 @@ void AlphaBlending()
 
 	// 1) Get File Header
 	PRO_BEGIN(L"Get File");
-	OpenFile(fileName1, &buffer1, L"rb");
-	ReadBmpHeader(&buffer1, &bf, &bi);
+	ret = fopen_s(&buffer1, fileName1, "rb");
+	if (ret != 0)
+		printf("Fail to open %s : %d\n", fileName1, ret);
+
+	fread(&bf, sizeof(bf), 1, buffer1);
+	fread(&bi, sizeof(bi), 1, buffer1);
 	size = (bi.biWidth * bi.biHeight * bi.biBitCount) / 8;
 
 	char* pImageBuffer1 = static_cast<char*>(malloc(size));
@@ -42,14 +33,17 @@ void AlphaBlending()
 	char* pImageBlend = static_cast<char*>(malloc(size));
 
 	// 2) Get File1 Data
-	ReadBmpData(&buffer1, size, pImageBuffer1);
-	CloseFile(&buffer1);
+	fread(pImageBuffer1, size, 1, buffer1);
+	fclose(buffer1);
+	PRO_END(L"Get File");
 
 	// 3) Get File2 Data
-	OpenFile(fileName2, &buffer2, L"rb");
-	ReadBmpData(&buffer2, size, pImageBuffer2);
-	CloseFile(&buffer2);
-	PRO_END(L"Get File");
+	ret = fopen_s(&buffer2, fileName2, "rb");
+	if (ret != 0)
+		printf("Fail to open %s : %d\n", fileName2, ret);
+
+	fread(pImageBuffer2, size, 1, buffer2);
+	fclose(buffer2);
 
 	// 2. Write File data
 
@@ -73,69 +67,25 @@ void AlphaBlending()
 
 	// 2) Write Bmp File
 	PRO_BEGIN(L"Write File");
-	OpenFile(resultFileName, &result, L"wb");
-	WriteBmpFile(&result, &bf, &bi, size, pImageBlend);
-	CloseFile(&result);
+	ret = fopen_s(&result, resultFileName, "wb");
+	if (ret != 0)
+		printf("Fail to open %s : %d\n", resultFileName, ret);
+
+	fwrite(&bf, sizeof(bf), 1, result);
+	fwrite(&bi, sizeof(bi), 1, result);
+	fwrite(pImageBlend, size, 1, result);
+	fclose(result);
 	PRO_END(L"Write File");
 
 	free(pImageBlend);
 	free(pImageBuffer1);
 	free(pImageBuffer2);
-
 }
 
-void ReadBmpHeader(FILE** file, BITMAPFILEHEADER* bf, BITMAPINFOHEADER* bi)
+int main()
 {
-	PRO_BEGIN(L"Get BMP Header");
-	errno_t ret;
-
-	fread(bf, sizeof(*bf), 1, *file);
-	ret = ferror(*file);
-
-	if (ret != 0)
-		printf("Fail to read file header : %d\n", ret);
-
-	fread(bi, sizeof(*bi), 1, *file);
-	ret = ferror(*file);
-
-	if (ret != 0)
-		printf("Fail to read info header : %d\n", ret);
-	PRO_END(L"Get BMP Header");
-}
-
-void ReadBmpData(FILE** file, int size, char* data)
-{
-	PRO_BEGIN(L"Get BMP Data");
-	errno_t ret;
-	fread(data, size, 1, *file);
-	ret = ferror(*file);
-
-	if (ret != 0)
-		printf("Fail to read data : %d\n", ret);
-
-	PRO_END(L"Get BMP Data");
-}
-
-void WriteBmpFile(FILE** output, BITMAPFILEHEADER* bf,
-	BITMAPINFOHEADER* bi, int size, char* data)
-{
-	errno_t ret;
-
-	fwrite(bf, sizeof(*bf), 1, *output);
-	ret = ferror(*output);
-
-	if (ret != 0)
-		printf("Fail to write file header : %d\n", ret);
-
-	fwrite(bi, sizeof(*bi), 1, *output);
-	ret = ferror(*output);
-
-	if (ret != 0)
-		printf("Fail to write info header : %d\n", ret);
-
-	fwrite(data, size, 1, *output);
-	ret = ferror(*output);
-
-	if (ret != 0)
-		printf("Fail to write data : %d\n", ret);
+	for(int i = 0; i < 50; i++)
+		AlphaBlending();
+	PRO_OUT(L"output.txt");
+	return 0;
 }

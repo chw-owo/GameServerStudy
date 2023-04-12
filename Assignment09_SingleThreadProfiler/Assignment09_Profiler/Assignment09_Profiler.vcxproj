@@ -128,11 +128,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Assignment09_Profiler.cpp" />
-    <ClCompile Include="FileIO.cpp" />
     <ClCompile Include="Profile.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="FileIO.h" />
     <ClInclude Include="Profile.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

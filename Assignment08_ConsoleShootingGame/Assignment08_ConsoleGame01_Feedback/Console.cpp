@@ -23,7 +23,6 @@ void cs_MoveCursor(int iPosX, int iPosY)
 	SetConsoleCursorPosition(hConsole, stCoord);
 }
 
-
 void cs_ClearScreen(void)
 {
 	DWORD dw;

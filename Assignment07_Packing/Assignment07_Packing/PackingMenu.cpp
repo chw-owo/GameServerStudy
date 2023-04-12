@@ -1,8 +1,13 @@
 #include "PackingMenu.h"
+#include <stdio.h>
+#include <stdlib.h>
+
+#define MENU_INPUT 4
+#define INPUT 512
 
 void PrintMenu()
 {
-	_tprintf(_T(
+	printf(
 		"1. Pack\n"
 		"2. Unpack\n"
 		"3. Show All Files in Packfile\n"
@@ -11,15 +16,15 @@ void PrintMenu()
 		"6. Select File to Update\n"
 		"7. Clear Console Window\n\n"
 
-		"Choose number and press enter\n")
+		"Choose number and press enter\n"
 	);
 }
 
 void SelectMenu()
 {
-	TCHAR input[MENU_INPUT] = { '\0', };
-	_fgetts(input, MENU_INPUT, stdin);
-	DWORD select = _ttoi(input);
+	char input[MENU_INPUT] = { '\0', };
+	fgets(input, MENU_INPUT, stdin);
+	int select = atoi(input);
 
 	switch (select)
 	{
@@ -52,7 +57,7 @@ void SelectMenu()
 		break;
 
 	default:
-		_tprintf(_T("Wrong input. Choose Again\n"));
+		printf("Wrong input. Choose Again\n");
 	}
 }
 
@@ -61,15 +66,15 @@ void SelectMenu()
 void Menu_Pack()
 {
 	// Get PackFile Name
-	TCHAR packName[FILE_NAME] = { '\0', };
-	_tprintf(_T("Enter pack file name. (max length %u)\n"), FILE_NAME);
-	_fgetts(packName, FILE_NAME, stdin);
+	char packName[FILE_NAME] = { '\0', };
+	printf("Enter pack file name. (max length %u)\n", FILE_NAME);
+	fgets(packName, FILE_NAME, stdin);
  
 	// Get Files' Name to Pack
-	TCHAR fileNames[INPUT] = { ' ', };
-	_tprintf(_T("Enter files' name with extension to pack." 
-		" (max count %d, max length %d)\n"), FILE_CNT, INPUT);
-	_fgetts(fileNames, INPUT, stdin);
+	char fileNames[INPUT] = { ' ', };
+	printf("Enter files' name with extension to pack." 
+		" (max count %d, max length %d)\n", FILE_CNT, INPUT);
+	fgets(fileNames, INPUT, stdin);
 
 	Pack(packName, fileNames);
 
@@ -78,9 +83,9 @@ void Menu_Pack()
 void Menu_Unpack()
 {
 	// Get PackFile Name
-	TCHAR packName[FILE_NAME] = { '\0', };
-	_tprintf(_T("Enter pack file name to unpack.\n"));
-	_fgetts(packName, FILE_NAME, stdin);
+	char packName[FILE_NAME] = { '\0', };
+	printf("Enter pack file name to unpack.\n");
+	fgets(packName, FILE_NAME, stdin);
 
 	Unpack(packName);
 }
@@ -88,28 +93,28 @@ void Menu_Unpack()
 void Menu_ShowFiles()
 {
 	// Get PackFile Name
-	TCHAR packName[FILE_NAME] = { '\0', };
-	_tprintf(_T("Enter pack file name to add file.\n"));
-	_fgetts(packName, FILE_NAME, stdin);
+	char packName[FILE_NAME] = { '\0', };
+	printf("Enter pack file name to add file.\n");
+	fgets(packName, FILE_NAME, stdin);
 
 	//ReadPackFile(packName, pack);
 	ShowFiles(packName);
 
-	_tprintf(_T("Show All Files Complete!\n\n"));
+	printf("Show All Files Complete!\n\n");
 }
 
 void Menu_AddPack()
 {
 	// Get PackFile Name
-	TCHAR packName[FILE_NAME] = { '\0', };
-	_tprintf(_T("Enter pack file name to add file.\n"));
-	_fgetts(packName, FILE_NAME, stdin);
+	char packName[FILE_NAME] = { '\0', };
+	printf("Enter pack file name to add file.\n");
+	fgets(packName, FILE_NAME, stdin);
 
 	// Get Files' Name to Pack
-	TCHAR fileNames[INPUT] = { ' ', };
-	_tprintf(_T("Enter files name with extension to add."
-		" (max count %d, max length %d)\n"), FILE_CNT, INPUT);
-	_fgetts(fileNames, INPUT, stdin);
+	char fileNames[INPUT] = { ' ', };
+	printf("Enter files name with extension to add."
+		" (max count %d, max length %d)\n", FILE_CNT, INPUT);
+	fgets(fileNames, INPUT, stdin);
 
 	// Add Files To Pack
 	AddPack(packName, fileNames);
@@ -118,15 +123,15 @@ void Menu_AddPack()
 void Menu_UnpackFiles()
 {
 	// Get PackFile Name
-	TCHAR packName[FILE_NAME] = { '\0', };
-	_tprintf(_T("Enter pack file name to unpack.\n"));
-	_fgetts(packName, FILE_NAME, stdin);
+	char packName[FILE_NAME] = { '\0', };
+	printf("Enter pack file name to unpack.\n");
+	fgets(packName, FILE_NAME, stdin);
 
 	// Get Files' Name to Pack
-	TCHAR fileNames[INPUT] = { ' ', };
-	_tprintf(_T("Enter files name with extension to add."
-		" (max count %d, max length %d)\n"), FILE_CNT, INPUT);
-	_fgetts(fileNames, INPUT, stdin);
+	char fileNames[INPUT] = { ' ', };
+	printf("Enter files name with extension to add."
+		" (max count %d, max length %d)\n", FILE_CNT, INPUT);
+	fgets(fileNames, INPUT, stdin);
 
 	// Write Data to Files
 	UnpackFiles(packName, fileNames);
@@ -135,18 +140,17 @@ void Menu_UnpackFiles()
 void Menu_UpdateFile()
 {
 	// Get Packfile Name
-	TCHAR packName[FILE_NAME] = { '\0', };
-	_tprintf(_T("Enter pack file name to unpack.\n"));
-	_fgetts(packName, FILE_NAME, stdin);
+	char packName[FILE_NAME] = { '\0', };
+	printf("Enter pack file name to unpack.\n");
+	fgets(packName, FILE_NAME, stdin);
 
 	// Get File Name to Update
-	TCHAR fileName[FILE_NAME] = { ' ', };
-	_tprintf(_T("Enter file name with extension to update."
-		" (max length %d)\n"), FILE_NAME);
-	_fgetts(fileName, FILE_NAME, stdin);
+	char fileName[FILE_NAME] = { ' ', };
+	printf("Enter file name with extension to update."
+		" (max length %d)\n", FILE_NAME);
+	fgets(fileName, FILE_NAME, stdin);
 
 	// Update Data
 	UpdateFile(packName, fileName);
-
 }
 

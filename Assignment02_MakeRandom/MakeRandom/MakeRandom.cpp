@@ -7,7 +7,6 @@ public:
     CustomRand()
     {
         _seed = 1;
-
     }
 
     CustomRand(int seed)
@@ -43,10 +42,7 @@ void CustomRandom()
     CustomRand customRand(time(NULL));
 
     for (int i = 0; i < 10; i++)
-    {
-        printf("custom: %d\n", customRand());
-    }
-        
+        printf("custom: %d\n", customRand());      
 }
 
 int main()

@@ -2,24 +2,22 @@
 #include "AllocMgr.h"
 
 #include <Windows.h>
-#include <stringapiset.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stringapiset.h>
+
 
 #undef new
-void* operator new(size_t size, const char* File, int Line)
+void* operator new(size_t size, const char* filename, int line)
 {
 	void* ptr = malloc(size);
-	TCHAR filename[FILE_NAME] = { '\0', };
-	MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED,
-		File, strlen(File), filename, FILE_NAME);
 	
 	AllocInfo info;
 	info._use = true;
 	info._ptr = ptr;
 	info._size = size;
-	_tcscpy_s(info._filename, FILE_NAME, filename);
-	info._line = Line;
+	strcpy_s(info._filename, NAME_SIZE, filename);
+	info._line = line;
 	info._array = false;
 	g_AllocMgr.PushInfo(info);
 
@@ -27,19 +25,16 @@ void* operator new(size_t size, const char* File, int Line)
 	return ptr;
 }
 
-void* operator new[](size_t size, const char* File, int Line)
+void* operator new[](size_t size, const char* filename, int line)
 {
 	void* ptr = malloc(size);
-	TCHAR filename[FILE_NAME] = { '\0', };
-	MultiByteToWideChar(CP_ACP, MB_PRECOMPOSED,
-		File, strlen(File), filename, FILE_NAME);
 
 	AllocInfo info;
 	info._use = true;
 	info._ptr = ptr;
 	info._size = size;
-	_tcscpy_s(info._filename, FILE_NAME, filename);
-	info._line = Line;
+	strcpy_s(info._filename, NAME_SIZE, filename);
+	info._line = line;
 	info._array = true;
 	g_AllocMgr.PushInfo(info);
 
@@ -47,11 +42,11 @@ void* operator new[](size_t size, const char* File, int Line)
 	return ptr;
 }
 
-void operator delete (void* p, char* File, int Line)
+void operator delete (void* p, char* file, int line)
 {
 
 }
-void operator delete[](void *p, char* File, int Line)
+void operator delete[](void *p, char* file, int line)
 {
 
 }
@@ -71,12 +66,12 @@ void operator delete (void* p)
 
 	if (g_AllocMgr.FindInfo(arrP, &info))
 	{
-		g_AllocMgr.WriteLog(_T("ARRAY"), arrP, info);
+		g_AllocMgr.WriteLog("ARRAY", arrP, info);
 		free(arrP);
 		return;
 	}	
 	
-	g_AllocMgr.WriteLog(_T("NOALLOC"), p, info);
+	g_AllocMgr.WriteLog("NOALLOC", p, info);
 }
 
 void operator delete[](void* p)
@@ -94,12 +89,12 @@ void operator delete[](void* p)
 
 	if (g_AllocMgr.FindInfo(notArrP, &info))
 	{
-		g_AllocMgr.WriteLog(_T("NOARRAY"), notArrP, info);
+		g_AllocMgr.WriteLog("NOARRAY", notArrP, info);
 		free(notArrP);
 		return;
 	}
 
-	g_AllocMgr.WriteLog(_T("NOALLOC"), p, info);
+	g_AllocMgr.WriteLog("NOALLOC", p, info);
 }
 
 

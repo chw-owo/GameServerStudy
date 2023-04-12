@@ -1,7 +1,6 @@
 ﻿#include <iostream>
 #include <conio.h>
 #include <windows.h>
-#pragma comment(lib, "Winmm.lib") 
 
 #define CNT 9
 int g_Timing[CNT] = { 5, 10, 14, 17, 20, 25, 29, 31, 33 };
