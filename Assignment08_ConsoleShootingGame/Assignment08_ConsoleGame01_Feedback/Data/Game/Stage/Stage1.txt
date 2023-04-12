@@ -1,0 +1,12 @@
+POSITION
+.\\Data\\Game\\Position\\Position1.txt
+PLAYER
+.\\Data\\Game\\Player\\Player1.txt
+BULLET
+.\\Data\\Game\\Bullet\\Bullet1.txt
+ENEMY
+.\\Data\\Game\\Enemy\\A.txt
+.\\Data\\Game\\Enemy\\B.txt
+ENEMYNUM
+14
+7

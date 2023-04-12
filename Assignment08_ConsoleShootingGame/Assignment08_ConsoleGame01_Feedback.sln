@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.4.33213.308
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Assignment08_ConsoleGame01_Feedback", "Assignment08_ConsoleGame01_Feedback\Assignment08_ConsoleGame01_Feedback.vcxproj", "{CFC5ECD9-6508-4CF3-9E89-0419C9166919}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{CFC5ECD9-6508-4CF3-9E89-0419C9166919}.Debug|x64.ActiveCfg = Debug|x64
+		{CFC5ECD9-6508-4CF3-9E89-0419C9166919}.Debug|x64.Build.0 = Debug|x64
+		{CFC5ECD9-6508-4CF3-9E89-0419C9166919}.Debug|x86.ActiveCfg = Debug|Win32
+		{CFC5ECD9-6508-4CF3-9E89-0419C9166919}.Debug|x86.Build.0 = Debug|Win32
+		{CFC5ECD9-6508-4CF3-9E89-0419C9166919}.Release|x64.ActiveCfg = Release|x64
+		{CFC5ECD9-6508-4CF3-9E89-0419C9166919}.Release|x64.Build.0 = Release|x64
+		{CFC5ECD9-6508-4CF3-9E89-0419C9166919}.Release|x86.ActiveCfg = Release|Win32
+		{CFC5ECD9-6508-4CF3-9E89-0419C9166919}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {42CFB07C-2AB5-4594-BDB3-5D0EFF97374F}
+	EndGlobalSection
+EndGlobal

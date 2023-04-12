@@ -1,0 +1,3 @@
+.\\Data\\Clear\\Clear1.txt
+.\\Data\\Clear\\Clear2.txt
+.\\Data\\Clear\\Clear3.txt

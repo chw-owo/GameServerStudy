@@ -1,0 +1,75 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Main">
+      <UniqueIdentifier>{ab4ca61e-c72c-4918-a57f-e1f75dbed689}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Scenes">
+      <UniqueIdentifier>{674726f4-52a8-433c-9bf0-cf0ae65a6a37}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Utils">
+      <UniqueIdentifier>{1f742957-6042-4211-a0e9-bf64d9dca7ec}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Console.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Render.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="FileIO.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Game.h">
+      <Filter>Scenes</Filter>
+    </ClInclude>
+    <ClInclude Include="Scenes.h">
+      <Filter>Scenes</Filter>
+    </ClInclude>
+    <ClInclude Include="Clear.h">
+      <Filter>Scenes</Filter>
+    </ClInclude>
+    <ClInclude Include="Load.h">
+      <Filter>Scenes</Filter>
+    </ClInclude>
+    <ClInclude Include="Over.h">
+      <Filter>Scenes</Filter>
+    </ClInclude>
+    <ClInclude Include="Title.h">
+      <Filter>Scenes</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Main.cpp">
+      <Filter>Main</Filter>
+    </ClCompile>
+    <ClCompile Include="Console.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="Render.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="FileIO.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="Game.cpp">
+      <Filter>Scenes</Filter>
+    </ClCompile>
+    <ClCompile Include="Scenes.cpp">
+      <Filter>Scenes</Filter>
+    </ClCompile>
+    <ClCompile Include="Clear.cpp">
+      <Filter>Scenes</Filter>
+    </ClCompile>
+    <ClCompile Include="Load.cpp">
+      <Filter>Scenes</Filter>
+    </ClCompile>
+    <ClCompile Include="Over.cpp">
+      <Filter>Scenes</Filter>
+    </ClCompile>
+    <ClCompile Include="Title.cpp">
+      <Filter>Scenes</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>

@@ -1,0 +1,5 @@
+.\\Data\\Title\\Title.txt
+.\\Data\\Load\\Load.txt
+.\\Data\\Game\\StageInfo.txt
+.\\Data\\Clear\\ClearInfo.txt
+.\\Data\\Over\\Over.txt

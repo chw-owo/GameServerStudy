@@ -1,0 +1,19 @@
+
+
+
+
+                               Simple Shooting Game
+
+
+
+
+
+
+
+
+
+                             Continue Prev Play: Press 1
+
+                               Start New Play: Press 2
+
+                                    Exit: Press Esc

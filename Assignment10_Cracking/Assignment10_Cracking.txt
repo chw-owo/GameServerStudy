@@ -1,0 +1,21 @@
+<과제 1>
+1. 81 7D F8 64 35 00 00 cmp dword ptr [ebp-8],3564h
+위 코드가 패스워드를 검사하는 부분으로, 패스워드는 16진수로 3564, 10진수로 13668입니다.
+
+2. 81 7D F8 64 35 00 00 => 81 7D F8 00 00 00 00 (cmp dword ptr [ebp-8],0h)
+이와 같이 바꿔줄 경우 0을 입력했을 때 통과하는 실행 파일이 됩니다. 
+
+<과제 2>
+1. 8B 45 F4    mov  eax,dword ptr [ebp-0Ch]
+여기서 ebp-0Ch는 첫번째 input으로, eax에 첫번째 input이 들어갑니다.
+
+2. 03 45 F8    add   eax,dword ptr [ebp-8]
+ebp-8은 두번째 input으로, eax에 두번째 input을 더합니다.
+
+3. C1 E0 03    shl   eax,3
+첫번째 input과 두번째 input을 더한 값을 3번 left shift 합니다. 
+
+4. 2B 45 F8     sub   eax,dword ptr [ebp-8]
+위의 값에서 다시 두번째 input을 뺍니다.
+
+5. 이 결과를 스택에 저장했다가 출력합니다. 세번째 input은 사용되지 않습니다. 

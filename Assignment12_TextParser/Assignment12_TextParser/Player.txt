@@ -1,0 +1,4 @@
+NUM,JOB,STR,SPEED,TRIBE
+0,Warrior,13,10,Mori
+1,Dwarf,14,5,Mecha
+2,Wizard,15,8,Undead
