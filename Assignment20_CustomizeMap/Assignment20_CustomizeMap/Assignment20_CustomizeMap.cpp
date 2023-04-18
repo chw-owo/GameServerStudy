@@ -1,8 +1,6 @@
 ﻿#include "framework.h"
 #include "Assignment20_CustomizeMap.h"
 #define MAX_LOADSTRING 100
-
-#define GRID_SIZE 16
 #define GRID_WIDTH 100
 #define GRID_HEIGHT 50
 
@@ -59,14 +57,16 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
 HPEN g_hGridPen;
 HBRUSH g_hTileBrush;
+
+int iGridSize = 16;
+char g_chTile[GRID_HEIGHT][GRID_WIDTH] = { 0 };
+bool g_bErase = false;
+bool g_bDraw = false;
+
 HBITMAP g_hMemDCBitmap;
 HBITMAP g_hMemDCBitmap_old;
 HDC g_hMemDC;
 RECT g_MemDCRect;
-
-char g_chTile[GRID_HEIGHT][GRID_WIDTH];
-bool g_bErase = false;
-bool g_bDraw = false;
 
 void RenderGrid(HDC hdc)
 {
@@ -77,23 +77,22 @@ void RenderGrid(HDC hdc)
     for (int i = 0; i <= GRID_WIDTH; i++)
     {
         MoveToEx(hdc, iX, 0, NULL);
-        LineTo(hdc, iX, GRID_HEIGHT * GRID_SIZE);
-        iX += GRID_SIZE;
+        LineTo(hdc, iX, GRID_HEIGHT * iGridSize);
+        iX += iGridSize;
     }
 
     for (int i = 0; i <= GRID_HEIGHT; i++)
     {
         MoveToEx(hdc, 0, iY, NULL);
-        LineTo(hdc, GRID_WIDTH * GRID_SIZE, iY);
-        iY += GRID_SIZE;
+        LineTo(hdc, GRID_WIDTH * iGridSize, iY);
+        iY += iGridSize;
     }
     SelectObject(hdc, hOldPen);
 }
 
 void RenderObstacle(HDC hdc)
 {
-    int iX = 0;
-    int iY = 0;
+    int iX, iY;
     HBRUSH hOldBrush = (HBRUSH)SelectObject(hdc, g_hTileBrush);
     SelectObject(hdc, GetStockObject(NULL_PEN));
 
@@ -101,13 +100,19 @@ void RenderObstacle(HDC hdc)
     {
         for (int j = 0; j < GRID_WIDTH; j++)
         {
-            iX = j * GRID_SIZE;
-            iY = i * GRID_SIZE;
-            Rectangle(hdc, iX, iY, iX + GRID_SIZE + 2, iY + GRID_SIZE + 2);
-            g_chTile[i][j] = false;
+            iX = j * iGridSize;
+            iY = i * iGridSize;
+
+            if (g_chTile[i][j] == 1)         
+                Rectangle(hdc, iX, iY, iX + iGridSize + 2, iY + iGridSize + 2);   
         }
     }
     SelectObject(hdc, hOldBrush);
+}
+
+void CreateRandomMap(HDC hdc)
+{
+
 }
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -132,6 +137,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
         break;
 
+    case WM_MOUSEWHEEL:
+        if (GET_WHEEL_DELTA_WPARAM(wParam) > 0)
+            iGridSize++;
+        else if(GET_WHEEL_DELTA_WPARAM(wParam) < 0)
+            iGridSize--;
+        InvalidateRect(hWnd, NULL, false);
+        break;
+
     case WM_LBUTTONDOWN:
         g_bDraw = true;
         break;
@@ -152,18 +165,15 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
         xPos = GET_X_LPARAM(lParam);
         yPos = GET_Y_LPARAM(lParam);
-        iTileX = xPos / GRID_SIZE;
-        iTileY = yPos / GRID_SIZE;
+        iTileX = xPos / iGridSize;
+        iTileY = yPos / iGridSize;
+        if (iTileX >= GRID_WIDTH)   iTileX = GRID_WIDTH - 1;
+        if (iTileY >= GRID_HEIGHT)  iTileY = GRID_HEIGHT - 1;
 
-        if (g_bDraw)
-        {       
-            g_chTile[iTileY][iTileX] = true;
-        }
-        if (g_bErase)
-        {
-            g_chTile[iTileY][iTileX] = false;
-        }
+        if (g_bDraw)    g_chTile[iTileY][iTileX] = 1;
+        if (g_bErase)   g_chTile[iTileY][iTileX] = 0;   
         InvalidateRect(hWnd, NULL, false);
+       
         break;
 
     case WM_PAINT:
@@ -195,6 +205,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         g_hMemDCBitmap = CreateCompatibleBitmap(hdc, g_MemDCRect.right, g_MemDCRect.bottom);
         g_hMemDC = CreateCompatibleDC(hdc);
         ReleaseDC(hWnd, hdc);
+
         g_hMemDCBitmap_old = (HBITMAP)SelectObject(g_hMemDC, g_hMemDCBitmap);
         PatBlt(g_hMemDC, 0, 0, g_MemDCRect.right, g_MemDCRect.bottom, WHITENESS);
 
