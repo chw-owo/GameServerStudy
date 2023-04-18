@@ -110,6 +110,7 @@ void RenderObstacle(HDC hdc)
     SelectObject(hdc, hOldBrush);
 }
 
+
 void CreateRandomMap(HDC hdc)
 {
 
@@ -125,6 +126,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     switch (message)
     {
     case WM_CREATE:
+        srand(time(NULL));
         g_hGridPen = CreatePen(PS_SOLID, 1, RGB(200, 200, 200));
         g_hTileBrush = CreateSolidBrush(RGB(100, 100, 100));
 
@@ -174,6 +176,25 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         if (g_bErase)   g_chTile[iTileY][iTileX] = 0;   
         InvalidateRect(hWnd, NULL, false);
        
+        break;
+
+    case WM_KEYDOWN:
+        switch (wParam)
+        {
+        case VK_RETURN:
+            for (int i = 0; i < GRID_HEIGHT; i++)
+            {
+                for (int j = 0; j < GRID_WIDTH; j++)
+                {
+                    g_chTile[i][j] = rand() % 2;
+                }
+            }
+            InvalidateRect(hWnd, NULL, false);
+            break;
+
+        default:
+            break;
+        }
         break;
 
     case WM_PAINT:
