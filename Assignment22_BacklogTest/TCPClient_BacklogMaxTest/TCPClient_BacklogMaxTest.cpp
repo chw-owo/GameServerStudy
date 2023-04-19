@@ -8,29 +8,6 @@
 #define SERVERPORT 9000
 #define BUFSIZE 512
 
-int err_quit(const wchar_t* msg)
-{
-	LPVOID lpMsgBuf;
-	FormatMessage(
-		FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
-		NULL, WSAGetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-		(LPTSTR)&lpMsgBuf, 0, NULL);
-	MessageBox(NULL, (LPCTSTR)lpMsgBuf, msg, MB_ICONERROR);
-	LocalFree(lpMsgBuf);
-	return 1;
-}
-
-void err_display(const wchar_t* msg)
-{
-	LPVOID lpMsgBuf;
-	FormatMessage(
-		FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM,
-		NULL, WSAGetLastError(), MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-		(LPTSTR)&lpMsgBuf, 0, NULL);
-	wprintf(L"[%s] %s", msg, (wchar_t*)lpMsgBuf);
-	LocalFree(lpMsgBuf);
-}
-
 int recvn(SOCKET s, char* buf, int len, int flags)
 {
 	int received;
@@ -62,12 +39,14 @@ int wmain(int argc, wchar_t* argv[])
 		WSADATA wsa;
 		if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
 			return 1;
-		//MessageBox(NULL, L"Success to Initialize Winsock!", L"Alert", MB_OK);
 
 		// Generate Socket
 		SOCKET sock = socket(AF_INET, SOCK_STREAM, 0);
-		if (sock == INVALID_SOCKET) return err_quit(L"sock()");
-		//MessageBox(NULL, L"Success to Generate socket!", L"Alert", MB_OK);
+		if (sock == INVALID_SOCKET)
+		{
+			printf("Fail to Generate Socket");
+			return 0;
+		}
 
 		// Connect
 		SOCKADDR_IN serveraddr;
@@ -78,20 +57,26 @@ int wmain(int argc, wchar_t* argv[])
 		serveraddr.sin_addr.s_addr = server_sin_addr;
 		serveraddr.sin_port = htons(SERVERPORT);
 		retval = connect(sock, (SOCKADDR*)&serveraddr, sizeof(serveraddr));
-		if (retval == SOCKET_ERROR) return err_quit(L"connect()");
+		if (retval == SOCKET_ERROR) 
+		{
+			printf("Fail to Connect");
+			return 0;
+		}
 
 		cnt++;
 		printf("put socket no.%d in the backlog queue! \n", cnt);
 		
 		// Close Socket
 		retval = closesocket(sock);
-		WSACleanup();
 		if (retval == SOCKET_ERROR)
-		{
+		{	
+			printf("Fail to Close Socket");
 			WSACleanup();
-			return err_quit(L"closesocket");
+			return 0;
+			
 		}
 		
+		WSACleanup();
 	}
 
 	return 0;
