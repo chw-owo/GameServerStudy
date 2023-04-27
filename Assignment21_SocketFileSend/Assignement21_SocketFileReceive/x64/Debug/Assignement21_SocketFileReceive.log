@@ -1,0 +1,3 @@
+﻿  Assignment21_SocketFileReceive.cpp
+C:\Users\Dell\Desktop\Assignment\Assignment21_SocketFileSend\Assignement21_SocketFileReceive\Assignment21_SocketFileReceive.cpp(121,7): warning C4101: 'buf' :참조되지 않은 지역 변수입니다.
+  Assignement21_SocketFileReceive.vcxproj -> C:\Users\Dell\Desktop\Assignment\Assignment21_SocketFileSend\x64\Debug\Assignment21_SocketFileReceive.exe

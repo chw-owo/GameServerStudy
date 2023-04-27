@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#define SERVERPORT 10010
+#define SERVERPORT 9000
 #define BUFSIZE 512
 
 int main(int argc, char* argv[])
