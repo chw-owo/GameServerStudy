@@ -282,6 +282,7 @@ int main(int argc, char* argv[])
 						{
 							(*iter)->X = pMsg->X;
 							(*iter)->Y = pMsg->Y;
+							break;
 						}
 					}
 
