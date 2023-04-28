@@ -13,9 +13,9 @@
 
 struct Player
 {
-	__int32 ID = 0;
-	__int32 X = 0;
-	__int32 Y = 0;
+	__int32 ID;
+	__int32 X;
+	__int32 Y;
 };
 
 SOCKET sock;
@@ -68,16 +68,12 @@ struct MSG_MOVE
 
 // Render Alert Message
 void AlertMsg(const char* alertMsg)
-{
-	char alertBuf[XMAX];
-	memset(alertBuf, ' ', XMAX);
-	strcpy_s(alertBuf, XMAX, alertMsg);
-	
+{	
 	COORD stCoord;
 	stCoord.X = 0;
 	stCoord.Y = YMAX;
 	SetConsoleCursorPosition(hConsole, stCoord);
-	printf(alertBuf);
+	printf(alertMsg);
 }
 
 void HandleError(int line)
@@ -214,7 +210,7 @@ int main(int argc, char* argv[])
 				}
 				else if (ret == 0)
 				{
-					AlertMsg("Disconnect to Server!");
+					AlertMsg("Disconnect from Server!");
 					break;
 				}
 
@@ -225,7 +221,6 @@ int main(int argc, char* argv[])
 				{
 					MSG_ID* pMsg = (MSG_ID*)recvBuf;
 					ID = pMsg->ID;
-					AlertMsg("Success to Alloc ID!");
 					break;
 				}
 					
@@ -236,14 +231,16 @@ int main(int argc, char* argv[])
 					{
 						gMyPlayer = new Player;
 						gMyPlayer->ID = pMsg->ID;
-						AlertMsg("Success to Create My Data!");
+						gMyPlayer->X = pMsg->X;
+						gMyPlayer->Y = pMsg->Y;
 					}
 					else if (ID != pMsg->ID)
 					{
 						Player* player = new Player;
 						player->ID = pMsg->ID;
+						player->X = pMsg->X;
+						player->Y = pMsg->Y;
 						gPlayerList.push_back(player);
-						AlertMsg("Other player come in!");
 					}
 					break;
 				}		
@@ -255,7 +252,6 @@ int main(int argc, char* argv[])
 					{
 						delete gMyPlayer;
 						gMyPlayer = nullptr;
-						AlertMsg("Success to Delete My Data!");
 					}
 					else if (gMyPlayer == nullptr || gMyPlayer->ID != pMsg->ID)
 					{
@@ -265,7 +261,7 @@ int main(int argc, char* argv[])
 							{
 								delete (*iter);
 								iter = gPlayerList.erase(iter);
-								AlertMsg("Other player go out!");
+								break;
 							}
 							else
 							{
@@ -286,7 +282,6 @@ int main(int argc, char* argv[])
 						{
 							(*iter)->X = pMsg->X;
 							(*iter)->Y = pMsg->Y;
-							AlertMsg("Success to Get Move Data!");
 						}
 					}
 
@@ -304,7 +299,7 @@ int main(int argc, char* argv[])
 		// Keyboard IO ===================================
 		#pragma region KeyboardIO
 
-		if (gMyPlayer != nullptr && clock() - timecheck > 50)
+		if (gMyPlayer != nullptr && clock() - timecheck > 30)
 		{
 			if (GetAsyncKeyState(VK_LEFT) && gMyPlayer->X > 0)
 				gMyPlayer->X--;
@@ -333,6 +328,7 @@ int main(int argc, char* argv[])
 		// Set Buffer
 		if (gMyPlayer != nullptr)
 			gScreenBuffer[gMyPlayer->Y][gMyPlayer->X] = '*';
+
 		for (iter = gPlayerList.begin(); iter != gPlayerList.end(); ++iter)
 			gScreenBuffer[(*iter)->Y][(*iter)->X] = '*';
 
