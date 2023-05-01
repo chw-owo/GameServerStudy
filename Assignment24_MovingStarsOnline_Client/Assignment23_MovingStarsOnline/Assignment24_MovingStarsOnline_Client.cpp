@@ -79,7 +79,7 @@ int main(int argc, char* argv[])
 
 	// Setting For Network
 	char recvBuf[MSGSIZE] = { 0 };
-	FD_SET rset, wset;
+	FD_SET rset;
 
 	// Setting For Keyboard IO
 	__int32 prevX = 0;
@@ -100,14 +100,12 @@ int main(int argc, char* argv[])
 #pragma region Network
 
 		FD_ZERO(&rset);
-		FD_ZERO(&wset);
 		FD_SET(sock, &rset);
-		FD_SET(sock, &wset);
 
 		// Select 
 		TIMEVAL time;
 		time.tv_usec = 0;
-		ret = select(0, &rset, &wset, NULL, &time);
+		ret = select(0, &rset, NULL, NULL, &time);
 		if (ret == SOCKET_ERROR)
 		{
 			err = ::WSAGetLastError();
@@ -119,33 +117,31 @@ int main(int argc, char* argv[])
 		}
 		else if (ret > 0)
 		{
-			// Send Data to Server
-			if (FD_ISSET(sock, &wset))
+			// Send Data to Server	
+			if (gMyPlayer != nullptr &&
+				(gMyPlayer->X != prevX || gMyPlayer->Y != prevY))
 			{
-				if (gMyPlayer != nullptr &&
-					(gMyPlayer->X != prevX || gMyPlayer->Y != prevY))
+				MSG_MOVE Msg;
+				Msg.type = TYPE_MOVE;
+				Msg.ID = gMyPlayer->ID;
+				Msg.X = gMyPlayer->X;
+				Msg.Y = gMyPlayer->Y;
+
+				ret = send(sock, (char*)&Msg, MSGSIZE, 0);
+				if (ret == SOCKET_ERROR)
 				{
-					MSG_MOVE Msg;
-					Msg.type = TYPE_MOVE;
-					Msg.ID = gMyPlayer->ID;
-					Msg.X = gMyPlayer->X;
-					Msg.Y = gMyPlayer->Y;
-
-					ret = send(sock, (char*)&Msg, MSGSIZE, 0);
-					if (ret == SOCKET_ERROR)
+					err = ::WSAGetLastError();
+					if (err != WSAEWOULDBLOCK)
 					{
-						err = ::WSAGetLastError();
-						if (err != WSAEWOULDBLOCK)
-						{
-							printf("Error! Line %d: %d", __LINE__, err);
-							break;
-						}
+						printf("Error! Line %d: %d", __LINE__, err);
+						break;
 					}
-
-					prevX = gMyPlayer->X;
-					prevY = gMyPlayer->Y;
 				}
+
+				prevX = gMyPlayer->X;
+				prevY = gMyPlayer->Y;
 			}
+			
 
 			// Reveice Data from Server
 			if (FD_ISSET(sock, &rset))
@@ -254,11 +250,11 @@ int main(int argc, char* argv[])
 		{
 			if (GetAsyncKeyState(VK_LEFT) && gMyPlayer->X > 0)
 				gMyPlayer->X--;
-			else if (GetAsyncKeyState(VK_RIGHT) && gMyPlayer->X < XMAX - 2)
+			if (GetAsyncKeyState(VK_RIGHT) && gMyPlayer->X < XMAX - 2)
 				gMyPlayer->X++;
-			else if (GetAsyncKeyState(VK_UP) && gMyPlayer->Y > 0)
+			if (GetAsyncKeyState(VK_UP) && gMyPlayer->Y > 0)
 				gMyPlayer->Y--;
-			else if (GetAsyncKeyState(VK_DOWN) && gMyPlayer->Y < YMAX - 2)
+			if (GetAsyncKeyState(VK_DOWN) && gMyPlayer->Y < YMAX - 2)
 				gMyPlayer->Y++;
 
 			timecheck = clock();
