@@ -1,98 +1,25 @@
 ﻿#pragma comment(lib, "ws2_32")
 #include <ws2tcpip.h>
 #include <iostream>
+#include "Message.h"
 #include "List.h"
+#include "Player.h"
 
 #define SERVERPORT 3000
 #define MSGSIZE 16
-
-#define PLAYERMAX 32
 #define IPMAX 16
-#define XMAX 81
-#define YMAX 24
-
-struct Player
-{
-	__int32 ID;
-	__int32 X;
-	__int32 Y;
-};
 
 SOCKET sock;
 HANDLE hConsole;
-
-__int32 ID = -1;
-Player* gMyPlayer = nullptr;
-CList<Player*> gPlayerList;
-char gScreenBuffer[YMAX][XMAX] = { ' ', };
-
-enum MSG_TYPE
+int main(int argc, char* argv[])
 {
-	TYPE_ID, 
-	TYPE_CREATE, 
-	TYPE_DELETE,
-	TYPE_MOVE
-};
-
-struct MSG_ID
-{
-	__int32 type;
-	__int32 ID;
-	__int32 none1;
-	__int32 none2;
-};
-
-struct MSG_CREATE
-{
-	__int32 type;
-	__int32 ID;
-	__int32 X;
-	__int32 Y;
-};
-
-struct MSG_DELETE
-{
-	__int32 type;
-	__int32 ID;
-	__int32 none1;
-	__int32 none2;
-};
-
-struct MSG_MOVE
-{
-	__int32 type;
-	__int32 ID;
-	__int32 X;
-	__int32 Y;
-};
-
-// Render Alert Message
-void AlertMsg(const char* alertMsg)
-{	
+	// Initialize Winsock
+	int err;
 	COORD stCoord;
 	stCoord.X = 0;
 	stCoord.Y = YMAX;
 	SetConsoleCursorPosition(hConsole, stCoord);
-	printf(alertMsg);
-}
 
-void HandleError(int line)
-{
-	int err = ::WSAGetLastError();
-	if (err == WSAECONNRESET)
-	{
-		AlertMsg("Server terminated!(code: 10054) Bye~");
-		return;
-	}
-	char alertMsg[XMAX];
-	sprintf_s(alertMsg, XMAX, "Error! Line %d: %d", line, err);
-	AlertMsg(alertMsg);
-}
-#define _HandleError HandleError(__LINE__)
-
-int main(int argc, char* argv[])
-{
-	// Initialize Winsock
 	WSADATA wsa;
 	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
 		return 1;
@@ -101,8 +28,12 @@ int main(int argc, char* argv[])
 	sock = socket(AF_INET, SOCK_STREAM, 0);
 	if (sock == INVALID_SOCKET)
 	{
-		_HandleError;
-		return 0;
+		err = ::WSAGetLastError();
+		if (err != WSAEWOULDBLOCK)
+		{
+			printf("Error! Line %d: %d", __LINE__, err);
+			return 0;
+		}
 	}
 
 	// Get IP Address to connect
@@ -117,13 +48,17 @@ int main(int argc, char* argv[])
 	serveraddr.sin_family = AF_INET;
 	InetPton(AF_INET, IPbuf, &serveraddr.sin_addr);
 	serveraddr.sin_port = htons(SERVERPORT);
-	
+
 	int ret;
 	ret = connect(sock, (SOCKADDR*)&serveraddr, sizeof(serveraddr));
 	if (ret == SOCKET_ERROR)
 	{
-		_HandleError;
-		return 0;
+		err = ::WSAGetLastError();
+		if (err != WSAEWOULDBLOCK)
+		{
+			printf("Error! Line %d: %d", __LINE__, err);
+			return 0;
+		}
 	}
 
 	// Set Socket Non-Blocking Mode
@@ -131,8 +66,12 @@ int main(int argc, char* argv[])
 	ret = ioctlsocket(sock, FIONBIO, &on);
 	if (ret == SOCKET_ERROR)
 	{
-		_HandleError;
-		return 0;
+		err = ::WSAGetLastError();
+		if (err != WSAEWOULDBLOCK)
+		{
+			printf("Error! Line %d: %d", __LINE__, err);
+			return 0;
+		}
 	}
 
 	// Setting For Players
@@ -146,18 +85,19 @@ int main(int argc, char* argv[])
 	__int32 prevX = 0;
 	__int32 prevY = 0;
 	clock_t timecheck = clock();
-	
+
 	// Setting For Render
 	CONSOLE_CURSOR_INFO stConsoleCursor;
 	stConsoleCursor.bVisible = FALSE;
 	stConsoleCursor.dwSize = 1;
 	hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 	SetConsoleCursorInfo(hConsole, &stConsoleCursor);
+	char screenBuffer[YMAX][XMAX] = { ' ', };
 
 	while (1)
 	{
 		// Network =================================
-		#pragma region Network
+#pragma region Network
 
 		FD_ZERO(&rset);
 		FD_ZERO(&wset);
@@ -166,12 +106,16 @@ int main(int argc, char* argv[])
 
 		// Select 
 		TIMEVAL time;
-		time.tv_usec = 300;
+		time.tv_usec = 0;
 		ret = select(0, &rset, &wset, NULL, &time);
 		if (ret == SOCKET_ERROR)
 		{
-			_HandleError;
-			break;
+			err = ::WSAGetLastError();
+			if (err != WSAEWOULDBLOCK)
+			{
+				printf("Error! Line %d: %d", __LINE__, err);
+				break;
+			}
 		}
 		else if (ret > 0)
 		{
@@ -190,8 +134,12 @@ int main(int argc, char* argv[])
 					ret = send(sock, (char*)&Msg, MSGSIZE, 0);
 					if (ret == SOCKET_ERROR)
 					{
-						_HandleError;
-						continue;
+						err = ::WSAGetLastError();
+						if (err != WSAEWOULDBLOCK)
+						{
+							printf("Error! Line %d: %d", __LINE__, err);
+							break;
+						}
 					}
 
 					prevX = gMyPlayer->X;
@@ -205,16 +153,19 @@ int main(int argc, char* argv[])
 				ret = recv(sock, recvBuf, MSGSIZE, 0);
 				if (ret == SOCKET_ERROR)
 				{
-					_HandleError;
-					continue;
+					err = ::WSAGetLastError();
+					if (err != WSAEWOULDBLOCK)
+					{
+						printf("Error! Line %d: %d", __LINE__, err);
+						break;
+					}
 				}
 				else if (ret == 0)
 				{
-					AlertMsg("Disconnect from Server!");
 					break;
 				}
 
-				int* pType = (int*)recvBuf;
+				MSG_TYPE* pType = (MSG_TYPE*)recvBuf;
 				switch (*pType)
 				{
 				case TYPE_ID:
@@ -223,7 +174,7 @@ int main(int argc, char* argv[])
 					ID = pMsg->ID;
 					break;
 				}
-					
+
 				case TYPE_CREATE:
 				{
 					MSG_CREATE* pMsg = (MSG_CREATE*)recvBuf;
@@ -243,7 +194,7 @@ int main(int argc, char* argv[])
 						gPlayerList.push_back(player);
 					}
 					break;
-				}		
+				}
 
 				case TYPE_DELETE:
 				{
@@ -270,22 +221,21 @@ int main(int argc, char* argv[])
 						}
 					}
 					break;
-				}		
+				}
 
 				case TYPE_MOVE:
 				{
 					MSG_MOVE* pMsg = (MSG_MOVE*)recvBuf;
-					
+
 					for (iter = gPlayerList.begin(); iter != gPlayerList.end(); ++iter)
 					{
-						if (pMsg->ID == (*iter)->ID)
+						if ((*iter)->ID == pMsg->ID)
 						{
 							(*iter)->X = pMsg->X;
 							(*iter)->Y = pMsg->Y;
 							break;
 						}
 					}
-
 					break;
 				}
 
@@ -295,10 +245,10 @@ int main(int argc, char* argv[])
 			}
 		}
 
-		#pragma endregion 
+#pragma endregion 
 
 		// Keyboard IO ===================================
-		#pragma region KeyboardIO
+#pragma region KeyboardIO
 
 		if (gMyPlayer != nullptr && clock() - timecheck > 30)
 		{
@@ -313,38 +263,38 @@ int main(int argc, char* argv[])
 
 			timecheck = clock();
 		}
-		
-		#pragma endregion
+
+#pragma endregion
 
 		// Render ==================================
-		#pragma region Render
+#pragma region Render
 
-		// Buffer Clear
-		memset(gScreenBuffer, ' ', YMAX * XMAX);
+// Buffer Clear
+		memset(screenBuffer, ' ', YMAX * XMAX);
 		for (int i = 0; i < YMAX; i++)
 		{
-			gScreenBuffer[i][XMAX - 1] = '\0';
+			screenBuffer[i][XMAX - 1] = '\0';
 		}
 
 		// Set Buffer
 		if (gMyPlayer != nullptr)
-			gScreenBuffer[gMyPlayer->Y][gMyPlayer->X] = '*';
+			screenBuffer[gMyPlayer->Y][gMyPlayer->X] = '*';
 
 		for (iter = gPlayerList.begin(); iter != gPlayerList.end(); ++iter)
-			gScreenBuffer[(*iter)->Y][(*iter)->X] = '*';
+			screenBuffer[(*iter)->Y][(*iter)->X] = '*';
 
 		// Buffer Flip
 		for (int i = 0; i < YMAX; i++)
 		{
-			COORD stCoord;
 			stCoord.X = 0;
 			stCoord.Y = i;
 			SetConsoleCursorPosition(hConsole, stCoord);
-			printf(gScreenBuffer[i]);
+			printf(screenBuffer[i]);
 		}
 
-		#pragma endregion
+	#pragma endregion
 	}
+
 
 	closesocket(sock);
 	WSACleanup();
