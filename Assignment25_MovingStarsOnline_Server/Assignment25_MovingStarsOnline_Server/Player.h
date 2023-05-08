@@ -1,5 +1,6 @@
 #pragma once
 #include "List.h"
+#include "RingBuffer.h"
 #include <ws2tcpip.h>
 #include <iostream>
 
@@ -16,13 +17,14 @@ enum PlayerState
 struct Player
 {
 	PlayerState state;
-	bool updated = false;
-
 	SOCKET sock;
+	RingBuffer recvBuf;
+	RingBuffer sendBuf;
+
+	bool updated = false;
 	__int32 ID;
 	__int32 X = XMAX / 2;
 	__int32 Y = YMAX / 2;
-
 };
 
 class IDGenerator

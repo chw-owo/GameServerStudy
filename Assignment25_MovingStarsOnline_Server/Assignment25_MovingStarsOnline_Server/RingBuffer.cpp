@@ -1,12 +1,12 @@
 #include "RingBuffer.h"
 #include <iostream>
 
-RingBuffer::RingBuffer(void): _bufferSize(DEFAULT_SIZE), _freeSize(DEFAULT_SIZE)
+RingBuffer::RingBuffer(void) : _bufferSize(DEFAULT_BUF_SIZE), _freeSize(DEFAULT_BUF_SIZE)
 {
     _buffer = new char[_bufferSize]();
 }
 
-RingBuffer::RingBuffer(int bufferSize): _bufferSize(bufferSize), _freeSize(bufferSize)
+RingBuffer::RingBuffer(int bufferSize) : _bufferSize(bufferSize), _freeSize(bufferSize)
 {
     _buffer = new char[_bufferSize]();
 }
@@ -122,17 +122,17 @@ int RingBuffer::Enqueue(char* chpData, int iSize)
     }
     else
     {
-        if ( _writePos < _readPos ||
-           ((_writePos > _readPos) &&
-           ((_writePos + iSize) % _bufferSize >= _readPos)))
-                return -1;
-        
+        if (_writePos < _readPos ||
+            ((_writePos > _readPos) &&
+                ((_writePos + iSize) % _bufferSize >= _readPos)))
+            return -1;
+
         int size1 = DirectEnqueueSize();
         int size2 = iSize - size1;
         memcpy_s(&_buffer[_writePos], size1, chpData, size1);
         memcpy_s(_buffer, size2, &chpData[size1], size2);
     }
-    
+
     _useSize += iSize;
     _freeSize -= iSize;
     _writePos = (_writePos + iSize) % _bufferSize;
@@ -150,7 +150,7 @@ int RingBuffer::Dequeue(char* chpData, int iSize)
         printf("Dequeue Error!\n");
         return -1;
     }
-       
+
     if (iSize > GetUseSize())
     {
         printf("Dequeuing size is too Big\n");
@@ -163,10 +163,10 @@ int RingBuffer::Dequeue(char* chpData, int iSize)
     }
     else
     {
-        if ( _writePos > _readPos ||
+        if (_writePos > _readPos ||
             ((_writePos < _readPos) &&
-            ((_readPos + iSize) % _bufferSize > _writePos)))
-                return -1;
+                ((_readPos + iSize) % _bufferSize > _writePos)))
+            return -1;
 
         int size1 = DirectDequeueSize();
         int size2 = iSize - size1;
@@ -204,10 +204,10 @@ int RingBuffer::Peek(char* chpDest, int iSize)
     }
     else
     {
-        if ( _writePos > _readPos ||
-           ((_writePos < _readPos) &&
-           ((_readPos + iSize) % _bufferSize > _writePos)))
-                return -1;
+        if (_writePos > _readPos ||
+            ((_writePos < _readPos) &&
+                ((_readPos + iSize) % _bufferSize > _writePos)))
+            return -1;
 
         int size1 = DirectDequeueSize();
         int size2 = iSize - size1;
@@ -230,12 +230,12 @@ void RingBuffer::ClearBuffer(void)
 
 bool RingBuffer::Resize(int iSize)
 {
-    if (iSize > MAX_SIZE)
+    if (iSize > MAX_BUF_SIZE)
     {
         printf("Size is too Big!!!\n");
         return false;
     }
-    
+
     if (iSize < _useSize)
     {
         printf("Size is Small than UseSize!!!\n");
@@ -285,10 +285,10 @@ int RingBuffer::MoveReadPos(int iSize)
     }
 
     if (iSize <= DirectDequeueSize() &&
-        ( _writePos > _readPos ||
-        ((_writePos < _readPos) &&
-        ((_readPos + iSize) % _bufferSize > _writePos))))
-            return -1;
+        (_writePos > _readPos ||
+            ((_writePos < _readPos) &&
+                ((_readPos + iSize) % _bufferSize > _writePos))))
+        return -1;
 
     _readPos = (_readPos + iSize) % _bufferSize;
     _useSize -= iSize;
@@ -315,11 +315,11 @@ int RingBuffer::MoveWritePos(int iSize)
     }
 
     if (iSize > DirectEnqueueSize() &&
-        ( _writePos < _readPos ||
-        ((_writePos > _readPos) &&
-        ((_writePos + iSize) % _bufferSize >= _readPos))))
-            return -1;
-    
+        (_writePos < _readPos ||
+            ((_writePos > _readPos) &&
+                ((_writePos + iSize) % _bufferSize >= _readPos))))
+        return -1;
+
     _writePos = (_writePos + iSize) % _bufferSize;
     _useSize += iSize;
     _freeSize -= iSize;

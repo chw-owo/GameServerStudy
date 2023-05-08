@@ -1,6 +1,6 @@
 #pragma once
-#define DEFAULT_SIZE 256
-#define MAX_SIZE 65536
+#define DEFAULT_BUF_SIZE 256
+#define MAX_BUF_SIZE 4096
 
 class RingBuffer
 {
@@ -16,7 +16,7 @@ public:
     int GetFreeSize(void);
     int DirectEnqueueSize(void);
     int DirectDequeueSize(void);
- 
+
     int Enqueue(char* chpData, int iSize);
     int Dequeue(char* chpData, int iSize);
     int Peek(char* chpDest, int iSize);

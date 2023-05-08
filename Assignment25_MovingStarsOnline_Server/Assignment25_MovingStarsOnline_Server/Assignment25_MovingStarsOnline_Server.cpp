@@ -25,7 +25,7 @@ int main(int argc, char* argv[])
 	if (listen_sock == INVALID_SOCKET)
 	{
 		err = ::WSAGetLastError();
-		SetCursor();
+		//SetCursor();
 		printf("Error! Line %d: %d\n", __LINE__, err);
 		return 0;
 	}
@@ -41,7 +41,7 @@ int main(int argc, char* argv[])
 	if (bindRet == SOCKET_ERROR)
 	{
 		err = ::WSAGetLastError();
-		SetCursor();
+		//SetCursor();
 		printf("Error! Line %d: %d\n", __LINE__, err);
 		return 0;
 	}
@@ -51,7 +51,7 @@ int main(int argc, char* argv[])
 	if (listenRet == SOCKET_ERROR)
 	{
 		err = ::WSAGetLastError();
-		SetCursor();
+		//SetCursor();
 		printf("Error! Line %d: %d\n", __LINE__, err);
 		return 0;
 	}
@@ -62,7 +62,7 @@ int main(int argc, char* argv[])
 	if (ioctRet == SOCKET_ERROR)
 	{
 		err = ::WSAGetLastError();
-		SetCursor();
+		//SetCursor();
 		printf("Error! Line %d: %d\n", __LINE__, err);
 		return 0;
 	}
@@ -70,13 +70,16 @@ int main(int argc, char* argv[])
 	FD_SET rset;
 	FD_SET wset;
 
+	/*
 	CONSOLE_CURSOR_INFO stConsoleCursor;
 	stConsoleCursor.bVisible = FALSE;
 	stConsoleCursor.dwSize = 1;
 	hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 	SetConsoleCursorInfo(hConsole, &stConsoleCursor);
 	char screenBuffer[YMAX][XMAX] = { ' ', };
+	*/
 
+	printf("Setting Complete!\n");
 	while (1)
 	{
 		// Network ============================================
@@ -89,6 +92,12 @@ int main(int argc, char* argv[])
 		{
 			FD_SET((*i)->sock, &rset);
 			FD_SET((*i)->sock, &wset);
+			/*
+			if ((*i)->sendBuf.GetUseSize() > 0)
+			{
+				FD_SET((*i)->sock, &wset);
+			}
+			*/	
 		}
 
 		// Select 
@@ -96,7 +105,7 @@ int main(int argc, char* argv[])
 		if (selectRet == SOCKET_ERROR)
 		{
 			err = ::WSAGetLastError();
-			SetCursor();
+			//SetCursor();
 			printf("Error! Line %d: %d\n", __LINE__, err);
 			break;
 		}
@@ -120,6 +129,7 @@ int main(int argc, char* argv[])
 
 		// Render ==============================================
 
+		/*
 		// Buffer Clear
 		memset(screenBuffer, ' ', YMAX * XMAX);
 		for (int i = 0; i < YMAX; i++)
@@ -147,6 +157,7 @@ int main(int argc, char* argv[])
 			SetConsoleCursorPosition(hConsole, stCoord);
 			printf(screenBuffer[i]);
 		}
+		*/
 	}
 
 	closesocket(listen_sock);
