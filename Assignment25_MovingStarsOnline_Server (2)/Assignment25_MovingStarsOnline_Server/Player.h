@@ -7,21 +7,14 @@
 #define XMAX 81
 #define YMAX 24
 
-enum PlayerState
-{
-	DEAD = 0,
-	BEFORE_SETTING = 1,
-	ALIVE = 2
-};
 
 struct Player
 {
-	PlayerState state;
+	bool alive = false;
 	SOCKET sock;
 	RingBuffer recvBuf;
 	RingBuffer sendBuf;
 
-	bool updated = false;
 	__int32 ID;
 	__int32 X = XMAX / 2;
 	__int32 Y = YMAX / 2;

@@ -1,6 +1,6 @@
 #pragma once
-#define DEFAULT_SIZE 256
-#define MAX_SIZE 65536
+#define DEFAULT_BUF_SIZE 256
+#define MAX_BUF_SIZE 65536
 
 class RingBuffer
 {
@@ -9,8 +9,6 @@ public:
     RingBuffer(int iBufferSize);
     ~RingBuffer(void);
 
-    bool isEmpty(void);
-    bool isFull(void);
     int GetBufferSize(void);
     int GetUseSize(void);
     int GetFreeSize(void);

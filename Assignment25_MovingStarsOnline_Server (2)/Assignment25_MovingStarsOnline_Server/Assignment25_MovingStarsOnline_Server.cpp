@@ -25,7 +25,7 @@ int main(int argc, char* argv[])
 	if (listen_sock == INVALID_SOCKET)
 	{
 		err = ::WSAGetLastError();
-		//SetCursor();
+		SetCursor();
 		printf("Error! Line %d: %d\n", __LINE__, err);
 		return 0;
 	}
@@ -41,7 +41,7 @@ int main(int argc, char* argv[])
 	if (bindRet == SOCKET_ERROR)
 	{
 		err = ::WSAGetLastError();
-		//SetCursor();
+		SetCursor();
 		printf("Error! Line %d: %d\n", __LINE__, err);
 		return 0;
 	}
@@ -51,7 +51,7 @@ int main(int argc, char* argv[])
 	if (listenRet == SOCKET_ERROR)
 	{
 		err = ::WSAGetLastError();
-		//SetCursor();
+		SetCursor();
 		printf("Error! Line %d: %d\n", __LINE__, err);
 		return 0;
 	}
@@ -62,7 +62,7 @@ int main(int argc, char* argv[])
 	if (ioctRet == SOCKET_ERROR)
 	{
 		err = ::WSAGetLastError();
-		//SetCursor();
+		SetCursor();
 		printf("Error! Line %d: %d\n", __LINE__, err);
 		return 0;
 	}
@@ -70,34 +70,26 @@ int main(int argc, char* argv[])
 	FD_SET rset;
 	FD_SET wset;
 
-	/*
+
 	CONSOLE_CURSOR_INFO stConsoleCursor;
 	stConsoleCursor.bVisible = FALSE;
 	stConsoleCursor.dwSize = 1;
 	hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
 	SetConsoleCursorInfo(hConsole, &stConsoleCursor);
 	char screenBuffer[YMAX][XMAX] = { ' ', };
-	*/
 
 	printf("Setting Complete!\n");
 	while (1)
 	{
 		// Network ============================================
-
 		FD_ZERO(&rset);
 		FD_ZERO(&wset);
 		FD_SET(listen_sock, &rset);
-		FD_SET(listen_sock, &wset);
 		for (CList<Player*>::iterator i = gPlayerList.begin(); i != gPlayerList.end(); i++)
 		{
 			FD_SET((*i)->sock, &rset);
-			FD_SET((*i)->sock, &wset);
-			/*
-			if ((*i)->sendBuf.GetUseSize() > 0)
-			{
+			if((*i)->sendBuf.GetUseSize() > 0)
 				FD_SET((*i)->sock, &wset);
-			}
-			*/	
 		}
 
 		// Select 
@@ -105,31 +97,37 @@ int main(int argc, char* argv[])
 		if (selectRet == SOCKET_ERROR)
 		{
 			err = ::WSAGetLastError();
-			//SetCursor();
+			SetCursor();
 			printf("Error! Line %d: %d\n", __LINE__, err);
 			break;
 		}
 		else if (selectRet > 0)
 		{
+			for (CList<Player*>::iterator i = gPlayerList.begin(); i != gPlayerList.end(); i++)
+			{
+				if (FD_ISSET((*i)->sock, &wset) && (*i)->alive)
+					SendProc((*i));
+			}
+
 			if (FD_ISSET(listen_sock, &rset))
 				AcceptProc();
 
 			for (CList<Player*>::iterator i = gPlayerList.begin(); i != gPlayerList.end(); i++)
 			{
-				if (FD_ISSET((*i)->sock, &rset))
+				if (FD_ISSET((*i)->sock, &rset) && (*i)->alive)
+				{
 					RecvProc((*i));
-
-				if (FD_ISSET((*i)->sock, &wset))
-					SendProc((*i));
+					SetBuffer((*i));
+				}
 			}
 
-			if(deleted = true)
+			if (deleted = true)
 				DeleteDeadPlayers();
 		}
 
 		// Render ==============================================
 
-		/*
+
 		// Buffer Clear
 		memset(screenBuffer, ' ', YMAX * XMAX);
 		for (int i = 0; i < YMAX; i++)
@@ -140,14 +138,26 @@ int main(int argc, char* argv[])
 		// Set Buffer
 		for (CList<Player*>::iterator i = gPlayerList.begin(); i != gPlayerList.end(); i++)
 		{
-			if ((*i)->state == ALIVE)
+			if ((*i)->alive)
 			{
-				if ((*i)->X >= XMAX) (*i)->X = XMAX - 1;
-				if ((*i)->Y >= YMAX) (*i)->Y = YMAX - 1;
+				if ((*i)->X > XMAX - 2) (*i)->X = XMAX - 2;
+				else if ((*i)->X <= 0) (*i)->X = 0;
+				if ((*i)->Y > YMAX - 1) (*i)->Y = YMAX - 1;
+				else if ((*i)->Y <= 0) (*i)->Y = 0;
+
 				screenBuffer[(*i)->Y][(*i)->X] = '*';
 			}
 		}
 		sprintf_s(screenBuffer[0], "Connect Client: %02d\n", gPlayerList.size());
+
+		/*
+		int idx = 0;
+		for (CList<Player*>::iterator iter = gPlayerList.begin(); iter != gPlayerList.end(); ++iter)
+		{
+			idx++;
+			sprintf_s(screenBuffer[idx], XMAX, "%d: %d-%d", (*iter)->ID, (*iter)->X, (*iter)->Y);
+		}
+		*/
 
 		// Buffer Flip
 		for (int i = 0; i < YMAX; i++)
@@ -157,7 +167,7 @@ int main(int argc, char* argv[])
 			SetConsoleCursorPosition(hConsole, stCoord);
 			printf(screenBuffer[i]);
 		}
-		*/
+
 	}
 
 	closesocket(listen_sock);

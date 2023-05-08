@@ -9,8 +9,6 @@ public:
     RingBuffer(int iBufferSize);
     ~RingBuffer(void);
 
-    bool isEmpty(void);
-    bool isFull(void);
     int GetBufferSize(void);
     int GetUseSize(void);
     int GetFreeSize(void);

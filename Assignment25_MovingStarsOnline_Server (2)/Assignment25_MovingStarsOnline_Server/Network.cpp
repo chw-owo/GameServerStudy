@@ -23,126 +23,112 @@ void AcceptProc()
 	if (newPlayer->sock == INVALID_SOCKET)
 	{
 		int err = ::WSAGetLastError();
-		//SetCursor();
+		SetCursor();
 		printf("Error! Line %d: %d\n", __LINE__, err);
 	}
 
-	newPlayer->state = BEFORE_SETTING;
+	newPlayer->alive = true;
 	newPlayer->ID = gIDGenerator.AllocID();
 	gPlayerList.push_back(newPlayer);
-}
 
+	// Send <Allocate ID Message> to New Player
+	MSG_ID MsgID;
+	MsgID.ID = newPlayer->ID;
+	SendUnicast((char*)&MsgID, newPlayer);
+	//printf("%d: Set ID Message!\n", newPlayer->ID);
+
+	// Send <Create New Player Message> to All Player
+	MSG_CREATE MsgCreateNew;
+	MsgCreateNew.ID = newPlayer->ID;
+	MsgCreateNew.X = newPlayer->X;
+	MsgCreateNew.Y = newPlayer->Y;
+	SendBroadcast((char*)&MsgCreateNew, newPlayer);
+	//printf("%d: Set Create Message!\n", newPlayer->ID);
+
+	// Send <Create All Players Message> to New Player
+	MSG_CREATE MsgCreateAll;
+	for (CList<Player*>::iterator i = gPlayerList.begin(); i != gPlayerList.end(); i++)
+	{
+		MsgCreateAll.ID = (*i)->ID;
+		MsgCreateAll.X = (*i)->X;
+		MsgCreateAll.Y = (*i)->Y;
+		SendUnicast((char*)&MsgCreateAll, newPlayer);
+	}
+	//printf("%d: Set Create Message!\n", newPlayer->ID);
+}
 
 void RecvProc(Player* player)
 {
-	if (player->state == ALIVE)
+	char recvBuf[MAX_BUF_SIZE] = { '\0', };
+	int recvRet = recv(player->sock, recvBuf, MAX_BUF_SIZE, 0);
+	if (recvRet == SOCKET_ERROR)
 	{
-		char recvBuf[MAX_BUF_SIZE] = { '\0',};
-		int recvRet = recv(player->sock, recvBuf, MAX_BUF_SIZE, 0);
-		if (recvRet == SOCKET_ERROR)
+		int err = WSAGetLastError();
+		if (err != WSAEWOULDBLOCK)
 		{
-			int err = WSAGetLastError();
-			if (err != WSAEWOULDBLOCK)
-			{
-				//SetCursor();
-				printf("Error! Line %d: %d\n", __LINE__, err);
-				Disconnect(player);
-				return;
-			}
+			SetCursor();
+			printf("Error! Line %d: %d\n", __LINE__, err);
+			Disconnect(player);
+			return;
 		}
-		else if (recvRet == 0)
+	}
+	else if (recvRet == 0)
+	{
+		Disconnect(player);
+		return;
+	}
+
+	//printf("%d: Recieve %d bytes\n", player->ID, recvRet);
+
+	int enqueueSize = player->recvBuf.Enqueue(recvBuf, recvRet);
+	if (enqueueSize != recvRet)
+	{
+		SetCursor();
+		printf("Error! Line %d: recv buffer enqueue\n", __LINE__);
+		Disconnect(player);
+		return;
+	}
+	
+}
+
+void SetBuffer(Player* player)
+{
+	while (player->recvBuf.GetUseSize() >= MSGSIZE)
+	{
+		char msgBuf[MSGSIZE];
+		int dequeueRet = player->recvBuf.Dequeue(msgBuf, MSGSIZE);
+		if (dequeueRet != MSGSIZE)
 		{
+			SetCursor();
+			printf("Error! Line %d: recv buffer dequeue\n", __LINE__);
 			Disconnect(player);
 			return;
 		}
 
-		printf("%d: Recieve %d bytes\n", player->ID, recvRet);
+		MSG_TYPE* pType = (MSG_TYPE*)msgBuf;
 
-		int enqueueSize = player->recvBuf.Enqueue(recvBuf, recvRet);
-		if (enqueueSize != recvRet)
+		switch (*pType)
 		{
-			//SetCursor();
-			printf("Error! Line %d: recv buffer enqueue\n", __LINE__);
-			Disconnect(player);
-			return;
+		case TYPE_MOVE:
+		{
+			MSG_MOVE* pMsg = (MSG_MOVE*)msgBuf;
+			if (player->ID == pMsg->ID)
+			{
+				player->X = pMsg->X;
+				player->Y = pMsg->Y;
+				SendBroadcast((char*)pMsg, player);
+				//printf("%d: Set Move Message!\n", player->ID);
+			}
+			break;
 		}
-
-		while (player->recvBuf.GetUseSize() >= MSGSIZE)
-		{
-			char msgBuf[MSGSIZE];
-			int dequeueRet = player->recvBuf.Dequeue(msgBuf, MSGSIZE);
-			if(dequeueRet != MSGSIZE)
-			{ 
-				//SetCursor();
-				printf("Error! Line %d: recv buffer dequeue\n", __LINE__);
-				Disconnect(player);
-				return;
-			}
-
-			MSG_TYPE* pType = (MSG_TYPE*)msgBuf;
-
-			switch (*pType)
-			{
-			case TYPE_MOVE:
-			{
-				MSG_MOVE* pMsg = (MSG_MOVE*)msgBuf;
-				if (player->ID == pMsg->ID)
-				{
-					player->X = pMsg->X;
-					player->Y = pMsg->Y;
-					player->updated = true;
-				}
-				printf("%d: Get Move Message!\n", player->ID);
-				break;
-			}
-			default:
-				break;
-			}
+		default:
+			break;
 		}
 	}
 }
 
 void SendProc(Player* player)
 {
-	if (player->state == ALIVE && player->updated == true)
-	{
-		MSG_MOVE MsgMove;
-		MsgMove.ID = player->ID;
-		MsgMove.X = player->X;
-		MsgMove.Y = player->Y;
-		SendBroadcast((char*)&MsgMove, player);
-		player->updated = false;
-		printf("%d: Set Move Message!\n", player->ID);
-	}
-	else if (player->state == BEFORE_SETTING)
-	{
-		// Send <Allocate ID Message> to New Player
-		MSG_ID MsgID;
-		MsgID.ID = player->ID;
-		SendUnicast((char*)&MsgID, player);
-		printf("%d: Set ID Message!\n", player->ID);
-
-		// Send <Create New Player Message> to All Player
-		MSG_CREATE MsgCreateNew;
-		MsgCreateNew.ID = player->ID;
-		MsgCreateNew.X = player->X;
-		MsgCreateNew.Y = player->Y;
-		SendBroadcast((char*)&MsgCreateNew);
-		printf("%d: Set Create Message!\n", player->ID);
-
-		// Send <Create All Players Message> to New Player
-		MSG_CREATE MsgCreateAll;
-		for (CList<Player*>::iterator i = gPlayerList.begin(); i != gPlayerList.end(); i++)
-		{
-			MsgCreateAll.ID = (*i)->ID;
-			MsgCreateAll.X = (*i)->X;
-			MsgCreateAll.Y = (*i)->Y;
-			SendUnicast((char*)&MsgCreateAll, player);
-		}
-		player->state = ALIVE;
-		printf("%d: Set Create Message!\n", player->ID);
-	}
-
 	int msgBufSize = player->sendBuf.GetUseSize();
 	if (msgBufSize <= 0)
 	{
@@ -154,31 +140,29 @@ void SendProc(Player* player)
 		msgBufSize -= remains;
 	}
 
-	char* msgBuf = new char[msgBufSize]();
+	char msgBuf[MAX_BUF_SIZE];
 	int dequeueRet = player->sendBuf.Dequeue(msgBuf, msgBufSize);
 	if (dequeueRet != msgBufSize)
 	{
-		//SetCursor();
+		SetCursor();
 		printf("Error! Line %d: recv buffer dequeue\n", __LINE__);
 		Disconnect(player);
-		delete[] msgBuf;
 		return;
 	}
 
 	int sendRet = send(player->sock, msgBuf, msgBufSize, 0);
-	delete[] msgBuf;
 	if (sendRet == SOCKET_ERROR)
 	{
 		int err = WSAGetLastError();
 		if (err != WSAEWOULDBLOCK)
 		{
-			//SetCursor();
+			SetCursor();
 			printf("Error! Line %d: %d\n", __LINE__, err);
 			Disconnect(player);
 			return;
 		}
 	}
-	printf("%d: Send %d bytes\n", player->ID, sendRet);
+	//printf("%d: Send %d bytes\n", player->ID, sendRet);
 }
 
 void SendUnicast(char* msg, Player* player)
@@ -186,7 +170,7 @@ void SendUnicast(char* msg, Player* player)
 	int enqueueRet = player->sendBuf.Enqueue(msg, MSGSIZE);
 	if (enqueueRet != MSGSIZE)
 	{
-		//SetCursor();
+		SetCursor();
 		printf("Error! Line %d: send buffer enqueue error\n", __LINE__);
 		Disconnect(player);		
 	}	
@@ -199,12 +183,12 @@ void SendBroadcast(char* msg, Player* expPlayer)
 	{
 		for (CList<Player*>::iterator i = gPlayerList.begin(); i != gPlayerList.end(); i++)
 		{
-			if ((*i)->state == ALIVE)
+			if ((*i)->alive)
 			{
 				enqueueRet = (*i)->sendBuf.Enqueue(msg, MSGSIZE);
 				if (enqueueRet != MSGSIZE)
 				{
-					//SetCursor();
+					SetCursor();
 					printf("Error! Line %d: send buffer enqueue error\n", __LINE__);
 					Disconnect(*i);
 				}
@@ -215,12 +199,12 @@ void SendBroadcast(char* msg, Player* expPlayer)
 	{
 		for (CList<Player*>::iterator i = gPlayerList.begin(); i != gPlayerList.end(); i++)
 		{
-			if (expPlayer->ID != (*i)->ID && (*i)->state == ALIVE)
+			if (expPlayer->ID != (*i)->ID && (*i)->alive)
 			{
 				enqueueRet = (*i)->sendBuf.Enqueue(msg, MSGSIZE);
 				if (enqueueRet != MSGSIZE)
 				{
-					//SetCursor();
+					SetCursor();
 					printf("Error! Line %d: send buffer enqueue error\n", __LINE__);
 					Disconnect(*i);
 				}
@@ -234,7 +218,7 @@ void Disconnect(Player* player)
 {
 	MSG_DELETE MsgDelete;
 	MsgDelete.ID = player->ID;
-	player->state = DEAD;
+	player->alive = false;
 	SendBroadcast((char*)&MsgDelete);
 	deleted = true;
 }
@@ -243,7 +227,7 @@ void DeleteDeadPlayers()
 {
 	for (CList<Player*>::iterator i = gPlayerList.begin(); i != gPlayerList.end();)
 	{
-		if ((*i)->state == DEAD)
+		if (!(*i)->alive)
 		{
 			Player* player = *i;
 			i = gPlayerList.erase(i);
