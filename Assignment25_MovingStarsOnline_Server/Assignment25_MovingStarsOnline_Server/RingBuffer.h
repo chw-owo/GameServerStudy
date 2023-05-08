@@ -1,5 +1,5 @@
 #pragma once
-#define DEFAULT_BUF_SIZE 256
+#define DEFAULT_BUF_SIZE 512
 #define MAX_BUF_SIZE 4096
 
 class RingBuffer
@@ -9,8 +9,6 @@ public:
     RingBuffer(int iBufferSize);
     ~RingBuffer(void);
 
-    bool isEmpty(void);
-    bool isFull(void);
     int GetBufferSize(void);
     int GetUseSize(void);
     int GetFreeSize(void);
@@ -22,7 +20,7 @@ public:
     int Peek(char* chpDest, int iSize);
     void ClearBuffer(void);
     bool Resize(int size);
-
+     
     int MoveReadPos(int iSize);
     int MoveWritePos(int iSize);
     char* GetReadBufferPtr(void);

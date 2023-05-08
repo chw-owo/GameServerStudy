@@ -167,7 +167,6 @@ int main(int argc, char* argv[])
 			SetConsoleCursorPosition(hConsole, stCoord);
 			printf(screenBuffer[i]);
 		}
-
 	}
 
 	closesocket(listen_sock);

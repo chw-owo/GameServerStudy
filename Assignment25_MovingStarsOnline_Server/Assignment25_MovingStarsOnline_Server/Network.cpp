@@ -35,7 +35,6 @@ void AcceptProc()
 	MSG_ID MsgID;
 	MsgID.ID = newPlayer->ID;
 	SendUnicast((char*)&MsgID, newPlayer);
-	//printf("%d: Set ID Message!\n", newPlayer->ID);
 
 	// Send <Create New Player Message> to All Player
 	MSG_CREATE MsgCreateNew;
@@ -43,7 +42,6 @@ void AcceptProc()
 	MsgCreateNew.X = newPlayer->X;
 	MsgCreateNew.Y = newPlayer->Y;
 	SendBroadcast((char*)&MsgCreateNew, newPlayer);
-	//printf("%d: Set Create Message!\n", newPlayer->ID);
 
 	// Send <Create All Players Message> to New Player
 	MSG_CREATE MsgCreateAll;
@@ -54,7 +52,6 @@ void AcceptProc()
 		MsgCreateAll.Y = (*i)->Y;
 		SendUnicast((char*)&MsgCreateAll, newPlayer);
 	}
-	//printf("%d: Set Create Message!\n", newPlayer->ID);
 }
 
 void RecvProc(Player* player)
@@ -77,8 +74,6 @@ void RecvProc(Player* player)
 		Disconnect(player);
 		return;
 	}
-
-	//printf("%d: Recieve %d bytes\n", player->ID, recvRet);
 
 	int enqueueSize = player->recvBuf.Enqueue(recvBuf, recvRet);
 	if (enqueueSize != recvRet)
@@ -117,7 +112,6 @@ void SetBuffer(Player* player)
 				player->X = pMsg->X;
 				player->Y = pMsg->Y;
 				SendBroadcast((char*)pMsg, player);
-				//printf("%d: Set Move Message!\n", player->ID);
 			}
 			break;
 		}
@@ -162,7 +156,6 @@ void SendProc(Player* player)
 			return;
 		}
 	}
-	//printf("%d: Send %d bytes\n", player->ID, sendRet);
 }
 
 void SendUnicast(char* msg, Player* player)
