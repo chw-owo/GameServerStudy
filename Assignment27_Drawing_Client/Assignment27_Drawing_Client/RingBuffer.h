@@ -39,5 +39,9 @@ private:
     int _readPos = 0;
     int _writePos = 0;
 
+    // readPos는 비어있는 공간을,
+    // writePos는 마지막으로 넣은 공간을 가리킨다
+    // 따라서 readPos == writePos는 버퍼가 비어있음을 의미하고
+    // 버퍼가 찼을 때는 (readPos + 1)%_bufferSize == writePos 가 된다. 
 };
 

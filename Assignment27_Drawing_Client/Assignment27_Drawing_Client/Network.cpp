@@ -89,7 +89,7 @@ void ProcessSocketMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 	case FD_READ:
 		if (g_Session.bConnected)
-			HandleReadEvent();
+			HandleReadEvent(hWnd);
 		break;
 
 	case FD_WRITE:
@@ -104,7 +104,9 @@ void ProcessSocketMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 	}
 }
 
-void HandleReadEvent()
+HPEN g_hPen;
+
+void HandleReadEvent(HWND hWnd)
 {
 	char buf[MAX_BUF_SIZE];
 	int recvRet = recv(g_Session.sock, buf, MAX_BUF_SIZE, 0);
@@ -125,20 +127,21 @@ void HandleReadEvent()
 		return;
 	}
 
-	while (g_Session.recvBuf.GetUseSize() > 0)
+	int useSize = g_Session.recvBuf.GetUseSize();
+	while (useSize > 0)
 	{
-		if (g_Session.recvBuf.GetUseSize() <= HEADER_LEN) 
+		if (useSize <= HEADER_LEN)
 			break;
 
 		Header header;
-		int peekRet = g_Session.recvBuf.Peek((char*)& header, HEADER_LEN);
+		int peekRet = g_Session.recvBuf.Peek((char*)&header, HEADER_LEN);
 		if (peekRet != HEADER_LEN)
 		{
 			printf("Error! Func %s Line %d\n", __func__, __LINE__);
 			return;
 		}
 
-		if (HEADER_LEN + header.len > g_Session.recvBuf.GetUseSize())
+		if (useSize < HEADER_LEN + header.len)
 			break;
 
 		DRAW_PACKET drawPacket;
@@ -149,19 +152,28 @@ void HandleReadEvent()
 			return;
 		}
 
-		int dequeueRet = g_Session.recvBuf.Dequeue((char*) & drawPacket, header.len);
+		int dequeueRet = g_Session.recvBuf.Dequeue((char*)&drawPacket, header.len);
 		if (dequeueRet != header.len)
 		{
 			printf("Error! Func %s Line %d\n", __func__, __LINE__);
 			return;
 		}
-		
-		printf("Other: %d-%d, %d-%d\n",
+
+		printf("Other %d bytes: %d-%d, %d-%d\n", header.len,
 			drawPacket.iStartX, drawPacket.iStartY,
 			drawPacket.iEndX, drawPacket.iEndY);
-		
-		// Draw: GetDC...
+
+		HDC hdc = GetDC(hWnd);
+		HPEN hPen = (HPEN)SelectObject(hdc, g_hPen);
+		MoveToEx(hdc, drawPacket.iStartX, drawPacket.iStartY, NULL);
+		LineTo(hdc, drawPacket.iEndX, drawPacket.iEndY);
+		SelectObject(hdc, hPen);
+		ReleaseDC(hWnd, hdc);
+
+		useSize = g_Session.recvBuf.GetUseSize();
+
 	}
+
 	_DebugTest;
 }
 
@@ -210,7 +222,7 @@ void SendUnicast()
 }
 
 
-void EnqueueSendData(char* data, int len)
+void EnqueueSendData(char* data, unsigned short len)
 {
 	int enqueueRet;
 

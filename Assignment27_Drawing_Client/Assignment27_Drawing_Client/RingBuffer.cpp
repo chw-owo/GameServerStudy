@@ -1,6 +1,6 @@
 #include "RingBuffer.h"
 #include <iostream>
-#define RINGBUFFER_DEBUG
+//#define RINGBUFFER_DEBUG
 
 RingBuffer::RingBuffer(void) : _bufferSize(DEFAULT_BUF_SIZE), _freeSize(DEFAULT_BUF_SIZE - 1)
 {
@@ -36,17 +36,6 @@ int RingBuffer::GetUseSize(void)
         useSize = _bufferSize - _readPos + _writePos;
     }
 
-    int freeSize = _bufferSize - 1;
-
-    if (_writePos > _readPos)
-    {
-        freeSize = _bufferSize - _writePos + _readPos - 1;
-    }
-    else if (_writePos < _readPos)
-    {
-        freeSize = _readPos - _writePos - 1;
-    }
-
     if (useSize != _useSize)
     {
         printf("Error! Func %s Line %d\n", __func__, __LINE__);
@@ -57,7 +46,6 @@ int RingBuffer::GetUseSize(void)
         printf("Real Use Size: %d\n", _useSize);
         printf("Real Free Size: %d\n", _freeSize);
         printf("Calced Use Size: %d\n", useSize);
-        printf("Calced Free Size: %d\n", freeSize);
         printf("\n");
         return -1;
     }
@@ -69,17 +57,6 @@ int RingBuffer::GetUseSize(void)
 int RingBuffer::GetFreeSize(void)
 {
 #ifdef RINGBUFFER_DEBUG
-
-    int useSize = 0;
-
-    if (_writePos > _readPos)
-    {
-        useSize = _writePos - _readPos;
-    }
-    else if (_writePos < _readPos)
-    {
-        useSize = _bufferSize - _readPos + _writePos;
-    }
 
     int freeSize = _bufferSize - 1;
 
@@ -101,7 +78,6 @@ int RingBuffer::GetFreeSize(void)
         printf("Write: %d\n", _writePos);
         printf("Real Use Size: %d\n", _useSize);
         printf("Real Free Size: %d\n", _freeSize);
-        printf("Calced Use Size: %d\n", useSize);
         printf("Calced Free Size: %d\n", freeSize);
         printf("\n");
         return -1;
@@ -136,7 +112,7 @@ int RingBuffer::DirectDequeueSize(void)
     }
     else
     {
-        directDequeueSize = _bufferSize - _readPos;
+        directDequeueSize = _bufferSize - _readPos - 1;
     }
 
     return directDequeueSize;
@@ -165,6 +141,27 @@ int RingBuffer::Enqueue(char* chpData, int iSize)
     if (iSize <= DirectEnqueueSize())
     {
         memcpy_s(&_buffer[(_writePos + 1) % _bufferSize], iSize, chpData, iSize);
+
+#ifdef RINGBUFFER_DEBUG
+        printf("\n\n");
+        printf("Enqueue===========================\n\n");
+        int idx = 0;
+        while (idx < iSize)
+        {
+            printf("%d ", chpData[idx]);
+            idx++;
+        }
+        printf("\n");
+
+        idx = 0;
+        while (idx < iSize)
+        {
+            printf("%d ", _buffer[(_writePos + 1) % _bufferSize + idx]);
+            idx++;
+        }
+        printf("\n\n===================================");
+        printf("\n\n");
+#endif
     }
     else
     {
@@ -172,6 +169,34 @@ int RingBuffer::Enqueue(char* chpData, int iSize)
         int size2 = iSize - size1;
         memcpy_s(&_buffer[(_writePos + 1) % _bufferSize], size1, chpData, size1);
         memcpy_s(_buffer, size2, &chpData[size1], size2);
+
+#ifdef RINGBUFFER_DEBUG
+        printf("\n\n");
+        printf("Enqueue===========================\n\n");
+        int idx = 0;
+        while (idx < iSize)
+        {
+            printf("%d ", chpData[idx]);
+            idx++;
+        }
+        printf("\n");
+
+        idx = 0;
+        while (idx < size1)
+        {
+            printf("%d ", _buffer[(_writePos + 1) % _bufferSize + idx]);
+            idx++;
+        }
+        printf("=[%d]", (_writePos + 1) % _bufferSize + idx - 1);
+        idx = 0;
+        while (idx < size2)
+        {
+            printf("%d ", _buffer[idx]);
+            idx++;
+        }
+        printf("\n\n===================================");
+        printf("\n\n");
+#endif
     }
 
     _useSize += iSize;
@@ -208,6 +233,19 @@ int RingBuffer::Dequeue(char* chpData, int iSize)
     if (iSize <= DirectDequeueSize())
     {
         memcpy_s(chpData, iSize, &_buffer[(_readPos + 1) % _bufferSize], iSize);
+
+#ifdef RINGBUFFER_DEBUG
+        printf("\n\n");
+        printf("Dequeue===========================\n\n");
+        int idx = 0;
+        while (idx < iSize)
+        {
+            printf("%d ", _buffer[(_readPos + 1) % _bufferSize + idx]);
+            idx++;
+        }
+        printf("\n\n===================================");
+        printf("\n\n");
+#endif
     }
     else
     {
@@ -215,6 +253,27 @@ int RingBuffer::Dequeue(char* chpData, int iSize)
         int size2 = iSize - size1;
         memcpy_s(chpData, size1, &_buffer[(_readPos + 1) % _bufferSize], size1);
         memcpy_s(&chpData[size1], size2, _buffer, size2);
+
+#ifdef RINGBUFFER_DEBUG
+        printf("\n\n");
+        printf("Dequeue===========================\n\n");
+        int idx = 0;
+        while (idx < size1)
+        {
+            printf("%d ", _buffer[(_readPos + 1) % _bufferSize + idx]);
+            idx++;
+        }
+        printf("=[%d]", (_readPos + 1) % _bufferSize + idx - 1);
+
+        idx = 0;
+        while (idx < size2)
+        {
+            printf("%d ", _buffer[idx]);
+            idx++;
+        }
+        printf("\n\n===================================");
+        printf("\n\n");
+#endif
     }
 
     _useSize -= iSize;
@@ -290,22 +349,18 @@ bool RingBuffer::Resize(int iSize)
 
     if (_writePos > _readPos)
     {
-        _readPos = (_readPos + 1) % _bufferSize;
-        memcpy_s(newBuffer, iSize, &_buffer[_readPos], _useSize);
+        memcpy_s(newBuffer, iSize, &_buffer[(_readPos + 1) % _bufferSize], _useSize);
     }
     else if (_writePos < _readPos)
     {
-        _readPos = (_readPos + 1) % _bufferSize;
-
-        int ReadSize = _writePos;
-        int backSize = _useSize - ReadSize;
-        memcpy_s(newBuffer, iSize, &_buffer[_readPos], backSize);
-        memcpy_s(&newBuffer[backSize], iSize - backSize, _buffer, ReadSize);
+        int size1 = _bufferSize - _readPos - 1;
+        int size2 = _writePos + 1;
+        memcpy_s(newBuffer, iSize, &_buffer[(_readPos + 1) % _bufferSize], size1);
+        memcpy_s(&newBuffer[size1], iSize - size1, _buffer, size2);
     }
 
     delete[] _buffer;
     _buffer = newBuffer;
-
     _bufferSize = iSize;
     _freeSize = _bufferSize - _useSize - 1;
     _readPos = 0;

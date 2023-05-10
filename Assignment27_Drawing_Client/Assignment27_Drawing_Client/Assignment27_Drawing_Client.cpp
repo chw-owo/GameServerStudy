@@ -54,46 +54,18 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     return (int)msg.wParam;
 }
 
+BOOL g_bClick;
 int iOldX = 0;
 int iOldY = 0; 
 int iCurX = 0; 
 int iCurY = 0;
-
-void Render(HWND hWnd)
-{
-    PAINTSTRUCT ps;
-    HDC hdc = BeginPaint(hWnd, &ps);
-    EndPaint(hWnd, &ps);
-}
-
-void ProcessMouseMove(WPARAM wParam, LPARAM lParam)
-{
-    // 아 오키... 마우스 뗐을 때는 그리지 않게끔 지정하면 됨 캬학 얼추 끝났다!!!
-    if (wParam & MK_LBUTTON)
-    {
-        iCurX = GET_X_LPARAM(lParam);
-        iCurY = GET_Y_LPARAM(lParam);
-
-        DRAW_PACKET drawPacket;
-        drawPacket.iStartX = iOldX;
-        drawPacket.iStartY = iOldY;
-        drawPacket.iEndX = iCurX;
-        drawPacket.iEndY = iCurY;
-
-        iOldX = iCurX;
-        iOldY = iCurY;
-
-        EnqueueSendData((char*)&drawPacket, (int)sizeof(DRAW_PACKET));
-        SendUnicast();
-    }
-}
-
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     switch (message)
     {
     case WM_CREATE:
+        g_hPen = CreatePen(PS_SOLID, 1, BLACKNESS);
         if (!InitialSocket(hWnd))
             PostQuitMessage(0);
         break;
@@ -102,15 +74,37 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         ProcessSocketMessage(hWnd, message, wParam, lParam);
         break;
 
-    case WM_MOUSEMOVE:
-        ProcessMouseMove(wParam, lParam);
+    case WM_LBUTTONDOWN:
+        g_bClick = true;
         break;
 
-    case WM_PAINT:
-        Render(hWnd);
+    case WM_LBUTTONUP:
+        g_bClick = false;
+        break;
+
+    case WM_MOUSEMOVE:
+
+        iCurX = GET_X_LPARAM(lParam);
+        iCurY = GET_Y_LPARAM(lParam);
+
+        if (g_bClick)
+        {
+            DRAW_PACKET drawPacket;
+            drawPacket.iStartX = iOldX;
+            drawPacket.iStartY = iOldY;
+            drawPacket.iEndX = iCurX;
+            drawPacket.iEndY = iCurY;
+
+            EnqueueSendData((char*)&drawPacket, (unsigned short)sizeof(DRAW_PACKET));
+            SendUnicast();
+        }
+
+        iOldX = iCurX;
+        iOldY = iCurY;
         break;
 
     case WM_DESTROY:
+        DeleteObject(g_hPen);
         PostQuitMessage(0);
         break;
 

@@ -34,12 +34,14 @@ struct DRAW_PACKET
 bool InitialSocket(HWND hWnd);
 void ProcessSocketMessage(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 
-void HandleReadEvent();
+void HandleReadEvent(HWND hWnd);
 void HandleWriteEvent();
 void HandleCloseEvent();
 
-void EnqueueSendData(char* data, int len);
+void EnqueueSendData(char* data, unsigned short len);
 void SendUnicast();
+
+extern HPEN g_hPen;
 
 // For Debugging
 //#define NETWORK_DEBUG
