@@ -1,6 +1,6 @@
 #pragma once
-#define DEFAULT_BUF_SIZE (512 + 1)
-#define MAX_BUF_SIZE (8192 + 1) 
+#define DEFAULT_BUF_SIZE (4096 + 1)
+#define MAX_BUF_SIZE (32768 + 1) 
 
 class RingBuffer
 {

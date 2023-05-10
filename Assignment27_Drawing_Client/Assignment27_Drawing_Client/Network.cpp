@@ -3,7 +3,7 @@
 #pragma comment(lib, "Ws2_32.lib")
 
 #define IPMAX 12
-#define SERVERIP L"127.0.0.1"
+#define SERVERIP L"192.168.30.15"
 #define SERVERPORT 25000
 #define HEADER_LEN sizeof(Header)
 
