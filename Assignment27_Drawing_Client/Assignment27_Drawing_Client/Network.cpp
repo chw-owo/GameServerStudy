@@ -2,8 +2,7 @@
 #include "stdio.h"
 #pragma comment(lib, "Ws2_32.lib")
 
-#define IPMAX 12
-#define SERVERIP L"192.168.30.15"
+#define SERVERIP L"192.168.30.13"
 #define SERVERPORT 25000
 #define HEADER_LEN sizeof(Header)
 
@@ -36,7 +35,6 @@ bool InitialSocket(HWND hWnd)
 	InetPton(AF_INET, SERVERIP, &serveraddr.sin_addr);
 	serveraddr.sin_port = htons(SERVERPORT);
 
-
 	// AsyncSelect the Socket
 	ret = WSAAsyncSelect(g_Session.sock, hWnd, UM_SOCKET,
 				FD_CONNECT | FD_READ | FD_WRITE | FD_CLOSE);
@@ -46,7 +44,6 @@ bool InitialSocket(HWND hWnd)
 		printf("Error! Func %s Line %d: %d\n", __func__, __LINE__, err);
 		return false;
 	}
-
 
 	// Try Connect
 	ret = connect(g_Session.sock, (SOCKADDR*)&serveraddr, sizeof(serveraddr));
