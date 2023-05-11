@@ -1,5 +1,5 @@
 #pragma once
-#define DEFAULT_BUF_SIZE (512 + 1)
+#define DEFAULT_BUF_SIZE (2048 + 1)
 #define MAX_BUF_SIZE (8192 + 1) 
 
 /*====================================================================

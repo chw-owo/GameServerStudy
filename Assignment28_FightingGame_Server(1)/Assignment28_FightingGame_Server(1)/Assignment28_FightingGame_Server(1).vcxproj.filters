@@ -22,10 +22,7 @@
     <ClCompile Include="Main.cpp">
       <Filter>Main</Filter>
     </ClCompile>
-    <ClCompile Include="Network.cpp">
-      <Filter>Network</Filter>
-    </ClCompile>
-    <ClCompile Include="PacketDefine.cpp">
+    <ClCompile Include="NetworkManager.cpp">
       <Filter>Network</Filter>
     </ClCompile>
     <ClCompile Include="Player.cpp">
@@ -34,12 +31,15 @@
     <ClCompile Include="RingBuffer.cpp">
       <Filter>DataStruct</Filter>
     </ClCompile>
+    <ClCompile Include="PlayerManager.cpp">
+      <Filter>Content</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Main.h">
       <Filter>Main</Filter>
     </ClInclude>
-    <ClInclude Include="Network.h">
+    <ClInclude Include="NetworkManager.h">
       <Filter>Network</Filter>
     </ClInclude>
     <ClInclude Include="PacketDefine.h">
@@ -53,6 +53,12 @@
     </ClInclude>
     <ClInclude Include="List.h">
       <Filter>DataStruct</Filter>
+    </ClInclude>
+    <ClInclude Include="Typedef.h">
+      <Filter>Main</Filter>
+    </ClInclude>
+    <ClInclude Include="PlayerManager.h">
+      <Filter>Content</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

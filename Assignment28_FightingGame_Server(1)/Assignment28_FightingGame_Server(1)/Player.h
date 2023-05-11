@@ -1,43 +1,39 @@
 #pragma once
-#include "List.h"
 #include "RingBuffer.h"
-#include <ws2tcpip.h>
-#include <iostream>
+#include "Typedef.h"
 
-#define XMAX 81
-#define YMAX 24
+class Session;
+class PlayerManager;
 
-struct Player
+class Player
 {
-	bool alive = false;
-	SOCKET sock;
-	RingBuffer recvBuf;
-	RingBuffer sendBuf;
+	friend PlayerManager;
 
-	__int32 ID;
-	__int32 X = XMAX / 2;
-	__int32 Y = YMAX / 2;
-};
-
-class IDGenerator
-{
 public:
-	IDGenerator()
-	{
-		srand((unsigned int)time(NULL));
-		ID = rand();
-	}
-	__int32 AllocID()
-	{
-		ID++;
-		return ID;
-	}
+	Player(Session* pSession, uint32 ID,
+		uint8 direction, uint16 x, uint16 y, uint8 hp);
+	~Player();
+	void Update();
+	void OnCollision(Player* player);
+
+public:
+	bool GetDead() { return _dead; }
+	uint16 GetX() { return _x; }
+	uint16 GetY() { return _y; }
 
 private:
-	__int32 ID;
+	void DequeueRecvBuf();
 
+private:
+
+	bool _dead = false;
+	bool _move = false;
+	Session* _pSession;
+
+	uint32 _ID;
+	uint8 _direction;
+	uint16 _x;
+	uint16 _y;
+	uint8 _hp;
 };
 
-extern CList<Player*> gPlayerList;
-extern IDGenerator gIDGenerator;
-extern bool deleted;

@@ -38,15 +38,15 @@ int RingBuffer::GetUseSize(void)
 
     if (useSize != _useSize)
     {
-        wprintf(L"Error! Func %s Line %d\n", __func__, __LINE__);
-        wprintf(L"\n\n");
-        wprintf(L"Buffer Size: %d\n", _bufferSize);
-        wprintf(L"Read: %d\n", _readPos);
-        wprintf(L"Write: %d\n", _writePos);
-        wprintf(L"Real Use Size: %d\n", _useSize);
-        wprintf(L"Real Free Size: %d\n", _freeSize);
-        wprintf(L"Calced Use Size: %d\n", useSize);
-        wprintf(L"\n");
+        printf("Error! Func %s Function %s Line %d\n", __func__, __func__, __LINE__);
+        printf("\n\n");
+        printf("Buffer Size: %d\n", _bufferSize);
+        printf("Read: %d\n", _readPos);
+        printf("Write: %d\n", _writePos);
+        printf("Real Use Size: %d\n", _useSize);
+        printf("Real Free Size: %d\n", _freeSize);
+        printf("Calced Use Size: %d\n", useSize);
+        printf("\n");
         return -1;
     }
 
@@ -71,15 +71,15 @@ int RingBuffer::GetFreeSize(void)
 
     if (freeSize != _freeSize)
     {
-        wprintf(L"Error! Func %s Line %d\n", __func__, __LINE__);
-        wprintf(L"\n\n");
-        wprintf(L"Buffer Size: %d\n", _bufferSize);
-        wprintf(L"Read: %d\n", _readPos);
-        wprintf(L"Write: %d\n", _writePos);
-        wprintf(L"Real Use Size: %d\n", _useSize);
-        wprintf(L"Real Free Size: %d\n", _freeSize);
-        wprintf(L"Calced Free Size: %d\n", freeSize);
-        wprintf(L"\n");
+        printf("Error! Func %s Function %s Line %d\n", __func__, __func__, __LINE__);
+        printf("\n\n");
+        printf("Buffer Size: %d\n", _bufferSize);
+        printf("Read: %d\n", _readPos);
+        printf("Write: %d\n", _writePos);
+        printf("Real Use Size: %d\n", _useSize);
+        printf("Real Free Size: %d\n", _freeSize);
+        printf("Calced Free Size: %d\n", freeSize);
+        printf("\n");
         return -1;
     }
 #endif
@@ -124,7 +124,7 @@ int RingBuffer::Enqueue(char* chpData, int iSize)
 #ifdef RINGBUFFER_DEBUG
     if (GetFreeSize() < 0 || DirectEnqueueSize() < 0)
     {
-        wprintf(L"Error! Func %s Line %d\n", __func__, __LINE__);
+        printf("Error! Func %s Function %s Line %d\n", __func__, __func__, __LINE__);
         return -1;
     }
 #endif
@@ -133,7 +133,7 @@ int RingBuffer::Enqueue(char* chpData, int iSize)
     {
         if (!Resize(_bufferSize + iSize))
         {
-            wprintf(L"Error! Func %s Line %d\n", __func__, __LINE__);
+            printf("Error! Func %s Function %s Line %d\n", __func__, __func__, __LINE__);
             return -1;
         }
     }
@@ -143,24 +143,24 @@ int RingBuffer::Enqueue(char* chpData, int iSize)
         memcpy_s(&_buffer[(_writePos + 1) % _bufferSize], iSize, chpData, iSize);
 
 #ifdef RINGBUFFER_DEBUG
-        wprintf(L"\n\n");
-        wprintf(L"Enqueue===========================\n\n");
+        printf("\n\n");
+        printf("Enqueue===========================\n\n");
         int idx = 0;
         while (idx < iSize)
         {
-            wprintf(L"%d ", chpData[idx]);
+            printf("%d ", chpData[idx]);
             idx++;
         }
-        wprintf(L"\n");
+        printf("\n");
 
         idx = 0;
         while (idx < iSize)
         {
-            wprintf(L"%d ", _buffer[(_writePos + 1) % _bufferSize + idx]);
+            printf("%d ", _buffer[(_writePos + 1) % _bufferSize + idx]);
             idx++;
         }
-        wprintf(L"\n\n===================================");
-        wprintf(L"\n\n");
+        printf("\n\n===================================");
+        printf("\n\n");
 #endif
     }
     else
@@ -171,31 +171,31 @@ int RingBuffer::Enqueue(char* chpData, int iSize)
         memcpy_s(_buffer, size2, &chpData[size1], size2);
 
 #ifdef RINGBUFFER_DEBUG
-        wprintf(L"\n\n");
-        wprintf(L"Enqueue===========================\n\n");
+        printf("\n\n");
+        printf("Enqueue===========================\n\n");
         int idx = 0;
         while (idx < iSize)
         {
-            wprintf(L"%d ", chpData[idx]);
+            printf("%d ", chpData[idx]);
             idx++;
         }
-        wprintf(L"\n");
+        printf("\n");
 
         idx = 0;
         while (idx < size1)
         {
-            wprintf(L"%d ", _buffer[(_writePos + 1) % _bufferSize + idx]);
+            printf("%d ", _buffer[(_writePos + 1) % _bufferSize + idx]);
             idx++;
         }
-        wprintf(L"=[%d]", (_writePos + 1) % _bufferSize + idx - 1);
+        printf("=[%d]", (_writePos + 1) % _bufferSize + idx - 1);
         idx = 0;
         while (idx < size2)
         {
-            wprintf(L"%d ", _buffer[idx]);
+            printf("%d ", _buffer[idx]);
             idx++;
         }
-        wprintf(L"\n\n===================================");
-        wprintf(L"\n\n");
+        printf("\n\n===================================");
+        printf("\n\n");
 #endif
     }
 
@@ -206,7 +206,7 @@ int RingBuffer::Enqueue(char* chpData, int iSize)
 #ifdef RINGBUFFER_DEBUG
     if (GetUseSize() < 0 || GetFreeSize() < 0)
     {
-        wprintf(L"Error! Func %s Line %d\n", __func__, __LINE__);
+        printf("Error! Func %s Function %s Line %d\n", __func__, __func__, __LINE__);
         return -1;
     }
 #endif
@@ -219,14 +219,14 @@ int RingBuffer::Dequeue(char* chpData, int iSize)
 #ifdef RINGBUFFER_DEBUG
     if (GetUseSize() < 0 || DirectDequeueSize() < 0)
     {
-        wprintf(L"Error! Func %s Line %d\n", __func__, __LINE__);
+        printf("Error! Func %s Function %s Line %d\n", __func__, __func__, __LINE__);
         return -1;
     }
 #endif
 
     if (iSize > GetUseSize())
     {
-        wprintf(L"Error! Func %s Line %d\n", __func__, __LINE__);
+        printf("Error! Func %s Function %s Line %d\n", __func__, __func__, __LINE__);
         return -1;
     }
 
@@ -235,16 +235,16 @@ int RingBuffer::Dequeue(char* chpData, int iSize)
         memcpy_s(chpData, iSize, &_buffer[(_readPos + 1) % _bufferSize], iSize);
 
 #ifdef RINGBUFFER_DEBUG
-        wprintf(L"\n\n");
-        wprintf(L"Dequeue===========================\n\n");
+        printf("\n\n");
+        printf("Dequeue===========================\n\n");
         int idx = 0;
         while (idx < iSize)
         {
-            wprintf(L"%d ", _buffer[(_readPos + 1) % _bufferSize + idx]);
+            printf("%d ", _buffer[(_readPos + 1) % _bufferSize + idx]);
             idx++;
         }
-        wprintf(L"\n\n===================================");
-        wprintf(L"\n\n");
+        printf("\n\n===================================");
+        printf("\n\n");
 #endif
     }
     else
@@ -255,24 +255,24 @@ int RingBuffer::Dequeue(char* chpData, int iSize)
         memcpy_s(&chpData[size1], size2, _buffer, size2);
 
 #ifdef RINGBUFFER_DEBUG
-        wprintf(L"\n\n");
-        wprintf(L"Dequeue===========================\n\n");
+        printf("\n\n");
+        printf("Dequeue===========================\n\n");
         int idx = 0;
         while (idx < size1)
         {
-            wprintf(L"%d ", _buffer[(_readPos + 1) % _bufferSize + idx]);
+            printf("%d ", _buffer[(_readPos + 1) % _bufferSize + idx]);
             idx++;
         }
-        wprintf(L"=[%d]", (_readPos + 1) % _bufferSize + idx - 1);
+        printf("=[%d]", (_readPos + 1) % _bufferSize + idx - 1);
 
         idx = 0;
         while (idx < size2)
         {
-            wprintf(L"%d ", _buffer[idx]);
+            printf("%d ", _buffer[idx]);
             idx++;
         }
-        wprintf(L"\n\n===================================");
-        wprintf(L"\n\n");
+        printf("\n\n===================================");
+        printf("\n\n");
 #endif
     }
 
@@ -283,7 +283,7 @@ int RingBuffer::Dequeue(char* chpData, int iSize)
 #ifdef RINGBUFFER_DEBUG
     if (GetUseSize() < 0 || GetFreeSize() < 0)
     {
-        wprintf(L"Error! Func %s Line %d\n", __func__, __LINE__);
+        printf("Error! Func %s Function %s Line %d\n", __func__, __func__, __LINE__);
         return -1;
     }
 #endif
@@ -295,14 +295,14 @@ int RingBuffer::Peek(char* chpDest, int iSize)
 #ifdef RINGBUFFER_DEBUG
     if (GetUseSize() < 0 || DirectDequeueSize() < 0)
     {
-        wprintf(L"Error! Func %s Line %d\n", __func__, __LINE__);
+        printf("Error! Func %s Function %s Line %d\n", __func__, __func__, __LINE__);
         return -1;
     }
 #endif
 
     if (iSize > GetUseSize())
     {
-        wprintf(L"Error! Func %s Line %d\n", __func__, __LINE__);
+        printf("Error! Func %s Function %s Line %d\n", __func__, __func__, __LINE__);
         return -1;
     }
 
@@ -335,13 +335,13 @@ bool RingBuffer::Resize(int iSize)
 {
     if (iSize > MAX_BUF_SIZE)
     {
-        wprintf(L"Error! Func %s Line %d\n", __func__, __LINE__);
+        printf("Error! Func %s Function %s Line %d\n", __func__, __func__, __LINE__);
         return false;
     }
 
     if (iSize < _useSize)
     {
-        wprintf(L"Error! Func %s Line %d\n", __func__, __LINE__);
+        printf("Error! Func %s Function %s Line %d\n", __func__, __func__, __LINE__);
         return false;
     }
 
@@ -369,7 +369,7 @@ bool RingBuffer::Resize(int iSize)
 #ifdef RINGBUFFER_DEBUG
     if (GetUseSize() < 0 || GetFreeSize() < 0)
     {
-        wprintf(L"Error! Func %s Line %d\n", __func__, __LINE__);
+        printf("Error! Func %s Function %s Line %d\n", __func__, __func__, __LINE__);
         return false;
     }
 #endif
@@ -381,14 +381,14 @@ int RingBuffer::MoveReadPos(int iSize)
 #ifdef RINGBUFFER_DEBUG
     if (GetUseSize() < 0)
     {
-        wprintf(L"Error! Func %s Line %d\n", __func__, __LINE__);
+        printf("Error! Func %s Function %s Line %d\n", __func__, __func__, __LINE__);
         return -1;
     }
 #endif
 
     if (iSize > GetUseSize())
     {
-        wprintf(L"Error! Func %s Line %d\n", __func__, __LINE__);
+        printf("Error! Func %s Function %s Line %d\n", __func__, __func__, __LINE__);
         return -1;
     }
 
@@ -399,7 +399,7 @@ int RingBuffer::MoveReadPos(int iSize)
 #ifdef RINGBUFFER_DEBUG
     if (GetUseSize() < 0 || GetFreeSize() < 0)
     {
-        wprintf(L"Error! Func %s Line %d\n", __func__, __LINE__);
+        printf("Error! Func %s Function %s Line %d\n", __func__, __func__, __LINE__);
         return -1;
     }
 #endif
@@ -411,7 +411,7 @@ int RingBuffer::MoveWritePos(int iSize)
 #ifdef RINGBUFFER_DEBUG
     if (GetFreeSize() < 0)
     {
-        wprintf(L"Error! Func %s Line %d\n", __func__, __LINE__);
+        printf("Error! Func %s Function %s Line %d\n", __func__, __func__, __LINE__);
         return -1;
     }
 #endif
@@ -420,7 +420,7 @@ int RingBuffer::MoveWritePos(int iSize)
     {
         if (!Resize(_bufferSize + iSize))
         {
-            wprintf(L"Error! Func %s Line %d\n", __func__, __LINE__);
+            printf("Error! Func %s Function %s Line %d\n", __func__, __func__, __LINE__);
             return -1;
         }
     }
@@ -432,7 +432,7 @@ int RingBuffer::MoveWritePos(int iSize)
 #ifdef RINGBUFFER_DEBUG
     if (GetUseSize() < 0 || GetFreeSize() < 0)
     {
-        wprintf(L"Error! Func %s Line %d\n", __func__, __LINE__);
+        printf("Error! Func %s Function %s Line %d\n", __func__, __func__, __LINE__);
         return -1;
     }
 #endif
@@ -444,7 +444,7 @@ char* RingBuffer::GetReadBufferPtr(void)
 #ifdef RINGBUFFER_DEBUG
     if (GetUseSize() < 0 || GetFreeSize() < 0)
     {
-        wprintf(L"Error! Func %s Line %d\n", __func__, __LINE__);
+        printf("Error! Func %s Function %s Line %d\n", __func__, __func__, __LINE__);
         return nullptr;
     }
 #endif
@@ -456,7 +456,7 @@ char* RingBuffer::GetWriteBufferPtr(void)
 #ifdef RINGBUFFER_DEBUG
     if (GetUseSize() < 0 || GetFreeSize() < 0)
     {
-        wprintf(L"Error! Func %s Line %d\n", __func__, __LINE__);
+        printf("Error! Func %s Function %s Line %d\n", __func__, __func__, __LINE__);
         return nullptr;
     }
 #endif
@@ -465,13 +465,13 @@ char* RingBuffer::GetWriteBufferPtr(void)
 
 void RingBuffer::GetBufferDataForDebug()
 {
-    wprintf(L"\n");
-    wprintf(L"Buffer Size: %d\n", _bufferSize);
-    wprintf(L"Read: %d\n", _readPos);
-    wprintf(L"Write: %d\n", _writePos);
-    wprintf(L"Real Use Size: %d\n", _useSize);
-    wprintf(L"Real Free Size: %d\n", _freeSize);
-    wprintf(L"Direct Dequeue Size: %d\n", DirectDequeueSize());
-    wprintf(L"Direct Enqueue Size: %d\n", DirectEnqueueSize());
-    wprintf(L"\n");
+    printf("\n");
+    printf("Buffer Size: %d\n", _bufferSize);
+    printf("Read: %d\n", _readPos);
+    printf("Write: %d\n", _writePos);
+    printf("Real Use Size: %d\n", _useSize);
+    printf("Real Free Size: %d\n", _freeSize);
+    printf("Direct Dequeue Size: %d\n", DirectDequeueSize());
+    printf("Direct Enqueue Size: %d\n", DirectEnqueueSize());
+    printf("\n");
 }

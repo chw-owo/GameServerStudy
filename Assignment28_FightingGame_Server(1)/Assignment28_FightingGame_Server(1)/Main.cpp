@@ -1,14 +1,32 @@
 ﻿#include "Main.h"
 
-int wmain(int argc, wchar_t* argv[])
+int main(int argc, char* argv[])
 {
-	if (!NetworkInit()) return;
+	timeBeginPeriod(1);
+	NetworkManager* networkMgr = NetworkManager::GetInstance();
+	PlayerManager* playerMgr = PlayerManager::GetInstance();
+
+	if (!networkMgr->Initialize()) return 0;
 
 	while (1)
 	{
-		if (!NetworkProc()) break;
+		if (!networkMgr->Update()) break;
+		playerMgr->Update();
+		WaitForFrame();
 	}
 
-	NetworkTerminate();
+	networkMgr->Terminate();
 	return 0;
+}
+
+void WaitForFrame()
+{
+	static DWORD oldTick = timeGetTime();
+	DWORD deltaTick = timeGetTime() - oldTick;
+	oldTick += 50;
+
+	if (deltaTick < 50)
+	{
+		Sleep(50 - deltaTick);
+	}
 }
