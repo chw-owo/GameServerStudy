@@ -4,7 +4,7 @@
 #include "List.h"
 #include <iostream>
 
-
+#define FPS 50
 class NetworkManager;
 class PlayerManager
 {
@@ -22,6 +22,7 @@ public:
 
 public:
 	void Update();
+	void Terminate(); 
 
 private:
 	void EnqueueUnicast(uint8 msgType, char* msg, int size, Player* pPlayer);

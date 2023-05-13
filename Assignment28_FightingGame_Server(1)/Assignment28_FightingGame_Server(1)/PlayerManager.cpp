@@ -3,6 +3,10 @@
 #include "NetworkManager.h"
 #include "CreatePacket.h"
 
+#include <windows.h>
+#pragma comment(lib, "winmm.lib")
+
+
 PlayerManager::PlayerManager()
 {
 	srand((uint16)time(NULL));
@@ -74,6 +78,11 @@ void PlayerManager::DestroyAllPlayer()
 
 void PlayerManager::Update()
 {
+	timeBeginPeriod(1);
+	static DWORD oldTick = timeGetTime();
+	if ((timeGetTime() - oldTick) < (1000 / FPS))
+		return;
+	oldTick += (1000 / FPS);
 
 	for (CList<Player*>::iterator i = _PlayerList.begin(); i != _PlayerList.end();)
 	{
@@ -124,6 +133,10 @@ void PlayerManager::Update()
 	}
 }
 
+void PlayerManager::Terminate()
+{
+
+}
 
 void PlayerManager::EnqueueUnicast(uint8 msgType, char* msg, int size, Player* pPlayer)
 {
