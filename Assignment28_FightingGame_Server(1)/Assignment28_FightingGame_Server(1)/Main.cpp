@@ -1,32 +1,34 @@
 ﻿#include "Main.h"
 
+DWORD g_oldTick;
+bool g_bShutdown = false;
 int main(int argc, char* argv[])
 {
 	timeBeginPeriod(1);
+	g_oldTick = timeGetTime();
 	NetworkManager* networkMgr = NetworkManager::GetInstance();
 	PlayerManager* playerMgr = PlayerManager::GetInstance();
 
-	if (!networkMgr->Initialize()) return 0;
+	networkMgr->Initialize();
 
-	while (1)
+	while (!g_bShutdown)
 	{
-		if (!networkMgr->Update()) break;
-		playerMgr->Update();
-		WaitForFrame();
+		networkMgr->Update();
+		if(SkipForFixedFrame())
+			playerMgr->Update();
 	}
 
 	networkMgr->Terminate();
 	return 0;
 }
 
-void WaitForFrame()
+bool SkipForFixedFrame()
 {
-	static DWORD oldTick = timeGetTime();
-	DWORD deltaTick = timeGetTime() - oldTick;
-	oldTick += 50;
-
-	if (deltaTick < 50)
+	if ((timeGetTime() - g_oldTick) < (1000/FPS))
 	{
-		Sleep(50 - deltaTick);
+		return false;
 	}
+
+	g_oldTick += (1000 / FPS);
+	return true;
 }

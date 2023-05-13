@@ -34,6 +34,9 @@
     <ClCompile Include="PlayerManager.cpp">
       <Filter>Content</Filter>
     </ClCompile>
+    <ClCompile Include="CreatePacket.cpp">
+      <Filter>Network</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Main.h">
@@ -59,6 +62,9 @@
     </ClInclude>
     <ClInclude Include="PlayerManager.h">
       <Filter>Content</Filter>
+    </ClInclude>
+    <ClInclude Include="CreatePacket.h">
+      <Filter>Network</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

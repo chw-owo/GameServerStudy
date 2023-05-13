@@ -24,35 +24,6 @@
 #define	dfPACKET_CS_SYNC						250
 #define	dfPACKET_SC_SYNC						251
 
-// DIRECTION TYPE Define
-#define dfPACKET_MOVE_DIR_LL					0
-#define dfPACKET_MOVE_DIR_LU					1
-#define dfPACKET_MOVE_DIR_UU					2
-#define dfPACKET_MOVE_DIR_RU					3
-#define dfPACKET_MOVE_DIR_RR					4
-#define dfPACKET_MOVE_DIR_RD					5
-#define dfPACKET_MOVE_DIR_DD					6
-#define dfPACKET_MOVE_DIR_LD					7
-
-// MOVE UNIT Define
-#define dfMOVE_X 3
-#define dfMOVE_Y 2
-
-// POSITION RANGE Define
-#define dfERROR_RANGE		50
-#define dfRANGE_MOVE_TOP	50
-#define dfRANGE_MOVE_LEFT	10
-#define dfRANGE_MOVE_RIGHT	630
-#define dfRANGE_MOVE_BOTTOM	470
-
-// ATTACK RANGE Define
-#define dfATTACK1_RANGE_X		80
-#define dfATTACK2_RANGE_X		90
-#define dfATTACK3_RANGE_X		100
-#define dfATTACK1_RANGE_Y		10
-#define dfATTACK2_RANGE_Y		10
-#define dfATTACK3_RANGE_Y		20
-
 #pragma pack (push, 1)
 #define HEADER_LEN sizeof(stPACKET_HEADER)
 

@@ -127,6 +127,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="CreatePacket.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="NetworkManager.cpp" />
     <ClCompile Include="Player.cpp" />
@@ -134,6 +135,7 @@
     <ClCompile Include="RingBuffer.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CreatePacket.h" />
     <ClInclude Include="List.h" />
     <ClInclude Include="Main.h" />
     <ClInclude Include="NetworkManager.h" />

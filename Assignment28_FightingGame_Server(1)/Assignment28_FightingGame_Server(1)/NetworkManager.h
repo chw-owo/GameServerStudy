@@ -18,7 +18,12 @@ class Session
 	friend Player;
 
 private:
-	bool _disconnect;
+	void SetSessionAlive() { _alive = true; }
+	void SetSessionDead() { _alive = false; }
+	bool GetSessionAlive() { return _alive; }
+
+private:
+	bool _alive;
 	SOCKET _sock;
 	RingBuffer _recvBuf;
 	RingBuffer _sendBuf;
@@ -34,8 +39,8 @@ public:
 	static NetworkManager* GetInstance();
 
 public:
-	bool Initialize();
-	bool Update();
+	void Initialize();
+	void Update();
 	void Terminate();
 
 	void AcceptProc();

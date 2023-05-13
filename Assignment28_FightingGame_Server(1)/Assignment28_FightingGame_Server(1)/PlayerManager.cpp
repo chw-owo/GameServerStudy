@@ -1,6 +1,7 @@
 #include "PlayerManager.h"
 #include "PacketDefine.h"
 #include "NetworkManager.h"
+#include "CreatePacket.h"
 
 PlayerManager::PlayerManager()
 {
@@ -21,27 +22,20 @@ PlayerManager* PlayerManager::GetInstance()
 
 Player* PlayerManager::CreatePlayer(Session* pSession)
 {
-	Player* player = new Player(pSession, 
-		_ID, dfPACKET_MOVE_DIR_LL, 20, 20, 100);
+	Player* player = new Player(pSession, _ID);
 	_PlayerList.push_back(player);
 
 	// Send <Allocate ID Message> to New Player
 	stPACKET_SC_CREATE_MY_CHARACTER packetCreateMy;
-	packetCreateMy.ID = player->_ID;
-	packetCreateMy.Direction = player->_direction;
-	packetCreateMy.X = player->_x;
-	packetCreateMy.Y = player->_y;
-	packetCreateMy.HP = player->_hp;
+	Create_PACKET_SC_CREATE_MY_CHARACTER(packetCreateMy,
+		player->_ID, player->_direction, player->_x, player->_y, player->_hp);
 	EnqueueUnicast(dfPACKET_SC_CREATE_MY_CHARACTER, (char*)&packetCreateMy, 
 		sizeof(stPACKET_SC_CREATE_MY_CHARACTER), player);
 
 	// Send <Create New Player Message> to All Player
 	stPACKET_SC_CREATE_OTHER_CHARACTER packetCreateOther;
-	packetCreateOther.ID = player->_ID;
-	packetCreateOther.Direction = player->_direction;
-	packetCreateOther.X = player->_x;
-	packetCreateOther.Y = player->_y;
-	packetCreateOther.HP = player->_hp;
+	Create_PACKET_SC_CREATE_OTHER_CHARACTER(packetCreateOther,
+		player->_ID, player->_direction, player->_x, player->_y, player->_hp);
 	EnqueueBroadcast(dfPACKET_SC_CREATE_OTHER_CHARACTER, (char*)&packetCreateOther, 
 		sizeof(stPACKET_SC_CREATE_OTHER_CHARACTER), player);
 
@@ -51,11 +45,8 @@ Player* PlayerManager::CreatePlayer(Session* pSession)
 	{
 		if ((*i)->_ID != _ID)
 		{
-			packetCreateAll.ID = (*i)->_ID;
-			packetCreateAll.Direction = (*i)->_direction;
-			packetCreateAll.X = (*i)->_x;
-			packetCreateAll.Y = (*i)->_y;
-			packetCreateAll.HP = (*i)->_hp;
+			Create_PACKET_SC_CREATE_OTHER_CHARACTER(packetCreateAll,
+				(*i)->_ID, (*i)->_direction, (*i)->_x, (*i)->_y, (*i)->_hp);
 			EnqueueUnicast(dfPACKET_SC_CREATE_OTHER_CHARACTER, (char*)&packetCreateAll,
 				sizeof(stPACKET_SC_CREATE_OTHER_CHARACTER), player);
 		}
@@ -83,15 +74,26 @@ void PlayerManager::DestroyAllPlayer()
 
 void PlayerManager::Update()
 {
-	for (CList<Player*>::iterator i = _PlayerList.begin(); i != _PlayerList.end(); ++i)
+
+	for (CList<Player*>::iterator i = _PlayerList.begin(); i != _PlayerList.end();)
 	{
-		// Update
+		// Destroy Dead Player
+		if (!(*i)->GetStateAlive())
+		{
+			i = _PlayerList.erase(i);
+			delete((*i));
+			continue;
+		}
+
+		// Recv and Update
+		(*i)->DequeueRecvBuf();
 		(*i)->Update();
 
 		// Collision Check
+		/*
 		for (CList<Player*>::iterator j = _PlayerList.begin(); j != _PlayerList.end(); ++j)
 		{
-			if (!(*i)->GetDead() && !(*j)->GetDead() &&
+			if ((*i)->GetStateAlive() && !(*j)->GetStateAlive() &&
 				(*i)->GetX() == (*j)->GetX() &&
 				(*i)->GetY() == (*j)->GetY())
 			{
@@ -99,6 +101,26 @@ void PlayerManager::Update()
 				(*j)->OnCollision((*i));
 			}
 		}
+		*/
+
+		// Broadcast Move Packet
+		if ((*i)->GetPacketMoveStart())
+		{
+			stPACKET_SC_MOVE_START packetSCMoveStart;
+			Create_PACKET_SC_MOVE_START(packetSCMoveStart,
+				(*i)->_ID, (*i)->_moveDirection, (*i)->_x, (*i)->_y);
+			(*i)->ResetPacketMoveStart();
+		}
+
+		if ((*i)->GetPacketMoveStop())
+		{
+			stPACKET_SC_MOVE_START packetSCMoveStart;
+			Create_PACKET_SC_MOVE_START(packetSCMoveStart,
+				(*i)->_ID, (*i)->_direction, (*i)->_x, (*i)->_y);
+			(*i)->ResetPacketMoveStop();
+		}
+
+		i++;
 	}
 }
 

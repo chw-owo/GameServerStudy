@@ -1,5 +1,6 @@
 #include "NetworkManager.h"
 #include "PlayerManager.h"
+#include "Main.h"
 #include <stdio.h>
 
 #define IP L"0.0.0.0"
@@ -20,7 +21,7 @@ NetworkManager* NetworkManager::GetInstance()
 	return &_networkMgr;
 }
 
-bool NetworkManager::Initialize()
+void NetworkManager::Initialize()
 {
 	int err;
 	int bindRet;
@@ -29,7 +30,10 @@ bool NetworkManager::Initialize()
 
 	WSADATA wsa;
 	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
-		return false;
+	{
+		g_bShutdown = true;
+		return;
+	}
 
 	// Create Socket
 	_listensock = socket(AF_INET, SOCK_STREAM, 0);
@@ -37,7 +41,8 @@ bool NetworkManager::Initialize()
 	{
 		err = WSAGetLastError();
 		printf("Error! Function %s Line %d: %d\n", __func__, __LINE__, err);
-		return false;
+		g_bShutdown = true;
+		return;
 	}
 
 	// Bind
@@ -52,7 +57,8 @@ bool NetworkManager::Initialize()
 	{
 		err = WSAGetLastError();
 		printf("Error! Function %s Line %d: %d\n", __func__, __LINE__, err);
-		return false;
+		g_bShutdown = true;
+		return;
 	}
 
 	// Listen
@@ -61,7 +67,8 @@ bool NetworkManager::Initialize()
 	{
 		err = WSAGetLastError();
 		printf("Error! Function %s Line %d: %d\n", __func__, __LINE__, err);
-		return false;
+		g_bShutdown = true;
+		return;
 	}
 
 	// Set Non-Blocking Mode
@@ -71,18 +78,15 @@ bool NetworkManager::Initialize()
 	{
 		err = WSAGetLastError();
 		printf("Error! Function %s Line %d: %d\n", __func__, __LINE__, err);
-		return false;
+		g_bShutdown = true;
+		return;
 	}
 
 	printf("Setting Complete!\n");
-	return true;
 }
 
-bool NetworkManager::Update()
+void NetworkManager::Update()
 {
-	int err;
-	int selectRet;
-
 	FD_ZERO(&_rset);
 	FD_ZERO(&_wset);
 	FD_SET(_listensock, &_rset);
@@ -93,13 +97,17 @@ bool NetworkManager::Update()
 			FD_SET((*i)->_sock, &_wset);
 	}
 
-	// Select 
-	selectRet = select(0, &_rset, &_wset, NULL, NULL);
+	// Select
+	timeval time;
+	time.tv_sec = 0;
+	time.tv_usec = 0;
+	int selectRet = select(0, &_rset, &_wset, NULL, &time);
 	if (selectRet == SOCKET_ERROR)
 	{
-		err = WSAGetLastError();
+		int err = WSAGetLastError();
 		printf("Error! Function %s Line %d: %d\n", __func__, __LINE__, err);
-		return false;
+		g_bShutdown = true;
+		return;
 	}
 	else if (selectRet > 0)
 	{
@@ -120,13 +128,18 @@ bool NetworkManager::Update()
 
 		DisconnectDeadSessions();
 	}
-
-	return true;
 }
 
 void NetworkManager::Terminate()
 {
-	//To-do: Delete All Players
+	// Disconnect All Connected Session 
+	for (CList<Session*>::iterator i = _sessionList.begin(); i != _sessionList.end();)
+	{
+		Session* pSession = *i;
+		i = _sessionList.erase(i);
+		closesocket(pSession->_sock);
+		delete(pSession);
+	}
 	closesocket(_listensock);
 	WSACleanup();
 }
@@ -145,7 +158,7 @@ void NetworkManager::AcceptProc()
 		delete newSession;
 		return;
 	}
-	newSession->_disconnect = false;
+	newSession->SetSessionAlive();
 	_sessionList.push_back(newSession);
 	
 	if(_pPlayerManager== nullptr)
@@ -165,13 +178,13 @@ void NetworkManager::RecvProc(Session* session)
 		if (err != WSAEWOULDBLOCK)
 		{
 			printf("Error! Func %s Line %d: %d\n", __func__, __LINE__, err);
-			session->_disconnect = true;
+			session->SetSessionDead();
 			return;
 		}
 	}
 	else if (recvRet == 0)
 	{
-		session->_disconnect = true;(session);
+		session->SetSessionDead();
 		return;
 	}
 
@@ -179,7 +192,7 @@ void NetworkManager::RecvProc(Session* session)
 	if (recvRet != enqueueRet)
 	{
 		printf("Error! Func %s Line %d\n", __func__, __LINE__);
-		session->_disconnect = true;
+		session->SetSessionDead();
 		return;
 	}
 }
@@ -196,7 +209,7 @@ void NetworkManager::SendProc(Session* session)
 	if (peekRet != sendBufSize)
 	{
 		printf("Error! Func %s Line %d\n", __func__, __LINE__);
-		session->_disconnect = true;
+		session->SetSessionDead();
 		return;
 	}
 
@@ -207,7 +220,7 @@ void NetworkManager::SendProc(Session* session)
 		if (err != WSAEWOULDBLOCK)
 		{
 			printf("Error! Func %s Line %d: %d\n", __func__, __LINE__, err);
-			session->_disconnect = true;
+			session-> SetSessionDead();
 		}
 		return;
 	}
@@ -219,7 +232,7 @@ void NetworkManager::DisconnectDeadSessions()
 {
 	for (CList<Session*>::iterator i = _sessionList.begin(); i != _sessionList.end();)
 	{
-		if ((*i)->_disconnect)
+		if (!(*i)->GetSessionAlive())
 		{
 			Session* pSession = *i;
 			i = _sessionList.erase(i);
@@ -239,7 +252,7 @@ void NetworkManager::EnqueueUnicast(char* msg, int size, Session* pSession)
 	if (enqueueRet != size)
 	{
 		printf("Error! Function %s Line %d\n", __func__, __LINE__);
-		pSession->_disconnect = true;
+		pSession->SetSessionDead();
 	}
 }
 
@@ -251,13 +264,13 @@ void NetworkManager::EnqueueBroadcast(char* msg, int size, Session* pExpSession)
 	{
 		for (CList<Session*>::iterator i = _sessionList.begin(); i != _sessionList.end(); i++)
 		{
-			if (!(*i)->_disconnect)
+			if ((*i)->GetSessionAlive())
 			{
 				enqueueRet = (*i)->_sendBuf.Enqueue(msg, size);
 				if (enqueueRet != size)
 				{
 					printf("Error! Function %s Line %d\n", __func__, __LINE__);
-					(*i)->_disconnect = true;
+					(*i)->SetSessionDead();
 				}
 			}
 		}
@@ -266,13 +279,13 @@ void NetworkManager::EnqueueBroadcast(char* msg, int size, Session* pExpSession)
 	{
 		for (CList<Session*>::iterator i = _sessionList.begin(); i != _sessionList.end(); i++)
 		{
-			if (!(*i)->_disconnect && pExpSession->_sock != (*i)->_sock)
+			if ((*i)->GetSessionAlive() && pExpSession->_sock != (*i)->_sock)
 			{
 				enqueueRet = (*i)->_sendBuf.Enqueue(msg, size);
 				if (enqueueRet != size)
 				{
 					printf("Error! Function %s Line %d\n", __func__, __LINE__);
-					(*i)->_disconnect = true;
+					(*i)->SetSessionDead();
 				}
 			}
 		}
