@@ -15,6 +15,7 @@ class NetworkManager;
 class Session
 {
 	friend NetworkManager;
+	friend PlayerManager;
 	friend Player;
 
 private:
@@ -43,13 +44,15 @@ public:
 	void Update();
 	void Terminate();
 
+public: 
+	void EnqueueUnicast(char* msg, int size, Session* pSession);
+	void EnqueueBroadcast(char* msg, int size, Session* pExpSession = nullptr);
+
+private:
 	void AcceptProc();
 	void RecvProc(Session* session);
 	void SendProc(Session* session);
 	void DisconnectDeadSessions();
-
-	void EnqueueUnicast(char* msg, int size, Session* pSession);
-	void EnqueueBroadcast(char* msg, int size, Session* pExpSession = nullptr);
 
 private:
 	static NetworkManager _networkMgr;

@@ -14,8 +14,8 @@ int main(int argc, char* argv[])
 		playerMgr->Update();
 	}
 
-	networkMgr->Terminate();
 	playerMgr->Terminate();
+	networkMgr->Terminate();
 
 	return 0;
 }

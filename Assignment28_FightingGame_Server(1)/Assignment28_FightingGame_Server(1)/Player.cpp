@@ -9,7 +9,7 @@ Player::Player(Session* pSession, uint32 ID)
 	_direction(dfPACKET_MOVE_DIR_LL), 
 	_moveDirection(dfPACKET_MOVE_DIR_LL), 
 	_x(dfINIT_X), _y(dfINIT_Y), _hp(dfMAX_HP), 
-	_packet (0b00000000), _state(0b00000001)
+	_packet (0), _state(dfPLAYER_STATE_ALIVE)
 {
 
 }
@@ -69,11 +69,6 @@ void Player::Update()
 	}
 }
 
-void Player::OnCollision(Player* player)
-{
-
-}
-
 void Player::DequeueRecvBuf()
 {
 	int useSize = _pSession->_recvBuf.GetUseSize();
@@ -105,23 +100,23 @@ void Player::DequeueRecvBuf()
 		switch (header.Type)
 		{
 		case dfPACKET_CS_MOVE_START:
-			if (!HandlePacketMoveStart(header.Size)) return;
+			HandlePacketMoveStart(header.Size);
 			break;
 
 		case dfPACKET_CS_MOVE_STOP:
-			if (!HandlePacketMoveStop(header.Size)) return;
+			HandlePacketMoveStop(header.Size);
 			break;
 
 		case dfPACKET_CS_ATTACK1:
-			if (!HandlePacketAttack1(header.Size)) return;
+			HandlePacketAttack1(header.Size);
 			break;
 
 		case dfPACKET_CS_ATTACK2:	
-			if (!HandlePacketAttack2(header.Size)) return;
+			HandlePacketAttack2(header.Size);
 			break;
 
 		case dfPACKET_CS_ATTACK3:
-			if (!HandlePacketAttack3(header.Size)) return;
+			HandlePacketAttack3(header.Size);
 			break;
 		}
 
@@ -129,7 +124,17 @@ void Player::DequeueRecvBuf()
 	}
 }
 
-bool Player::HandlePacketMoveStart(int packetSize)
+void Player::Attacked(uint8 damage)
+{
+	_hp -= damage;
+	if (_hp <= 0)
+	{
+		_hp = 0;
+		SetStateDead();
+	}
+}
+
+void Player::HandlePacketMoveStart(int packetSize)
 {
 	stPACKET_CS_MOVE_START packetMoveStart;
 	int dequeueRet = _pSession->_recvBuf.Dequeue((char*)&packetMoveStart, packetSize);
@@ -137,7 +142,7 @@ bool Player::HandlePacketMoveStart(int packetSize)
 	{
 		printf("Error! Func %s Line %d\n", __func__, __LINE__);
 		SetStateDead();
-		return false;
+		return;
 	}
 	
 	printf("===================================\n\
@@ -157,7 +162,7 @@ now Y: %d\n\
 		abs(packetMoveStart.Y - _y) > dfERROR_RANGE)
 	{
 		SetStateDead();
-		return false;
+		return;
 	}
 
 	_moveDirection = packetMoveStart.Direction;
@@ -180,11 +185,9 @@ now Y: %d\n\
 	_y = packetMoveStart.Y;
 	SetPacketMoveStart();
 	SetStateMoveStart();
-
-	return true;
 }
 
-bool Player::HandlePacketMoveStop(int packetSize)
+void Player::HandlePacketMoveStop(int packetSize)
 {
 	stPACKET_CS_MOVE_STOP packetMoveStop;
 	int dequeueRet = _pSession->_recvBuf.Dequeue((char*)&packetMoveStop, packetSize);
@@ -192,7 +195,7 @@ bool Player::HandlePacketMoveStop(int packetSize)
 	{
 		printf("Error! Func %s Line %d\n", __func__, __LINE__);
 		SetStateDead();
-		return false;
+		return;
 	}
 	
 	printf("===================================\n\
@@ -212,7 +215,7 @@ now Y: %d\n\
 		abs(packetMoveStop.Y - _y) > dfERROR_RANGE)
 	{
 		SetStateDead();
-		return false;
+		return;
 	}
 
 	_direction = packetMoveStop.Direction;
@@ -220,11 +223,9 @@ now Y: %d\n\
 	_y = packetMoveStop.Y;
 	SetPacketMoveStop();
 	SetStateMoveStop();
-
-	return true;
 }
 
-bool Player::HandlePacketAttack1(int packetSize)
+void Player::HandlePacketAttack1(int packetSize)
 {
 	stPACKET_CS_ATTACK1 packetAttack1;
 	int dequeueRet = _pSession->_recvBuf.Dequeue((char*)&packetAttack1, packetSize);
@@ -232,19 +233,33 @@ bool Player::HandlePacketAttack1(int packetSize)
 	{
 		printf("Error! Func %s Line %d\n", __func__, __LINE__);
 		SetStateDead();
-		return false;
+		return;
 	}
+
+	printf("===================================\n\
+%d: ATTACK 1\n\n\
+packetAttack1.Direction: %d\n\
+packetAttack1.X: %d\n\
+packetAttack1.Y: %d\n\n\
+now X: %d\n\
+now Y: %d\n\
+====================================\n\n",
+	_ID, packetAttack1.Direction, packetAttack1.X, packetAttack1.Y, _x, _y);
 
 	if (abs(packetAttack1.X - _x) > dfERROR_RANGE ||
 		abs(packetAttack1.Y - _y) > dfERROR_RANGE)
 	{
 		SetStateDead();
-		return false;
+		return;
 	}
-	return true;
+
+	_direction = packetAttack1.Direction;
+	_x = packetAttack1.X;
+	_y = packetAttack1.Y;
+	SetPacketAttack1();
 }
 
-bool Player::HandlePacketAttack2(int packetSize)
+void Player::HandlePacketAttack2(int packetSize)
 {
 	stPACKET_CS_ATTACK2 packetAttack2;
 	int dequeueRet = _pSession->_recvBuf.Dequeue((char*)&packetAttack2, packetSize);
@@ -252,20 +267,33 @@ bool Player::HandlePacketAttack2(int packetSize)
 	{
 		printf("Error! Func %s Line %d\n", __func__, __LINE__);
 		SetStateDead();
-		return false;
+		return;
 	}
+
+	printf("===================================\n\
+%d: ATTACK 2\n\n\
+packetAttack2.Direction: %d\n\
+packetAttack2.X: %d\n\
+packetAttack2.Y: %d\n\n\
+now X: %d\n\
+now Y: %d\n\
+====================================\n\n",
+	_ID, packetAttack2.Direction, packetAttack2.X, packetAttack2.Y, _x, _y);
 
 	if (abs(packetAttack2.X - _x) > dfERROR_RANGE ||
 		abs(packetAttack2.Y - _y) > dfERROR_RANGE)
 	{
 		SetStateDead();
-		return false;
+		return;
 	}
 
-	return true;
+	_direction = packetAttack2.Direction;
+	_x = packetAttack2.X;
+	_y = packetAttack2.Y;
+	SetPacketAttack2();
 }
 
-bool Player::HandlePacketAttack3(int packetSize)
+void Player::HandlePacketAttack3(int packetSize)
 {
 	stPACKET_CS_ATTACK3 packetAttack3;
 	int dequeueRet = _pSession->_recvBuf.Dequeue((char*)&packetAttack3, packetSize);
@@ -273,15 +301,28 @@ bool Player::HandlePacketAttack3(int packetSize)
 	{
 		printf("Error! Func %s Line %d\n", __func__, __LINE__);
 		SetStateDead();
-		return false;
+		return;
 	}
+
+	printf("===================================\n\
+%d: ATTACK 3\n\n\
+packetAttack3.Direction: %d\n\
+packetAttack3.X: %d\n\
+packetAttack3.Y: %d\n\n\
+now X: %d\n\
+now Y: %d\n\
+====================================\n\n",
+	_ID, packetAttack3.Direction, packetAttack3.X, packetAttack3.Y, _x, _y);
 
 	if (abs(packetAttack3.X - _x) > dfERROR_RANGE ||
 		abs(packetAttack3.Y - _y) > dfERROR_RANGE)
 	{
 		SetStateDead();
-		return false;
+		return;
 	}
 
-	return true;
+	_direction = packetAttack3.Direction;
+	_x = packetAttack3.X;
+	_y = packetAttack3.Y;
+	SetPacketAttack3();
 }
