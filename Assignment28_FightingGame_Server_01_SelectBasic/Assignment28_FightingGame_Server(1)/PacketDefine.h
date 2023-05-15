@@ -24,12 +24,13 @@
 #define	dfPACKET_CS_SYNC						250
 #define	dfPACKET_SC_SYNC						251
 
+#define dfPACKET_HEADER_CODE					0x89
 #pragma pack (push, 1)
 #define HEADER_LEN sizeof(stPACKET_HEADER)
 
 struct stPACKET_HEADER
 {
-	uint8	Code = 0x89;
+	uint8	Code = dfPACKET_HEADER_CODE;
 	uint8	Size;
 	uint8	Type;
 };

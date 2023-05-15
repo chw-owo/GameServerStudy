@@ -86,6 +86,13 @@ void Player::DequeueRecvBuf()
 			return;
 		}
 
+		if (header.Code != dfPACKET_HEADER_CODE)
+		{
+			printf("Error! Wrong Header Code! - Func %s Line %d\n", __func__, __LINE__);
+			SetStateDead();
+			return;
+		}
+
 		if (useSize < HEADER_LEN + header.Size)
 			break;
 
@@ -144,7 +151,7 @@ void Player::HandlePacketMoveStart(int packetSize)
 		SetStateDead();
 		return;
 	}
-	
+	/*
 	printf("===================================\n\
 %d: MOVE START\n\n\
 packetMoveStart.Direction: %d\n\
@@ -156,6 +163,7 @@ now Y: %d\n\
 ====================================\n\n",
 		_ID, packetMoveStart.Direction, packetMoveStart.X, packetMoveStart.Y,
 		_moveDirection, _x, _y);
+		*/
 		
 
 	if (abs(packetMoveStart.X - _x) > dfERROR_RANGE ||
@@ -197,7 +205,7 @@ void Player::HandlePacketMoveStop(int packetSize)
 		SetStateDead();
 		return;
 	}
-	
+	/*
 	printf("===================================\n\
 %d: MOVE STOP\n\n\
 packetMoveStop.Direction: %d\n\
@@ -209,7 +217,7 @@ now Y: %d\n\
 ====================================\n\n",
 		_ID, packetMoveStop.Direction, packetMoveStop.X, packetMoveStop.Y,
 		_moveDirection, _x, _y);
-
+		*/
 
 	if (abs(packetMoveStop.X - _x) > dfERROR_RANGE ||
 		abs(packetMoveStop.Y - _y) > dfERROR_RANGE)
@@ -235,7 +243,7 @@ void Player::HandlePacketAttack1(int packetSize)
 		SetStateDead();
 		return;
 	}
-
+	/*
 	printf("===================================\n\
 %d: ATTACK 1\n\n\
 packetAttack1.Direction: %d\n\
@@ -245,7 +253,7 @@ now X: %d\n\
 now Y: %d\n\
 ====================================\n\n",
 	_ID, packetAttack1.Direction, packetAttack1.X, packetAttack1.Y, _x, _y);
-
+	*/
 	if (abs(packetAttack1.X - _x) > dfERROR_RANGE ||
 		abs(packetAttack1.Y - _y) > dfERROR_RANGE)
 	{
@@ -269,7 +277,7 @@ void Player::HandlePacketAttack2(int packetSize)
 		SetStateDead();
 		return;
 	}
-
+	/*
 	printf("===================================\n\
 %d: ATTACK 2\n\n\
 packetAttack2.Direction: %d\n\
@@ -278,8 +286,8 @@ packetAttack2.Y: %d\n\n\
 now X: %d\n\
 now Y: %d\n\
 ====================================\n\n",
-	_ID, packetAttack2.Direction, packetAttack2.X, packetAttack2.Y, _x, _y);
-
+	_ID, packetAttack2.Direction, packetAttack2.X, packetAttack2.Y, _x, _y); 
+	*/
 	if (abs(packetAttack2.X - _x) > dfERROR_RANGE ||
 		abs(packetAttack2.Y - _y) > dfERROR_RANGE)
 	{
@@ -303,7 +311,7 @@ void Player::HandlePacketAttack3(int packetSize)
 		SetStateDead();
 		return;
 	}
-
+	/*
 	printf("===================================\n\
 %d: ATTACK 3\n\n\
 packetAttack3.Direction: %d\n\
@@ -313,7 +321,7 @@ now X: %d\n\
 now Y: %d\n\
 ====================================\n\n",
 	_ID, packetAttack3.Direction, packetAttack3.X, packetAttack3.Y, _x, _y);
-
+	*/
 	if (abs(packetAttack3.X - _x) > dfERROR_RANGE ||
 		abs(packetAttack3.Y - _y) > dfERROR_RANGE)
 	{
