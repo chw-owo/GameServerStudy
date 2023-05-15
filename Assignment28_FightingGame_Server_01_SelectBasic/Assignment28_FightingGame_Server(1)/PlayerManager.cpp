@@ -26,8 +26,7 @@
 
 PlayerManager::PlayerManager()
 {
-	srand((uint16)time(NULL));
-	_ID = rand();
+
 }
 
 PlayerManager::~PlayerManager()

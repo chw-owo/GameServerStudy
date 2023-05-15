@@ -39,7 +39,7 @@ private:
 		uint32 ID, uint8 direction, uint16 x, uint16 y);
 
 private:
-	uint32 _ID;
+	uint32 _ID = 0;
 	static PlayerManager _PlayerMgr;
 	CList<Player*> _PlayerList;
 

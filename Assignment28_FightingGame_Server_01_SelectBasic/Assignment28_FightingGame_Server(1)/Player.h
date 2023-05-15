@@ -109,7 +109,7 @@ private:
 	uint8 _moveDirection;
 	uint16 _x;
 	uint16 _y;
-	uint8 _hp;
+	int8 _hp;
 
 	uint8 _packet;
 	uint8 _state;
