@@ -170,8 +170,7 @@ void NetworkManager::AcceptProc()
 
 void NetworkManager::RecvProc(Session* session)
 {
-	char buf[MAX_BUF_SIZE];
-	int recvRet = recv(session->_sock, buf, MAX_BUF_SIZE, 0);
+	int recvRet = recv(session->_sock, session->_recvBuf.GetWriteBufferPtr(), MAX_BUF_SIZE, 0);
 	if (recvRet == SOCKET_ERROR)
 	{
 		int err = WSAGetLastError();
@@ -188,7 +187,7 @@ void NetworkManager::RecvProc(Session* session)
 		return;
 	}
 
-	int enqueueRet = session->_recvBuf.Enqueue(buf, recvRet);
+	int enqueueRet = session->_recvBuf.MoveWritePos(recvRet);
 	if (recvRet != enqueueRet)
 	{
 		printf("Error! Func %s Line %d\n", __func__, __LINE__);
@@ -202,10 +201,10 @@ void NetworkManager::SendProc(Session* session)
 	if(session->_sendBuf.GetUseSize() <= 0)
 		return;
 
-	char buf[MAX_BUF_SIZE];
+
 	int sendBufSize = session->_sendBuf.GetUseSize();
 
-	int peekRet = session->_sendBuf.Peek(buf, sendBufSize);
+	int peekRet = session->_sendBuf.Peek(session->_sendBuf.GetReadBufferPtr(), sendBufSize);
 	if (peekRet != sendBufSize)
 	{
 		printf("Error! Func %s Line %d\n", __func__, __LINE__);
@@ -213,7 +212,7 @@ void NetworkManager::SendProc(Session* session)
 		return;
 	}
 
-	int sendRet = send(session->_sock, buf, peekRet, 0);
+	int sendRet = send(session->_sock, session->_sendBuf.GetReadBufferPtr(), peekRet, 0);
 	if (sendRet == SOCKET_ERROR)
 	{
 		int err = WSAGetLastError();
@@ -225,7 +224,13 @@ void NetworkManager::SendProc(Session* session)
 		return;
 	}
 
-	session->_sendBuf.MoveReadPos(sendRet);
+	int dequeueRet = session->_sendBuf.MoveReadPos(sendRet);
+	if (sendRet != dequeueRet)
+	{
+		printf("Error! Func %s Line %d\n", __func__, __LINE__);
+		session->SetSessionDead();
+		return;
+	}
 }
 
 void NetworkManager::DisconnectDeadSessions()

@@ -82,8 +82,10 @@ void NetworkManager::Initialize()
 		return;
 	}
 
-	_rsetList.push_back(new fd_set);
-	_wsetList.push_back(new fd_set);
+	fd_set* rset = new fd_set;
+	fd_set* wset = new fd_set;
+	_rsetList.push_back(rset);
+	_wsetList.push_back(wset);
 	
 	printf("Setting Complete!\n");
 }
@@ -105,14 +107,16 @@ void NetworkManager::Update()
 	int needRset = (((_sessionList.size() + 1) / (FD_SETSIZE + 1)) + 1) - _rsetList.size();
 	while(needRset > 0)
 	{ 
-		_rsetList.push_back(new fd_set);
+		fd_set* rset = new fd_set;
+		_rsetList.push_back(rset);
 		needRset--;
 	}
 
 	int needWset = (((_sessionList.size()) / (FD_SETSIZE + 1)) + 1) - _wsetList.size();
 	while (needWset > 0)
 	{
-		_wsetList.push_back(new fd_set);
+		fd_set* wset = new fd_set;
+		_wsetList.push_back(wset);
 		needWset--;
 	}
 	
@@ -161,9 +165,10 @@ void NetworkManager::Update()
 	time.tv_usec = 0;
 	int usedWsetIdx = 0;
 	CList<Session*>::iterator sessionIter = _sessionList.begin();
+	CList<fd_set*>::iterator wsetIter = _wsetList.begin();
+
 	for (CList<fd_set*>::iterator rsetIter = _rsetList.begin(); rsetIter != _rsetList.end();)
 	{
-		CList<fd_set*>::iterator wsetIter = _wsetList.begin();
 		if (usedWsetIdx < usedWsetNum && wsetIter != _wsetList.end())
 		{
 			int selectRet = select(0, (*rsetIter), (*wsetIter), NULL, &time);
@@ -179,7 +184,7 @@ void NetworkManager::Update()
 
 			if (selectRet > 0)
 			{
-				if (FD_ISSET(_listensock, (*rsetIter)))
+				if (FD_ISSET(_listensock, (*rsetFirstIter)))
 					AcceptProc();
 
 				for (int i = 0; i < FD_SETSIZE; i++)
