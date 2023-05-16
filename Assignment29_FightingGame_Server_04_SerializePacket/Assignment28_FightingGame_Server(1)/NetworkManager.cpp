@@ -81,57 +81,27 @@ void NetworkManager::Initialize()
 		g_bShutdown = true;
 		return;
 	}
-	_rsetList.push_back(new FD_SET);
-	_wsetList.push_back(new FD_SET);
+
 	printf("Setting Complete!\n");
 }
 
 void NetworkManager::Update()
 {
-	int rsetSessionNum = 0;
-	int wsetSessionNum = 0;
-	CList<FD_SET*>::iterator rsetIter = _rsetList.begin();
-	CList<FD_SET*>::iterator wsetIter = _wsetList.begin();
-
-	FD_ZERO(*rsetIter);
-	FD_ZERO(*wsetIter);
-	FD_SET(_listensock, *rsetIter);
-	rsetSessionNum++;
-
+	FD_ZERO(&_rset);
+	FD_ZERO(&_wset);
+	FD_SET(_listensock, &_rset);
 	for (CList<Session*>::iterator i = _sessionList.begin(); i != _sessionList.end(); i++)
 	{
-		FD_SET((*i)->_sock, *rsetIter);
-		rsetSessionNum++;
-		if (rsetSessionNum > FD_SETSIZE)
-		{
-			rsetSessionNum = 0;
-			_rsetList.push_back(new FD_SET);
-			rsetIter++;
-		}
-
+		FD_SET((*i)->_sock, &_rset);
 		if ((*i)->_sendBuf.GetUseSize() > 0)
-		{
-			FD_SET((*i)->_sock, *wsetIter);
-			wsetSessionNum++;
-			if (wsetSessionNum > FD_SETSIZE)
-			{
-				wsetSessionNum = 0;
-				_wsetList.push_back(new FD_SET);
-				wsetIter++;
-			}
-		}
+			FD_SET((*i)->_sock, &_wset);
 	}
 
 	// Select
 	timeval time;
 	time.tv_sec = 0;
 	time.tv_usec = 0;
-	rsetIter = _rsetList.begin();
-	wsetIter = _wsetList.begin();
-
-	// iter++만 하고 나면 select에서 10022 예외가 터지는데 원인이 뭔지 모르겠다...
-	// 일단 다른 과제부터 하고 나중에 해결하자...
-	int selectRet = select(0, *rsetIter, *wsetIter, NULL, &time);
+	int selectRet = select(0, &_rset, &_wset, NULL, &time);
 	if (selectRet == SOCKET_ERROR)
 	{
 		int err = WSAGetLastError();
@@ -143,16 +113,16 @@ void NetworkManager::Update()
 	{
 		for (CList<Session*>::iterator i = _sessionList.begin(); i != _sessionList.end(); i++)
 		{
-			if (FD_ISSET((*i)->_sock, *wsetIter))
+			if (FD_ISSET((*i)->_sock, &_wset))
 				SendProc((*i));
 		}
 
-		if (FD_ISSET(_listensock, *rsetIter))
+		if (FD_ISSET(_listensock, &_rset))
 			AcceptProc();
 
 		for (CList<Session*>::iterator i = _sessionList.begin(); i != _sessionList.end(); i++)
 		{
-			if (FD_ISSET((*i)->_sock, *rsetIter))
+			if (FD_ISSET((*i)->_sock, &_rset))
 				RecvProc((*i));
 		}
 
@@ -162,10 +132,6 @@ void NetworkManager::Update()
 
 void NetworkManager::Terminate()
 {
-	// For Test
-	printf("session: %d, rset List Size: %d, wset List Size: %d\n",
-		_sessionList.size(), _rsetList.size(), _wsetList.size());
-
 	// Disconnect All Connected Session 
 	for (CList<Session*>::iterator i = _sessionList.begin(); i != _sessionList.end();)
 	{
@@ -174,22 +140,8 @@ void NetworkManager::Terminate()
 		closesocket(pSession->_sock);
 		delete(pSession);
 	}
-
 	closesocket(_listensock);
 	WSACleanup();
-
-	FD_SET* pSet;
-	while (!_rsetList.empty())
-	{
-		pSet = _rsetList.pop_back();
-		delete(pSet);
-	}
-
-	while (!_wsetList.empty())
-	{
-		pSet = _wsetList.pop_back();
-		delete(pSet);
-	}
 }
 
 void NetworkManager::AcceptProc()
