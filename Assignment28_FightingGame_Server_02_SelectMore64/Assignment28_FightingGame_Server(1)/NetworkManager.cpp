@@ -2,6 +2,7 @@
 #include "PlayerManager.h"
 #include "Main.h"
 #include <stdio.h>
+#include <windows.h>
 
 #define IP L"0.0.0.0"
 #define PORT 5000
@@ -130,33 +131,75 @@ void NetworkManager::Update()
 	wsetIter = _wsetList.begin();
 
 	// iter++만 하고 나면 select에서 10022 예외가 터지는데 원인이 뭔지 모르겠다...
-	// 일단 다른 과제부터 하고 나중에 해결하자...
-	int selectRet = select(0, *rsetIter, *wsetIter, NULL, &time);
-	if (selectRet == SOCKET_ERROR)
+	// 안되는 게 당연했음 ㅠ 스레드 당 64개 제한이라 여러개 쓰려면 멀티스레드로 만들어야 한다
+	// 이후에 멀티스레드 수업 진행한 다음에 수정하도록 하자
+
+	while (wsetIter != _wsetList.end())
 	{
-		int err = WSAGetLastError();
-		printf("Error! Function %s Line %d: %d\n", __func__, __LINE__, err);
-		g_bShutdown = true;
-		return;
+		int selectRet = select(0, *rsetIter, *wsetIter, NULL, &time);
+		if (selectRet == SOCKET_ERROR)
+		{
+			int err = WSAGetLastError();
+			printf("Error! Function %s Line %d: %d\n", __func__, __LINE__, err);
+			g_bShutdown = true;
+			return;
+		}
+		else if (selectRet > 0)
+		{
+			for (CList<Session*>::iterator i = _sessionList.begin(); i != _sessionList.end(); i++)
+			{
+				if (FD_ISSET((*i)->_sock, *wsetIter))
+					SendProc((*i));
+			}
+
+			if (FD_ISSET(_listensock, *rsetIter))
+				AcceptProc();
+
+			for (CList<Session*>::iterator i = _sessionList.begin(); i != _sessionList.end(); i++)
+			{
+				if (FD_ISSET((*i)->_sock, *rsetIter))
+					RecvProc((*i));
+			}
+
+			DisconnectDeadSessions();
+		}
+
+		wsetIter++;
+		rsetIter++;
 	}
-	else if (selectRet > 0)
+
+	while (rsetIter != _rsetList.end())
 	{
-		for (CList<Session*>::iterator i = _sessionList.begin(); i != _sessionList.end(); i++)
+		int selectRet = select(0, *rsetIter, NULL, NULL, &time);
+		if (selectRet == SOCKET_ERROR)
 		{
-			if (FD_ISSET((*i)->_sock, *wsetIter))
-				SendProc((*i));
+			int err = WSAGetLastError();
+			printf("Error! Function %s Line %d: %d\n", __func__, __LINE__, err);
+			g_bShutdown = true;
+			return;
 		}
-
-		if (FD_ISSET(_listensock, *rsetIter))
-			AcceptProc();
-
-		for (CList<Session*>::iterator i = _sessionList.begin(); i != _sessionList.end(); i++)
+		else if (selectRet > 0)
 		{
-			if (FD_ISSET((*i)->_sock, *rsetIter))
-				RecvProc((*i));
-		}
 
-		DisconnectDeadSessions();
+			if (FD_ISSET(_listensock, *rsetIter))
+				AcceptProc();
+
+			for (CList<Session*>::iterator i = _sessionList.begin(); i != _sessionList.end(); i++)
+			{
+				if (FD_ISSET((*i)->_sock, *rsetIter))
+					RecvProc((*i));
+			}
+
+			DisconnectDeadSessions();
+		}
+		rsetIter++;
+	}
+
+	if (GetAsyncKeyState(VK_RETURN) & 0x0001)
+	{
+		// For Test
+		printf("session: %d, rset List Size: %d, wset List Size: %d\n",
+			_sessionList.size(), _rsetList.size(), _wsetList.size());
 	}
 }
 
