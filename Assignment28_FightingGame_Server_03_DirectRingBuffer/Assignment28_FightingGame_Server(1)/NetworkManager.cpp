@@ -170,7 +170,10 @@ void NetworkManager::AcceptProc()
 
 void NetworkManager::RecvProc(Session* session)
 {
-	int recvRet = recv(session->_sock, session->_recvBuf.GetWriteBufferPtr(), MAX_BUF_SIZE, 0);
+	int recvRet = recv(session->_sock, 
+		session->_recvBuf.GetWriteBufferPtr(), 
+		session->_recvBuf.DirectEnqueueSize(), 0);
+
 	if (recvRet == SOCKET_ERROR)
 	{
 		int err = WSAGetLastError();
@@ -194,6 +197,26 @@ void NetworkManager::RecvProc(Session* session)
 		session->SetSessionDead();
 		return;
 	}
+
+	// For Test
+	char testBuf[DEFAULT_BUF_SIZE];
+	int testPeekRet = session->_recvBuf.Peek(testBuf, enqueueRet);
+	testBuf[testPeekRet] = '\0';
+	printf("\n\n");
+	printf("Recv Test===========================\n\n");
+	int idx = 0;
+	while (idx < testPeekRet)
+	{
+		printf("%d ", testBuf[idx]);
+		idx++;
+	}
+	printf("\n\n===================================");
+	printf("\n\n");
+
+	if(testPeekRet != enqueueRet)
+	{
+		printf("Test Error! Func %s Line %d\n", __func__, __LINE__);
+	}
 }
 
 void NetworkManager::SendProc(Session* session)
@@ -201,18 +224,21 @@ void NetworkManager::SendProc(Session* session)
 	if(session->_sendBuf.GetUseSize() <= 0)
 		return;
 
+	int peekRet = session->_sendBuf.Peek(
+		session->_sendBuf.GetReadBufferPtr(), 
+		session->_sendBuf.DirectDequeueSize());
 
-	int sendBufSize = session->_sendBuf.GetUseSize();
-
-	int peekRet = session->_sendBuf.Peek(session->_sendBuf.GetReadBufferPtr(), sendBufSize);
-	if (peekRet != sendBufSize)
+	if (peekRet != session->_sendBuf.DirectDequeueSize())
 	{
 		printf("Error! Func %s Line %d\n", __func__, __LINE__);
 		session->SetSessionDead();
 		return;
 	}
 
-	int sendRet = send(session->_sock, session->_sendBuf.GetReadBufferPtr(), peekRet, 0);
+	int sendRet = send(session->_sock, 
+						session->_sendBuf.GetReadBufferPtr(), 
+						peekRet, 0);
+
 	if (sendRet == SOCKET_ERROR)
 	{
 		int err = WSAGetLastError();
@@ -224,6 +250,26 @@ void NetworkManager::SendProc(Session* session)
 		return;
 	}
 
+	// For Test
+	char testBuf[DEFAULT_BUF_SIZE];
+	int testPeekRet = session->_recvBuf.Peek(testBuf, sendRet);
+	testBuf[testPeekRet] = '\0';
+	printf("\n\n");
+	printf("Send Test===========================\n\n");
+	int idx = 0;
+	while (idx < testPeekRet)
+	{
+		printf("%d ", testBuf[idx]);
+		idx++;
+	}
+	printf("\n\n===================================");
+	printf("\n\n");
+
+	if (testPeekRet != sendRet)
+	{
+		printf("Test Error! Func %s Line %d\n", __func__, __LINE__);
+	}
+
 	int dequeueRet = session->_sendBuf.MoveReadPos(sendRet);
 	if (sendRet != dequeueRet)
 	{
@@ -231,6 +277,8 @@ void NetworkManager::SendProc(Session* session)
 		session->SetSessionDead();
 		return;
 	}
+
+
 }
 
 void NetworkManager::DisconnectDeadSessions()

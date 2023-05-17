@@ -1,6 +1,6 @@
 #include "RingBuffer.h"
 #include <iostream>
-//#define RINGBUFFER_DEBUG
+#define RINGBUFFER_DEBUG
 
 RingBuffer::RingBuffer(void) : _bufferSize(DEFAULT_BUF_SIZE), _freeSize(DEFAULT_BUF_SIZE - 1)
 {
@@ -295,14 +295,14 @@ int RingBuffer::Peek(char* chpDest, int iSize)
 #ifdef RINGBUFFER_DEBUG
     if (GetUseSize() < 0 || DirectDequeueSize() < 0)
     {
-        printf("Error! Func %s Function %s Line %d\n", __func__, __func__, __LINE__);
+        printf("Error! Func %s Line %d\n", __func__, __LINE__);
         return -1;
     }
 #endif
 
     if (iSize > GetUseSize())
     {
-        printf("Error! Func %s Function %s Line %d\n", __func__, __func__, __LINE__);
+        printf("Error! Func %s Line %d\n", __func__, __LINE__);
         return -1;
     }
 
