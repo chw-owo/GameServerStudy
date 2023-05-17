@@ -10,4 +10,24 @@ typedef unsigned __int16 uint16;
 typedef unsigned __int32 uint32;
 typedef unsigned __int64 uint64;
 
+class SerializeBuffer;
 
+SerializeBuffer& operator << (SerializeBuffer& out, int8 iValue);
+SerializeBuffer& operator << (SerializeBuffer& out, int16 iValue);
+SerializeBuffer& operator << (SerializeBuffer& out, int32 iValue);
+SerializeBuffer& operator << (SerializeBuffer& out, int64 iValue);
+
+SerializeBuffer& operator << (SerializeBuffer& out, uint8 iValue);
+SerializeBuffer& operator << (SerializeBuffer& out, uint16 iValue);
+SerializeBuffer& operator << (SerializeBuffer& out, uint32 iValue);
+SerializeBuffer& operator << (SerializeBuffer& out, uint64 iValue);
+
+SerializeBuffer& operator >> (SerializeBuffer& out, int8& iValue);
+SerializeBuffer& operator >> (SerializeBuffer& out, int16& iValue);
+SerializeBuffer& operator >> (SerializeBuffer& out, int32& iValue);
+SerializeBuffer& operator >> (SerializeBuffer& out, int64& iValue);
+
+SerializeBuffer& operator >> (SerializeBuffer& out, uint8& iValue);
+SerializeBuffer& operator >> (SerializeBuffer& out, uint16& iValue);
+SerializeBuffer& operator >> (SerializeBuffer& out, uint32& iValue);
+SerializeBuffer& operator >> (SerializeBuffer& out, uint64& iValue);

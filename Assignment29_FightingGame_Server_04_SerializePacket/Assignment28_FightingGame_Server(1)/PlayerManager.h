@@ -1,8 +1,10 @@
 #pragma once
-#include "Player.h"
-#include "Typedef.h"
+
 #include "List.h"
-#include <iostream>
+#include "Typedef.h"
+
+#include "Player.h"
+#include "SerializeBuffer.h"
 
 #define FPS 50
 class NetworkManager;
@@ -31,8 +33,8 @@ private:
 	bool SkipForFixedFrame();
 
 private:
-	void EnqueueUnicast(uint8 msgType, char* msg, int size, Player* pPlayer);
-	void EnqueueBroadcast(uint8 msgType, char* msg, int size, Player* pExpPlayer = nullptr);
+	void EnqueueUnicast(int size, Player* pPlayer);
+	void EnqueueBroadcast(int size, Player* pExpPlayer = nullptr);
 
 private:
 	void CheckAttacknEnqueueDamagePacket(uint8 attackType, 
@@ -42,6 +44,7 @@ private:
 	uint32 _ID = 0;
 	static PlayerManager _PlayerMgr;
 	CList<Player*> _PlayerList;
+	SerializeBuffer _buffer;
 
 private:
 	NetworkManager* _pNetworkManager = nullptr;

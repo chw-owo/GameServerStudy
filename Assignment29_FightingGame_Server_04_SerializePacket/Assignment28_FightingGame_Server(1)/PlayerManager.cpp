@@ -1,10 +1,12 @@
 #include "PlayerManager.h"
 #include "PacketDefine.h"
 #include "NetworkManager.h"
-#include "CreatePacket.h"
+#include "CreateSCPacket.h"
 
-#include <windows.h>
 #pragma comment(lib, "winmm.lib")
+#include <windows.h>
+#include <iostream>
+
 
 // ATTACK TYPE Define
 #define dfATTACK_TYPE_ATTACK1	1
@@ -46,29 +48,23 @@ Player* PlayerManager::CreatePlayer(Session* pSession)
 	_PlayerList.push_back(player);
 
 	// Send <Allocate ID Message> to New Player
-	stPACKET_SC_CREATE_MY_CHARACTER packetCreateMy;
-	Create_PACKET_SC_CREATE_MY_CHARACTER(packetCreateMy,
+	int CreateMyCharSize = Create_PACKET_SC_CREATE_MY_CHARACTER(&_buffer,
 		player->GetID(), player->GetDirection(), player->GetX(), player->GetY(), player->GetHp());
-	EnqueueUnicast(dfPACKET_SC_CREATE_MY_CHARACTER, (char*)&packetCreateMy, 
-		sizeof(stPACKET_SC_CREATE_MY_CHARACTER), player);
+	EnqueueUnicast(CreateMyCharSize, player);
 
 	// Send <Create New Player Message> to All Player
-	stPACKET_SC_CREATE_OTHER_CHARACTER packetCreateOther;
-	Create_PACKET_SC_CREATE_OTHER_CHARACTER(packetCreateOther,
+	int CreateOtherCharSize = Create_PACKET_SC_CREATE_OTHER_CHARACTER(&_buffer,
 		player->GetID(), player->GetDirection(), player->GetX(), player->GetY(), player->GetHp());
-	EnqueueBroadcast(dfPACKET_SC_CREATE_OTHER_CHARACTER, (char*)&packetCreateOther, 
-		sizeof(stPACKET_SC_CREATE_OTHER_CHARACTER), player);
+	EnqueueBroadcast(CreateOtherCharSize, player);
 
 	// Send <Create All Players Message> to New Player
-	stPACKET_SC_CREATE_OTHER_CHARACTER packetCreateAll;
 	for (CList<Player*>::iterator i = _PlayerList.begin(); i != _PlayerList.end(); i++)
 	{
 		if ((*i)->GetID() != _ID)
 		{
-			Create_PACKET_SC_CREATE_OTHER_CHARACTER(packetCreateAll,
+			int CreateOtherCharAllSize = Create_PACKET_SC_CREATE_OTHER_CHARACTER(&_buffer,
 				(*i)->GetID(), (*i)->GetDirection(), (*i)->GetX(), (*i)->GetY(), (*i)->GetHp());
-			EnqueueUnicast(dfPACKET_SC_CREATE_OTHER_CHARACTER, (char*)&packetCreateAll,
-				sizeof(stPACKET_SC_CREATE_OTHER_CHARACTER), player);
+			EnqueueUnicast(CreateOtherCharAllSize, player);
 		}
 	}
 
@@ -102,10 +98,15 @@ void PlayerManager::DestroyDeadPlayers()
 		{
 			Player* deletedPlayer = (*i);
 
-			stPACKET_SC_DELETE_CHARACTER packetDelete;
-			Create_PACKET_SC_DELETE_CHARACTER(packetDelete, deletedPlayer->GetID());
-			EnqueueBroadcast(dfPACKET_SC_DELETE_CHARACTER, (char*)&packetDelete,
-				sizeof(stPACKET_SC_DELETE_CHARACTER));
+			_buffer.Clear();
+
+			int DeleteCharSize = Create_PACKET_SC_DELETE_CHARACTER(&_buffer, deletedPlayer->GetID());
+			EnqueueBroadcast(DeleteCharSize);
+
+			if (_buffer.GetReadPtr() == _buffer.GetWritePtr())
+				printf("Good~~ Func %s, Line %d\n", __func__, __LINE__);
+			else
+				printf("No!!! Func %s, Line %d\n", __func__, __LINE__);
 
 			deletedPlayer->GetSession()->SetSessionDead();
 			i = _PlayerList.erase(i);
@@ -141,58 +142,86 @@ void PlayerManager::Update()
 		// Broadcast SC Packets
 		if ((*i)->GetPacketMoveStart())
 		{
-			stPACKET_SC_MOVE_START packetSCMoveStart;
-			Create_PACKET_SC_MOVE_START(packetSCMoveStart,
+			_buffer.Clear();
+
+			int MoveStartSize = Create_PACKET_SC_MOVE_START(&_buffer,
 				(*i)->GetID(), (*i)->GetMoveDirection(), (*i)->GetX(), (*i)->GetY());
-			EnqueueBroadcast(dfPACKET_SC_MOVE_START, (char*)&packetSCMoveStart,
-				sizeof(stPACKET_SC_MOVE_START), (*i));
+			EnqueueBroadcast(MoveStartSize, (*i));
 			(*i)->ResetPacketMoveStart();
+
+			if (_buffer.GetReadPtr() == _buffer.GetWritePtr())
+				printf("Good~~ Func %s, Line %d\n", __func__, __LINE__);
+			else
+				printf("No!!! Func %s, Line %d\n", __func__, __LINE__);
 		}
 
 		if ((*i)->GetPacketMoveStop())
 		{
-			stPACKET_SC_MOVE_STOP packetSCMoveStop;
-			Create_PACKET_SC_MOVE_STOP(packetSCMoveStop,
+			_buffer.Clear();
+
+			int MoveStopSize = Create_PACKET_SC_MOVE_STOP(&_buffer,
 				(*i)->GetID(), (*i)->GetDirection(), (*i)->GetX(), (*i)->GetY());
-			EnqueueBroadcast(dfPACKET_SC_MOVE_STOP, (char*)&packetSCMoveStop,
-				sizeof(stPACKET_SC_MOVE_STOP), (*i));
+			EnqueueBroadcast(MoveStopSize, (*i));
 			(*i)->ResetPacketMoveStop();
+
+			if (_buffer.GetReadPtr() == _buffer.GetWritePtr())
+				printf("Good~~ Func %s, Line %d\n", __func__, __LINE__);
+			else
+				printf("No!!! Func %s, Line %d\n", __func__, __LINE__);
 		}
 
 		if ((*i)->GetPacketAttack1())
 		{
-			stPACKET_SC_ATTACK1 packetSCAttack1;
-			Create_PACKET_SC_ATTACK1(packetSCAttack1,
+			_buffer.Clear();
+
+			int Attack1Size = Create_PACKET_SC_ATTACK1(&_buffer,
 				(*i)->GetID(), (*i)->GetDirection(), (*i)->GetX(), (*i)->GetY());
-			CheckAttacknEnqueueDamagePacket(dfATTACK_TYPE_ATTACK1, 
-				(*i)->GetID(), (*i)->GetDirection(), (*i)->GetX(), (*i)->GetY());
-			EnqueueBroadcast(dfPACKET_SC_ATTACK1, (char*)&packetSCAttack1,
-				sizeof(stPACKET_SC_ATTACK1), (*i));
+			EnqueueBroadcast(Attack1Size, (*i));
 			(*i)->ResetPacketAttack1();
+
+			if (_buffer.GetReadPtr() == _buffer.GetWritePtr())
+				printf("Good~~ Func %s, Line %d\n", __func__, __LINE__);
+			else
+				printf("No!!! Func %s, Line %d\n", __func__, __LINE__);
+
+			CheckAttacknEnqueueDamagePacket(dfATTACK_TYPE_ATTACK1,
+				(*i)->GetID(), (*i)->GetDirection(), (*i)->GetX(), (*i)->GetY());
 		}
 
 		if ((*i)->GetPacketAttack2())
 		{
-			stPACKET_SC_ATTACK2 packetSCAttack2;
-			Create_PACKET_SC_ATTACK2(packetSCAttack2,
+			_buffer.Clear();
+
+			int Attack2Size = Create_PACKET_SC_ATTACK2(&_buffer,
 				(*i)->GetID(), (*i)->GetDirection(), (*i)->GetX(), (*i)->GetY());
+			EnqueueBroadcast(Attack2Size, (*i));
+			(*i)->ResetPacketAttack2();
+
+			if (_buffer.GetReadPtr() == _buffer.GetWritePtr())
+				printf("Good~~ Func %s, Line %d\n", __func__, __LINE__);
+			else
+				printf("No!!! Func %s, Line %d\n", __func__, __LINE__);
+
 			CheckAttacknEnqueueDamagePacket(dfATTACK_TYPE_ATTACK2,
 				(*i)->GetID(), (*i)->GetDirection(), (*i)->GetX(), (*i)->GetY());
-			EnqueueBroadcast(dfPACKET_SC_ATTACK2, (char*)&packetSCAttack2,
-				sizeof(stPACKET_SC_ATTACK2), (*i));
-			(*i)->ResetPacketAttack2();
 		}
 
 		if ((*i)->GetPacketAttack3())
 		{
-			stPACKET_SC_ATTACK3 packetSCAttack3;
-			Create_PACKET_SC_ATTACK3(packetSCAttack3,
+			_buffer.Clear();
+
+			int Attack3Size = Create_PACKET_SC_ATTACK3(&_buffer,
 				(*i)->GetID(), (*i)->GetDirection(), (*i)->GetX(), (*i)->GetY());
+			EnqueueBroadcast(Attack3Size, (*i));
+			(*i)->ResetPacketAttack3();
+
+			if (_buffer.GetReadPtr() == _buffer.GetWritePtr())
+				printf("Good~~ Func %s, Line %d\n", __func__, __LINE__);
+			else
+				printf("No!!! Func %s, Line %d\n", __func__, __LINE__);
+
 			CheckAttacknEnqueueDamagePacket(dfATTACK_TYPE_ATTACK3,
 				(*i)->GetID(), (*i)->GetDirection(), (*i)->GetX(), (*i)->GetY());
-			EnqueueBroadcast(dfPACKET_SC_ATTACK3, (char*)&packetSCAttack3,
-				sizeof(stPACKET_SC_ATTACK3), (*i));
-			(*i)->ResetPacketAttack3();
 		}
 	}
 }
@@ -202,39 +231,30 @@ void PlayerManager::Terminate()
 	DestroyAllPlayer();
 }
 
-void PlayerManager::EnqueueUnicast(uint8 msgType, char* msg, int size, Player* pPlayer)
+void PlayerManager::EnqueueUnicast(int size, Player* pPlayer)
 {
-	stPACKET_HEADER header;
-	header.Code = 0x89;
-	header.Size = size;
-	header.Type = msgType;
-	
 	if(_pNetworkManager == nullptr)
 		_pNetworkManager = NetworkManager::GetInstance();
 
-	_pNetworkManager->EnqueueUnicast((char*)&header, HEADER_LEN, pPlayer->GetSession());
-	_pNetworkManager->EnqueueUnicast(msg, size, pPlayer->GetSession());
+	_pNetworkManager->EnqueueUnicast(_buffer.GetReadPtr(), size, pPlayer->GetSession());
+	_buffer.MoveReadPos(size);
 }
 
-void PlayerManager::EnqueueBroadcast(uint8 msgType, char* msg, int size, Player* pExpPlayer)
+void PlayerManager::EnqueueBroadcast(int size, Player* pExpPlayer)
 {
-	stPACKET_HEADER header;
-	header.Code = 0x89;
-	header.Size = size;
-	header.Type = msgType;
 
 	if (_pNetworkManager == nullptr)
 		_pNetworkManager = NetworkManager::GetInstance();
 
 	if (pExpPlayer != nullptr)
 	{
-		_pNetworkManager->EnqueueBroadcast((char*)&header, HEADER_LEN, pExpPlayer->GetSession());
-		_pNetworkManager->EnqueueBroadcast(msg, size, pExpPlayer->GetSession());
+		_pNetworkManager->EnqueueBroadcast(_buffer.GetReadPtr(), size, pExpPlayer->GetSession());
+		_buffer.MoveReadPos(size);
 	}
 	else
 	{
-		_pNetworkManager->EnqueueBroadcast((char*)&header, HEADER_LEN);
-		_pNetworkManager->EnqueueBroadcast(msg, size);
+		_pNetworkManager->EnqueueBroadcast(_buffer.GetReadPtr(), size);
+		_buffer.MoveReadPos(size);
 	}
 }
 
@@ -278,11 +298,16 @@ void PlayerManager::CheckAttacknEnqueueDamagePacket(uint8 attackType, uint32 ID,
 			if ((*i)->GetX() >= minX && (*i)->GetX() <= x &&
 				(*i)->GetY() >= minY && (*i)->GetY() <= maxY && ID != (*i)->GetID())
 			{
+				_buffer.Clear();
+
 				(*i)->Attacked(damage);
-				stPACKET_SC_DAMAGE packetSCDamage;
-				Create_PACKET_SC_DAMAGE(packetSCDamage, ID, (*i)->GetID(), (*i)->GetHp());
-				EnqueueBroadcast(dfPACKET_SC_DAMAGE, (char*)&packetSCDamage,
-					sizeof(stPACKET_SC_DAMAGE));
+				int DamageSize = Create_PACKET_SC_DAMAGE(&_buffer, ID, (*i)->GetID(), (*i)->GetHp());
+				EnqueueBroadcast(DamageSize);
+
+				if (_buffer.GetReadPtr() == _buffer.GetWritePtr())
+					printf("Good~~ Func %s, Line %d\n", __func__, __LINE__);
+				else
+					printf("No!!! Func %s, Line %d\n", __func__, __LINE__);
 			}
 		}
 	}
@@ -298,11 +323,16 @@ void PlayerManager::CheckAttacknEnqueueDamagePacket(uint8 attackType, uint32 ID,
 			if ((*i)->GetX() >= x && (*i)->GetX() <= maxX &&
 				(*i)->GetY() >= minY && (*i)->GetY() <= maxY && ID != (*i)->GetID())
 			{
+				_buffer.Clear();
+
 				(*i)->Attacked(damage);
-				stPACKET_SC_DAMAGE packetSCDamage;
-				Create_PACKET_SC_DAMAGE(packetSCDamage, ID, (*i)->GetID(), (*i)->GetHp());
-				EnqueueBroadcast(dfPACKET_SC_DAMAGE, (char*)&packetSCDamage,
-					sizeof(stPACKET_SC_DAMAGE));
+				int DamageSize = Create_PACKET_SC_DAMAGE(&_buffer, ID, (*i)->GetID(), (*i)->GetHp());
+				EnqueueBroadcast(DamageSize);
+
+				if (_buffer.GetReadPtr() == _buffer.GetWritePtr())
+					printf("Good~~ Func %s, Line %d\n", __func__, __LINE__);
+				else
+					printf("No!!! Func %s, Line %d\n", __func__, __LINE__);
 			}
 		}
 	}

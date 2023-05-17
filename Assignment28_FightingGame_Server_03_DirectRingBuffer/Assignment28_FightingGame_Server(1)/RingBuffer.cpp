@@ -1,6 +1,7 @@
 #include "RingBuffer.h"
 #include <iostream>
 #define RINGBUFFER_DEBUG
+//#define ENQ_DEQ_DEBUG
 
 RingBuffer::RingBuffer(void) : _bufferSize(DEFAULT_BUF_SIZE), _freeSize(DEFAULT_BUF_SIZE - 1)
 {
@@ -142,7 +143,7 @@ int RingBuffer::Enqueue(char* chpData, int iSize)
     {
         memcpy_s(&_buffer[(_writePos + 1) % _bufferSize], iSize, chpData, iSize);
 
-#ifdef RINGBUFFER_DEBUG
+#ifdef ENQ_DEQ_DEBUG
         printf("\n\n");
         printf("Enqueue===========================\n\n");
         int idx = 0;
@@ -170,7 +171,7 @@ int RingBuffer::Enqueue(char* chpData, int iSize)
         memcpy_s(&_buffer[(_writePos + 1) % _bufferSize], size1, chpData, size1);
         memcpy_s(_buffer, size2, &chpData[size1], size2);
 
-#ifdef RINGBUFFER_DEBUG
+#ifdef ENQ_DEQ_DEBUG
         printf("\n\n");
         printf("Enqueue===========================\n\n");
         int idx = 0;
@@ -234,7 +235,7 @@ int RingBuffer::Dequeue(char* chpData, int iSize)
     {
         memcpy_s(chpData, iSize, &_buffer[(_readPos + 1) % _bufferSize], iSize);
 
-#ifdef RINGBUFFER_DEBUG
+#ifdef ENQ_DEQ_DEBUG
         printf("\n\n");
         printf("Dequeue===========================\n\n");
         int idx = 0;
@@ -254,7 +255,7 @@ int RingBuffer::Dequeue(char* chpData, int iSize)
         memcpy_s(chpData, size1, &_buffer[(_readPos + 1) % _bufferSize], size1);
         memcpy_s(&chpData[size1], size2, _buffer, size2);
 
-#ifdef RINGBUFFER_DEBUG
+#ifdef ENQ_DEQ_DEBUG
         printf("\n\n");
         printf("Dequeue===========================\n\n");
         int idx = 0;
@@ -448,7 +449,7 @@ char* RingBuffer::GetReadBufferPtr(void)
         return nullptr;
     }
 #endif
-    return &_buffer[_readPos];
+    return &_buffer[_readPos + 1];
 }
 
 char* RingBuffer::GetWriteBufferPtr(void)
@@ -460,7 +461,7 @@ char* RingBuffer::GetWriteBufferPtr(void)
         return nullptr;
     }
 #endif
-    return &_buffer[_writePos];
+    return &_buffer[_writePos + 1];
 }
 
 void RingBuffer::GetBufferDataForDebug()

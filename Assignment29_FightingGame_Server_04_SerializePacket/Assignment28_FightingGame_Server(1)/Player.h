@@ -1,7 +1,8 @@
 #pragma once
-#include "NetworkManager.h"
-#include "RingBuffer.h"
+
 #include "Typedef.h"
+#include "SerializeBuffer.h"
+class Session;
 
 // MOVE UNIT Define
 #define dfMOVE_X 3
@@ -95,15 +96,16 @@ private:
 	void SetStateMoveStop()		{ _state ^= dfPLAYER_STATE_MOVE;  }	
 
 private:
-	void HandlePacketMoveStart(int packetSize);
-	void HandlePacketMoveStop(int packetSize);
-	void HandlePacketAttack1(int packetSize);
-	void HandlePacketAttack2(int packetSize);
-	void HandlePacketAttack3(int packetSize);
+	void HandlePacketMoveStart();
+	void HandlePacketMoveStop();
+	void HandlePacketAttack1();
+	void HandlePacketAttack2();
+	void HandlePacketAttack3();
 
 private:
 	Session* _pSession;
-	
+	SerializeBuffer _buffer;
+
 	uint32 _ID;
 	uint8 _direction;
 	uint8 _moveDirection;

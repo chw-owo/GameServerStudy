@@ -195,6 +195,20 @@ void NetworkManager::RecvProc(Session* session)
 		session->SetSessionDead();
 		return;
 	}
+
+	// For Test =======================================================
+	buf[recvRet] = '\0';
+	printf("\n\n");
+	printf("Send Test===========================\n\n");
+	int idx = 0;
+	while (idx < recvRet)
+	{
+		printf("%d ", buf[idx]);
+		idx++;
+	}
+	printf("\n\n===================================");
+	printf("\n\n");
+	// ===================================================================
 }
 
 void NetworkManager::SendProc(Session* session)
@@ -226,6 +240,20 @@ void NetworkManager::SendProc(Session* session)
 	}
 
 	session->_sendBuf.MoveReadPos(sendRet);
+
+	// For Test =======================================================
+	buf[sendRet] = '\0';
+	printf("\n\n");
+	printf("Send Test===========================\n\n");
+	int idx = 0;
+	while (idx < sendRet)
+	{
+		printf("%d ", buf[idx]);
+		idx++;
+	}
+	printf("\n\n===================================");
+	printf("\n\n");
+	// ===================================================================
 }
 
 void NetworkManager::DisconnectDeadSessions()
