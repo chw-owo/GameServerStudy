@@ -23,16 +23,16 @@ class Session;
 #define dfRANGE_MOVE_RIGHT	630
 #define dfRANGE_MOVE_BOTTOM	470
 
-// Player Packet Flag
-#define dfPLAYER_packetState_MOVE_START	0b00000001
-#define dfPLAYER_packetState_MOVE_STOP	0b00000010
-#define dfPLAYER_packetState_ATTACK1		0b00000100
-#define dfPLAYER_packetState_ATTACK2		0b00001000
-#define dfPLAYER_packetState_ATTACK3		0b00010000
+// Packet State Flag
+#define dfPACKET_STATE_MOVE_START		0b00000001
+#define dfPACKET_STATE_MOVE_STOP		0b00000010
+#define dfPACKET_STATE_ATTACK1		0b00000100
+#define dfPACKET_STATE_ATTACK2		0b00001000
+#define dfPACKET_STATE_ATTACK3		0b00010000
 
 // Player State Flag
-#define dfPLAYER_playerState_ALIVE		0b00000001
-#define dfPLAYER_playerState_MOVE			0b00000010
+#define dfPLAYER_STATE_ALIVE			0b00000001
+#define dfPLAYER_STATE_MOVE			0b00000010
 
 // Init Setting
 #define dfINIT_X (dfRANGE_MOVE_RIGHT - dfRANGE_MOVE_LEFT) / 2
@@ -61,37 +61,37 @@ public:
 	char GetHp()				{ return _hp; }
 
 public:
-	bool GetPacketMoveStart()	{ return (_packetState & dfPLAYER_packetState_MOVE_START); }
-	bool GetPacketMoveStop()	{ return (_packetState & dfPLAYER_packetState_MOVE_STOP); }
-	bool GetPacketAttack1()		{ return (_packetState & dfPLAYER_packetState_ATTACK1); }
-	bool GetPacketAttack2()		{ return (_packetState & dfPLAYER_packetState_ATTACK2); }
-	bool GetPacketAttack3()		{ return (_packetState & dfPLAYER_packetState_ATTACK3); }
+	bool GetPacketMoveStart()	{ return (_packetState & dfPACKET_STATE_MOVE_START); }
+	bool GetPacketMoveStop()	{ return (_packetState & dfPACKET_STATE_MOVE_STOP); }
+	bool GetPacketAttack1()		{ return (_packetState & dfPACKET_STATE_ATTACK1); }
+	bool GetPacketAttack2()		{ return (_packetState & dfPACKET_STATE_ATTACK2); }
+	bool GetPacketAttack3()		{ return (_packetState & dfPACKET_STATE_ATTACK3); }
 
 public:
-	bool GetStateAlive()		{ return (_playerState & dfPLAYER_playerState_ALIVE); }
-	bool GetStateMoving()		{ return (_playerState & dfPLAYER_playerState_MOVE); }
+	bool GetStateAlive()		{ return (_playerState & dfPLAYER_STATE_ALIVE); }
+	bool GetStateMoving()		{ return (_playerState & dfPLAYER_STATE_MOVE); }
 
 public:
-	void ResetPacketMoveStart() { _packetState ^= dfPLAYER_packetState_MOVE_START; }
-	void ResetPacketMoveStop()	{ _packetState ^= dfPLAYER_packetState_MOVE_STOP; }
-	void ResetPacketAttack1()	{ _packetState ^= dfPLAYER_packetState_ATTACK1; }
-	void ResetPacketAttack2()	{ _packetState ^= dfPLAYER_packetState_ATTACK2; }
-	void ResetPacketAttack3()	{ _packetState ^= dfPLAYER_packetState_ATTACK3; }
+	void ResetPacketMoveStart() { _packetState ^= dfPACKET_STATE_MOVE_START; }
+	void ResetPacketMoveStop()	{ _packetState ^= dfPACKET_STATE_MOVE_STOP; }
+	void ResetPacketAttack1()	{ _packetState ^= dfPACKET_STATE_ATTACK1; }
+	void ResetPacketAttack2()	{ _packetState ^= dfPACKET_STATE_ATTACK2; }
+	void ResetPacketAttack3()	{ _packetState ^= dfPACKET_STATE_ATTACK3; }
 
 	// Packet Flag Setting
 private:
-	void SetPacketMoveStart()	{ _packetState |= dfPLAYER_packetState_MOVE_START; }
-	void SetPacketMoveStop()	{ _packetState |= dfPLAYER_packetState_MOVE_STOP; }
-	void SetPacketAttack1()		{ _packetState |= dfPLAYER_packetState_ATTACK1; }
-	void SetPacketAttack2()		{ _packetState |= dfPLAYER_packetState_ATTACK2; }
-	void SetPacketAttack3()		{ _packetState |= dfPLAYER_packetState_ATTACK3; }
+	void SetPacketMoveStart()	{ _packetState |= dfPACKET_STATE_MOVE_START; }
+	void SetPacketMoveStop()	{ _packetState |= dfPACKET_STATE_MOVE_STOP; }
+	void SetPacketAttack1()		{ _packetState |= dfPACKET_STATE_ATTACK1; }
+	void SetPacketAttack2()		{ _packetState |= dfPACKET_STATE_ATTACK2; }
+	void SetPacketAttack3()		{ _packetState |= dfPACKET_STATE_ATTACK3; }
 
 	// State Flag Setting
 private:
-	void SetStateAlive()		{ _playerState |= dfPLAYER_playerState_ALIVE; }
-	void SetStateDead()			{ _playerState ^= dfPLAYER_playerState_ALIVE; }
-	void SetStateMoveStart()	{ _playerState |= dfPLAYER_playerState_MOVE;  }
-	void SetStateMoveStop()		{ _playerState ^= dfPLAYER_playerState_MOVE;  }	
+	void SetStateAlive()		{ _playerState |= dfPLAYER_STATE_ALIVE; }
+	void SetStateDead()			{ _playerState ^= dfPLAYER_STATE_ALIVE; }
+	void SetStateMoveStart()	{ _playerState |= dfPLAYER_STATE_MOVE;  }
+	void SetStateMoveStop()		{ _playerState ^= dfPLAYER_STATE_MOVE;  }
 
 private:
 	void HandlePacketMoveStart();

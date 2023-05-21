@@ -8,7 +8,7 @@ Player::Player(Session* pSession, int ID)
 	_direction(dfPACKET_MOVE_DIR_LL), 
 	_moveDirection(dfPACKET_MOVE_DIR_LL), 
 	_x(dfINIT_X), _y(dfINIT_Y), _hp(dfMAX_HP), 
-	_packetState (0), _state(dfPLAYER_STATE_ALIVE)
+	_packetState (0), _playerState(dfPLAYER_STATE_ALIVE)
 {
 
 }
@@ -85,9 +85,9 @@ void Player::DequeueRecvBuf()
 			return;
 		}
 
-		if (header.Code != dfPACKET_HEADER_CODE)
+		if ((char)header.Code != (char)dfPACKET_HEADER_CODE)
 		{
-			printf("Error! Wrong Header Code! - Func %s Line %d\n", __func__, __LINE__);
+			printf("Error! Wrong Header Code! %x - Func %s Line %d\n", header.Code, __func__, __LINE__);
 			SetStateDead();
 			return;
 		}

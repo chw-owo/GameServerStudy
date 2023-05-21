@@ -225,7 +225,6 @@ void NetworkManager::SendProc(Session* session)
 	if(session->_sendBuf.GetUseSize() <= 0)
 		return;
 
-
 	int sendRet = send(	session->_sock, 
 						session->_sendBuf.GetReadBufferPtr(), 
 						session->_sendBuf.DirectDequeueSize(), 0);

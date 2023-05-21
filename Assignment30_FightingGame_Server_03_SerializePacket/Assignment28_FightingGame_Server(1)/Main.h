@@ -1,5 +1,2 @@
-#pragma once
-#include "NetworkManager.h"
-#include "PlayerManager.h"
-
+#pragma oncess
 extern bool g_bShutdown;

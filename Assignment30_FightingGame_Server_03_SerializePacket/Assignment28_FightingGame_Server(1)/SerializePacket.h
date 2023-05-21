@@ -2,6 +2,12 @@
 #ifndef  __SERIALIZE_BUFFER__
 #define  __SERIALIZE_BUFFER__
 
+#ifndef _WINSOCKAPI_
+#define _WINSOCKAPI_
+#endif
+
+#include <windows.h>
+
 class SerializePacket
 {
 public:
@@ -43,7 +49,7 @@ public:
 
 	SerializePacket& operator << (int iValue);
 	SerializePacket& operator << (long lValue);
-	SerializePacket& operator << (____int64 iValue);
+	SerializePacket& operator << (__int64 iValue);
 
 
 	SerializePacket& operator >> (char& chValue);
@@ -54,7 +60,7 @@ public:
 
 	SerializePacket& operator >> (int& iValue);
 	SerializePacket& operator >> (DWORD& dwValue);
-	SerializePacket& operator >> (____int64& iValue);
+	SerializePacket& operator >> (__int64& iValue);
 
 	int	GetData(char* chpDest, int iSize);
 	int	PutData(char* chpSrc, int iSrcSize);

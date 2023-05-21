@@ -1,5 +1,4 @@
 #include "SerializePacket.h"
-#include <windows.h>
 #include <stdio.h>
 
 SerializePacket::SerializePacket()
@@ -207,7 +206,7 @@ SerializePacket& SerializePacket::operator<<(long lValue)
     return *this;
 }
 
-SerializePacket& SerializePacket::operator<<(____int64 iValue)
+SerializePacket& SerializePacket::operator<<(__int64 iValue)
 {
     if (_iBufferSize - _iWritePos < sizeof(iValue))
         Resize(_iBufferSize * 1.5f);
@@ -224,7 +223,7 @@ SerializePacket& SerializePacket::operator>>(BYTE& byValue)
 {
     if (_iWritePos - _iReadPos < sizeof(BYTE))
     {
-        printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n", 
+        printf("Used Size(%d) < Requested Size(%llu)!\n", 
             _iWritePos - _iReadPos, sizeof(BYTE));
         return *this;
     }
@@ -241,7 +240,7 @@ SerializePacket& SerializePacket::operator>>(char& chValue)
     if (_iWritePos - _iReadPos < sizeof(char))
     {
         printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n", 
-            _iWritePos - _iReadPos, sizeof(char));
+            _iWritePos - _iReadPos, sizeof(char), __func__, __LINE__);
         return *this;
     }
 
@@ -257,7 +256,7 @@ SerializePacket& SerializePacket::operator>>(short& shValue)
     if (_iWritePos - _iReadPos < sizeof(short))
     {
         printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n", 
-            _iWritePos - _iReadPos, sizeof(short));
+            _iWritePos - _iReadPos, sizeof(short), __func__, __LINE__);
         return *this;
     }
 
@@ -273,7 +272,7 @@ SerializePacket& SerializePacket::operator>>(WORD& wValue)
     if (_iWritePos - _iReadPos < sizeof(WORD))
     {
         printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n", 
-            _iWritePos - _iReadPos, sizeof(WORD));
+            _iWritePos - _iReadPos, sizeof(WORD), __func__, __LINE__);
         return *this;
     }
 
@@ -289,7 +288,7 @@ SerializePacket& SerializePacket::operator>>(int& iValue)
     if (_iWritePos - _iReadPos < sizeof(int))
     {
         printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n", 
-            _iWritePos - _iReadPos, sizeof(int));
+            _iWritePos - _iReadPos, sizeof(int), __func__, __LINE__);
         return *this;
     }
 
@@ -305,7 +304,7 @@ SerializePacket& SerializePacket::operator>>(DWORD& dwValue)
     if (_iWritePos - _iReadPos < sizeof(DWORD))
     {
         printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n", 
-            _iWritePos - _iReadPos, sizeof(DWORD));
+            _iWritePos - _iReadPos, sizeof(DWORD), __func__, __LINE__);
         return *this;
     }
 
@@ -316,19 +315,19 @@ SerializePacket& SerializePacket::operator>>(DWORD& dwValue)
     return *this;
 }
 
-SerializePacket& SerializePacket::operator>>(____int64& iValue)
+SerializePacket& SerializePacket::operator>>(__int64& iValue)
 {
-    if (_iWritePos - _iReadPos < sizeof(____int64))
+    if (_iWritePos - _iReadPos < sizeof(__int64))
     {
         printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n", 
-            _iWritePos - _iReadPos, sizeof(____int64));
+            _iWritePos - _iReadPos, sizeof(__int64), __func__, __LINE__);
         return *this;
     }
 
-    memcpy_s(&iValue, sizeof(____int64),
-        &_chpBuffer[_iReadPos], sizeof(____int64));
+    memcpy_s(&iValue, sizeof(__int64),
+        &_chpBuffer[_iReadPos], sizeof(__int64));
 
-    _iReadPos += sizeof(____int64);
+    _iReadPos += sizeof(__int64);
     return *this;
 }
 
