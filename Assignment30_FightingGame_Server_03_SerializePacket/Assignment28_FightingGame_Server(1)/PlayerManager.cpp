@@ -7,7 +7,6 @@
 #include <windows.h>
 #include <iostream>
 
-
 // ATTACK TYPE Define
 #define dfATTACK_TYPE_ATTACK1	1
 #define dfATTACK_TYPE_ATTACK2	2
@@ -48,12 +47,12 @@ Player* PlayerManager::CreatePlayer(Session* pSession)
 	_PlayerList.push_back(player);
 
 	// Send <Allocate ID Message> to New Player
-	int CreateMyCharSize = Create_PACKET_SC_CREATE_MY_CHARACTER(&_buffer,
+	int CreateMyCharSize = Create_Packet_SC_CREATE_MY_CHARACTER(&_packetBuffer,
 		player->GetID(), player->GetDirection(), player->GetX(), player->GetY(), player->GetHp());
 	EnqueueUnicast(CreateMyCharSize, player);
 
 	// Send <Create New Player Message> to All Player
-	int CreateOtherCharSize = Create_PACKET_SC_CREATE_OTHER_CHARACTER(&_buffer,
+	int CreateOtherCharSize = Create_Packet_SC_CREATE_OTHER_CHARACTER(&_packetBuffer,
 		player->GetID(), player->GetDirection(), player->GetX(), player->GetY(), player->GetHp());
 	EnqueueBroadcast(CreateOtherCharSize, player);
 
@@ -62,7 +61,7 @@ Player* PlayerManager::CreatePlayer(Session* pSession)
 	{
 		if ((*i)->GetID() != _ID)
 		{
-			int CreateOtherCharAllSize = Create_PACKET_SC_CREATE_OTHER_CHARACTER(&_buffer,
+			int CreateOtherCharAllSize = Create_Packet_SC_CREATE_OTHER_CHARACTER(&_packetBuffer,
 				(*i)->GetID(), (*i)->GetDirection(), (*i)->GetX(), (*i)->GetY(), (*i)->GetHp());
 			EnqueueUnicast(CreateOtherCharAllSize, player);
 		}
@@ -98,12 +97,12 @@ void PlayerManager::DestroyDeadPlayers()
 		{
 			Player* deletedPlayer = (*i);
 
-			_buffer.Clear();
+			_packetBuffer.Clear();
 
-			int DeleteCharSize = Create_PACKET_SC_DELETE_CHARACTER(&_buffer, deletedPlayer->GetID());
+			int DeleteCharSize = Create_Packet_SC_DELETE_CHARACTER(&_packetBuffer, deletedPlayer->GetID());
 			EnqueueBroadcast(DeleteCharSize);
 
-			if (_buffer.GetReadPtr() == _buffer.GetWritePtr())
+			if (_packetBuffer.GetReadPtr() == _packetBuffer.GetWritePtr())
 				printf("Good~~ Func %s, Line %d\n", __func__, __LINE__);
 			else
 				printf("No!!! Func %s, Line %d\n", __func__, __LINE__);
@@ -142,14 +141,14 @@ void PlayerManager::Update()
 		// Broadcast SC Packets
 		if ((*i)->GetPacketMoveStart())
 		{
-			_buffer.Clear();
+			_packetBuffer.Clear();
 
-			int MoveStartSize = Create_PACKET_SC_MOVE_START(&_buffer,
+			int MoveStartSize = Create_Packet_SC_MOVE_START(&_packetBuffer,
 				(*i)->GetID(), (*i)->GetMoveDirection(), (*i)->GetX(), (*i)->GetY());
 			EnqueueBroadcast(MoveStartSize, (*i));
 			(*i)->ResetPacketMoveStart();
 
-			if (_buffer.GetReadPtr() == _buffer.GetWritePtr())
+			if (_packetBuffer.GetReadPtr() == _packetBuffer.GetWritePtr())
 				printf("Good~~ Func %s, Line %d\n", __func__, __LINE__);
 			else
 				printf("No!!! Func %s, Line %d\n", __func__, __LINE__);
@@ -157,14 +156,14 @@ void PlayerManager::Update()
 
 		if ((*i)->GetPacketMoveStop())
 		{
-			_buffer.Clear();
+			_packetBuffer.Clear();
 
-			int MoveStopSize = Create_PACKET_SC_MOVE_STOP(&_buffer,
+			int MoveStopSize = Create_Packet_SC_MOVE_STOP(&_packetBuffer,
 				(*i)->GetID(), (*i)->GetDirection(), (*i)->GetX(), (*i)->GetY());
 			EnqueueBroadcast(MoveStopSize, (*i));
 			(*i)->ResetPacketMoveStop();
 
-			if (_buffer.GetReadPtr() == _buffer.GetWritePtr())
+			if (_packetBuffer.GetReadPtr() == _packetBuffer.GetWritePtr())
 				printf("Good~~ Func %s, Line %d\n", __func__, __LINE__);
 			else
 				printf("No!!! Func %s, Line %d\n", __func__, __LINE__);
@@ -172,14 +171,14 @@ void PlayerManager::Update()
 
 		if ((*i)->GetPacketAttack1())
 		{
-			_buffer.Clear();
+			_packetBuffer.Clear();
 
-			int Attack1Size = Create_PACKET_SC_ATTACK1(&_buffer,
+			int Attack1Size = Create_Packet_SC_ATTACK1(&_packetBuffer,
 				(*i)->GetID(), (*i)->GetDirection(), (*i)->GetX(), (*i)->GetY());
 			EnqueueBroadcast(Attack1Size, (*i));
 			(*i)->ResetPacketAttack1();
 
-			if (_buffer.GetReadPtr() == _buffer.GetWritePtr())
+			if (_packetBuffer.GetReadPtr() == _packetBuffer.GetWritePtr())
 				printf("Good~~ Func %s, Line %d\n", __func__, __LINE__);
 			else
 				printf("No!!! Func %s, Line %d\n", __func__, __LINE__);
@@ -190,14 +189,14 @@ void PlayerManager::Update()
 
 		if ((*i)->GetPacketAttack2())
 		{
-			_buffer.Clear();
+			_packetBuffer.Clear();
 
-			int Attack2Size = Create_PACKET_SC_ATTACK2(&_buffer,
+			int Attack2Size = Create_Packet_SC_ATTACK2(&_packetBuffer,
 				(*i)->GetID(), (*i)->GetDirection(), (*i)->GetX(), (*i)->GetY());
 			EnqueueBroadcast(Attack2Size, (*i));
 			(*i)->ResetPacketAttack2();
 
-			if (_buffer.GetReadPtr() == _buffer.GetWritePtr())
+			if (_packetBuffer.GetReadPtr() == _packetBuffer.GetWritePtr())
 				printf("Good~~ Func %s, Line %d\n", __func__, __LINE__);
 			else
 				printf("No!!! Func %s, Line %d\n", __func__, __LINE__);
@@ -208,14 +207,14 @@ void PlayerManager::Update()
 
 		if ((*i)->GetPacketAttack3())
 		{
-			_buffer.Clear();
+			_packetBuffer.Clear();
 
-			int Attack3Size = Create_PACKET_SC_ATTACK3(&_buffer,
+			int Attack3Size = Create_Packet_SC_ATTACK3(&_packetBuffer,
 				(*i)->GetID(), (*i)->GetDirection(), (*i)->GetX(), (*i)->GetY());
 			EnqueueBroadcast(Attack3Size, (*i));
 			(*i)->ResetPacketAttack3();
 
-			if (_buffer.GetReadPtr() == _buffer.GetWritePtr())
+			if (_packetBuffer.GetReadPtr() == _packetBuffer.GetWritePtr())
 				printf("Good~~ Func %s, Line %d\n", __func__, __LINE__);
 			else
 				printf("No!!! Func %s, Line %d\n", __func__, __LINE__);
@@ -236,8 +235,8 @@ void PlayerManager::EnqueueUnicast(int size, Player* pPlayer)
 	if(_pNetworkManager == nullptr)
 		_pNetworkManager = NetworkManager::GetInstance();
 
-	_pNetworkManager->EnqueueUnicast(_buffer.GetReadPtr(), size, pPlayer->GetSession());
-	_buffer.MoveReadPos(size);
+	_pNetworkManager->EnqueueUnicast(_packetBuffer.GetReadPtr(), size, pPlayer->GetSession());
+	_packetBuffer.MoveReadPos(size);
 }
 
 void PlayerManager::EnqueueBroadcast(int size, Player* pExpPlayer)
@@ -248,21 +247,21 @@ void PlayerManager::EnqueueBroadcast(int size, Player* pExpPlayer)
 
 	if (pExpPlayer != nullptr)
 	{
-		_pNetworkManager->EnqueueBroadcast(_buffer.GetReadPtr(), size, pExpPlayer->GetSession());
-		_buffer.MoveReadPos(size);
+		_pNetworkManager->EnqueueBroadcast(_packetBuffer.GetReadPtr(), size, pExpPlayer->GetSession());
+		_packetBuffer.MoveReadPos(size);
 	}
 	else
 	{
-		_pNetworkManager->EnqueueBroadcast(_buffer.GetReadPtr(), size);
-		_buffer.MoveReadPos(size);
+		_pNetworkManager->EnqueueBroadcast(_packetBuffer.GetReadPtr(), size);
+		_packetBuffer.MoveReadPos(size);
 	}
 }
 
-void PlayerManager::CheckAttacknEnqueueDamagePacket(uint8 attackType, uint32 ID, uint8 direction, uint16 x, uint16 y)
+void PlayerManager::CheckAttacknEnqueueDamagePacket(char attackType, int ID, char direction, short x, short y)
 {
-	uint16 rangeX;
-	uint16 rangeY;
-	uint16 damage;
+	short rangeX;
+	short rangeY;
+	short damage;
 
 	switch (attackType)
 	{
@@ -290,21 +289,21 @@ void PlayerManager::CheckAttacknEnqueueDamagePacket(uint8 attackType, uint32 ID,
 
 	if (direction == dfPACKET_MOVE_DIR_LL)
 	{
-		uint16 minX = x - rangeX;
-		uint16 minY = y - rangeY;
-		uint16 maxY = y + rangeY;
+		short minX = x - rangeX;
+		short minY = y - rangeY;
+		short maxY = y + rangeY;
 		for (CList<Player*>::iterator i = _PlayerList.begin(); i != _PlayerList.end(); i++)
 		{
 			if ((*i)->GetX() >= minX && (*i)->GetX() <= x &&
 				(*i)->GetY() >= minY && (*i)->GetY() <= maxY && ID != (*i)->GetID())
 			{
-				_buffer.Clear();
+				_packetBuffer.Clear();
 
 				(*i)->Attacked(damage);
-				int DamageSize = Create_PACKET_SC_DAMAGE(&_buffer, ID, (*i)->GetID(), (*i)->GetHp());
+				int DamageSize = Create_Packet_SC_DAMAGE(&_packetBuffer, ID, (*i)->GetID(), (*i)->GetHp());
 				EnqueueBroadcast(DamageSize);
 
-				if (_buffer.GetReadPtr() == _buffer.GetWritePtr())
+				if (_packetBuffer.GetReadPtr() == _packetBuffer.GetWritePtr())
 					printf("Good~~ Func %s, Line %d\n", __func__, __LINE__);
 				else
 					printf("No!!! Func %s, Line %d\n", __func__, __LINE__);
@@ -314,22 +313,22 @@ void PlayerManager::CheckAttacknEnqueueDamagePacket(uint8 attackType, uint32 ID,
 		
 	else if (direction == dfPACKET_MOVE_DIR_RR)
 	{
-		uint16 maxX = x + rangeX;
-		uint16 minY = y - rangeY;
-		uint16 maxY = y + rangeY;
+		short maxX = x + rangeX;
+		short minY = y - rangeY;
+		short maxY = y + rangeY;
 
 		for (CList<Player*>::iterator i = _PlayerList.begin(); i != _PlayerList.end(); i++)
 		{
 			if ((*i)->GetX() >= x && (*i)->GetX() <= maxX &&
 				(*i)->GetY() >= minY && (*i)->GetY() <= maxY && ID != (*i)->GetID())
 			{
-				_buffer.Clear();
+				_packetBuffer.Clear();
 
 				(*i)->Attacked(damage);
-				int DamageSize = Create_PACKET_SC_DAMAGE(&_buffer, ID, (*i)->GetID(), (*i)->GetHp());
+				int DamageSize = Create_Packet_SC_DAMAGE(&_packetBuffer, ID, (*i)->GetID(), (*i)->GetHp());
 				EnqueueBroadcast(DamageSize);
 
-				if (_buffer.GetReadPtr() == _buffer.GetWritePtr())
+				if (_packetBuffer.GetReadPtr() == _packetBuffer.GetWritePtr())
 					printf("Good~~ Func %s, Line %d\n", __func__, __LINE__);
 				else
 					printf("No!!! Func %s, Line %d\n", __func__, __LINE__);

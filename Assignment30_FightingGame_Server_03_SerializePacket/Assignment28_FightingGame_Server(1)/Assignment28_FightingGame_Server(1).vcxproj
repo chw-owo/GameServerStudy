@@ -24,6 +24,7 @@
     <ProjectGuid>{6fb46af9-a707-4e88-b2db-75f9ab304aed}</ProjectGuid>
     <RootNamespace>Assignment28FightingGameServer1</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>Assignment30_FightingGame_Server_03</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -104,7 +105,6 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -119,8 +119,6 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <Optimization>Disabled</Optimization>
-      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -130,15 +128,16 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="CreatePacket.cpp" />
+    <ClCompile Include="CreateSCPacket.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="NetworkManager.cpp" />
     <ClCompile Include="Player.cpp" />
     <ClCompile Include="PlayerManager.cpp" />
     <ClCompile Include="RingBuffer.cpp" />
+    <ClCompile Include="SerializePacket.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="CreatePacket.h" />
+    <ClInclude Include="CreateSCPacket.h" />
     <ClInclude Include="List.h" />
     <ClInclude Include="Main.h" />
     <ClInclude Include="NetworkManager.h" />
@@ -146,7 +145,7 @@
     <ClInclude Include="Player.h" />
     <ClInclude Include="PlayerManager.h" />
     <ClInclude Include="RingBuffer.h" />
-    <ClInclude Include="Typedef.h" />
+    <ClInclude Include="SerializePacket.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

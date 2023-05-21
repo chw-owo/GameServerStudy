@@ -34,8 +34,11 @@
     <ClCompile Include="PlayerManager.cpp">
       <Filter>Content</Filter>
     </ClCompile>
-    <ClCompile Include="CreatePacket.cpp">
+    <ClCompile Include="CreateSCPacket.cpp">
       <Filter>Network</Filter>
+    </ClCompile>
+    <ClCompile Include="SerializePacket.cpp">
+      <Filter>DataStruct</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -43,9 +46,6 @@
       <Filter>Main</Filter>
     </ClInclude>
     <ClInclude Include="NetworkManager.h">
-      <Filter>Network</Filter>
-    </ClInclude>
-    <ClInclude Include="PacketDefine.h">
       <Filter>Network</Filter>
     </ClInclude>
     <ClInclude Include="Player.h">
@@ -57,13 +57,16 @@
     <ClInclude Include="List.h">
       <Filter>DataStruct</Filter>
     </ClInclude>
-    <ClInclude Include="Typedef.h">
-      <Filter>Main</Filter>
-    </ClInclude>
     <ClInclude Include="PlayerManager.h">
       <Filter>Content</Filter>
     </ClInclude>
-    <ClInclude Include="CreatePacket.h">
+    <ClInclude Include="CreateSCPacket.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="SerializePacket.h">
+      <Filter>DataStruct</Filter>
+    </ClInclude>
+    <ClInclude Include="PacketDefine.h">
       <Filter>Network</Filter>
     </ClInclude>
   </ItemGroup>

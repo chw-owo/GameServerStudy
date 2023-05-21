@@ -1,5 +1,5 @@
 #pragma once
-#include "Typedef.h"
+ 
 
 #define	dfPACKET_SC_CREATE_MY_CHARACTER			0
 #define	dfPACKET_SC_CREATE_OTHER_CHARACTER		1
@@ -28,8 +28,8 @@
 
 struct stPACKET_HEADER
 {
-	uint8	Code = dfPACKET_HEADER_CODE;
-	uint8	Size;
-	uint8	Type;
+	char	Code = dfPACKET_HEADER_CODE;
+	char	Size;
+	char	Type;
 };
 #pragma pack (pop)

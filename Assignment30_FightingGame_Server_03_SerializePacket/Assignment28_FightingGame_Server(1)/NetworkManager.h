@@ -1,7 +1,8 @@
 #pragma once
-#include "RingBuffer.h"
-#include "Typedef.h"
+
 #include "List.h"
+ 
+#include "RingBuffer.h"
 
 #pragma comment(lib, "ws2_32")
 #include <ws2tcpip.h>
@@ -56,10 +57,9 @@ private:
 
 private:
 	static NetworkManager _networkMgr;
-
+	FD_SET _rset;
+	FD_SET _wset;
 	SOCKET _listensock;
-	CList<FD_SET*> _rsetList;
-	CList<FD_SET*> _wsetList;
 	CList<Session*> _sessionList;
 
 private:
