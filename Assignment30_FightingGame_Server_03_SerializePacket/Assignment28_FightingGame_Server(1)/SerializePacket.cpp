@@ -349,7 +349,7 @@ int SerializePacket::GetData(char* chpDest, int iSize)
 int SerializePacket::PutData(char* chpSrc, int iSrcSize)
 {
     if (_iBufferSize - _iWritePos < iSrcSize)
-        Resize(_iBufferSize + (iSrcSize * 2));
+        Resize(_iBufferSize + (iSrcSize * 1.5f));
 
     memcpy_s(&_chpBuffer[_iReadPos],
         _iBufferSize - _iWritePos,

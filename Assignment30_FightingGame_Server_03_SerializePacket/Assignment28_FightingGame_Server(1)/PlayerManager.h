@@ -2,7 +2,6 @@
 
 #include "List.h"
  
-
 #include "Player.h"
 #include "SerializePacket.h"
 

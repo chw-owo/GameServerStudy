@@ -83,7 +83,6 @@ void PlayerManager::DestroyAllPlayer()
 	while (!_PlayerList.empty())
 	{
 		player = _PlayerList.pop_back();
-		//player->GetSession()->SetSessionDead();
 		delete(player);
 	}
 }
@@ -102,10 +101,8 @@ void PlayerManager::DestroyDeadPlayers()
 			int DeleteCharSize = Create_Packet_SC_DELETE_CHARACTER(&_packetBuffer, deletedPlayer->GetID());
 			EnqueueBroadcast(DeleteCharSize);
 
-			if (_packetBuffer.GetReadPtr() == _packetBuffer.GetWritePtr())
-				printf("Good~~ Func %s, Line %d\n", __func__, __LINE__);
-			else
-				printf("No!!! Func %s, Line %d\n", __func__, __LINE__);
+			if (_packetBuffer.GetReadPtr() != _packetBuffer.GetWritePtr())
+				printf("Packet Buffer Error. Func %s, Line %d\n", __func__, __LINE__);
 
 			deletedPlayer->GetSession()->SetSessionDead();
 			i = _PlayerList.erase(i);
@@ -148,10 +145,8 @@ void PlayerManager::Update()
 			EnqueueBroadcast(MoveStartSize, (*i));
 			(*i)->ResetPacketMoveStart();
 
-			if (_packetBuffer.GetReadPtr() == _packetBuffer.GetWritePtr())
-				printf("Good~~ Func %s, Line %d\n", __func__, __LINE__);
-			else
-				printf("No!!! Func %s, Line %d\n", __func__, __LINE__);
+			if (_packetBuffer.GetReadPtr() != _packetBuffer.GetWritePtr())
+				printf("Packet Buffer Error. Func %s, Line %d\n", __func__, __LINE__);
 		}
 
 		if ((*i)->GetPacketMoveStop())
@@ -163,10 +158,9 @@ void PlayerManager::Update()
 			EnqueueBroadcast(MoveStopSize, (*i));
 			(*i)->ResetPacketMoveStop();
 
-			if (_packetBuffer.GetReadPtr() == _packetBuffer.GetWritePtr())
-				printf("Good~~ Func %s, Line %d\n", __func__, __LINE__);
-			else
-				printf("No!!! Func %s, Line %d\n", __func__, __LINE__);
+			if (_packetBuffer.GetReadPtr() != _packetBuffer.GetWritePtr())
+				printf("Packet Buffer Error. Func %s, Line %d\n", __func__, __LINE__);
+
 		}
 
 		if ((*i)->GetPacketAttack1())
@@ -178,10 +172,8 @@ void PlayerManager::Update()
 			EnqueueBroadcast(Attack1Size, (*i));
 			(*i)->ResetPacketAttack1();
 
-			if (_packetBuffer.GetReadPtr() == _packetBuffer.GetWritePtr())
-				printf("Good~~ Func %s, Line %d\n", __func__, __LINE__);
-			else
-				printf("No!!! Func %s, Line %d\n", __func__, __LINE__);
+			if (_packetBuffer.GetReadPtr() != _packetBuffer.GetWritePtr())
+				printf("Packet Buffer Error. Func %s, Line %d\n", __func__, __LINE__);
 
 			CheckAttacknEnqueueDamagePacket(dfATTACK_TYPE_ATTACK1,
 				(*i)->GetID(), (*i)->GetDirection(), (*i)->GetX(), (*i)->GetY());
@@ -196,10 +188,8 @@ void PlayerManager::Update()
 			EnqueueBroadcast(Attack2Size, (*i));
 			(*i)->ResetPacketAttack2();
 
-			if (_packetBuffer.GetReadPtr() == _packetBuffer.GetWritePtr())
-				printf("Good~~ Func %s, Line %d\n", __func__, __LINE__);
-			else
-				printf("No!!! Func %s, Line %d\n", __func__, __LINE__);
+			if (_packetBuffer.GetReadPtr() != _packetBuffer.GetWritePtr())
+				printf("Packet Buffer Error. Func %s, Line %d\n", __func__, __LINE__);
 
 			CheckAttacknEnqueueDamagePacket(dfATTACK_TYPE_ATTACK2,
 				(*i)->GetID(), (*i)->GetDirection(), (*i)->GetX(), (*i)->GetY());
@@ -214,10 +204,8 @@ void PlayerManager::Update()
 			EnqueueBroadcast(Attack3Size, (*i));
 			(*i)->ResetPacketAttack3();
 
-			if (_packetBuffer.GetReadPtr() == _packetBuffer.GetWritePtr())
-				printf("Good~~ Func %s, Line %d\n", __func__, __LINE__);
-			else
-				printf("No!!! Func %s, Line %d\n", __func__, __LINE__);
+			if (_packetBuffer.GetReadPtr() != _packetBuffer.GetWritePtr())
+				printf("Packet Buffer Error. Func %s, Line %d\n", __func__, __LINE__);
 
 			CheckAttacknEnqueueDamagePacket(dfATTACK_TYPE_ATTACK3,
 				(*i)->GetID(), (*i)->GetDirection(), (*i)->GetX(), (*i)->GetY());
@@ -303,10 +291,9 @@ void PlayerManager::CheckAttacknEnqueueDamagePacket(char attackType, int ID, cha
 				int DamageSize = Create_Packet_SC_DAMAGE(&_packetBuffer, ID, (*i)->GetID(), (*i)->GetHp());
 				EnqueueBroadcast(DamageSize);
 
-				if (_packetBuffer.GetReadPtr() == _packetBuffer.GetWritePtr())
-					printf("Good~~ Func %s, Line %d\n", __func__, __LINE__);
-				else
-					printf("No!!! Func %s, Line %d\n", __func__, __LINE__);
+				if (_packetBuffer.GetReadPtr() != _packetBuffer.GetWritePtr())
+					printf("Packet Buffer Error. Func %s, Line %d\n", __func__, __LINE__);
+
 			}
 		}
 	}
@@ -328,10 +315,9 @@ void PlayerManager::CheckAttacknEnqueueDamagePacket(char attackType, int ID, cha
 				int DamageSize = Create_Packet_SC_DAMAGE(&_packetBuffer, ID, (*i)->GetID(), (*i)->GetHp());
 				EnqueueBroadcast(DamageSize);
 
-				if (_packetBuffer.GetReadPtr() == _packetBuffer.GetWritePtr())
-					printf("Good~~ Func %s, Line %d\n", __func__, __LINE__);
-				else
-					printf("No!!! Func %s, Line %d\n", __func__, __LINE__);
+				if (_packetBuffer.GetReadPtr() != _packetBuffer.GetWritePtr())
+					printf("Packet Buffer Error. Func %s, Line %d\n", __func__, __LINE__);
+
 			}
 		}
 	}

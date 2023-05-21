@@ -41,12 +41,11 @@ public:
 
 private:
     char* _buffer;
-    int _bufferSize;
-
-    int _useSize = 0;
-    int _freeSize = 0;
-
     int _readPos = 0;
     int _writePos = 0;
+
+    int _bufferSize;
+    int _useSize = 0;
+    int _freeSize = 0;
 };
 

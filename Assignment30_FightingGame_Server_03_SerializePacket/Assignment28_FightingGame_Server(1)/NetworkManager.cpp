@@ -6,6 +6,9 @@
 #define IP L"0.0.0.0"
 #define PORT 5000
 
+//#define RECVBUF_DEBUG
+//#define SENDBUF_DEBUG
+
 NetworkManager::NetworkManager()
 {
 	
@@ -198,7 +201,8 @@ void NetworkManager::RecvProc(Session* session)
 		return;
 	}
 
-	// For Test =========================================================
+#ifdef RECVBUF_DEBUG
+
 	char testBuf[DEFAULT_BUF_SIZE];
 	int testPeekRet = session->_recvBuf.Peek(testBuf, moveRet);
 	testBuf[testPeekRet] = '\0';
@@ -217,8 +221,8 @@ void NetworkManager::RecvProc(Session* session)
 	{
 		printf("Test Error! Func %s Line %d\n", __func__, __LINE__);
 	}
-	// ==================================================================
 
+#endif
 }
 
 void NetworkManager::SendProc(Session* session)
@@ -241,7 +245,8 @@ void NetworkManager::SendProc(Session* session)
 		return;
 	}
 
-	// For Test =======================================================
+#ifdef SENDBUF_DEBUG
+
 	char testBuf[DEFAULT_BUF_SIZE];
 	int testPeekRet = session->_sendBuf.Peek(testBuf, sendRet);
 	testBuf[testPeekRet] = '\0';
@@ -261,7 +266,7 @@ void NetworkManager::SendProc(Session* session)
 		printf("Test Error! Func %s Line %d\n", __func__, __LINE__);
 	}
 
-	// ===================================================================
+#endif
 
 	int moveRet = session->_sendBuf.MoveReadPos(sendRet);
 	if (sendRet != moveRet)

@@ -3,6 +3,8 @@
 #include "NetworkManager.h"
 #include <stdio.h>
 
+#define RECV_PACKET_DEBUG
+
 Player::Player(Session* pSession, int ID)
 	: _pSession(pSession), _ID(ID), 
 	_direction(dfPACKET_MOVE_DIR_LL), 
@@ -128,10 +130,8 @@ void Player::DequeueRecvBuf()
 			break;
 		}
 
-		if (_packetBuffer.GetReadPtr() == _packetBuffer.GetWritePtr())
-			printf("Good~~ Func %s, Line %d\n", __func__, __LINE__);
-		else
-			printf("No!!! Func %s, Line %d\n", __func__, __LINE__);
+		if (_packetBuffer.GetReadPtr() != _packetBuffer.GetWritePtr())
+			printf("Packet Buffer Error. Func %s, Line %d\n", __func__, __LINE__);
 
 		useSize = _pSession->_recvBuf.GetUseSize();
 	}
@@ -168,6 +168,7 @@ void Player::HandlePacketMoveStart()
 	_packetBuffer >> X;
 	_packetBuffer >> Y;
 
+#ifdef RECV_PACKET_DEBUG
 	printf("===================================\n\
 %d: MOVE START\n\n\
 packetMoveStart.Direction: %d\n\
@@ -178,6 +179,7 @@ now X: %d\n\
 now Y: %d\n\
 ====================================\n\n",
 	_ID, Direction, X, Y, _moveDirection, _x, _y);
+#endif
 
 	if (abs(X - _x) > dfERROR_RANGE ||
 		abs(Y - _y) > dfERROR_RANGE)
@@ -228,6 +230,7 @@ void Player::HandlePacketMoveStop()
 	 _packetBuffer >> X;
 	 _packetBuffer >> Y;
 
+#ifdef RECV_PACKET_DEBUG
 	printf("===================================\n\
 %d: MOVE STOP\n\n\
 packetMoveStop.Direction: %d\n\
@@ -238,7 +241,7 @@ now X: %d\n\
 now Y: %d\n\
 ====================================\n\n",
 	_ID, Direction, X, Y, _moveDirection, _x, _y);
-
+#endif
 
 	if (abs(X - _x) > dfERROR_RANGE ||
 		abs(Y - _y) > dfERROR_RANGE)
@@ -275,6 +278,7 @@ void Player::HandlePacketAttack1()
 	 _packetBuffer >> X;
 	 _packetBuffer >> Y;
 
+#ifdef RECV_PACKET_DEBUG
 	printf("===================================\n\
 %d: ATTACK 1\n\n\
 packetAttack1.Direction: %d\n\
@@ -284,6 +288,7 @@ now X: %d\n\
 now Y: %d\n\
 ====================================\n\n",
 	_ID, Direction, X, Y, _x, _y);
+#endif
 
 	if (abs(X - _x) > dfERROR_RANGE ||
 		abs(Y - _y) > dfERROR_RANGE)
@@ -318,6 +323,7 @@ void Player::HandlePacketAttack2()
 	 _packetBuffer >> X;
 	 _packetBuffer >> Y;
 
+#ifdef RECV_PACKET_DEBUG
 	printf("===================================\n\
 %d: ATTACK 2\n\n\
 packetAttack2.Direction: %d\n\
@@ -327,6 +333,7 @@ now X: %d\n\
 now Y: %d\n\
 ====================================\n\n",
 	_ID, Direction, X, Y, _x, _y);
+#endif
 
 	if (abs(X - _x) > dfERROR_RANGE ||
 		abs(Y - _y) > dfERROR_RANGE)
@@ -361,6 +368,7 @@ void Player::HandlePacketAttack3()
 	 _packetBuffer >> X;
 	 _packetBuffer >> Y;
 
+#ifdef RECV_PACKET_DEBUG
 	printf("===================================\n\
 %d: ATTACK 3\n\n\
 packetAttack3.Direction: %d\n\
@@ -370,6 +378,7 @@ now X: %d\n\
 now Y: %d\n\
 ====================================\n\n",
 	_ID, Direction, X, Y, _x, _y);
+#endif
 
 	if (abs(X - _x) > dfERROR_RANGE ||
 		abs(Y - _y) > dfERROR_RANGE)
