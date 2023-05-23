@@ -133,7 +133,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp" />
+    <ClCompile Include="Main.cpp" />
     <ClCompile Include="MemoryPoolM.cpp" />
     <ClCompile Include="ProfilerForSingleThread.cpp" />
   </ItemGroup>

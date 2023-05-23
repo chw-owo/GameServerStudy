@@ -3,10 +3,56 @@
 #define  __CHUU_MEMORY_POOL_TYPE__
 #include <new.h>
 #include <stdlib.h>
-//#define __CHUU_MEMORY_POOL_TYPE_DEBUG__
+
+#define __CHUU_MEMORY_POOL_TYPE_DEBUG__
+
+/* ===============================================
+
+<< __CHUU_MEMORY_POOL_TYPE_DEBUG__ 설명 >>
+
+1. Node
+
+head와 tail에 검증 및 디버깅을 위한 값이 들어간다.
+head, tail은 할당된 데이터 관리를 위한 것이므로
+Alloc에서 값이 정해지고 Free에서 확인한다. 
+
+이 모드가 아닐 때는 tail에 다음 node의 주소값만 들어간다. 
+
+1) head 
+
+32bit일 경우, 상위 1byte로 Object pool ID를
+하위 3byte로 Data 주소의 하위 3byte를 가진다.
+64bit일 경우, 상위 4byte로 0x0000을,
+하위 4byte로 32bit에서의 head 값을 가진다. 
+
+Object pool ID는 unsigned char(0~255)이며
+그 이상의 Object pool이 만들어지는 것은 대비하지 않았다. 
+
+2) tail
+
+tail는 해제되어 pool 안에 있을 때는 다음 node의 주소를,
+할당되어 pool 밖에 있을 때는 head와 동일한 값을 가진다.
+
+3) 검증 방법
+
+Free가 호출되면 아래 사항들을 체크한다.
+- head와 tail이 서로 같은 값을 가지는지
+- pool ID와 instance ID를 바탕으로 나올 수 있는 값인지
+
+만족하지 않을 경우, Pool에 속하지 않는 데이터의 해제 요청,
+Overflow/Underflow 중 한가지 경우로 판단하여 예외를 던진다.
+
+2. UseCount, Capacity
+
+UseCount와 Capacity를 계산하여 필요할 때 출력할 수 있도록 한다. 
+또, Pool 소멸 시 UseCount를 확인하여 미반환 데이터가 있으면 알린다.
+현재는 메시지를 콘솔에 출력하고 있으며 추후 변경할 예정이다.
+
+==================================================*/
 
 #ifdef __CHUU_MEMORY_POOL_TYPE_DEBUG__
 #include <stdio.h>
+unsigned char gObjectPoolID = 0;
 #endif
 
 namespace CHUU
@@ -18,16 +64,18 @@ namespace CHUU
 
 #ifdef __CHUU_MEMORY_POOL_TYPE_DEBUG__
 
-		struct st_BLOCK_NODE
+		struct stNODE
 		{
-			DATA Data;
-			st_BLOCK_NODE* pNext;
+			size_t head;
+			DATA data;
+			size_t tail;  
 		};
+
 #else
-		struct st_BLOCK_NODE
+		struct stNODE
 		{
-			DATA Data;
-			st_BLOCK_NODE* pNext = nullptr;
+			DATA data;
+			size_t tail = nullptr;
 		};
 #endif
 
@@ -42,7 +90,7 @@ namespace CHUU
 	private:
 		bool _bPlacementNew;
 		int _iBlockNum;
-		st_BLOCK_NODE* _pFreeNode = nullptr;
+		stNODE* _pFreeNode = nullptr;
 
 #ifdef __CHUU_MEMORY_POOL_TYPE_DEBUG__
 	public:
@@ -52,6 +100,7 @@ namespace CHUU
 	private:
 		int _iCapacity;
 		int _iUseCount;
+		unsigned char _iPoolID;
 #endif
 
 	};
@@ -61,8 +110,11 @@ namespace CHUU
 		:_bPlacementNew(bPlacementNew), _iBlockNum(iBlockNum), _pFreeNode(nullptr)
 	{
 #ifdef __CHUU_MEMORY_POOL_TYPE_DEBUG__
+		
 		_iCapacity = _iBlockNum;
 		_iUseCount = 0;
+		_iPoolID = gObjectPoolID;
+		gObjectPoolID++;
 #endif
 
 		if (_iBlockNum <= 0)
@@ -70,29 +122,31 @@ namespace CHUU
 
 		if (_bPlacementNew)
 		{
-			// Alloc 시 Data의 생성자를 호출하므로 이때 호출하면 안됨
-			_pFreeNode = (st_BLOCK_NODE*)malloc(sizeof(st_BLOCK_NODE));
-			_pFreeNode->pNext = nullptr;
+			// Alloc 시 Data의 생성자를 호출하므로 이때 호출하면 안된다
+
+			_pFreeNode = (stNODE*)malloc(sizeof(stNODE));
+			_pFreeNode->tail = (size_t)nullptr;
 			for (int i = 1; i < _iBlockNum; i++)
 			{
-				st_BLOCK_NODE* p = (st_BLOCK_NODE*)malloc(sizeof(st_BLOCK_NODE));
-				p->pNext = _pFreeNode;
+				stNODE* p = (stNODE*)malloc(sizeof(stNODE));
+				p->tail = (size_t)_pFreeNode;
 				_pFreeNode = p;
 			}
 		}
 		else
 		{
-			// Alloc 시 Data의 생성자를 호출하지 않으므로 이때 호출해야 됨
-			_pFreeNode = (st_BLOCK_NODE*)malloc(sizeof(st_BLOCK_NODE));
-			_pFreeNode->pNext = nullptr;
+			// Alloc 시 Data의 생성자를 호출하지 않으므로 이때 호출해야 된다
+
+			_pFreeNode = (stNODE*)malloc(sizeof(stNODE));
+			_pFreeNode->tail = (size_t)nullptr;
 			for (int i = 1; i < _iBlockNum; i++)
 			{
-				new (&(_pFreeNode->Data)) DATA;
-				st_BLOCK_NODE* p = (st_BLOCK_NODE*)malloc(sizeof(st_BLOCK_NODE));
-				p->pNext = _pFreeNode;
+				new (&(_pFreeNode->data)) DATA;
+				stNODE* p = (stNODE*)malloc(sizeof(stNODE));
+				p->tail = (size_t)_pFreeNode;
 				_pFreeNode = p;
 			}
-			new (&(_pFreeNode->Data)) DATA;
+			new (&(_pFreeNode->data)) DATA;
 		}
 	}
 
@@ -100,33 +154,41 @@ namespace CHUU
 	CMemoryPoolT<DATA>::~CMemoryPoolT()
 	{
 #ifdef __CHUU_MEMORY_POOL_TYPE_DEBUG__
+
 		if (_iUseCount != 0)
 		{
 			printf("There is Unfree Data!!\n");
 		}
+
 #endif
+
+		if (_pFreeNode == nullptr)
+			return;
+
 		if (_bPlacementNew)
 		{
-			// Free 시 Data의 소멸자를 호출하므로 이때는 호출하면 안됨
-			while (_pFreeNode->pNext != nullptr)
+			// Free 시 Data의 소멸자를 호출하므로 이때는 호출하면 안된다
+
+			while (_pFreeNode->tail != (size_t)nullptr)
 			{
-				st_BLOCK_NODE* pNext = _pFreeNode->pNext;
+				size_t next = _pFreeNode->tail;
 				free(_pFreeNode);
-				_pFreeNode = pNext;
+				_pFreeNode = (stNODE*)next;
 			}
 			free(_pFreeNode);
 		}
 		else
 		{
-			// Free 시 Data의 소멸자를 호출하지 않으므로 이때 호출해야 됨
-			while (_pFreeNode->pNext != nullptr)
+			// Free 시 Data의 소멸자를 호출하지 않으므로 이때 호출해야 된다
+
+			while (_pFreeNode->tail != (size_t)nullptr)
 			{
-				st_BLOCK_NODE* pNext = _pFreeNode->pNext;
-				(_pFreeNode->Data).~DATA();
+				size_t next = _pFreeNode->tail;
+				(_pFreeNode->data).~DATA();
 				free(_pFreeNode);
-				_pFreeNode = pNext;
+				_pFreeNode = (stNODE*)next;
 			}
-			(_pFreeNode->Data).~DATA();
+			(_pFreeNode->data).~DATA();
 			free(_pFreeNode);
 		}
 	}
@@ -136,41 +198,71 @@ namespace CHUU
 	{
 		if (_pFreeNode == nullptr)
 		{
-			// 비어있는 노드가 없다면 생성한 후 Data의 생성자를 호출한다. (최초 생성)
+			// 비어있는 노드가 없다면 생성한 후 Data의 생성자를 호출한다 (최초 생성)
+
+			stNODE* pNew = (stNODE*)malloc(sizeof(stNODE));
+			new (&(pNew->data)) DATA;
 
 #ifdef __CHUU_MEMORY_POOL_TYPE_DEBUG__
+			
 			_iCapacity++;
 			_iUseCount++;
+
+			size_t code = 0;
+			code |= (size_t)_iPoolID << (3 * 3);
+			code |= 0777 & (size_t)(&(pNew->data));
+
+			pNew->head = code;
+			pNew->tail = code;
+			
 #endif
 
-			st_BLOCK_NODE* pNew = (st_BLOCK_NODE*)malloc(sizeof(st_BLOCK_NODE));
-			new (&(pNew->Data)) DATA;
-			return &(pNew->Data);
+			return &(pNew->data);
 		}
 
 		if (_bPlacementNew)
 		{
-			// 비어있는 노드가 있다면 가져온 후 Data의 생성자를 호출한다.
+			// 비어있는 노드가 있다면 가져온 후 Data의 생성자를 호출한다
+
+			stNODE* p = _pFreeNode;
+			_pFreeNode = (stNODE*)_pFreeNode->tail;
+			new (&(p->data)) DATA;
 
 #ifdef __CHUU_MEMORY_POOL_TYPE_DEBUG__
+
 			_iUseCount++;
+
+			size_t code = 0;
+			code |= (size_t)_iPoolID << (3 * 3);
+			code |= 0777 & (size_t)(&(p->data));
+
+			p->head = code;
+			p->tail = code;
 #endif
 
-			st_BLOCK_NODE* p = _pFreeNode;
-			_pFreeNode = _pFreeNode->pNext;
-			new (&(p->Data)) DATA;
-			return &(p->Data);
+			return &(p->data);
 		}
 		else
 		{
-			// 비어있는 노드가 있다면 가져온 후 Data의 생성자를 호출하지 않는다.
+			// 비어있는 노드가 있다면 가져온 후 Data의 생성자를 호출하지 않는다
+
+			stNODE* p = _pFreeNode;
+			_pFreeNode = (stNODE*) _pFreeNode->tail;
 
 #ifdef __CHUU_MEMORY_POOL_TYPE_DEBUG__
+
 			_iUseCount++;
+
+			size_t code = 0;
+			code |= (size_t)_iPoolID << (3 * 3);
+			code |=  0777 & (size_t)(&(p->data));
+
+			p->head = code;
+			p->tail = code;
+
 #endif
-			st_BLOCK_NODE* p = _pFreeNode;
-			_pFreeNode = _pFreeNode->pNext;
-			return &(p->Data);
+
+			return &(p->data);
 		}
 
 		return nullptr;
@@ -181,27 +273,72 @@ namespace CHUU
 	{
 		if (_bPlacementNew)
 		{
-			// Data의 소멸자를 호출한 후 _pFreeNode에 push한다.
+			// Data의 소멸자를 호출한 후 _pFreeNode에 push한다
 
 #ifdef __CHUU_MEMORY_POOL_TYPE_DEBUG__
+
 			_iUseCount--;
-#else
+
+			size_t code = 0;
+			code |= (size_t)_iPoolID << (3 * 3);
+			code |= 0777 & (size_t)pData;
+
+			
+			size_t offset = (size_t)(&(((stNODE*)nullptr)->data));
+			stNODE* pNode = (stNODE*)((size_t)pData - offset);
+
+			if (pNode->head != code || pNode->tail != code)
+			{
+				printf("Error!code % o, head % o, tail % o\n",
+					code, pNode->head, pNode->tail);
+			}
+
 			pData->~DATA();
-			((st_BLOCK_NODE*)pData)->pNext = _pFreeNode;
-			_pFreeNode = (st_BLOCK_NODE*)pData;
-			return true;
+			pNode->tail = (size_t)_pFreeNode;
+			_pFreeNode = pNode;
+
+#else
+
+			pData->~DATA();
+			((stNODE*)pData)->tail = (size_t) _pFreeNode;
+			_pFreeNode = (stNODE*)pData;
+
 #endif
+			return true;
 		}
 		else
 		{
-			// Data의 소멸자를 호출하지 않고 _pFreeNode에 push한다.
+			// Data의 소멸자를 호출하지 않고 _pFreeNode에 push한다
+
 #ifdef __CHUU_MEMORY_POOL_TYPE_DEBUG__
+
 			_iUseCount--;
+
+			size_t code = 0;
+			code |= (size_t)_iPoolID << (3 * 3);
+			code |= 0777 & (size_t)pData;
+
+			size_t offset = (size_t)(&(((stNODE*)nullptr)->data));
+			stNODE* pNode = (stNODE*)((size_t)pData - offset);
+
+			if (pNode->head != code || pNode->tail != code)
+			{
+				printf("Error! code %o, head %o, tail %o\n", 
+					code, pNode->head, pNode->tail);
+
+				return false;
+			}
+
+			pNode->tail = (size_t)_pFreeNode;
+			_pFreeNode = pNode;
+
 #else
-			((st_BLOCK_NODE*)pData)->pNext = _pFreeNode;
-			_pFreeNode = (st_BLOCK_NODE*)pData;
-			return true;
+
+			((stNODE*)pData)->tail = (size_t) _pFreeNode;
+			_pFreeNode = (stNODE*)pData;
+
 #endif
+			return true;
 		}
 		return false;
 	}

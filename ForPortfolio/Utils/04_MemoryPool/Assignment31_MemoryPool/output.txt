@@ -2,26 +2,26 @@
 =====================================
 | Name | Average | Min | Max | Call |
 =====================================
-| MP False - Total | 0.0521レs | 0.0489レs | 0.0744レs | 20 |
-| MP False - 1st Alloc | 0.0365レs | 0.0334レs | 0.0579レs | 20 |
-| MP False - 1st Free | 0.0011レs | 0.0010レs | 0.0013レs | 20 |
-| MP False - 2nd Alloc | 0.0059レs | 0.0055レs | 0.0061レs | 20 |
-| MP False - 2nd Free | 0.0011レs | 0.0010レs | 0.0014レs | 20 |
-| MP False - 3rd Alloc | 0.0058レs | 0.0055レs | 0.0061レs | 20 |
-| MP False - 3rd Free | 0.0012レs | 0.0011レs | 0.0014レs | 20 |
-| MP True - Total | 0.1003レs | 0.0982レs | 0.1017レs | 20 |
-| MP True - 1st Alloc | 0.0345レs | 0.0331レs | 0.0354レs | 20 |
-| MP True - 1st Free | 0.0132レs | 0.0127レs | 0.0135レs | 20 |
-| MP True - 2nd Alloc | 0.0131レs | 0.0126レs | 0.0134レs | 20 |
-| MP True - 2nd Free | 0.0128レs | 0.0122レs | 0.0133レs | 20 |
-| MP True - 3rd Alloc | 0.0129レs | 0.0124レs | 0.0132レs | 20 |
-| MP True - 3rd Free | 0.0130レs | 0.0125レs | 0.0134レs | 20 |
-| NEW - Total | 0.1644レs | 0.1605レs | 0.1708レs | 20 |
-| NEW - 1st Alloc | 0.0348レs | 0.0326レs | 0.0379レs | 20 |
-| NEW - 1st Free | 0.0207レs | 0.0202レs | 0.0222レs | 20 |
-| NEW - 2nd Alloc | 0.0342レs | 0.0298レs | 0.0426レs | 20 |
-| NEW - 2nd Free | 0.0205レs | 0.0198レs | 0.0212レs | 20 |
-| NEW - 3rd Alloc | 0.0324レs | 0.0293レs | 0.0373レs | 20 |
-| NEW - 3rd Free | 0.0209レs | 0.0201レs | 0.0217レs | 20 |
+| MP False - Total | 0.0141レs | 0.0141レs | 0.0141レs | 1 |
+| MP False - 1st Alloc | 0.0070レs | 0.0070レs | 0.0070レs | 1 |
+| MP False - 1st Free | 0.0015レs | 0.0015レs | 0.0015レs | 1 |
+| MP False - 2nd Alloc | 0.0010レs | 0.0010レs | 0.0010レs | 1 |
+| MP False - 2nd Free | 0.0013レs | 0.0013レs | 0.0013レs | 1 |
+| MP False - 3rd Alloc | 0.0009レs | 0.0009レs | 0.0009レs | 1 |
+| MP False - 3rd Free | 0.0012レs | 0.0012レs | 0.0012レs | 1 |
+| MP True - Total | 0.0443レs | 0.0443レs | 0.0443レs | 1 |
+| MP True - 1st Alloc | 0.0094レs | 0.0094レs | 0.0094レs | 1 |
+| MP True - 1st Free | 0.0069レs | 0.0069レs | 0.0069レs | 1 |
+| MP True - 2nd Alloc | 0.0066レs | 0.0066レs | 0.0066レs | 1 |
+| MP True - 2nd Free | 0.0067レs | 0.0067レs | 0.0067レs | 1 |
+| MP True - 3rd Alloc | 0.0068レs | 0.0068レs | 0.0068レs | 1 |
+| MP True - 3rd Free | 0.0069レs | 0.0069レs | 0.0069レs | 1 |
+| NEW - Total | 0.0893レs | 0.0893レs | 0.0893レs | 1 |
+| NEW - 1st Alloc | 0.0207レs | 0.0207レs | 0.0207レs | 1 |
+| NEW - 1st Free | 0.0117レs | 0.0117レs | 0.0117レs | 1 |
+| NEW - 2nd Alloc | 0.0172レs | 0.0172レs | 0.0172レs | 1 |
+| NEW - 2nd Free | 0.0105レs | 0.0105レs | 0.0105レs | 1 |
+| NEW - 3rd Alloc | 0.0174レs | 0.0174レs | 0.0174レs | 1 |
+| NEW - 3rd Free | 0.0106レs | 0.0106レs | 0.0106レs | 1 |
 =====================================
 

@@ -8,7 +8,7 @@ class Player1
 public:
 	Player1()
 	{
-		srand(time(NULL));
+		srand((unsigned int)time(NULL));
 		ID = rand();
 		ID++;
 		constructCnt++;
@@ -16,7 +16,7 @@ public:
 
 	~Player1()
 	{
-		srand(time(NULL));
+		srand((unsigned int)time(NULL));
 		ID = rand();
 		ID++;
 		destructCnt++;
@@ -34,7 +34,7 @@ class Player2
 public:
 	Player2()
 	{
-		srand(time(NULL));
+		srand((unsigned int)time(NULL));
 		ID = rand();
 		ID++;
 		constructCnt++;
@@ -42,7 +42,7 @@ public:
 
 	~Player2()
 	{
-		srand(time(NULL));
+		srand((unsigned int)time(NULL));
 		ID = rand();
 		ID++;
 		destructCnt++;
@@ -60,7 +60,7 @@ class Player3
 public:
 	Player3()
 	{
-		srand(time(NULL));
+		srand((unsigned int)time(NULL));
 		ID = rand();
 		ID++;
 		constructCnt++;
@@ -68,7 +68,7 @@ public:
 
 	~Player3()
 	{
-		srand(time(NULL));
+		srand((unsigned int)time(NULL));
 		ID = rand();
 		ID++;
 		destructCnt++;
@@ -89,12 +89,12 @@ int Player2::destructCnt = 0;
 int Player3::constructCnt = 0;
 int Player3::destructCnt = 0;
 
-#define NUM 500
+#define NUM 250
 void ProfileMemoryPoolAllocFalse()
 {
 	int i = 0;
 	Player1* pPlayer1[NUM];
-	CHUU::CMemoryPoolT<Player1> MemPoolT1(0, false);
+	CHUU::CMemoryPoolT<Player1> MemPoolT1(200, false);
 
 	PRO_BEGIN(L"MP False - Total");
 
@@ -152,7 +152,7 @@ void ProfileMemoryPoolAllocTrue()
 {
 	int i = 0;
 	Player2* pPlayer2[NUM];
-	CHUU::CMemoryPoolT<Player2> MemPoolT2(0, true);
+	CHUU::CMemoryPoolT<Player2> MemPoolT2(200, true);
 
 	PRO_BEGIN(L"MP True - Total");
 
@@ -265,7 +265,7 @@ void ProfileDefaultNew()
 
 int main()
 {
-	for (int i = 0; i < 20; i++)
+	for (int i = 0; i < 1; i++)
 	{
 		ProfileMemoryPoolAllocFalse();
 		ProfileMemoryPoolAllocTrue();
