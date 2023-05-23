@@ -1,0 +1,20 @@
+HEADER{ char code = 0x89, char SIZE, char TYPE};
+
+SC_Create_My_Character[UNI](int ID, char direction, short x, short y, char hp); = 0
+SC_Create_Other_Character[UNI/BROAD_EXP](int ID, char direction, short x, short y, char hp);
+SC_Create_Delete_Character[BROAD](int ID);
+
+CS_Move_Start(char direction, short x, short y); = 10
+SC_Move_Start[BROAD_EXP](int ID, char direction, short x, short y);
+CS_Move_Stop(char direction, short x, short y);
+SC_Move_Stop[BROAD_EXP](int ID, char direction, short x, short y);
+
+CS_Attack1(char direction, short x, short y); = 20
+SC_Attack1[BROAD](int ID, char direction, short x, short y);
+CS_Attack2(char direction, short x, short y);
+SC_Attack2[BROAD](int ID, char direction, short x, short y);
+CS_Attack3(char direction, short x, short y);
+SC_Attack3[BROAD](int ID, char direction, short x, short y);
+
+SC_Damage[BROAD](int attackID, int damageID, char damageHp); = 30
+

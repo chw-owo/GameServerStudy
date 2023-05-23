@@ -1,0 +1,92 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="리소스 파일">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Content">
+      <UniqueIdentifier>{e343e265-f2a3-483b-a22e-0307855cad38}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="RPC">
+      <UniqueIdentifier>{f70ed1d0-21b4-46b3-8c18-50979fbad714}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetworkLibrary">
+      <UniqueIdentifier>{7602885d-2bca-4d93-800b-26b8b716c2d6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetworkLibrary\Utils">
+      <UniqueIdentifier>{974e03b2-256d-4dca-9fa7-5468f0e751ec}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Proxy.cpp">
+      <Filter>RPC</Filter>
+    </ClCompile>
+    <ClCompile Include="Stub.cpp">
+      <Filter>RPC</Filter>
+    </ClCompile>
+    <ClCompile Include="RingBuffer.cpp">
+      <Filter>NetworkLibrary\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="SerializePacket.cpp">
+      <Filter>NetworkLibrary\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="Network.cpp">
+      <Filter>NetworkLibrary</Filter>
+    </ClCompile>
+    <ClCompile Include="Main.cpp" />
+    <ClCompile Include="GameServer.cpp">
+      <Filter>Content</Filter>
+    </ClCompile>
+    <ClCompile Include="MemoryPool.cpp">
+      <Filter>NetworkLibrary\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="Player.cpp">
+      <Filter>Content</Filter>
+    </ClCompile>
+    <ClCompile Include="PlayerManager.cpp">
+      <Filter>Content</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Proxy.h">
+      <Filter>RPC</Filter>
+    </ClInclude>
+    <ClInclude Include="Stub.h">
+      <Filter>RPC</Filter>
+    </ClInclude>
+    <ClInclude Include="RingBuffer.h">
+      <Filter>NetworkLibrary\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="List.h">
+      <Filter>NetworkLibrary\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="SerializePacket.h">
+      <Filter>NetworkLibrary\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Network.h">
+      <Filter>NetworkLibrary</Filter>
+    </ClInclude>
+    <ClInclude Include="Main.h" />
+    <ClInclude Include="GameServer.h">
+      <Filter>Content</Filter>
+    </ClInclude>
+    <ClInclude Include="MemoryPool.h">
+      <Filter>NetworkLibrary\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Common.h">
+      <Filter>RPC</Filter>
+    </ClInclude>
+    <ClInclude Include="Player.h">
+      <Filter>Content</Filter>
+    </ClInclude>
+    <ClInclude Include="PlayerManager.h">
+      <Filter>Content</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="PacketDefine.txt">
+      <Filter>RPC</Filter>
+    </Text>
+  </ItemGroup>
+</Project>

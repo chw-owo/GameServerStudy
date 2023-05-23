@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.4.33213.308
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "chuuRPC", "chuuRPC\chuuRPC.vcxproj", "{BC200DE6-9BD2-4A93-B606-22712AA6A5C8}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
+		Debug|x86 = Debug|x86
+		Release|x64 = Release|x64
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{BC200DE6-9BD2-4A93-B606-22712AA6A5C8}.Debug|x64.ActiveCfg = Debug|x64
+		{BC200DE6-9BD2-4A93-B606-22712AA6A5C8}.Debug|x64.Build.0 = Debug|x64
+		{BC200DE6-9BD2-4A93-B606-22712AA6A5C8}.Debug|x86.ActiveCfg = Debug|Win32
+		{BC200DE6-9BD2-4A93-B606-22712AA6A5C8}.Debug|x86.Build.0 = Debug|Win32
+		{BC200DE6-9BD2-4A93-B606-22712AA6A5C8}.Release|x64.ActiveCfg = Release|x64
+		{BC200DE6-9BD2-4A93-B606-22712AA6A5C8}.Release|x64.Build.0 = Release|x64
+		{BC200DE6-9BD2-4A93-B606-22712AA6A5C8}.Release|x86.ActiveCfg = Release|Win32
+		{BC200DE6-9BD2-4A93-B606-22712AA6A5C8}.Release|x86.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {630734C1-ED73-42AA-88DF-40D12F6261A3}
+	EndGlobalSection
+EndGlobal
