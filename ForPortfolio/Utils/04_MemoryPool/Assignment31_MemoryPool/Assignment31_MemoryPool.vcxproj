@@ -135,10 +135,12 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MemoryPoolM.cpp" />
+    <ClCompile Include="ProfilerForSingleThread.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MemoryPoolM.h" />
     <ClInclude Include="MemoryPoolT.h" />
+    <ClInclude Include="ProfilerForSingleThread.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

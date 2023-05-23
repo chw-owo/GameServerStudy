@@ -14,6 +14,9 @@
     <Filter Include="MemoryPool-Memory">
       <UniqueIdentifier>{86be1f62-eb4d-4bdf-8ce6-f79dff265585}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Profiler">
+      <UniqueIdentifier>{314e8ba6-79b9-4f00-bc29-9931a98a2019}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
@@ -22,6 +25,9 @@
     <ClCompile Include="MemoryPoolM.cpp">
       <Filter>MemoryPool-Memory</Filter>
     </ClCompile>
+    <ClCompile Include="ProfilerForSingleThread.cpp">
+      <Filter>Profiler</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MemoryPoolT.h">
@@ -29,6 +35,9 @@
     </ClInclude>
     <ClInclude Include="MemoryPoolM.h">
       <Filter>MemoryPool-Memory</Filter>
+    </ClInclude>
+    <ClInclude Include="ProfilerForSingleThread.h">
+      <Filter>Profiler</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

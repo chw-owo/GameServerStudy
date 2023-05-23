@@ -24,6 +24,7 @@
     <ProjectGuid>{02d2bd81-9a86-4c34-a2e1-c19e0d645be8}</ProjectGuid>
     <RootNamespace>Assignment09Profiler</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>Profiler</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -127,11 +128,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Assignment09_Profiler.cpp" />
-    <ClCompile Include="Profile.cpp" />
+    <ClCompile Include="Main.cpp" />
+    <ClCompile Include="ProfileForSingleThread.cpp" />
+    <ClCompile Include="ProfilerForMultiThread.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Profile.h" />
+    <ClInclude Include="ProfileForSingleThread.h" />
+    <ClInclude Include="ProfilerForMultiThread.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
