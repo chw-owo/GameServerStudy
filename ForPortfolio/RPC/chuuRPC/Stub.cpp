@@ -11,26 +11,23 @@ void IStub::ProcessReceivedMessage(Session* pSession)
 	
 	// Get Packet ID from Serialize Packet
 	int useSize = pSession->_recvBuf.GetUseSize();
-	while (useSize > 0)
+	while (useSize > df_HEADER_SIZE)
 	{
-		if (useSize <= df_HEADER_SIZE)
-			break;
-
 		stHEADER header;
 		int peekRet = pSession->_recvBuf.Peek((char*)&header, df_HEADER_SIZE);
 		if (peekRet != df_HEADER_SIZE)
 		{
-			// TO-DO: Handle Exception (세션을 끊던가.. 로그를 남기던가..)
+			
 			printf("Error! Func %s Line %d\n", __func__, __LINE__);
-			//SetStateDead();
+			pSession->SetSessionDead();
 			return;
 		}
 
-		if ((char)header.code != df_HEADER_CODE)
+		if (header.code != df_HEADER_CODE)
 		{
-			// TO-DO: Handle Exception (세션을 끊던가.. 로그를 남기던가..)
+			
 			printf("Error! Func %s Line %d\n", __func__, __LINE__);
-			//SetStateDead();
+			pSession->SetSessionDead();
 			return;
 		}
 
@@ -40,9 +37,9 @@ void IStub::ProcessReceivedMessage(Session* pSession)
 		int moveReadRet = pSession->_recvBuf.MoveReadPos(df_HEADER_SIZE);
 		if (moveReadRet != df_HEADER_SIZE)
 		{
-			// TO-DO: Handle Exception (세션을 끊던가.. 로그를 남기던가..)
+			
 			printf("Error! Func %s Line %d\n", __func__, __LINE__);
-			//SetStateDead();
+			pSession->SetSessionDead();
 			return;
 		}
 
@@ -68,6 +65,8 @@ void IStub::ProcessReceivedMessage(Session* pSession)
 			Handle_CS_Attack3(pSession);
 			break;
 		}
+
+		useSize = pSession->_recvBuf.GetUseSize();
 	}
 }
 
@@ -82,9 +81,9 @@ void IStub::Handle_CS_MoveStart(Session* pSession)
 	int dequeueRet = pSession->_recvBuf.Dequeue(packet.GetWritePtr(), size);
 	if (dequeueRet != size)
 	{
-		// TO-DO: Handle Exception (세션을 끊던가.. 로그를 남기던가..)
+		
 		printf("Error! Func %s Line %d\n", __func__, __LINE__);
-		//SetStateDead();
+		pSession->SetSessionDead();
 		return;
 	}
 	packet.MoveWritePos(size);
@@ -95,16 +94,84 @@ void IStub::Handle_CS_MoveStart(Session* pSession)
 
 void IStub::Handle_CS_MoveStop(Session* pSession)
 {
+	char direction;
+	short x;
+	short y;
+
+	SerializePacket packet;
+	int size = sizeof(direction) + sizeof(x) + sizeof(y);
+	int dequeueRet = pSession->_recvBuf.Dequeue(packet.GetWritePtr(), size);
+	if (dequeueRet != size)
+	{
+		printf("Error! Func %s Line %d\n", __func__, __LINE__);
+		pSession->SetSessionDead();
+		return;
+	}
+	packet.MoveWritePos(size);
+
+	packet >> direction >> x >> y;
+	CS_MoveStop(pSession->GetSessionID(), direction, x, y);
 }
 
 void IStub::Handle_CS_Attack1(Session* pSession)
 {
+	char direction;
+	short x;
+	short y;
+
+	SerializePacket packet;
+	int size = sizeof(direction) + sizeof(x) + sizeof(y);
+	int dequeueRet = pSession->_recvBuf.Dequeue(packet.GetWritePtr(), size);
+	if (dequeueRet != size)
+	{
+		printf("Error! Func %s Line %d\n", __func__, __LINE__);
+		pSession->SetSessionDead();
+		return;
+	}
+	packet.MoveWritePos(size);
+
+	packet >> direction >> x >> y;
+	CS_Attack1(pSession->GetSessionID(), direction, x, y);
 }
 
 void IStub::Handle_CS_Attack2(Session* pSession)
 {
+	char direction;
+	short x;
+	short y;
+
+	SerializePacket packet;
+	int size = sizeof(direction) + sizeof(x) + sizeof(y);
+	int dequeueRet = pSession->_recvBuf.Dequeue(packet.GetWritePtr(), size);
+	if (dequeueRet != size)
+	{
+		printf("Error! Func %s Line %d\n", __func__, __LINE__);
+		pSession->SetSessionDead();
+		return;
+	}
+	packet.MoveWritePos(size);
+
+	packet >> direction >> x >> y;
+	CS_Attack2(pSession->GetSessionID(), direction, x, y);
 }
 
 void IStub::Handle_CS_Attack3(Session* pSession)
 {
+	char direction;
+	short x;
+	short y;
+
+	SerializePacket packet;
+	int size = sizeof(direction) + sizeof(x) + sizeof(y);
+	int dequeueRet = pSession->_recvBuf.Dequeue(packet.GetWritePtr(), size);
+	if (dequeueRet != size)
+	{
+		printf("Error! Func %s Line %d\n", __func__, __LINE__);
+		pSession->SetSessionDead();
+		return;
+	}
+	packet.MoveWritePos(size);
+
+	packet >> direction >> x >> y;
+	CS_Attack3(pSession->GetSessionID(), direction, x, y);
 }

@@ -5,11 +5,14 @@
 
 #pragma comment(lib, "ws2_32")
 #include <ws2tcpip.h>
+#include <stdio.h>
 
+class Proxy;
 class IStub;
 class NetworkManager;
 class PlayerManager;
 
+extern int gSessionID; // TO-DO
 class Session
 {
 	friend IStub;
@@ -17,7 +20,16 @@ class Session
 	friend PlayerManager; // TO-DO... 없애야 함
 
 public:
+	Session() 
+	{
+		_ID = gSessionID;
+		gSessionID++;
+	}
+	~Session() { }
+
+public:
 	int GetSessionID() { return _ID; }
+
 private:
 	void SetSessionAlive() { _alive = true; }
 	void SetSessionDead() { _alive = false; }
@@ -31,8 +43,7 @@ private:
 	RingBuffer _sendBuf;
 };
 
-class Proxy;
-class IStub;
+
 class NetworkManager
 {
 	friend Proxy;
@@ -43,7 +54,11 @@ private:
 
 public:
 	static NetworkManager* GetInstance();
-	void AttachStub(IStub* stub) { _pStub = stub; }
+	void AttachStub(IStub* stub) 
+	{ 
+		_pStub = stub; 
+		printf("Attach Stub Success!\n");
+	}
 
 public:
 	void Initialize();
@@ -70,4 +85,6 @@ private:
 	SOCKET _listensock;
 	CList<Session*> _sessionList;
 	
+private:
+	PlayerManager* _pPlayerManager = nullptr; // TO-DO: 분리해야 됨
 };

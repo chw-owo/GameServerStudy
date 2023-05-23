@@ -4,7 +4,7 @@
 #include <new.h>
 #include <stdlib.h>
 
-#define __CHUU_MEMORY_POOL_TYPE_DEBUG__
+//#define __CHUU_MEMORY_POOL_TYPE_DEBUG__
 
 /* ===============================================
 

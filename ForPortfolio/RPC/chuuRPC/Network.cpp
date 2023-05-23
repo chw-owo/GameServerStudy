@@ -1,7 +1,9 @@
 #include "Network.h"
 #include "Main.h"
+#include "PlayerManager.h" // TO-DO: 제거~~
 #include <stdio.h>
 
+int gSessionID = 0; // TO-DO
 #define IP L"0.0.0.0"
 #define PORT 5000
 
@@ -161,6 +163,18 @@ void NetworkManager::AcceptProc()
 	}
 	newSession->SetSessionAlive();
 	_sessionList.push_back(newSession);
+
+	// TO-DO: 분리해야 됨===============
+
+	if (_pPlayerManager == nullptr)
+		_pPlayerManager = PlayerManager::GetInstance();
+
+	_pPlayerManager->CreatePlayer(newSession);
+
+	//PlayerManager가 새 Session을 확인하다가 Create 하는 게 맞으려나?
+	//===============================
+
+	printf("Accept Success!\n");
 }
 
 void NetworkManager::RecvProc(Session* session)
@@ -193,6 +207,11 @@ void NetworkManager::RecvProc(Session* session)
 		return;
 	}
 
+	if (moveRet > 0)
+	{
+		printf("Recv Success!\n");
+	}
+
 }
 
 void NetworkManager::SendProc(Session* session)
@@ -221,6 +240,11 @@ void NetworkManager::SendProc(Session* session)
 		printf("Error! Func %s Line %d\n", __func__, __LINE__);
 		session->SetSessionDead();
 		return;
+	}
+
+	if (moveRet > 0)
+	{
+		printf("Send Success!\n");
 	}
 }
 

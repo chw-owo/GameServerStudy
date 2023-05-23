@@ -10,6 +10,9 @@ private:
 	~Proxy();
 
 public:
+	static Proxy* GetInstance();
+
+public:
 	void SC_CreateMyCharacter(Session* pSession, int ID, char direction, short x, short y, char hp);
 	void SC_CreateOtherCharacter(TARGET target, Session* pSession, int ID, char direction, short x, short y, char hp);
 	void SC_DeleteCharacter(int ID);
@@ -24,5 +27,6 @@ public:
 	void SC_Damage(int attackID, int damageID, char damageHp);
 
 private:
+	static Proxy _proxy;
 	NetworkManager* _net;
 };

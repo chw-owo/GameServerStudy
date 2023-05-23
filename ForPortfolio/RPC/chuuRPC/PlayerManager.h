@@ -2,13 +2,12 @@
 
 #include "List.h"
 #include "Player.h"
-#include "Proxy.h"
-#include "Stub.h"
 #include "SerializePacket.h"
 
 #define FPS 50
 
 class Proxy;
+class IStub;
 class PlayerManager
 {
 private:

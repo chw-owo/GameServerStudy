@@ -1,5 +1,8 @@
 #include "PlayerManager.h"
 #include "Network.h" // TO-DO... 분리하고 싶은데 SetSessionDead 때문에 못했음
+#include "GameServer.h"
+#include "Proxy.h"
+#include "Stub.h"
 
 #pragma comment(lib, "winmm.lib")
 #include <windows.h>
@@ -25,7 +28,8 @@
 
 PlayerManager::PlayerManager()
 {
-
+	_proxy = Proxy::GetInstance();
+	_stub = GameServer::GetInstance();
 }
 
 PlayerManager::~PlayerManager()
@@ -66,7 +70,7 @@ Player* PlayerManager::CreatePlayer(Session* pSession)
 
 Player* PlayerManager::FindPlayer(int sessionID)
 {
-	for (CList<Player*>::iterator i = _playerList.begin(); i != _playerList.end();)
+	for (CList<Player*>::iterator i = _playerList.begin(); i != _playerList.end(); i++)
 	{
 		// TO-DO
 		if (sessionID == (*i)->GetSession()->GetSessionID())
@@ -126,7 +130,6 @@ void PlayerManager::Update()
 	if (SkipForFixedFrame()) return;
 	DestroyDeadPlayers();
 
-
 	for (CList<Player*>::iterator i = _playerList.begin(); i != _playerList.end(); i++)
 	{
 		// Recv and Update
@@ -138,11 +141,13 @@ void PlayerManager::Update()
 		if ((*i)->GetPacketState_MoveStart())
 		{
 			_proxy->SC_MoveStart(pSession, (*i)->GetID(), (*i)->GetMoveDirection(), (*i)->GetX(), (*i)->GetY());
+			(*i)->ResetPacketState_MoveStart();
 		}
 
 		if ((*i)->GetPacketState_MoveStop())
 		{
 			_proxy->SC_MoveStop(pSession, (*i)->GetID(), (*i)->GetMoveDirection(), (*i)->GetX(), (*i)->GetY());
+			(*i)->ResetPacketState_MoveStop();
 		}
 
 		if ((*i)->GetPacketState_Attack1())
@@ -155,6 +160,7 @@ void PlayerManager::Update()
 				attacked1Player->Attacked(dfATTACK1_DAMAGE);
 				_proxy->SC_Damage((*i)->GetID(), attacked1Player->GetID(), attacked1Player->GetHp());
 			}
+			(*i)->ResetPacketState_Attack1();
 		}
 
 		if ((*i)->GetPacketState_Attack2())
@@ -168,6 +174,7 @@ void PlayerManager::Update()
 				attacked2Player->Attacked(dfATTACK2_DAMAGE);
 				_proxy->SC_Damage((*i)->GetID(), attacked2Player->GetID(), attacked2Player->GetHp());
 			}
+			(*i)->ResetPacketState_Attack2();
 		}
 
 		if ((*i)->GetPacketState_Attack3())
@@ -180,6 +187,7 @@ void PlayerManager::Update()
 				attacked3Player->Attacked(dfATTACK3_DAMAGE);
 				_proxy->SC_Damage((*i)->GetID(), attacked3Player->GetID(), attacked3Player->GetHp());
 			}
+			(*i)->ResetPacketState_Attack3();
 		}
 	}
 }

@@ -12,6 +12,12 @@ Proxy::~Proxy()
 
 }
 
+Proxy* Proxy::GetInstance()
+{
+	static Proxy _proxy;
+	return &_proxy;
+}
+
 void Proxy::SC_CreateMyCharacter(Session* pSession, int ID, char direction, short x, short y, char hp)
 {
 	SerializePacket packet;
@@ -26,14 +32,14 @@ void Proxy::SC_CreateOtherCharacter(TARGET target, Session* pSession, int ID, ch
 	{
 		SerializePacket packet;
 		CreateHeader(&packet, df_SC_CREATE_OTHER_CHARACTER, ID, direction, x, y, hp);
-		packet << ID;
+		packet << ID << direction << x << y << hp;
 		_net->EnqueueUnicast(packet.GetReadPtr(), packet.GetDataSize(), pSession);
 	}
 	else if (target == BROAD_EXP)
 	{
 		SerializePacket packet;
 		CreateHeader(&packet, df_SC_CREATE_OTHER_CHARACTER, ID, direction, x, y, hp);
-		packet << ID;
+		packet << ID << direction << x << y << hp;
 		_net->EnqueueBroadcast(packet.GetReadPtr(), packet.GetDataSize(), pSession);
 	}
 }

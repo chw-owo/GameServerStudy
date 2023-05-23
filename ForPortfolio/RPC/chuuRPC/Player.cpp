@@ -1,5 +1,6 @@
 #include "Player.h"
 #include <stdlib.h>
+#include <stdio.h>
 
 Player::Player(Session* pSession, int ID)
 	: _pSession(pSession), _ID(ID),
@@ -72,6 +73,7 @@ void Player::Attacked(char damage)
 	if (_hp <= 0)
 	{
 		_hp = 0;
+		
 		SetPlayerState_Dead();
 	}
 }
@@ -82,6 +84,7 @@ void Player::MoveStart(char direction, short x, short y)
 	if (abs(x - _x) > dfERROR_RANGE ||
 		abs(y - _y) > dfERROR_RANGE)
 	{
+		
 		SetPlayerState_Dead();
 		return;
 	}
@@ -114,6 +117,7 @@ void Player::MoveStop(char direction, short x, short y)
 	if (abs(x - _x) > dfERROR_RANGE ||
 		abs(y - _y) > dfERROR_RANGE)
 	{
+		
 		SetPlayerState_Dead();
 		return;
 	}
@@ -131,6 +135,7 @@ void Player::Attack1(char direction, short x, short y)
 	if (abs(x - _x) > dfERROR_RANGE ||
 		abs(y - _y) > dfERROR_RANGE)
 	{
+		
 		SetPlayerState_Dead();
 		return;
 	}
@@ -147,6 +152,7 @@ void Player::Attack2(char direction, short x, short y)
 	if (abs(x - _x) > dfERROR_RANGE ||
 		abs(y - _y) > dfERROR_RANGE)
 	{
+		
 		SetPlayerState_Dead();
 		return;
 	}
@@ -163,6 +169,7 @@ void Player::Attack3(char direction, short x, short y)
 	if (abs(x - _x) > dfERROR_RANGE ||
 		abs(y - _y) > dfERROR_RANGE)
 	{
+		
 		SetPlayerState_Dead();
 		return;
 	}

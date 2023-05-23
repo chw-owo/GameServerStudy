@@ -6,7 +6,7 @@
 
 GameServer::GameServer()
 {
-	_pPlayerManager = PlayerManager::GetInstance();
+
 }
 
 GameServer::~GameServer()
