@@ -1,13 +1,14 @@
 #pragma once
-
 #include "List.h"
 #include "Player.h"
 #include "SerializePacket.h"
 
 #define FPS 50
 
-class Proxy;
 class IStub;
+class Proxy;
+class NetworkManager;
+
 class PlayerManager
 {
 private:
@@ -16,19 +17,19 @@ private:
 
 public:
 	static PlayerManager* GetInstance();
-
+	
 public:
-	Player* CreatePlayer(Session* session);
 	Player* FindPlayer(int sessionID);
-
-public:
 	void Update();
 	void Terminate();
 
 private:
+	void CreateNewPlayers();
+	void DestroyDeadPlayers();
+
+	Player* CreatePlayer(Session* session);
 	void DestroyPlayer(Player* player);
 	void DestroyAllPlayer();
-	void DestroyDeadPlayers();
 
 private:
 	bool SkipForFixedFrame();
@@ -38,8 +39,11 @@ private:
 
 private:
 	int _ID = 0;
-	Proxy* _proxy;
+
 	IStub* _stub;
+	Proxy* _proxy;
+	NetworkManager* _net;
+
 	static PlayerManager _playerMgr;
 	CList<Player*> _playerList;
 };

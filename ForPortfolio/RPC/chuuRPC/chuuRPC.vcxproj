@@ -20,9 +20,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Common.h" />
+    <ClInclude Include="ErrorHandler.h" />
     <ClInclude Include="GameServer.h" />
     <ClInclude Include="List.h" />
-    <ClInclude Include="Main.h" />
     <ClInclude Include="MemoryPool.h" />
     <ClInclude Include="Network.h" />
     <ClInclude Include="Player.h" />
@@ -33,6 +33,7 @@
     <ClInclude Include="Stub.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="ErrorHandler.cpp" />
     <ClCompile Include="GameServer.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="MemoryPool.cpp" />

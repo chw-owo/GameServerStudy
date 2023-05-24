@@ -1,13 +1,9 @@
 #include "Network.h"
-#include "Main.h"
-#include "PlayerManager.h" // TO-DO: 제거~~
+#include "ErrorHandler.h"
 #include <stdio.h>
 
-int gSessionID = 0; // TO-DO
 #define IP L"0.0.0.0"
 #define PORT 5000
-
-// TO-DO: 지금은 g_bShutdown으로 예외를 처리하는데, 추후 수정 필요
 
 NetworkManager::NetworkManager()
 {
@@ -34,8 +30,7 @@ void NetworkManager::Initialize()
 	WSADATA wsa;
 	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
 	{
-		g_bShutdown = true;
-		return;
+		AssertCrash();
 	}
 
 	// Create Socket
@@ -44,8 +39,7 @@ void NetworkManager::Initialize()
 	{
 		err = WSAGetLastError();
 		printf("Error! Function %s Line %d: %d\n", __func__, __LINE__, err);
-		g_bShutdown = true;
-		return;
+		AssertCrash();
 	}
 
 	// Bind
@@ -60,8 +54,7 @@ void NetworkManager::Initialize()
 	{
 		err = WSAGetLastError();
 		printf("Error! Function %s Line %d: %d\n", __func__, __LINE__, err);
-		g_bShutdown = true;
-		return;
+		AssertCrash();
 	}
 
 	// Listen
@@ -70,8 +63,7 @@ void NetworkManager::Initialize()
 	{
 		err = WSAGetLastError();
 		printf("Error! Function %s Line %d: %d\n", __func__, __LINE__, err);
-		g_bShutdown = true;
-		return;
+		AssertCrash();
 	}
 
 	// Set Non-Blocking Mode
@@ -81,8 +73,7 @@ void NetworkManager::Initialize()
 	{
 		err = WSAGetLastError();
 		printf("Error! Function %s Line %d: %d\n", __func__, __LINE__, err);
-		g_bShutdown = true;
-		return;
+		AssertCrash();
 	}
 
 	printf("Setting Complete!\n");
@@ -109,8 +100,7 @@ void NetworkManager::Update()
 	{
 		int err = WSAGetLastError();
 		printf("Error! Function %s Line %d: %d\n", __func__, __LINE__, err);
-		g_bShutdown = true;
-		return;
+		AssertCrash();
 	}
 	else if (selectRet > 0)
 	{
@@ -161,20 +151,15 @@ void NetworkManager::AcceptProc()
 		delete newSession;
 		return;
 	}
+
+	newSession->_ID = (0xffffffff & (clientaddr.sin_addr.s_addr));
+	newSession->_ID <<= 16;
+	newSession->_ID |= (0xffff & (clientaddr.sin_port));
+	newSession->_ID |= 0x0089000000000000;
 	newSession->SetSessionAlive();
-	_sessionList.push_back(newSession);
 
-	// TO-DO: 분리해야 됨===============
-
-	if (_pPlayerManager == nullptr)
-		_pPlayerManager = PlayerManager::GetInstance();
-
-	_pPlayerManager->CreatePlayer(newSession);
-
-	//PlayerManager가 새 Session을 확인하다가 Create 하는 게 맞으려나?
-	//===============================
-
-	printf("Accept Success!\n");
+	printf("Accept! Session ID: %llx\n", newSession->_ID);
+	_newSessionList.push_back(newSession);
 }
 
 void NetworkManager::RecvProc(Session* session)

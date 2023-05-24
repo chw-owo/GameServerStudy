@@ -1,14 +1,13 @@
-#include "Main.h"
+#include "GameServer.h"
 
-bool g_bShutdown = false;
 int main(int argc, char* argv[])
 {
 	GameServer* server = GameServer::GetInstance();
+
 	server->Initialize();
-	while (!g_bShutdown)
-	{
+	for(;;)
 		server->Update();
-	}
 	server->Terminate();
+
 	return 0;
 }

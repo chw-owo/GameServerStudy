@@ -5,10 +5,7 @@
 #include <stdio.h>
 
 void IStub::ProcessReceivedMessage(Session* pSession)
-{
-	// TO-DO: Get HostID
-	// 일단은 인자로 받고 있는데 이거 말고~
-	
+{	
 	// Get Packet ID from Serialize Packet
 	int useSize = pSession->_recvBuf.GetUseSize();
 	while (useSize > df_HEADER_SIZE)
@@ -17,7 +14,6 @@ void IStub::ProcessReceivedMessage(Session* pSession)
 		int peekRet = pSession->_recvBuf.Peek((char*)&header, df_HEADER_SIZE);
 		if (peekRet != df_HEADER_SIZE)
 		{
-			
 			printf("Error! Func %s Line %d\n", __func__, __LINE__);
 			pSession->SetSessionDead();
 			return;
@@ -25,7 +21,6 @@ void IStub::ProcessReceivedMessage(Session* pSession)
 
 		if (header.code != df_HEADER_CODE)
 		{
-			
 			printf("Error! Func %s Line %d\n", __func__, __LINE__);
 			pSession->SetSessionDead();
 			return;
@@ -37,7 +32,6 @@ void IStub::ProcessReceivedMessage(Session* pSession)
 		int moveReadRet = pSession->_recvBuf.MoveReadPos(df_HEADER_SIZE);
 		if (moveReadRet != df_HEADER_SIZE)
 		{
-			
 			printf("Error! Func %s Line %d\n", __func__, __LINE__);
 			pSession->SetSessionDead();
 			return;
@@ -81,7 +75,6 @@ void IStub::Handle_CS_MoveStart(Session* pSession)
 	int dequeueRet = pSession->_recvBuf.Dequeue(packet.GetWritePtr(), size);
 	if (dequeueRet != size)
 	{
-		
 		printf("Error! Func %s Line %d\n", __func__, __LINE__);
 		pSession->SetSessionDead();
 		return;

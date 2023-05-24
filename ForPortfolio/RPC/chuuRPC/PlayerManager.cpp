@@ -1,5 +1,5 @@
 #include "PlayerManager.h"
-#include "Network.h" // TO-DO... 분리하고 싶은데 SetSessionDead 때문에 못했음
+#include "Network.h"
 #include "GameServer.h"
 #include "Proxy.h"
 #include "Stub.h"
@@ -30,6 +30,7 @@ PlayerManager::PlayerManager()
 {
 	_proxy = Proxy::GetInstance();
 	_stub = GameServer::GetInstance();
+	_net = NetworkManager::GetInstance();
 }
 
 PlayerManager::~PlayerManager()
@@ -41,6 +42,22 @@ PlayerManager* PlayerManager::GetInstance()
 {
 	static PlayerManager _playerMgr;
 	return &_playerMgr;
+}
+
+void PlayerManager::CreateNewPlayers()
+{
+	if (_net->GetNewSessionCnt() > 0)
+	{
+		CList<Session*>* pSessions = _net->GetNewSessionList();
+		CList<Session*>::iterator i = pSessions->begin();
+
+		for (; i != pSessions->end(); i++)
+		{
+			CreatePlayer(*i);
+		}
+
+		_net->SetNewSessionsToUsed();
+	}
 }
 
 Player* PlayerManager::CreatePlayer(Session* pSession)
@@ -72,7 +89,6 @@ Player* PlayerManager::FindPlayer(int sessionID)
 {
 	for (CList<Player*>::iterator i = _playerList.begin(); i != _playerList.end(); i++)
 	{
-		// TO-DO
 		if (sessionID == (*i)->GetSession()->GetSessionID())
 			return (*i);
 	}
@@ -128,8 +144,10 @@ void PlayerManager::Update()
 {
 	// Skip For Fixed Frame
 	if (SkipForFixedFrame()) return;
-	DestroyDeadPlayers();
 
+	DestroyDeadPlayers();
+	CreateNewPlayers();
+		
 	for (CList<Player*>::iterator i = _playerList.begin(); i != _playerList.end(); i++)
 	{
 		// Recv and Update

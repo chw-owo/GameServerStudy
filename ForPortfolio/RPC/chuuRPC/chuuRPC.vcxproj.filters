@@ -17,6 +17,9 @@
     <Filter Include="NetworkLibrary\Utils">
       <UniqueIdentifier>{974e03b2-256d-4dca-9fa7-5468f0e751ec}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Main">
+      <UniqueIdentifier>{590c87db-b8ce-4907-a598-4cb7f45fcd61}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Proxy.cpp">
@@ -34,7 +37,6 @@
     <ClCompile Include="Network.cpp">
       <Filter>NetworkLibrary</Filter>
     </ClCompile>
-    <ClCompile Include="Main.cpp" />
     <ClCompile Include="GameServer.cpp">
       <Filter>Content</Filter>
     </ClCompile>
@@ -46,6 +48,12 @@
     </ClCompile>
     <ClCompile Include="PlayerManager.cpp">
       <Filter>Content</Filter>
+    </ClCompile>
+    <ClCompile Include="Main.cpp">
+      <Filter>Main</Filter>
+    </ClCompile>
+    <ClCompile Include="ErrorHandler.cpp">
+      <Filter>NetworkLibrary\Utils</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -67,7 +75,6 @@
     <ClInclude Include="Network.h">
       <Filter>NetworkLibrary</Filter>
     </ClInclude>
-    <ClInclude Include="Main.h" />
     <ClInclude Include="GameServer.h">
       <Filter>Content</Filter>
     </ClInclude>
@@ -82,6 +89,9 @@
     </ClInclude>
     <ClInclude Include="PlayerManager.h">
       <Filter>Content</Filter>
+    </ClInclude>
+    <ClInclude Include="ErrorHandler.h">
+      <Filter>NetworkLibrary\Utils</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

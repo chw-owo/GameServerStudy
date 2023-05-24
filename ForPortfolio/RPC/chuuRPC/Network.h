@@ -7,37 +7,28 @@
 #include <ws2tcpip.h>
 #include <stdio.h>
 
-class Proxy;
 class IStub;
+class Proxy;
 class NetworkManager;
-class PlayerManager;
 
-extern int gSessionID; // TO-DO
+// ID = code(2byte, 0x0089) + IP(4byte) + port(2byte);
 class Session
 {
 	friend IStub;
+	friend Proxy;
 	friend NetworkManager;
-	friend PlayerManager; // TO-DO... 없애야 함
-
-public:
-	Session() 
-	{
-		_ID = gSessionID;
-		gSessionID++;
-	}
-	~Session() { }
 
 public:
 	int GetSessionID() { return _ID; }
+	bool GetSessionAlive() { return _alive; }
+	void SetSessionDead() { _alive = false; }
 
 private:
 	void SetSessionAlive() { _alive = true; }
-	void SetSessionDead() { _alive = false; }
-	bool GetSessionAlive() { return _alive; }
 
 private:
 	bool _alive;
-	int _ID;
+	unsigned __int64 _ID; 
 	SOCKET _sock;
 	RingBuffer _recvBuf;
 	RingBuffer _sendBuf;
@@ -58,6 +49,18 @@ public:
 	{ 
 		_pStub = stub; 
 		printf("Attach Stub Success!\n");
+	}
+
+public: 
+	int GetNewSessionCnt() { return _newSessionList.size();  }
+	CList<Session*>* GetNewSessionList() { return &_newSessionList; }
+	void SetNewSessionsToUsed() 
+	{ 
+		while (!_newSessionList.empty())
+		{
+			Session* pSession = _newSessionList.pop_back();
+			_sessionList.push_back(pSession);
+		}
 	}
 
 public:
@@ -84,7 +87,5 @@ private:
 	FD_SET _wset;
 	SOCKET _listensock;
 	CList<Session*> _sessionList;
-	
-private:
-	PlayerManager* _pPlayerManager = nullptr; // TO-DO: 분리해야 됨
+	CList<Session*> _newSessionList;
 };
