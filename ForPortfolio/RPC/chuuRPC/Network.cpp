@@ -132,7 +132,7 @@ void NetworkManager::Terminate()
 		Session* pSession = *i;
 		i = _sessionList.erase(i);
 		closesocket(pSession->_sock);
-		delete(pSession);
+		_SessionPool.Free(pSession); //delete(pSession);
 	}
 	closesocket(_listensock);
 	WSACleanup();
@@ -142,14 +142,14 @@ void NetworkManager::AcceptProc()
 {
 	SOCKADDR_IN clientaddr;
 	int addrlen = sizeof(clientaddr);
-	Session* newSession = new Session; 
+	Session* newSession = _SessionPool.Alloc();//new Session; 
 
 	newSession->_sock = accept(_listensock, (SOCKADDR*)&clientaddr, &addrlen);
 	if (newSession->_sock == INVALID_SOCKET)
 	{
 		int err = WSAGetLastError();
 		printf("Error! Function %s Line %d: %d\n", __func__, __LINE__, err);
-		delete newSession;
+		_SessionPool.Free(newSession); //delete newSession;
 		return;
 	}
 
@@ -243,7 +243,7 @@ void NetworkManager::DisconnectDeadSessions()
 			Session* pSession = *i;
 			i = _sessionList.erase(i);
 			closesocket(pSession->_sock);
-			delete(pSession);
+			_SessionPool.Free(pSession); //delete(pSession);
 		}
 		else
 		{
@@ -254,6 +254,8 @@ void NetworkManager::DisconnectDeadSessions()
 
 void NetworkManager::EnqueueUnicast(char* msg, int size, Session* pSession)
 {
+	printf("Network::Enqueue, input: %d\n", size);
+
 	int enqueueRet = pSession->_sendBuf.Enqueue(msg, size);
 	if (enqueueRet != size)
 	{

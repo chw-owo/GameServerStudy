@@ -1,12 +1,14 @@
 #include "RingBuffer.h"
 #include <iostream>
 
-RingBuffer::RingBuffer(void) : _bufferSize(DEFAULT_BUF_SIZE), _freeSize(DEFAULT_BUF_SIZE - 1)
+RingBuffer::RingBuffer(void) : 
+    _bufferSize(DEFAULT_BUF_SIZE), _freeSize(DEFAULT_BUF_SIZE - 1), _useSize(0)
 {
     _buffer = new char[_bufferSize]();
 }
 
-RingBuffer::RingBuffer(int bufferSize) : _bufferSize(bufferSize), _freeSize(bufferSize - 1)
+RingBuffer::RingBuffer(int bufferSize) 
+    : _bufferSize(bufferSize), _freeSize(bufferSize - 1), _useSize(0)
 {
     _buffer = new char[_bufferSize]();
 }
@@ -66,11 +68,13 @@ int RingBuffer::DirectDequeueSize(void)
 
 int RingBuffer::Enqueue(char* chpData, int iSize)
 {
+    printf("RingBuffer::Enqueue, input: %d\n", iSize);
+
     if (iSize > _freeSize)
     {
         if (!Resize(_bufferSize + (iSize * 1.5f)))
         {
-            printf("Error! Func %s Function %s Line %d\n", __func__, __func__, __LINE__);
+            printf("Error! Function %s Line %d\n", __func__, __LINE__);
             return -1;
         }
     }
@@ -99,7 +103,7 @@ int RingBuffer::Dequeue(char* chpData, int iSize)
 {
     if (iSize > _useSize)
     {
-        printf("Error! Func %s Function %s Line %d\n", __func__, __func__, __LINE__);
+        printf("Error! Function %s Line %d\n", __func__, __LINE__);
         return -1;
     }
 
@@ -161,13 +165,15 @@ bool RingBuffer::Resize(int iSize)
 {
     if (iSize > MAX_BUF_SIZE)
     {
-        printf("Error! Func %s Function %s Line %d\n", __func__, __func__, __LINE__);
+        printf("Error! Function %s Line %d\n", __func__, __LINE__);
         return false;
     }
 
+    printf("Requested Size: %d, Used Size: %d\n", iSize, _useSize);
+
     if (iSize < _useSize)
     {
-        printf("Error! Func %s Function %s Line %d\n", __func__, __func__, __LINE__);
+        printf("Error! Function %s Line %d\n", __func__, __LINE__);
         return false;
     }
 
@@ -199,7 +205,7 @@ int RingBuffer::MoveReadPos(int iSize)
 {
     if (iSize > _useSize)
     {
-        printf("Error! Func %s Function %s Line %d\n", __func__, __func__, __LINE__);
+        printf("Error! Function %s Line %d\n", __func__, __LINE__);
         return -1;
     }
 
@@ -216,7 +222,7 @@ int RingBuffer::MoveWritePos(int iSize)
     {
         if (!Resize(_bufferSize + (iSize * 1.5f)))
         {
-            printf("Error! Func %s Function %s Line %d\n", __func__, __func__, __LINE__);
+            printf("Error! Function %s Line %d\n", __func__, __LINE__);
             return -1;
         }
     }

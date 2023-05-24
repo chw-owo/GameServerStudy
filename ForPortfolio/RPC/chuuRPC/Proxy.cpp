@@ -23,6 +23,7 @@ void Proxy::SC_CreateMyCharacter(Session* pSession, int ID, char direction, shor
 	SerializePacket packet;
 	CreateHeader(&packet, df_SC_CREATE_MY_CHARACTER, ID, direction, x, y, hp);
 	packet << ID << direction << x << y << hp;
+	printf("Proxy::SC_Create, input: %d\n", packet.GetDataSize());
 	_net->EnqueueUnicast(packet.GetReadPtr(), packet.GetDataSize(), pSession);
 }
 
