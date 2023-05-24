@@ -2,6 +2,7 @@
 
 #include "List.h"
 #include "RingBuffer.h"
+#include "MemoryPool.h"
 
 #pragma comment(lib, "ws2_32")
 #include <ws2tcpip.h>
@@ -80,6 +81,7 @@ private:
 	void DisconnectDeadSessions();
 
 private:
+	CMemoryPoolT<Session> _SessionPool;
 	static NetworkManager _networkMgr;
 	IStub* _pStub = nullptr;
 

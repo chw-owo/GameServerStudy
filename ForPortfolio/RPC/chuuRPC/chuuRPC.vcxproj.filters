@@ -40,9 +40,6 @@
     <ClCompile Include="GameServer.cpp">
       <Filter>Content</Filter>
     </ClCompile>
-    <ClCompile Include="MemoryPool.cpp">
-      <Filter>NetworkLibrary\Utils</Filter>
-    </ClCompile>
     <ClCompile Include="Player.cpp">
       <Filter>Content</Filter>
     </ClCompile>
@@ -53,6 +50,9 @@
       <Filter>Main</Filter>
     </ClCompile>
     <ClCompile Include="ErrorHandler.cpp">
+      <Filter>NetworkLibrary\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="MemoryPool.cpp">
       <Filter>NetworkLibrary\Utils</Filter>
     </ClCompile>
   </ItemGroup>

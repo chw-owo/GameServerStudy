@@ -7,7 +7,8 @@
 
 NetworkManager::NetworkManager()
 {
-
+	_SessionPool = CMemoryPoolT<Session>(64, false);
+	//TO-DO: _SessionPool.Alloc()으로 바꾸기
 }
 NetworkManager::~NetworkManager()
 {
@@ -141,7 +142,7 @@ void NetworkManager::AcceptProc()
 {
 	SOCKADDR_IN clientaddr;
 	int addrlen = sizeof(clientaddr);
-	Session* newSession = new Session;
+	Session* newSession = new Session; 
 
 	newSession->_sock = accept(_listensock, (SOCKADDR*)&clientaddr, &addrlen);
 	if (newSession->_sock == INVALID_SOCKET)

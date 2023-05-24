@@ -2,5 +2,5 @@
 void AssertCrash()
 {
 	char* pNull = nullptr;
-	*pNull = 0xee;
+	*pNull;
 }
