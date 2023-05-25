@@ -7,7 +7,7 @@
 
 NetworkManager::NetworkManager()
 {
-	_SessionPool = CMemoryPoolT<Session>(64, false);
+	CMemoryPoolT<Session>_SessionPool(64, false);
 	//TO-DO: _SessionPool.Alloc()으로 바꾸기
 }
 NetworkManager::~NetworkManager()
@@ -254,8 +254,6 @@ void NetworkManager::DisconnectDeadSessions()
 
 void NetworkManager::EnqueueUnicast(char* msg, int size, Session* pSession)
 {
-	printf("Network::Enqueue, input: %d\n", size);
-
 	int enqueueRet = pSession->_sendBuf.Enqueue(msg, size);
 	if (enqueueRet != size)
 	{

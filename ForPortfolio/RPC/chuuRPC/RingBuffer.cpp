@@ -68,8 +68,6 @@ int RingBuffer::DirectDequeueSize(void)
 
 int RingBuffer::Enqueue(char* chpData, int iSize)
 {
-    printf("RingBuffer::Enqueue, input: %d\n", iSize);
-
     if (iSize > _freeSize)
     {
         if (!Resize(_bufferSize + (iSize * 1.5f)))
@@ -78,7 +76,6 @@ int RingBuffer::Enqueue(char* chpData, int iSize)
             return -1;
         }
     }
-
     int directEnqueueSize = DirectEnqueueSize();
     if (iSize <= directEnqueueSize)
     {
@@ -168,8 +165,6 @@ bool RingBuffer::Resize(int iSize)
         printf("Error! Function %s Line %d\n", __func__, __LINE__);
         return false;
     }
-
-    printf("Requested Size: %d, Used Size: %d\n", iSize, _useSize);
 
     if (iSize < _useSize)
     {
