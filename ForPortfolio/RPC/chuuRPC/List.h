@@ -1,4 +1,5 @@
 #pragma once
+#include "MemoryPool.h"
 template <typename T>
 class CList
 {
@@ -60,6 +61,8 @@ public:
 public:
 	CList()
 	{
+		CMemoryPoolT<Node> _NodePool(64, false);
+
 		_head._Prev = nullptr;
 		_head._Next = &_tail;
 		_tail._Prev = &_head;
@@ -81,7 +84,7 @@ public:
 
 	void push_front(T data)
 	{
-		Node* node = new Node;
+		Node* node = _NodePool.Alloc();
 		node->_data = data;
 		node->_Prev = &_head;
 		node->_Next = _head._Next;
@@ -92,7 +95,7 @@ public:
 
 	void push_back(T data)
 	{
-		Node* node = new Node;
+		Node* node = _NodePool.Alloc();
 		node->_data = data;
 		node->_Prev = _tail._Prev;
 		node->_Next = &_tail;
@@ -107,7 +110,7 @@ public:
 		T data = nodePtr->_data;
 		_head._Next = nodePtr->_Next;
 		(_head._Next)->_Prev = &_head;
-		delete(nodePtr);
+		_NodePool.Free(nodePtr);
 		_size--;
 		return data;
 	}
@@ -118,7 +121,7 @@ public:
 		T data = nodePtr->_data;
 		_tail._Prev = nodePtr->_Prev;
 		(_tail._Prev)->_Next = &_tail;
-		delete(nodePtr);
+		_NodePool.Free(nodePtr);
 		_size--;
 		return data;
 	}
@@ -132,7 +135,7 @@ public:
 		{
 			prevNodePtr = nodePtr;
 			nodePtr = prevNodePtr->_Next;
-			delete(prevNodePtr);
+			_NodePool.Free(prevNodePtr);
 		}
 
 		_head._Next = &_tail;
@@ -155,7 +158,7 @@ public:
 		Node* nodePtr = iter._node->_Next;
 		(iter._node->_Next)->_Prev = iter._node->_Prev;
 		(iter._node->_Prev)->_Next = iter._node->_Next;
-		delete(iter._node);
+		_NodePool.Free(iter._node);
 		_size--;
 
 		iter._node = nodePtr;
@@ -182,4 +185,5 @@ private:
 	int _size = 0;
 	Node _head;
 	Node _tail;
+	CMemoryPoolT<Node> _NodePool;
 };

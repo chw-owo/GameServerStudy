@@ -31,6 +31,7 @@ PlayerManager::PlayerManager()
 	_proxy = Proxy::GetInstance();
 	_stub = GameServer::GetInstance();
 	_net = NetworkManager::GetInstance();
+	CMemoryPoolT<Player> _PlayerPool(64, true);
 }
 
 PlayerManager::~PlayerManager()
@@ -62,7 +63,7 @@ void PlayerManager::CreateNewPlayers()
 
 Player* PlayerManager::CreatePlayer(Session* pSession)
 {
-	Player* player = new Player(pSession, _ID);
+	Player* player = _PlayerPool.Alloc(pSession, _ID);
 	_playerList.push_back(player);
 
 	_proxy->SC_CreateMyCharacter(player->GetSession(),
@@ -98,7 +99,7 @@ Player* PlayerManager::FindPlayer(int sessionID)
 void PlayerManager::DestroyPlayer(Player* player)
 {
 	_playerList.remove(player);
-	delete(player);
+	_PlayerPool.Free(player);
 }
 
 void PlayerManager::DestroyAllPlayer()
@@ -107,7 +108,7 @@ void PlayerManager::DestroyAllPlayer()
 	while (!_playerList.empty())
 	{
 		player = _playerList.pop_back();
-		delete(player);
+		_PlayerPool.Free(player);
 	}
 }
 
@@ -123,7 +124,7 @@ void PlayerManager::DestroyDeadPlayers()
 			_proxy->SC_DeleteCharacter(deletedPlayer->GetID());
 			deletedPlayer->GetSession()->SetSessionDead();
 			i = _playerList.erase(i);
-			delete(deletedPlayer);
+			_PlayerPool.Free(deletedPlayer);
 		}
 		else
 			i++;

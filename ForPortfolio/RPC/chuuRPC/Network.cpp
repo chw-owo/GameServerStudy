@@ -8,7 +8,6 @@
 NetworkManager::NetworkManager()
 {
 	CMemoryPoolT<Session>_SessionPool(64, false);
-	//TO-DO: _SessionPool.Alloc()으로 바꾸기
 }
 NetworkManager::~NetworkManager()
 {
@@ -132,7 +131,7 @@ void NetworkManager::Terminate()
 		Session* pSession = *i;
 		i = _sessionList.erase(i);
 		closesocket(pSession->_sock);
-		_SessionPool.Free(pSession); //delete(pSession);
+		_SessionPool.Free(pSession); 
 	}
 	closesocket(_listensock);
 	WSACleanup();
@@ -142,14 +141,14 @@ void NetworkManager::AcceptProc()
 {
 	SOCKADDR_IN clientaddr;
 	int addrlen = sizeof(clientaddr);
-	Session* newSession = _SessionPool.Alloc();//new Session; 
+	Session* newSession = _SessionPool.Alloc(); 
 
 	newSession->_sock = accept(_listensock, (SOCKADDR*)&clientaddr, &addrlen);
 	if (newSession->_sock == INVALID_SOCKET)
 	{
 		int err = WSAGetLastError();
 		printf("Error! Function %s Line %d: %d\n", __func__, __LINE__, err);
-		_SessionPool.Free(newSession); //delete newSession;
+		_SessionPool.Free(newSession); 
 		return;
 	}
 

@@ -2,6 +2,7 @@
 #include "List.h"
 #include "Player.h"
 #include "SerializePacket.h"
+#include "MemoryPool.h"
 
 #define FPS 50
 
@@ -45,6 +46,7 @@ private:
 	NetworkManager* _net;
 
 	static PlayerManager _playerMgr;
+	CMemoryPoolT<Player> _PlayerPool;
 	CList<Player*> _playerList;
 };
 

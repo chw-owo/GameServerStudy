@@ -4,11 +4,27 @@
 #include <new.h>
 #include <stdlib.h>
 
+/* ===============================================
+
+<< MemoryPool in the Project >>
+
+이 프로젝트에서는 현재
+
+List.h의 Node,
+Network.h의 Session,
+PlayerManager.h의 Player
+
+이 세가지를 메모리 풀을 통해 관리하고 있다.
+
+직렬화 패킷은 지역에서만 사용하므로 별도로 관리하지 않는다. 
+
+==================================================*/
+
 #define __CHUU_MEMORY_POOL_TYPE_DEBUG__
 
 /* ===============================================
 
-<< __CHUU_MEMORY_POOL_TYPE_DEBUG__ 설명 >>
+<< __CHUU_MEMORY_POOL_TYPE_DEBUG__ >>
 
 1. Node
 
@@ -84,8 +100,9 @@ public:
 	virtual	~CMemoryPoolT();
 
 public:
-	DATA* Alloc(void);
-	bool	Free(DATA* pData);
+	template<typename... Types>
+	DATA* Alloc(Types... data);
+	bool  Free(DATA* pData);
 
 private:
 	bool _bPlacementNew;
@@ -105,9 +122,23 @@ private:
 
 };
 
+/* ===============================================
+
+<< bPlacementNew >>
+
+bPlacementNew가 True일 경우,
+Alloc, Free가 될 때마다 생성자, 소멸자를 호출한다.
+이때 Alloc의 인자로 생성자의 인자를 전달할 수 있다.
+
+bPlacementNew가 False일 경우,
+내부적으로 malloc, free가 될 때 생성자, 소멸자를 호출한다.
+이때 생성자 인자를 전달할 수 없으며, 기본 생성자가 호출된다.
+
+==================================================*/
+
 template<class DATA>
 CMemoryPoolT<DATA>::CMemoryPoolT()
-	:_bPlacementNew(false), _iBlockNum(0), _pFreeNode(nullptr) 
+	:_bPlacementNew(true), _iBlockNum(0), _pFreeNode(nullptr) 
 {
 #ifdef __CHUU_MEMORY_POOL_TYPE_DEBUG__
 
@@ -156,12 +187,12 @@ CMemoryPoolT<DATA>::CMemoryPoolT(int iBlockNum, bool bPlacementNew)
 		_pFreeNode->tail = (size_t)nullptr;
 		for (int i = 1; i < _iBlockNum; i++)
 		{
-			new (&(_pFreeNode->data)) DATA;
+			new (&(_pFreeNode->data)) DATA();
 			stNODE* p = (stNODE*)malloc(sizeof(stNODE));
 			p->tail = (size_t)_pFreeNode;
 			_pFreeNode = p;
 		}
-		new (&(_pFreeNode->data)) DATA;
+		new (&(_pFreeNode->data)) DATA();
 	}
 }
 
@@ -209,14 +240,15 @@ CMemoryPoolT<DATA>::~CMemoryPoolT()
 }
 
 template<class DATA>
-DATA* CMemoryPoolT<DATA>::Alloc(void)
+template<typename... Types>
+DATA* CMemoryPoolT<DATA>::Alloc(Types... data)
 {
 	if (_pFreeNode == nullptr)
 	{
 		// 비어있는 노드가 없다면 생성한 후 Data의 생성자를 호출한다 (최초 생성)
 
 		stNODE* pNew = (stNODE*)malloc(sizeof(stNODE));
-		new (&(pNew->data)) DATA;
+		new (&(pNew->data)) DATA(data...);
 
 #ifdef __CHUU_MEMORY_POOL_TYPE_DEBUG__
 
@@ -241,7 +273,7 @@ DATA* CMemoryPoolT<DATA>::Alloc(void)
 
 		stNODE* p = _pFreeNode;
 		_pFreeNode = (stNODE*)_pFreeNode->tail;
-		new (&(p->data)) DATA;
+		new (&(p->data)) DATA(data...);
 
 #ifdef __CHUU_MEMORY_POOL_TYPE_DEBUG__
 

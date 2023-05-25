@@ -45,6 +45,7 @@ class Player
 
 public:
 	Player(Session* pSession, int ID);
+	Player();
 	~Player();
 	void Update();
 

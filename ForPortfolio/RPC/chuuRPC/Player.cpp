@@ -2,6 +2,16 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+Player::Player()
+	: _pSession(nullptr), _ID(-1),
+	_direction(dfPACKET_MOVE_DIR_LL),
+	_moveDirection(dfPACKET_MOVE_DIR_LL),
+	_x(dfINIT_X), _y(dfINIT_Y), _hp(dfMAX_HP),
+	_packetState(0), _playerState(dfPLAYER_STATE_ALIVE)
+{
+	
+}
+
 Player::Player(Session* pSession, int ID)
 	: _pSession(pSession), _ID(ID),
 	_direction(dfPACKET_MOVE_DIR_LL),
@@ -9,7 +19,7 @@ Player::Player(Session* pSession, int ID)
 	_x(dfINIT_X), _y(dfINIT_Y), _hp(dfMAX_HP),
 	_packetState(0), _playerState(dfPLAYER_STATE_ALIVE)
 {
-
+	printf("Success to Create Player!\n");
 }
 
 Player::~Player()
