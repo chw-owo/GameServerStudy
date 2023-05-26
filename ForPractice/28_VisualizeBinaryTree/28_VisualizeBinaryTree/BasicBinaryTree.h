@@ -3,6 +3,7 @@
 #include <windows.h>
 #include <cmath>
 
+#define TREE_MAX (INT_MAX / 2)
 #define TEXT_LEN 8
 #define TEXT_PAD 8
 #define RADIUS 12
@@ -34,13 +35,20 @@ public:
 	BasicBinaryTree() {}
 	~BasicBinaryTree() {}
 
-	void InsertNode(DATA data)
+	bool InsertNode(DATA data)
 	{
+		if(_size >= TREE_MAX)
+		{
+			printf("Tree is full. MAX: %d\n", _size);
+			return false;
+		}
+
 		if (_pRoot == nullptr)
 		{
 			_pRoot = new Node(data);
 			printf("Success to Insert %d!\n", data);
-			return;
+			_size++;
+			return true;
 		}
 
 		Node* pNode = _pRoot;
@@ -50,7 +58,7 @@ public:
 			if (pNode->_data == data)
 			{
 				printf("중복되는 값을 넣을 수 없습니다: %d\n", data);
-				return;
+				return false;
 			}
 
 			if (pNode->_data > data)
@@ -60,7 +68,8 @@ public:
 					Node* pNewNode = new Node(data);
 					pNode->_pLeft = pNewNode;
 					printf("Success to Insert %d!\n", data);
-					return;
+					_size++;
+					return true;
 				}
 				else
 				{
@@ -76,7 +85,8 @@ public:
 					Node* pNewNode = new Node(data);
 					pNode->_pRight = pNewNode;
 					printf("Success to Insert %d!\n", data);
-					return;
+					_size++;
+					return true;
 				}
 				else
 				{
@@ -85,8 +95,10 @@ public:
 				}
 			}
 		}
+		return false;
 	}
 
+	// TO-DO: 오작동~~ 수정해야됨~~
 	void DeleteNode(DATA data)
 	{
 		if (_pRoot == nullptr)
@@ -146,16 +158,26 @@ public:
 			}
 		}
 
+		if (pParent == nullptr && pNode != _pRoot)
+		{
+				printf("Tree is broken~\n");
+				return;
+		}
+
 		if (pNode->_pLeft == nullptr &&
 			pNode->_pRight == nullptr)
 		{
-			if (pParent == nullptr)
+			if (pNode == _pRoot)
 			{
+				printf("(0) ");
 				delete(pNode);
 				_pRoot = nullptr;
-				printf("0 Success to Delete %d!\n", data);
+				printf("Success to Delete %d!\n", data);
+				_size--;
 				return;
 			}
+
+			printf("(1) ");
 
 			if (bLeft)
 				pParent->_pLeft = nullptr;
@@ -163,47 +185,62 @@ public:
 				pParent->_pRight = nullptr;
 			delete (pNode);
 
-			printf("Success to Delete %d! (1)\n", data);
+			printf("Success to Delete %d!\n", data);
+			_size--;
 			return;
 		}
 		else if (pNode->_pLeft == nullptr)
 		{
+			printf("(2) ");
+
 			pNode->_data = pNode->_pRight->_data;
 			Node* pPrevRight = pNode->_pRight;
 			pNode->_pRight = pNode->_pRight->_pRight;
 			delete (pPrevRight);
-			printf("Success to Delete %d! (2)\n", data);
+			printf("Success to Delete %d!\n", data);
+			_size--;
 			return;
 		}
 		else if (pNode->_pRight == nullptr)
 		{
+			printf("(3) ");
+
 			pNode->_data = pNode->_pLeft->_data;
 			Node* pPrevLeft = pNode->_pLeft;
 			pNode->_pLeft = pNode->_pLeft->_pLeft;
 			delete (pPrevLeft);
-			printf("Success to Delete %d! (3)\n", data);
+			printf("Success to Delete %d!\n", data);
+			_size--;
 			return;
 		}
 
 		Node* pChild = pNode->_pLeft;
 		if (pChild->_pRight == nullptr)
 		{
+			printf("(4) ");
+
 			pNode->_data = pChild->_data;
 			pNode->_pLeft = pChild->_pLeft;
 			delete (pChild);
-			printf("Success to Delete %d! (4)\n", data);
+			printf("Success to Delete %d!\n", data);
+			_size--;
 			return;
 		}
 
+		printf("(5) ");
+
+		
 		while (pChild->_pRight != nullptr)
 		{
+			pParent = pChild;
 			pChild = pChild->_pRight;
 		}
+
 		pNode->_data = pChild->_data;
 		pParent->_pRight = nullptr;
 		delete (pChild);
-		printf("Success to Delete %d! (5)\n", data);
-
+		printf("Success to Delete %d!\n", data);
+		_size--;
 		return;
 	}
 
@@ -264,8 +301,6 @@ public:
 		printf("\n");
 	}
 
-private:
-
 	void InorderPrintNode(Node* pNode)
 	{
 		if (pNode == nullptr) return;
@@ -275,45 +310,76 @@ private:
 		InorderPrintNode(pNode->_pRight);
 	}
 
-public:
-
-	void DrawAllNode(HDC hdc)
+	int GetTreeSize()
 	{
-		DrawNode(hdc, _pRoot, X_PIVOT, Y_PIVOT, X_PIVOT, Y_PIVOT, 0, 0, 0);
+		return _size;
 	}
 
-	void DrawNode(HDC hdc, Node* pNode, int prevXPos, int prevYPos,
-		int xPos, int yPos, int left, int right, int depth)
+	void GetAllNode(DATA* dataArray)
+	{
+		int index = 0;
+		InorderGetNode(_pRoot, dataArray, &index);
+	}
+
+	void InorderGetNode(Node* pNode, DATA* dataArray, int* index)
 	{
 		if (pNode == nullptr) return;
 
-		MoveToEx(hdc, prevXPos, prevYPos, NULL);
-		LineTo(hdc, xPos, yPos);
+		InorderGetNode(pNode->_pLeft, dataArray, index);
+		dataArray[*index] = pNode->_data;
+		(*index)++;
+		InorderGetNode(pNode->_pRight, dataArray, index);
+	}
+
+public:
+
+	void DrawAllNode(HDC hdc, int xPad, int yPad)
+	{
+		DrawNode(hdc, _pRoot, 
+			X_PIVOT, Y_PIVOT, X_PIVOT, Y_PIVOT, 
+			xPad, yPad, 0, 0, 0);
+	}
+
+	void DrawNode(HDC hdc, Node* pNode, int prevXPos, int prevYPos,
+		int xPos, int yPos, int xPad, int yPad,
+		int left, int right, int depth)
+	{
+		if (pNode == nullptr) return;
+
+		MoveToEx(hdc, prevXPos + xPad, prevYPos + yPad, NULL);
+		LineTo(hdc, xPos + xPad, yPos + yPad);
 			
 		WCHAR text[TEXT_LEN] = { 0 };
 		_itow_s(pNode->_data, text, TEXT_LEN, 10);
 
-		Ellipse(hdc, xPos - RADIUS, yPos - RADIUS, 
-			xPos + RADIUS, yPos + RADIUS);
-		TextOutW(hdc, xPos - TEXT_PAD, yPos - TEXT_PAD, 
+		Ellipse(hdc, 
+			xPos - RADIUS + xPad, 
+			yPos - RADIUS + yPad,
+			xPos + RADIUS + xPad, 
+			yPos + RADIUS + yPad);
+
+		TextOutW(hdc, 
+			xPos - TEXT_PAD + xPad, 
+			yPos - TEXT_PAD + yPad,
 			text, wcslen(text));
 
 		depth++;
 
-		int prevXGap = xPos;
-		if(prevXPos != xPos)
-			prevXGap = abs(prevXPos - xPos);
+		int prevXGap = abs(prevXPos - xPos);
+		
+		if (pNode == _pRoot)
+			prevXGap = xPos;
 
 		left++;
 		DrawNode(hdc, pNode->_pLeft, xPos, yPos, 
 			xPos - (prevXGap / 2), yPos + Y_GAP,
-			left, right, depth);
+			xPad, yPad, left, right, depth);
 		left--;
 
 		right++;
 		DrawNode(hdc, pNode->_pRight, xPos, yPos,
 			xPos + (prevXGap / 2), yPos + Y_GAP,
-			left, right, depth);
+			xPad, yPad, left, right, depth);
 		right--;
 
 		depth--;
@@ -322,6 +388,6 @@ public:
 
 private:
 	Node* _pRoot = nullptr;
-
+	int _size = 0;
 };
 
