@@ -4,8 +4,13 @@
 #include <cmath>
 
 #define TEXT_LEN 8
-#define X_PIVOT 512
+#define TEXT_PAD 8
+#define RADIUS 12
+
+#define X_MAX 1024
+#define X_PIVOT (X_MAX / 2)
 #define Y_PIVOT 50
+#define Y_GAP 50
 
 template<typename DATA>
 class BasicBinaryTree
@@ -158,7 +163,7 @@ public:
 				pParent->_pRight = nullptr;
 			delete (pNode);
 
-			printf("1 Success to Delete %d!\n", data);
+			printf("Success to Delete %d! (1)\n", data);
 			return;
 		}
 		else if (pNode->_pLeft == nullptr)
@@ -167,7 +172,7 @@ public:
 			Node* pPrevRight = pNode->_pRight;
 			pNode->_pRight = pNode->_pRight->_pRight;
 			delete (pPrevRight);
-			printf("2 Success to Delete %d!\n", data);
+			printf("Success to Delete %d! (2)\n", data);
 			return;
 		}
 		else if (pNode->_pRight == nullptr)
@@ -176,7 +181,7 @@ public:
 			Node* pPrevLeft = pNode->_pLeft;
 			pNode->_pLeft = pNode->_pLeft->_pLeft;
 			delete (pPrevLeft);
-			printf("3 Success to Delete %d!\n", data);
+			printf("Success to Delete %d! (3)\n", data);
 			return;
 		}
 
@@ -186,7 +191,7 @@ public:
 			pNode->_data = pChild->_data;
 			pNode->_pLeft = pChild->_pLeft;
 			delete (pChild);
-			printf("4 Success to Delete %d!\n", data);
+			printf("Success to Delete %d! (4)\n", data);
 			return;
 		}
 
@@ -197,7 +202,7 @@ public:
 		pNode->_data = pChild->_data;
 		pParent->_pRight = nullptr;
 		delete (pChild);
-		printf("5 Success to Delete %d!\n", data);
+		printf("Success to Delete %d! (5)\n", data);
 
 		return;
 	}
@@ -271,75 +276,44 @@ private:
 	}
 
 public:
-	enum POS
-	{
-		ROOT,
-		LEFT,
-		RIGHT
-	};
 
 	void DrawAllNode(HDC hdc)
 	{
-		DrawNode(hdc, _pRoot, ROOT, 0, 0, 0);
+		DrawNode(hdc, _pRoot, X_PIVOT, Y_PIVOT, X_PIVOT, Y_PIVOT, 0, 0, 0);
 	}
 
-	void DrawNode(HDC hdc, Node* pNode, POS pos, int left, int right, int depth)
+	void DrawNode(HDC hdc, Node* pNode, int prevXPos, int prevYPos,
+		int xPos, int yPos, int left, int right, int depth)
 	{
 		if (pNode == nullptr) return;
-		
-		int gap = 512 / pow(2, depth);
 
-		/*
-		0 - 0
-		1 - 256
-		2 - 128
-		3 - 64
-		4 - 32
-		*/
-
-		if (pos == LEFT)
-		{
-			MoveToEx(hdc, 
-				X_PIVOT - (left * gap) + ((right + 1) * gap) ,
-				Y_PIVOT + ((depth - 1) * 50), 
-				NULL);
-
-			LineTo(hdc,
-				X_PIVOT - (left * gap) + (right * gap),
-				Y_PIVOT + (depth * 50));
-		}	
-		else if (pos == RIGHT)
-		{
-			MoveToEx(hdc,
-				X_PIVOT - ((left + 1) * gap) + (right * gap),
-				Y_PIVOT + ((depth - 1) * 50),
-				NULL);
-
-			LineTo(hdc, 
-				X_PIVOT - (left * gap) + (right * gap),
-				Y_PIVOT + (depth * 50));
-		}
+		MoveToEx(hdc, prevXPos, prevYPos, NULL);
+		LineTo(hdc, xPos, yPos);
 			
 		WCHAR text[TEXT_LEN] = { 0 };
 		_itow_s(pNode->_data, text, TEXT_LEN, 10);
 
-		Ellipse(hdc, 
-			X_PIVOT - (left * gap) + (right * gap) - 25,
-			Y_PIVOT + (depth * 50) - 25,
-			X_PIVOT - (left * gap) + (right * gap) + 25,
-			Y_PIVOT + (depth * 50) + 25);
-
-		TextOutW(hdc, X_PIVOT - (left * gap) + (right * gap) - 8,
-			Y_PIVOT + (depth * 50) - 8, text, wcslen(text));
+		Ellipse(hdc, xPos - RADIUS, yPos - RADIUS, 
+			xPos + RADIUS, yPos + RADIUS);
+		TextOutW(hdc, xPos - TEXT_PAD, yPos - TEXT_PAD, 
+			text, wcslen(text));
 
 		depth++;
 
+		int prevXGap = xPos;
+		if(prevXPos != xPos)
+			prevXGap = abs(prevXPos - xPos);
+
 		left++;
-		DrawNode(hdc, pNode->_pLeft, LEFT, left, right, depth);
+		DrawNode(hdc, pNode->_pLeft, xPos, yPos, 
+			xPos - (prevXGap / 2), yPos + Y_GAP,
+			left, right, depth);
 		left--;
 
 		right++;
-		DrawNode(hdc, pNode->_pRight, RIGHT, left, right, depth);
+		DrawNode(hdc, pNode->_pRight, xPos, yPos,
+			xPos + (prevXGap / 2), yPos + Y_GAP,
+			left, right, depth);
 		right--;
 
 		depth--;
