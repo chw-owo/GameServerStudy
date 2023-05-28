@@ -1,0 +1,13 @@
+﻿  Main.cpp
+C:\Users\Dell\Desktop\GameServer\ForPractice\29_VisualizeRedBlackTree\29_VisualizeRedBlackTree\Main.cpp(193,19): warning C4244: '인수': 'time_t'에서 'unsigned int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\29_VisualizeRedBlackTree\29_VisualizeRedBlackTree\RedBlackTree.h(546,1): warning C4267: '인수': 'size_t'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\29_VisualizeRedBlackTree\29_VisualizeRedBlackTree\RedBlackTree.h(501,1): message : 클래스 템플릿 멤버 함수 'void RedBlackTree<int>::DrawNode(HDC,HPEN,RedBlackTree<int>::Node *,int,int,int,int,int,int,int,int,int)'을(를) 컴파일하는 중입니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\29_VisualizeRedBlackTree\29_VisualizeRedBlackTree\RedBlackTree.h(490,11): message : 컴파일되는 함수 템플릿 인스턴스화 'void RedBlackTree<int>::DrawNode(HDC,HPEN,RedBlackTree<int>::Node *,int,int,int,int,int,int,int,int,int)'에 대한 참조를 확인하세요.
+C:\Users\Dell\Desktop\GameServer\ForPractice\29_VisualizeRedBlackTree\29_VisualizeRedBlackTree\Main.cpp(69,19): message : 컴파일되는 클래스 템플릿 인스턴스화 'RedBlackTree<int>'에 대한 참조를 확인하세요.
+  RedBlackTree.cpp
+  코드를 생성하고 있습니다.
+  7 of 31 functions (22.6%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    2 functions had inline decision re-evaluated but remain unchanged
+  코드를 생성했습니다.
+  29_VisualizeRedBlackTree.vcxproj -> C:\Users\Dell\Desktop\GameServer\ForPractice\29_VisualizeRedBlackTree\x64\Release\29_VisualizeRedBlackTree.exe
