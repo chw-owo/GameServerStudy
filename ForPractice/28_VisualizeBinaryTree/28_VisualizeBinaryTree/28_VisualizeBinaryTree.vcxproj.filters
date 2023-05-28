@@ -28,7 +28,9 @@
     <ClInclude Include="targetver.h">
       <Filter>UtilsForWindow</Filter>
     </ClInclude>
-    <ClInclude Include="BasicBinaryTree.h" />
+    <ClInclude Include="BasicBinaryTree.h">
+      <Filter>Tree</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="28_VisualizeBinaryTree.rc">
@@ -47,6 +49,8 @@
     <ClCompile Include="Main.cpp">
       <Filter>Main</Filter>
     </ClCompile>
-    <ClCompile Include="BasicBinaryTree.cpp" />
+    <ClCompile Include="BasicBinaryTree.cpp">
+      <Filter>Tree</Filter>
+    </ClCompile>
   </ItemGroup>
 </Project>

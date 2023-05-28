@@ -8,7 +8,7 @@
 #define TEXT_PAD 8
 #define RADIUS 12
 
-#define X_MAX 1024
+#define X_MAX 1536
 #define X_PIVOT (X_MAX / 2)
 #define Y_PIVOT 50
 #define Y_GAP 50
@@ -35,6 +35,7 @@ public:
 	BasicBinaryTree() {}
 	~BasicBinaryTree() {}
 
+public:
 	bool InsertNode(DATA data)
 	{
 		if(_size >= TREE_MAX)
@@ -98,180 +99,37 @@ public:
 		return false;
 	}
 
-	// TO-DO: 오작동~~ 수정해야됨~~
-	void DeleteNode(DATA data)
+
+private:
+	bool SearchNode(DATA data, Node*& pNode, Node*& pParent, bool& bNodeLeft)
 	{
 		if (_pRoot == nullptr)
 		{
 			printf("현재 비어있는 트리입니다.\n");
-			return;
+			pNode = nullptr;
+			pParent = nullptr;
+			return false;
 		}
 
-		bool bLeft = false;
-		Node* pParent = nullptr;
-		Node* pNode = _pRoot;
+		pParent = nullptr;
+		pNode = _pRoot;
 
-		if (pNode->_data != data)
+		while (pNode->_data != data)
 		{
-			for (;;)
-			{
-				if (pNode->_data > data)
-				{
-					if (pNode->_pLeft == nullptr)
-					{
-						printf("존재하지 않는 값입니다: %d\n", data);
-						return;
-					}
-					else if (pNode->_pLeft->_data == data)
-					{
-						pParent = pNode;
-						pNode = pNode->_pLeft;
-						bLeft = true;
-						break;
-					}
-					else
-					{
-						pNode = pNode->_pLeft;
-						continue;
-					}
-				}
-
-				if (pNode->_data < data)
-				{
-					if (pNode->_pRight == nullptr)
-					{
-						printf("존재하지 않는 값입니다: %d\n", data);
-						return;
-					}
-					else if (pNode->_pRight->_data == data)
-					{
-						pParent = pNode;
-						pNode = pNode->_pRight;
-						break;
-					}
-					else
-					{
-						pNode = pNode->_pRight;
-						continue;
-					}
-				}
-			}
-		}
-
-		if (pParent == nullptr && pNode != _pRoot)
-		{
-				printf("Tree is broken~\n");
-				return;
-		}
-
-		if (pNode->_pLeft == nullptr &&
-			pNode->_pRight == nullptr)
-		{
-			if (pNode == _pRoot)
-			{
-				printf("(0) ");
-				delete(pNode);
-				_pRoot = nullptr;
-				printf("Success to Delete %d!\n", data);
-				_size--;
-				return;
-			}
-
-			printf("(1) ");
-
-			if (bLeft)
-				pParent->_pLeft = nullptr;
-			else
-				pParent->_pRight = nullptr;
-			delete (pNode);
-
-			printf("Success to Delete %d!\n", data);
-			_size--;
-			return;
-		}
-		else if (pNode->_pLeft == nullptr)
-		{
-			printf("(2) ");
-
-			pNode->_data = pNode->_pRight->_data;
-			Node* pPrevRight = pNode->_pRight;
-			pNode->_pRight = pNode->_pRight->_pRight;
-			delete (pPrevRight);
-			printf("Success to Delete %d!\n", data);
-			_size--;
-			return;
-		}
-		else if (pNode->_pRight == nullptr)
-		{
-			printf("(3) ");
-
-			pNode->_data = pNode->_pLeft->_data;
-			Node* pPrevLeft = pNode->_pLeft;
-			pNode->_pLeft = pNode->_pLeft->_pLeft;
-			delete (pPrevLeft);
-			printf("Success to Delete %d!\n", data);
-			_size--;
-			return;
-		}
-
-		Node* pChild = pNode->_pLeft;
-		if (pChild->_pRight == nullptr)
-		{
-			printf("(4) ");
-
-			pNode->_data = pChild->_data;
-			pNode->_pLeft = pChild->_pLeft;
-			delete (pChild);
-			printf("Success to Delete %d!\n", data);
-			_size--;
-			return;
-		}
-
-		printf("(5) ");
-
-		
-		while (pChild->_pRight != nullptr)
-		{
-			pParent = pChild;
-			pChild = pChild->_pRight;
-		}
-
-		pNode->_data = pChild->_data;
-		pParent->_pRight = nullptr;
-		delete (pChild);
-		printf("Success to Delete %d!\n", data);
-		_size--;
-		return;
-	}
-
-	DATA* SearchNode(DATA data)
-	{
-		if (_pRoot == nullptr)
-		{
-			printf("현재 비어있는 트리입니다.\n");
-			return nullptr;
-		}
-
-		Node* pNode = _pRoot;
-
-		for (;;)
-		{
-			if (pNode->_data == data)
-			{
-				printf("Success to Search %d!\n", data);
-				return &(pNode->_data);
-			}
-
 			if (pNode->_data > data)
 			{
 				if (pNode->_pLeft == nullptr)
 				{
 					printf("존재하지 않는 값입니다: %d\n", data);
-					return nullptr;
+					pNode = nullptr;
+					pParent = nullptr;
+					return false;
 				}
 				else
 				{
+					pParent = pNode;
 					pNode = pNode->_pLeft;
+					bNodeLeft = true;
 					continue;
 				}
 			}
@@ -281,18 +139,115 @@ public:
 				if (pNode->_pRight == nullptr)
 				{
 					printf("존재하지 않는 값입니다: %d\n", data);
-					return nullptr;
+					pNode = nullptr;
+					pParent = nullptr;
+					return false;
 				}
 				else
 				{
+					pParent = pNode;
 					pNode = pNode->_pRight;
+					bNodeLeft = false;
 					continue;
 				}
 			}
 		}
 
-		printf("존재하지 않는 값입니다: %d\n", data);
-		return nullptr;
+		printf("Success to Search %d!\n", data);
+		return true;
+	}
+
+public:
+	bool DeleteNode(DATA data)
+	{
+		Node* pNode = nullptr;
+		Node* pParent = nullptr;
+		bool bNodeLeft = false;
+		if(!SearchNode(data, pNode, pParent, bNodeLeft))
+			return false;
+
+		// Delete Input Data Node 
+		if (pNode->_pLeft == nullptr &&
+			pNode->_pRight == nullptr)
+		{
+			printf("(0) ");
+
+			if (pNode == _pRoot)
+				_pRoot = nullptr;
+			else if (bNodeLeft)
+				pParent->_pLeft = nullptr;
+			else if (!bNodeLeft)
+				pParent->_pRight = nullptr;
+
+			delete(pNode);
+			printf("Success to Delete %d!\n", data);
+			_size--;
+			return true;
+		}
+		else if (pNode->_pLeft == nullptr)
+		{
+			printf("(1) ");
+
+			if (pNode == _pRoot)
+				_pRoot = pNode->_pRight;
+			else if (bNodeLeft)
+				pParent->_pLeft = pNode->_pRight;
+			else if (!bNodeLeft)
+				pParent->_pRight = pNode->_pRight;
+
+			delete(pNode);
+			printf("Success to Delete %d!\n", data);
+			_size--;
+			return true;
+		}
+		else if (pNode->_pRight == nullptr)
+		{
+			printf("(2) ");
+
+			if (pNode == _pRoot)
+				_pRoot = pNode->_pLeft;
+			else if (bNodeLeft)
+				pParent->_pLeft = pNode->_pLeft;
+			else if (!bNodeLeft)
+				pParent->_pRight = pNode->_pLeft;
+
+			delete(pNode);
+			printf("Success to Delete %d!\n", data);
+			_size--;
+			return true;
+		}
+
+		// Delete Alternate Node 
+
+		printf("(3) ");
+		
+		Node* pAlt = pNode->_pLeft;
+		Node* pAltParent = pNode;
+		bool bAltLeft = true;
+		
+		while(pAlt->_pRight != nullptr)
+		{
+			pAltParent = pAlt;
+			pAlt = pAlt->_pRight;
+			bAltLeft = false;
+		}
+
+		pNode->_data = pAlt->_data;
+
+		if(bAltLeft && pAlt->_pLeft != nullptr)
+			pAltParent->_pLeft = pAlt->_pLeft;
+		else if (bAltLeft && pAlt->_pLeft == nullptr)
+			pAltParent->_pLeft = nullptr;
+		else if(!bAltLeft && pAlt->_pLeft != nullptr)
+			pAltParent->_pRight = pAlt->_pLeft;
+		else if (!bAltLeft && pAlt->_pLeft == nullptr)
+			pAltParent->_pRight = nullptr;
+
+		delete(pAlt);
+
+		printf("Success to Delete %d!\n", data);
+		_size--;
+		return true;
 	}
 
 	void PrintAllNode()

@@ -207,28 +207,29 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_KEYDOWN:
     {
         switch (wParam)
-        {
+        { 
         case VK_UP:
-            g_iYPad++;
+            g_iYPad += 3;
             InvalidateRect(hWnd, NULL, TRUE);
             break;
 
         case VK_DOWN:
-            g_iYPad--;
+            g_iYPad -= 3;
             InvalidateRect(hWnd, NULL, TRUE);
             break;
 
         case VK_LEFT:
-            g_iXPad++;
+            g_iXPad += 3;
             InvalidateRect(hWnd, NULL, TRUE);
             break;
 
         case VK_RIGHT:
-            g_iXPad--;
+            g_iXPad -= 3;
             InvalidateRect(hWnd, NULL, TRUE);
             break;
 
         case VK_NUMPAD1:
+        case 0x31:
             {
                 char nodeInput[INPUT_LEN] = { '\0', };
                 printf("Enter Number to Insert\n");
@@ -248,6 +249,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             break;
 
         case VK_NUMPAD2:
+        case 0x32:
         {
             char nodeInput[INPUT_LEN] = { '\0', };
             printf("Enter Node Count to Insert (MAX: %d)\n", INT_MAX / 2);
@@ -273,6 +275,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             break;
 
         case VK_NUMPAD3:
+        case 0x33:
             {
                 char nodeInput[INPUT_LEN] = { '\0', };
                 printf("Enter Number to Delete\n");
@@ -292,6 +295,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             break;
 
         case VK_NUMPAD4:
+        case 0x34:
         {
             char nodeInput[INPUT_LEN] = { '\0', };
             printf("Enter Node Count to Delete (MAX: %d)\n", tree.GetTreeSize());
@@ -317,6 +321,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             break;
 
         case VK_NUMPAD5:
+        case 0x35:
             system("cls");
             break;
 
