@@ -75,7 +75,6 @@ void DrawTree()
 
 void InsertRandomNode(int node)
 {
-    srand(20);
     if (node <= RAND_MAX)
     {
         int* data = new int[node];
@@ -91,7 +90,7 @@ void InsertRandomNode(int node)
             {
                 rand1 = (rand() % node);
             }
-            tree.InsertNode(rand1);
+            tree.InsertNode(data[rand1]);
             data[rand1] = INT_MAX;
         }
 
@@ -122,7 +121,7 @@ void InsertRandomNode(int node)
                 rand1 %= node;
             }
 
-            tree.InsertNode(rand1);
+            tree.InsertNode(data[rand1]);
             data[rand1] = INT_MAX;
         }
         delete[] data;
@@ -135,7 +134,6 @@ void DeleteRandomNode(int node)
     int* data = new int[max];
     tree.GetAllNode(data);
 
-    srand(20);
     if (node <= RAND_MAX)
     {
         for (int i = 0; i < node; i++)
@@ -190,7 +188,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             "5. Clear Console\n\n"
             "Choose number\n");
 
-        srand(time(NULL));
+        srand(500);
         g_hBlackPen = CreatePen(PS_SOLID, 1, RGB(100, 100, 100));
         g_hRedPen = CreatePen(PS_SOLID, 1, RGB(200, 0, 0));
 
@@ -236,8 +234,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             fgets(nodeInput, INPUT_LEN, stdin);
             int node = atoi(nodeInput);
             tree.InsertNode(node);
-            tree.PrintAllNodeData();
+
             InvalidateRect(hWnd, NULL, TRUE);
+
+            tree.PrintAllNodeData();
+            int max = tree.GetTreeSize();
+            int* data = new int[max];
+            tree.GetAllNode(data);
+            printf("\ntotal size: %d\n", max);
+            for (int i = 0; i < max; i++)
+                printf("%d ", data[i]);
+            printf("\n");
 
             printf("\n1. Insert Node\n"
                 "2. Insert Random Node\n"
@@ -263,6 +270,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             printf("Requested Count: %d\n", node);
 
             InsertRandomNode(node);
+
+            tree.PrintAllNodeData();
+            int max = tree.GetTreeSize();
+            int* data = new int[max];
+            printf("\ntotal size: %d\n", max);
+            tree.GetAllNode(data);
+            printf("\n");
+            for (int i = 0; i < max; i++)
+                printf("%d ", data[i]);
+            printf("\n");
+
             InvalidateRect(hWnd, NULL, TRUE);
 
             printf("\n1. Insert Node\n"
@@ -283,6 +301,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             fgets(nodeInput, INPUT_LEN, stdin);
             int node = atoi(nodeInput);
             tree.DeleteNode(node);
+
+            tree.PrintAllNodeData();
+            int max = tree.GetTreeSize();
+            int* data = new int[max];
+            printf("\ntotal size: %d\n", max);
+            tree.GetAllNode(data);
+            printf("\n");
+            for (int i = 0; i < max; i++)
+                printf("%d ", data[i]);
+            printf("\n");
+
             InvalidateRect(hWnd, NULL, TRUE);
 
             printf("\n1. Insert Node\n"
@@ -309,6 +338,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             printf("Requested Count: %d\n", node);
 
             DeleteRandomNode(node);
+
+            tree.PrintAllNodeData();
+            int max = tree.GetTreeSize();
+            int* data = new int[max];
+            printf("\ntotal size: %d\n", max);
+            tree.GetAllNode(data);
+            printf("\n");
+            for (int i = 0; i < max; i++)
+                printf("%d ", data[i]);
+            printf("\n");
+
             InvalidateRect(hWnd, NULL, TRUE);
 
             printf("\n1. Insert Node\n"
@@ -371,6 +411,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         return DefWindowProc(hWnd, message, wParam, lParam);
     }
     return 0;
+
 }
 
 
