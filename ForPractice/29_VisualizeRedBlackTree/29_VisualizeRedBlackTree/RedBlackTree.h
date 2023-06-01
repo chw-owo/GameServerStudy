@@ -64,7 +64,7 @@ public:
 		{
 			_pRoot = new Node(data, _pNil);
 			_pRoot->_color = BLACK;
-			//printf("Success to Insert %d!\n", data);
+			printf("Success to Insert %d!\n", data);
 			_size++;
 			return true;
 		}
@@ -87,7 +87,7 @@ public:
 					pNode->_pLeft = pNewNode;
 					pNewNode->_pParent = pNode;
 					InsertBalanceCheck(pNewNode);
-					//printf("Success to Insert %d!\n", data);
+					printf("Success to Insert %d!\n", data);
 					_size++;
 					return true;
 				}
@@ -106,7 +106,7 @@ public:
 					pNode->_pRight = pNewNode;
 					pNewNode->_pParent = pNode;
 					InsertBalanceCheck(pNewNode);
-					//printf("Success to Insert %d!\n", data);
+					printf("Success to Insert %d!\n", data);
 					_size++;
 					return true;
 				}
@@ -186,19 +186,27 @@ public:
 			if (pNode == _pRoot)
 			{
 				_pRoot = _pNil;
+				delete(pNode);
 			}
-			else if (bLeft)
+			else
 			{
-				pNode->_pParent->_pLeft = _pNil;
-				DeleteBalanceCheck(pNode, true);
-			}
-			else if (!bLeft)
-			{
-				pNode->_pParent->_pRight = _pNil;
-				DeleteBalanceCheck(pNode, false);
+				if (bLeft)
+				{
+					pNode->_pParent->_pLeft = _pNil;
+				}
+				else
+				{
+					pNode->_pParent->_pRight = _pNil;
+				}
+
+				COLOR color = pNode->_color;
+				Node* pParent = pNode->_pParent;
+				delete(pNode);
+
+				if (color == BLACK)
+					DeleteBalanceCheck(_pNil, pParent);
 			}
 
-			delete(pNode);
 			printf("Success to Delete %d!\n", data);
 			_size--;
 			return true;
@@ -206,25 +214,33 @@ public:
 		else if (pNode->_pLeft == _pNil)
 		{
 			printf("(1) ");
-			
+
 			if (pNode == _pRoot)
 			{
 				_pRoot = pNode->_pRight;
+				delete(pNode);
 			}
-			else if (bLeft)
+			else
 			{
-				pNode->_pRight->_pParent = pNode->_pParent;
-				pNode->_pParent->_pLeft = pNode->_pRight;
-				DeleteBalanceCheck(pNode, true);
-			}
-			else if (!bLeft)
-			{
-				pNode->_pRight->_pParent = pNode->_pParent;
-				pNode->_pParent->_pRight = pNode->_pRight;
-				DeleteBalanceCheck(pNode, false);
+				if (bLeft)
+				{
+					pNode->_pRight->_pParent = pNode->_pParent;
+					pNode->_pParent->_pLeft = pNode->_pRight;
+				}
+				else
+				{
+					pNode->_pRight->_pParent = pNode->_pParent;
+					pNode->_pParent->_pRight = pNode->_pRight;
+				}
+
+				Node* pChild = pNode->_pRight;
+				COLOR color = pNode->_color;
+				delete(pNode);
+
+				if (color == BLACK)
+					DeleteBalanceCheck(pChild, pChild->_pParent);
 			}
 
-			delete(pNode);
 			printf("Success to Delete %d!\n", data);
 			_size--;
 			return true;
@@ -236,62 +252,67 @@ public:
 			if (pNode == _pRoot)
 			{ 
 				_pRoot = pNode->_pLeft;
+				delete(pNode);
 			}
-			else if (bLeft)
-			{ 
-				pNode->_pLeft->_pParent = pNode->_pParent;
-				pNode->_pParent->_pLeft = pNode->_pLeft;
-				DeleteBalanceCheck(pNode, true);
-			}
-			else if (!bLeft)
-			{ 
-				pNode->_pLeft->_pParent = pNode->_pParent;
-				pNode->_pParent->_pRight = pNode->_pLeft;
-				DeleteBalanceCheck(pNode, false);
+			else
+			{
+				if (bLeft)
+				{
+					pNode->_pLeft->_pParent = pNode->_pParent;
+					pNode->_pParent->_pLeft = pNode->_pLeft;
+				}
+				else
+				{
+					pNode->_pLeft->_pParent = pNode->_pParent;
+					pNode->_pParent->_pRight = pNode->_pLeft;
+				}
+
+				Node* pChild = pNode->_pLeft;
+				COLOR color = pNode->_color;
+				delete(pNode);
+
+				if (color == BLACK)
+					DeleteBalanceCheck(pChild, pChild->_pParent);
 			}
 
-			delete(pNode);
 			printf("Success to Delete %d!\n", data);
 			_size--;
 			return true;
 		}
 
 		// Delete Alternate Node 
-
 		printf("(3) ");
 
 		Node* pAlt = pNode->_pLeft;
 		bool bAltLeft = true;
 
+		
 		while (pAlt->_pRight != _pNil)
 		{
 			pAlt = pAlt->_pRight;
 			bAltLeft = false;
 		}
-
+	
 		pNode->_data = pAlt->_data;
-		DeleteBalanceCheck(pAlt, bAltLeft);
 
-		if (bAltLeft && pAlt->_pLeft != _pNil)
+		if (bAltLeft)
 		{
 			pAlt->_pLeft->_pParent = pAlt->_pParent;
 			pAlt->_pParent->_pLeft = pAlt->_pLeft;
 		}
-		else if (bAltLeft && pAlt->_pLeft == _pNil)
-		{
-			pAlt->_pParent->_pLeft = _pNil;
-		}
-		else if (!bAltLeft && pAlt->_pLeft != _pNil)
+		else if (!bAltLeft)
 		{
 			pAlt->_pLeft->_pParent = pAlt->_pParent;
 			pAlt->_pParent->_pRight = pAlt->_pLeft;
 		}
-		else if (!bAltLeft && pAlt->_pLeft == _pNil)
-		{ 
-			pAlt->_pParent->_pRight = _pNil;
-		}
 
+		COLOR color = pAlt->_color;
+		Node* pChild = pAlt->_pLeft;
+		Node* pParent = pAlt->_pParent;
 		delete(pAlt);
+
+		if (color == BLACK)
+			DeleteBalanceCheck(pChild, pParent);
 
 		printf("Success to Delete %d!\n", data);
 		_size--;
@@ -441,12 +462,88 @@ public:
 		}
 	}
 
-	void DeleteBalanceCheck(Node* pNode, bool bLeft)
+	void DeleteBalanceCheck(Node* pNode, Node* pParent)
 	{
-		if (pNode->_color == RED) return;
+		while (pNode->_color != RED)
+		{
+			bool bLeft = false;
+			Node* pSibling = nullptr;
+			if (pNode == pParent->_pLeft)
+			{
+				bLeft = true;
+				pSibling = pParent->_pRight;
+			}
+			else
+			{
+				pSibling = pParent->_pLeft;
+			}
 
-		// To-Do
-		 
+			if (pSibling->_color == RED)
+			{
+				pSibling->_color = BLACK;
+				if(bLeft)
+					RotateLeft(pParent);
+				else
+					RotateRight(pParent);
+				pParent->_color = RED;
+				continue;
+			}
+			else if (pSibling->_color == BLACK &&
+				pSibling->_pLeft->_color == BLACK &&
+				pSibling->_pRight->_color == BLACK)
+			{
+				pSibling->_color = RED;
+				if (pParent == _pRoot) 
+					return;
+				pNode = pParent;
+				pParent = pParent->_pParent;
+				continue;
+			}
+
+			if (bLeft &&
+				pSibling->_color == BLACK &&
+				pSibling->_pLeft->_color == RED &&
+				pSibling->_pRight->_color == BLACK)
+			{
+				pSibling->_pLeft->_color = BLACK;
+				pSibling->_color = RED;
+				RotateRight(pSibling);
+			}
+			else if (!bLeft &&
+				pSibling->_color == BLACK &&
+				pSibling->_pLeft->_color == BLACK &&
+				pSibling->_pRight->_color == RED)
+			{
+				pSibling->_pRight->_color = BLACK;
+				pSibling->_color = RED;
+				RotateLeft(pSibling);
+			}
+
+			if (bLeft && 
+				pSibling->_color == BLACK &&
+				pSibling->_pRight->_color == RED)
+			{
+				pSibling->_color = pParent->_color;
+				pParent->_color = BLACK;
+				pSibling->_pRight->_color = BLACK;
+				RotateLeft(pParent);
+				return;
+			}
+
+			else if (!bLeft &&
+				pSibling->_color == BLACK &&
+				pSibling->_pLeft->_color == RED)
+			{
+				pSibling->_color = pParent->_color;
+				pParent->_color = BLACK;
+				pSibling->_pLeft->_color = BLACK;
+				RotateRight(pParent);
+				return;
+			}
+		}
+	
+		pNode->_color = BLACK;
+		return;
 	}
 
 	void RotateLeft(Node* pNode)
