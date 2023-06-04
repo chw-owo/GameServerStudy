@@ -133,15 +133,19 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="BinaryTree.h" />
     <ClInclude Include="Main.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="RedBlackTree.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="TreeTester.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="BinaryTree.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="RedBlackTree.cpp" />
+    <ClCompile Include="TreeTester.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="29_VisualizeRedBlackTree.rc" />

@@ -3,8 +3,6 @@
 #pragma comment(linker, "/entry:wWinMainCRTStartup /subsystem:console" )
 
 #define MAX_LOADSTRING 100
-#define INPUT_LEN 16
-
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 
@@ -56,122 +54,15 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     return (int)msg.wParam;
 }
 
-int g_iXPad = 0;
-int g_iYPad = 0;
-HPEN g_hBlackPen;
-HPEN g_hRedPen;
+
+TreeTester* g_pTreeTester;
 
 HBITMAP g_hMemDCBitmap;
 HBITMAP g_hMemDCBitmap_old;
 HDC g_hMemDC;
 RECT g_MemDCRect;
 
-RedBlackTree<int> tree;
 
-void DrawTree()
-{
-    tree.DrawAllNode(g_hMemDC, g_hBlackPen, g_hRedPen, g_iXPad, g_iYPad);
-}
-
-void InsertRandomNode(int node)
-{
-    if (node <= RAND_MAX)
-    {
-        int* data = new int[node];
-
-        for (int i = 0; i < node; i++)
-        {
-            data[i] = i;
-        }
-        for (int i = 0; i < node; i++)
-        {
-            int rand1 = (rand() % node);
-            while (data[rand1] == INT_MAX)
-            {
-                rand1 = (rand() % node);
-            }
-            tree.InsertNode(data[rand1]);
-            data[rand1] = INT_MAX;
-        }
-
-        delete[] data;
-    }
-    else
-    {
-        int* data = new int[node];
-
-        for (int i = 0; i < node; i++)
-        {
-            data[i] = i;
-        }
-        for (int i = 0; i < node; i++)
-        {
-            int rand1 = rand();
-            int rand2 = rand();
-            rand1 = rand1 << 7;
-            rand1 |= rand2;
-            rand1 %= node;
-
-            while (data[rand1] == INT_MAX)
-            {
-                rand1 = rand();
-                rand2 = rand();
-                rand1 = rand1 << 7;
-                rand1 |= rand2;
-                rand1 %= node;
-            }
-
-            tree.InsertNode(data[rand1]);
-            data[rand1] = INT_MAX;
-        }
-        delete[] data;
-    }
-}
-
-void DeleteRandomNode(int node)
-{
-    int max = tree.GetTreeSize();
-    int* data = new int[max];
-    tree.GetAllNode(data);
-
-    if (node <= RAND_MAX)
-    {
-        for (int i = 0; i < node; i++)
-        {
-            int rand1 = (rand() % max);
-            while (data[rand1] == INT_MAX)
-            {
-                rand1 = (rand() % max);
-            }
-            tree.DeleteNode(data[rand1]);
-            data[rand1] = INT_MAX;
-        }
-    }
-    else
-    {
-        for (int i = 0; i < node; i++)
-        {
-            int rand1 = rand();
-            int rand2 = rand();
-            rand1 = rand1 << 7;
-            rand1 |= rand2;
-            rand1 %= max;
-
-            while (data[rand1] == INT_MAX)
-            {
-                rand1 = rand();
-                rand2 = rand();
-                rand1 = rand1 << 7;
-                rand1 |= rand2;
-                rand1 %= max;
-            }
-
-            tree.DeleteNode(data[rand1]);
-            data[rand1] = INT_MAX;
-        }
-    }
-    delete[] data;
-}
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     PAINTSTRUCT ps;
@@ -181,16 +72,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     {
     case WM_CREATE:
 
-        printf("1. Insert Node\n"
-            "2. Insert Random Node\n"
-            "3. Delete Node\n"
-            "4. Delete Random Node\n"
-            "5. Clear Console\n\n"
-            "Choose number\n");
-
-        srand(500);
-        g_hBlackPen = CreatePen(PS_SOLID, 1, RGB(100, 100, 100));
-        g_hRedPen = CreatePen(PS_SOLID, 1, RGB(200, 0, 0));
+        g_pTreeTester = new TreeTester;
 
         hdc = GetDC(hWnd);
         GetClientRect(hWnd, &g_MemDCRect);
@@ -206,163 +88,75 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         switch (wParam)
         {
         case VK_UP:
-            g_iYPad += 3;
+            g_pTreeTester->MoveUp();
             InvalidateRect(hWnd, NULL, TRUE);
             break;
 
         case VK_DOWN:
-            g_iYPad -= 3;
+            g_pTreeTester->MoveDown();
             InvalidateRect(hWnd, NULL, TRUE);
             break;
 
         case VK_LEFT:
-            g_iXPad += 3;
+            g_pTreeTester->MoveLeft();
             InvalidateRect(hWnd, NULL, TRUE);
             break;
 
         case VK_RIGHT:
-            g_iXPad -= 3;
+            g_pTreeTester->MoveRight();
             InvalidateRect(hWnd, NULL, TRUE);
+            break;
+
+        case VK_NUMPAD0:
+        case 0x30:
+            g_pTreeTester->GetTreeData();
             break;
 
         case VK_NUMPAD1:
         case 0x31:
-        {
-            char nodeInput[INPUT_LEN] = { '\0', };
-            printf("Enter Number to Insert\n");
-            rewind(stdin);
-            fgets(nodeInput, INPUT_LEN, stdin);
-            int node = atoi(nodeInput);
-            tree.InsertNode(node);
-
-            InvalidateRect(hWnd, NULL, TRUE);
-
-            tree.PrintAllNodeData();
-            int max = tree.GetTreeSize();
-            int* data = new int[max];
-            tree.GetAllNode(data);
-            printf("\ntotal size: %d\n", max);
-            for (int i = 0; i < max; i++)
-                printf("%d ", data[i]);
-            printf("\n");
-
-            printf("\n1. Insert Node\n"
-                "2. Insert Random Node\n"
-                "3. Delete Node\n"
-                "4. Delete Random Node\n"
-                "5. Clear Console\n\n"
-                "Choose number\n");
-        }
-        break;
+            g_pTreeTester->GetLeafData();
+            break;
 
         case VK_NUMPAD2:
         case 0x32:
-        {
-            char nodeInput[INPUT_LEN] = { '\0', };
-            printf("Enter Node Count to Insert (MAX: %d)\n", INT_MAX / 2);
-            rewind(stdin);
-            fgets(nodeInput, INPUT_LEN, stdin);
-            int node = atoi(nodeInput);
-
-            if (node > INT_MAX / 2 || node < 0)
-                node = INT_MAX / 2;
-
-            printf("Requested Count: %d\n", node);
-
-            InsertRandomNode(node);
-
-            tree.PrintAllNodeData();
-            int max = tree.GetTreeSize();
-            int* data = new int[max];
-            printf("\ntotal size: %d\n", max);
-            tree.GetAllNode(data);
-            printf("\n");
-            for (int i = 0; i < max; i++)
-                printf("%d ", data[i]);
-            printf("\n");
-
+            g_pTreeTester->InsertNode();
             InvalidateRect(hWnd, NULL, TRUE);
-
-            printf("\n1. Insert Node\n"
-                "2. Insert Random Node\n"
-                "3. Delete Node\n"
-                "4. Delete Random Node\n"
-                "5. Clear Console\n\n"
-                "Choose number\n");
-        }
-        break;
+            break;
 
         case VK_NUMPAD3:
-        case 0x33:
-        {
-            char nodeInput[INPUT_LEN] = { '\0', };
-            printf("Enter Number to Delete\n");
-            rewind(stdin);
-            fgets(nodeInput, INPUT_LEN, stdin);
-            int node = atoi(nodeInput);
-            tree.DeleteNode(node);
-
-            tree.PrintAllNodeData();
-            int max = tree.GetTreeSize();
-            int* data = new int[max];
-            printf("\ntotal size: %d\n", max);
-            tree.GetAllNode(data);
-            printf("\n");
-            for (int i = 0; i < max; i++)
-                printf("%d ", data[i]);
-            printf("\n");
-
+        case 0x33:    
+            g_pTreeTester->InsertRandomNodeUnder9999(); 
             InvalidateRect(hWnd, NULL, TRUE);
-
-            printf("\n1. Insert Node\n"
-                "2. Insert Random Node\n"
-                "3. Delete Node\n"
-                "4. Delete Random Node\n"
-                "5. Clear Console\n\n"
-                "Choose number\n");
-        }
-        break;
+            break;
 
         case VK_NUMPAD4:
         case 0x34:
-        {
-            char nodeInput[INPUT_LEN] = { '\0', };
-            printf("Enter Node Count to Delete (MAX: %d)\n", tree.GetTreeSize());
-            rewind(stdin);
-            fgets(nodeInput, INPUT_LEN, stdin);
-            int node = atoi(nodeInput);
-
-            if (node > tree.GetTreeSize() || node < 0)
-                node = tree.GetTreeSize();
-
-            printf("Requested Count: %d\n", node);
-
-            DeleteRandomNode(node);
-
-            tree.PrintAllNodeData();
-            int max = tree.GetTreeSize();
-            int* data = new int[max];
-            printf("\ntotal size: %d\n", max);
-            tree.GetAllNode(data);
-            printf("\n");
-            for (int i = 0; i < max; i++)
-                printf("%d ", data[i]);
-            printf("\n");
-
+            g_pTreeTester->InsertRandomNode(); 
             InvalidateRect(hWnd, NULL, TRUE);
-
-            printf("\n1. Insert Node\n"
-                "2. Insert Random Node\n"
-                "3. Delete Node\n"
-                "4. Delete Random Node\n"
-                "5. Clear Console\n\n"
-                "Choose number\n");
-        }
-        break;
+            break;
 
         case VK_NUMPAD5:
         case 0x35:
+            g_pTreeTester->DeleteNode(); 
+            InvalidateRect(hWnd, NULL, TRUE);
+            break;         
+
+        case VK_NUMPAD6:
+        case 0x36:
+            g_pTreeTester->DeleteRandomNode();
+            InvalidateRect(hWnd, NULL, TRUE);
+            break;
+
+        case VK_NUMPAD7:
+        case 0x37:
+            g_pTreeTester->TestTree();
+            InvalidateRect(hWnd, NULL, TRUE);
+            break;
+
+        case VK_NUMPAD8:
+        case 0x38:
             system("cls");
+            g_pTreeTester->PrintMenu();
             break;
 
         default:
@@ -374,8 +168,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_PAINT:
 
         PatBlt(g_hMemDC, 0, 0, g_MemDCRect.right, g_MemDCRect.bottom, WHITENESS);
-        DrawTree();
-
+        g_pTreeTester->DrawTree(g_hMemDC);
         hdc = BeginPaint(hWnd, &ps);
         BitBlt(hdc, 0, 0, g_MemDCRect.right,
             g_MemDCRect.bottom, g_hMemDC, 0, 0, SRCCOPY);
@@ -383,7 +176,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
 
     case WM_DESTROY:
-
         SelectObject(g_hMemDC, g_hMemDCBitmap_old);
         DeleteObject(g_hMemDC);
         DeleteObject(g_hMemDCBitmap);
@@ -391,7 +183,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
 
     case WM_SIZE:
-
         SelectObject(g_hMemDC, g_hMemDCBitmap_old);
         DeleteObject(g_hMemDC);
         DeleteObject(g_hMemDCBitmap);

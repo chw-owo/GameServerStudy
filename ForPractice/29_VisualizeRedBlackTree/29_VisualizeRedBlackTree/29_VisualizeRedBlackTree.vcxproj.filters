@@ -18,6 +18,9 @@
     <Filter Include="UtilsForWindow">
       <UniqueIdentifier>{c0ab9ef5-46eb-4788-b76d-b8dcde8661f8}</UniqueIdentifier>
     </Filter>
+    <Filter Include="TreeTester">
+      <UniqueIdentifier>{3545f41e-2bf7-4142-a351-1a3d4ca6ce42}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h">
@@ -34,6 +37,12 @@
     </ClInclude>
     <ClInclude Include="RedBlackTree.h">
       <Filter>Tree</Filter>
+    </ClInclude>
+    <ClInclude Include="BinaryTree.h">
+      <Filter>Tree</Filter>
+    </ClInclude>
+    <ClInclude Include="TreeTester.h">
+      <Filter>TreeTester</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -55,6 +64,12 @@
     </ClCompile>
     <ClCompile Include="RedBlackTree.cpp">
       <Filter>Tree</Filter>
+    </ClCompile>
+    <ClCompile Include="BinaryTree.cpp">
+      <Filter>Tree</Filter>
+    </ClCompile>
+    <ClCompile Include="TreeTester.cpp">
+      <Filter>TreeTester</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
