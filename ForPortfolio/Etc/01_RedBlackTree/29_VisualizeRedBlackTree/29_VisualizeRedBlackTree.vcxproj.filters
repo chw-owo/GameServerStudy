@@ -21,6 +21,9 @@
     <Filter Include="TreeTester">
       <UniqueIdentifier>{3545f41e-2bf7-4142-a351-1a3d4ca6ce42}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Profiler">
+      <UniqueIdentifier>{522e4746-593a-4ebf-8594-ce1f67739d3a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h">
@@ -44,6 +47,12 @@
     <ClInclude Include="TreeTester.h">
       <Filter>TreeTester</Filter>
     </ClInclude>
+    <ClInclude Include="TreeSetting.h">
+      <Filter>Tree</Filter>
+    </ClInclude>
+    <ClInclude Include="Profiler.h">
+      <Filter>Profiler</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="29_VisualizeRedBlackTree.rc">
@@ -62,14 +71,11 @@
     <ClCompile Include="Main.cpp">
       <Filter>Main</Filter>
     </ClCompile>
-    <ClCompile Include="RedBlackTree.cpp">
-      <Filter>Tree</Filter>
-    </ClCompile>
-    <ClCompile Include="BinaryTree.cpp">
-      <Filter>Tree</Filter>
-    </ClCompile>
     <ClCompile Include="TreeTester.cpp">
       <Filter>TreeTester</Filter>
+    </ClCompile>
+    <ClCompile Include="Profiler.cpp">
+      <Filter>Profiler</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

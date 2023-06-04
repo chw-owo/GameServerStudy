@@ -2,8 +2,10 @@
 #include <windows.h>
 #include <stdio.h>
 #include <set>
+
+#include "Profiler.h"
 #include "RedBlackTree.h"
-//#include "BinaryTree.h"
+#include "BinaryTree.h"
 
 using namespace std;
 #define MOVE 10
@@ -13,10 +15,9 @@ public:
 	TreeTester();
 	~TreeTester();
 
-	void GetLeafData();
-
 public:
 	void DrawTree(HDC hdc);
+	void PrintMenu();
 
 public:
 	void MoveRight() { _iXPad -= MOVE; }
@@ -25,16 +26,19 @@ public:
 	void MoveDown() { _iYPad -= MOVE; }
 
 public:
-	void GetTreeData();
+	void SearchNode();
 	void InsertNode();
 	void InsertRandomNodeUnder9999();
 	void InsertRandomNode();
 	void DeleteNode();
 	void DeleteRandomNode();
-	void TestTree();
+	void PrintPathData();
+	void PrintNodeData();
 
-public:
-	void PrintMenu();
+	void TestTree();
+	void SetCompareMode();
+	void PrintCompareResult();
+	void ShiftTreeDraw();
 
 private:
 	bool GetTreeDataForTest(set<int>& testSet);
@@ -42,12 +46,14 @@ private:
 	bool DeleteForTest(int count, set<int>& testSet);
 
 private:
+	bool _bCompareMode = false;
+	bool _bDrawRedBlackTree = true;
 	int _iXPad = 0;
 	int _iYPad = 0;
 	HPEN _hBlackPen;
 	HPEN _hRedPen;
 
 	RedBlackTree<int> _RedBlackTree;
-	//BinaryTree<int> _BinaryTree;
+	BinaryTree<int> _BinaryTree;
 };
 

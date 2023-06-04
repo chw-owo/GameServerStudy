@@ -136,15 +136,16 @@
     <ClInclude Include="BinaryTree.h" />
     <ClInclude Include="Main.h" />
     <ClInclude Include="framework.h" />
+    <ClInclude Include="Profiler.h" />
     <ClInclude Include="RedBlackTree.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="TreeSetting.h" />
     <ClInclude Include="TreeTester.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="BinaryTree.cpp" />
     <ClCompile Include="Main.cpp" />
-    <ClCompile Include="RedBlackTree.cpp" />
+    <ClCompile Include="Profiler.cpp" />
     <ClCompile Include="TreeTester.cpp" />
   </ItemGroup>
   <ItemGroup>

@@ -2,16 +2,7 @@
 #include <stdio.h>
 #include <windows.h>
 #include <cmath>
-
-#define TREE_MAX INT_MAX
-#define TEXT_LEN 8
-#define TEXT_PAD 8
-#define RADIUS 12
-
-#define X_MAX 4096
-#define X_PIVOT (X_MAX / 2)
-#define Y_PIVOT 50
-#define Y_GAP 50
+#include "TreeSetting.h"
 
 template<typename DATA>
 class RedBlackTree
@@ -22,7 +13,7 @@ class RedBlackTree
 		RED
 	};
 
-private:
+public:
 	class Node
 	{
 		friend RedBlackTree;
@@ -34,7 +25,7 @@ private:
 
 		~Node() {}
 
-	private:
+	public:
 		DATA _data;
 
 		COLOR _color;
@@ -53,21 +44,12 @@ public:
 	~RedBlackTree() {}
 
 public:
-	enum class INSERT_NODE
-	{
-		SUCCESS = 0,
-		TREE_IS_FULL,
-		DUPLICATE_VALUE,
-		UNKNOWN_ERROR
-	};
-
-public:
-	INSERT_NODE InsertNode(DATA data)
+	INSERT_NODE_RETURN InsertNode(DATA data)
 	{
 		if (_size >= TREE_MAX)
 		{
 			//printf("Tree is full. MAX: %d\n", _size);
-			return INSERT_NODE::TREE_IS_FULL;
+			return INSERT_NODE_RETURN::TREE_IS_FULL;
 		}
 
 		if (_pRoot == _pNil)
@@ -76,7 +58,7 @@ public:
 			_pRoot->_color = BLACK;
 			//printf("Success to Insert %d!\n", data);
 			_size++;
-			return INSERT_NODE::SUCCESS;
+			return INSERT_NODE_RETURN::SUCCESS;
 		}
 
 		Node* pNode = _pRoot;
@@ -86,7 +68,7 @@ public:
 			if (pNode->_data == data)
 			{
 				//printf("중복되는 값을 넣을 수 없습니다: %d\n", data);
-				return INSERT_NODE::DUPLICATE_VALUE;
+				return INSERT_NODE_RETURN::DUPLICATE_VALUE;
 			}
 
 			if (pNode->_data > data)
@@ -99,7 +81,7 @@ public:
 					InsertBalanceCheck(pNewNode);
 					//printf("Success to Insert %d!\n", data);
 					_size++;
-					return INSERT_NODE::SUCCESS;
+					return INSERT_NODE_RETURN::SUCCESS;
 				}
 				else
 				{
@@ -118,7 +100,7 @@ public:
 					InsertBalanceCheck(pNewNode);
 					//printf("Success to Insert %d!\n", data);
 					_size++;
-					return INSERT_NODE::SUCCESS;
+					return INSERT_NODE_RETURN::SUCCESS;
 				}
 				else
 				{
@@ -127,301 +109,10 @@ public:
 				}
 			}
 		}
-		return INSERT_NODE::UNKNOWN_ERROR;
+		return INSERT_NODE_RETURN::UNKNOWN_ERROR;
 	}
 
-	bool SearchNode(DATA data, Node*& pNode, bool& bNodeLeft)
-	{
-		if (_pRoot == _pNil)
-		{
-			//printf("현재 비어있는 트리입니다.\n");
-			pNode = nullptr;
-			return false;
-		}
-
-		pNode = _pRoot;
-
-		while (pNode->_data != data)
-		{
-			if (pNode->_data > data)
-			{
-				if (pNode->_pLeft == _pNil)
-				{
-					//printf("존재하지 않는 값입니다: %d\n", data);
-					pNode = nullptr;
-					return false;
-				}
-				else
-				{
-					pNode = pNode->_pLeft;
-					bNodeLeft = true;
-					continue;
-				}
-			}
-
-			if (pNode->_data < data)
-			{
-				if (pNode->_pRight == _pNil)
-				{
-					//printf("존재하지 않는 값입니다: %d\n", data);
-					pNode = nullptr;
-					return false;
-				}
-				else
-				{
-					pNode = pNode->_pRight;
-					bNodeLeft = false;
-					continue;
-				}
-			}
-		}
-
-		//printf("Success to Search %d!\n", data);
-		return true;
-	}
-
-public:
-	enum class DELETE_NODE
-	{
-		SUCCESS = 0,
-		CANT_FIND,
-		UNKNOWN_ERROR
-	};
-
-public:
-	DELETE_NODE DeleteNode(DATA data)
-	{
-		Node* pNode = nullptr;
-		bool bLeft = false;
-		if (!SearchNode(data, pNode, bLeft))
-			return DELETE_NODE::CANT_FIND;
-
-		// Delete Input Data Node 
-		if (pNode->_pLeft == _pNil &&
-			pNode->_pRight == _pNil)
-		{
-			//printf("(0) ");
-
-			if (pNode == _pRoot)
-			{
-				_pRoot = _pNil;
-				delete(pNode);
-			}
-			else
-			{
-				if (bLeft)
-				{
-					pNode->_pParent->_pLeft = _pNil;
-				}
-				else
-				{
-					pNode->_pParent->_pRight = _pNil;
-				}
-
-				COLOR color = pNode->_color;
-				Node* pParent = pNode->_pParent;
-				delete(pNode);
-
-				if (color == BLACK)
-					DeleteBalanceCheck(_pNil, pParent);
-			}
-
-			//printf("Success to Delete %d!\n", data);
-			_size--;
-			return DELETE_NODE::SUCCESS;
-		}
-		else if (pNode->_pLeft == _pNil)
-		{
-			//printf("(1) ");
-
-			if (pNode == _pRoot)
-			{
-				_pRoot = pNode->_pRight;
-				delete(pNode);
-			}
-			else
-			{
-				if (bLeft)
-				{
-					pNode->_pRight->_pParent = pNode->_pParent;
-					pNode->_pParent->_pLeft = pNode->_pRight;
-				}
-				else
-				{
-					pNode->_pRight->_pParent = pNode->_pParent;
-					pNode->_pParent->_pRight = pNode->_pRight;
-				}
-
-				Node* pChild = pNode->_pRight;
-				COLOR color = pNode->_color;
-				delete(pNode);
-
-				if (color == BLACK)
-					DeleteBalanceCheck(pChild, pChild->_pParent);
-			}
-
-			//printf("Success to Delete %d!\n", data);
-			_size--;
-			return DELETE_NODE::SUCCESS;
-		}
-		else if (pNode->_pRight == _pNil)
-		{
-			//printf("(2) ");
-
-			if (pNode == _pRoot)
-			{ 
-				_pRoot = pNode->_pLeft;
-				delete(pNode);
-			}
-			else
-			{
-				if (bLeft)
-				{
-					pNode->_pLeft->_pParent = pNode->_pParent;
-					pNode->_pParent->_pLeft = pNode->_pLeft;
-				}
-				else
-				{
-					pNode->_pLeft->_pParent = pNode->_pParent;
-					pNode->_pParent->_pRight = pNode->_pLeft;
-				}
-
-				Node* pChild = pNode->_pLeft;
-				COLOR color = pNode->_color;
-				delete(pNode);
-
-				if (color == BLACK)
-					DeleteBalanceCheck(pChild, pChild->_pParent);
-			}
-
-			//printf("Success to Delete %d!\n", data);
-			_size--;
-			return DELETE_NODE::SUCCESS;
-		}
-
-		// Delete Alternate Node 
-		//printf("(3) ");
-
-		Node* pAlt = pNode->_pLeft;
-		bool bAltLeft = true;
-
-		
-		while (pAlt->_pRight != _pNil)
-		{
-			pAlt = pAlt->_pRight;
-			bAltLeft = false;
-		}
-	
-		pNode->_data = pAlt->_data;
-
-		if (bAltLeft)
-		{
-			pAlt->_pLeft->_pParent = pAlt->_pParent;
-			pAlt->_pParent->_pLeft = pAlt->_pLeft;
-		}
-		else if (!bAltLeft)
-		{
-			pAlt->_pLeft->_pParent = pAlt->_pParent;
-			pAlt->_pParent->_pRight = pAlt->_pLeft;
-		}
-
-		COLOR color = pAlt->_color;
-		Node* pChild = pAlt->_pLeft;
-		Node* pParent = pAlt->_pParent;
-		delete(pAlt);
-
-		if (color == BLACK)
-			DeleteBalanceCheck(pChild, pParent);
-
-		//printf("Success to Delete %d!\n", data);
-		_size--;
-		return DELETE_NODE::SUCCESS;
-	}
-
-public:
-
-	void DeleteAllNode()
-	{
-		PostOrderDeleteNode(_pRoot);
-		_pRoot = _pNil;
-		_size = 0;
-	}
-
-	void PostOrderDeleteNode(Node* pNode)
-	{
-		if (pNode == _pNil) return;
-
-		PostOrderDeleteNode(pNode->_pLeft);
-		PostOrderDeleteNode(pNode->_pRight);
-		delete(pNode);
-	}
-
-	void PrintAllNodeData()
-	{
-		int leafIdx = 0;
-		int black = 0;
-		int red = 0;
-		
-		printf("\n");
-		PreOrderPrintNodeData(_pRoot, leafIdx, black, red);
-		printf("\n");
-	}
-	
-	void PreOrderPrintNodeData(Node* pNode, int& leafIdx, int black, int red)
-	{
-		if (pNode == _pNil)
-		{
-			black++;
-			printf("Leaf %d: black-%d, red-%d\n", leafIdx, black, red);
-			leafIdx++;
-			return;
-		}
-
-		if (pNode->_color == BLACK) black++;
-		else if (pNode->_color == RED) red++;
-
-		PreOrderPrintNodeData(pNode->_pLeft, leafIdx, black, red);
-		PreOrderPrintNodeData(pNode->_pRight, leafIdx, black, red);
-	}
-
-	void PrintAllNode()
-	{
-		InorderPrintNode(_pRoot);
-		printf("\n");
-	}
-
-	void InorderPrintNode(Node* pNode)
-	{
-		if (pNode == _pNil) return;
-
-		InorderPrintNode(pNode->_pLeft);
-		printf("%d", pNode->_data);
-		InorderPrintNode(pNode->_pRight);
-	}
-
-public:
-	int GetTreeSize()
-	{
-		return _size;
-	}
-
-	void GetAllNode(DATA* dataArray)
-	{
-		int index = 0;
-		InorderGetNode(_pRoot, dataArray, &index);
-	}
-
-	void InorderGetNode(Node* pNode, DATA* dataArray, int* index)
-	{
-		if (pNode == _pNil) return;
-
-		InorderGetNode(pNode->_pLeft, dataArray, index);
-		dataArray[*index] = pNode->_data;
-		(*index)++;
-		InorderGetNode(pNode->_pRight, dataArray, index);
-	}
-
-public:
+private:
 	void InsertBalanceCheck(Node* pNode)
 	{
 		while (pNode->_pParent->_color != BLACK)
@@ -492,9 +183,177 @@ public:
 				pNode->_pParent->_pParent->_color = RED;
 				RotateLeft(pNode->_pParent->_pParent);
 				break;
-			}	
+			}
 		}
 	}
+
+public:
+	DELETE_NODE_RETURN DeleteNode(DATA data)
+	{
+		Node* pNode = nullptr;
+		bool bLeft = false;
+		if (!SearchNode(data, pNode, bLeft))
+			return DELETE_NODE_RETURN::CANT_FIND;
+
+		// Delete Input Data Node 
+		if (pNode->_pLeft == _pNil &&
+			pNode->_pRight == _pNil)
+		{
+			//printf("(0) ");
+
+			if (pNode == _pRoot)
+			{
+				_pRoot = _pNil;
+				delete(pNode);
+			}
+			else
+			{
+				if (bLeft)
+				{
+					pNode->_pParent->_pLeft = _pNil;
+				}
+				else
+				{
+					pNode->_pParent->_pRight = _pNil;
+				}
+
+				COLOR color = pNode->_color;
+				Node* pParent = pNode->_pParent;
+				delete(pNode);
+
+				if (color == BLACK)
+					DeleteBalanceCheck(_pNil, pParent);
+			}
+
+			//printf("Success to Delete %d!\n", data);
+			_size--;
+			return DELETE_NODE_RETURN::SUCCESS;
+		}
+		else if (pNode->_pLeft == _pNil)
+		{
+			//printf("(1) ");
+
+			if (pNode == _pRoot)
+			{
+				_pRoot = pNode->_pRight;
+				delete(pNode);
+			}
+			else
+			{
+				if (bLeft)
+				{
+					pNode->_pRight->_pParent = pNode->_pParent;
+					pNode->_pParent->_pLeft = pNode->_pRight;
+				}
+				else
+				{
+					pNode->_pRight->_pParent = pNode->_pParent;
+					pNode->_pParent->_pRight = pNode->_pRight;
+				}
+
+				Node* pChild = pNode->_pRight;
+				COLOR color = pNode->_color;
+				delete(pNode);
+
+				if (color == BLACK)
+					DeleteBalanceCheck(pChild, pChild->_pParent);
+			}
+
+			//printf("Success to Delete %d!\n", data);
+			_size--;
+			return DELETE_NODE_RETURN::SUCCESS;
+		}
+		else if (pNode->_pRight == _pNil)
+		{
+			//printf("(2) ");
+
+			if (pNode == _pRoot)
+			{ 
+				_pRoot = pNode->_pLeft;
+				delete(pNode);
+			}
+			else
+			{
+				if (bLeft)
+				{
+					pNode->_pLeft->_pParent = pNode->_pParent;
+					pNode->_pParent->_pLeft = pNode->_pLeft;
+				}
+				else
+				{
+					pNode->_pLeft->_pParent = pNode->_pParent;
+					pNode->_pParent->_pRight = pNode->_pLeft;
+				}
+
+				Node* pChild = pNode->_pLeft;
+				COLOR color = pNode->_color;
+				delete(pNode);
+
+				if (color == BLACK)
+					DeleteBalanceCheck(pChild, pChild->_pParent);
+			}
+
+			//printf("Success to Delete %d!\n", data);
+			_size--;
+			return DELETE_NODE_RETURN::SUCCESS;
+		}
+
+		// Delete Alternate Node 
+		//printf("(3) ");
+
+		Node* pAlt = pNode->_pLeft;
+		bool bAltLeft = true;
+
+		
+		while (pAlt->_pRight != _pNil)
+		{
+			pAlt = pAlt->_pRight;
+			bAltLeft = false;
+		}
+	
+		pNode->_data = pAlt->_data;
+
+		if (bAltLeft)
+		{
+			pAlt->_pLeft->_pParent = pAlt->_pParent;
+			pAlt->_pParent->_pLeft = pAlt->_pLeft;
+		}
+		else if (!bAltLeft)
+		{
+			pAlt->_pLeft->_pParent = pAlt->_pParent;
+			pAlt->_pParent->_pRight = pAlt->_pLeft;
+		}
+
+		COLOR color = pAlt->_color;
+		Node* pChild = pAlt->_pLeft;
+		Node* pParent = pAlt->_pParent;
+		delete(pAlt);
+
+		if (color == BLACK)
+			DeleteBalanceCheck(pChild, pParent);
+
+		//printf("Success to Delete %d!\n", data);
+		_size--;
+		return DELETE_NODE_RETURN::SUCCESS;
+	}
+
+	void DeleteAllNode()
+	{
+		PostOrderDeleteNode(_pRoot);
+		_pRoot = _pNil;
+		_size = 0;
+	}
+
+	void PostOrderDeleteNode(Node* pNode)
+	{
+		if (pNode == _pNil) return;
+
+		PostOrderDeleteNode(pNode->_pLeft);
+		PostOrderDeleteNode(pNode->_pRight);
+		delete(pNode);
+	}
+
+private:
 
 	void DeleteBalanceCheck(Node* pNode, Node* pParent)
 	{
@@ -515,7 +374,7 @@ public:
 			if (pSibling->_color == RED)
 			{
 				pSibling->_color = BLACK;
-				if(bLeft)
+				if (bLeft)
 					RotateLeft(pParent);
 				else
 					RotateRight(pParent);
@@ -527,7 +386,7 @@ public:
 				pSibling->_pRight->_color == BLACK)
 			{
 				pSibling->_color = RED;
-				if (pParent == _pRoot) 
+				if (pParent == _pRoot)
 					return;
 				pNode = pParent;
 				pParent = pParent->_pParent;
@@ -553,7 +412,7 @@ public:
 				RotateLeft(pSibling);
 			}
 
-			if (bLeft && 
+			if (bLeft &&
 				pSibling->_color == BLACK &&
 				pSibling->_pRight->_color == RED)
 			{
@@ -575,11 +434,177 @@ public:
 				return;
 			}
 		}
-	
+
 		pNode->_color = BLACK;
 		return;
 	}
 
+public:
+	bool SearchNode(DATA data)
+	{
+		if (_pRoot == _pNil)
+		{
+			//printf("현재 비어있는 트리입니다.\n");
+			return false;
+		}
+
+		Node* pNode = _pRoot;
+
+		while (pNode->_data != data)
+		{
+			if (pNode->_data > data)
+			{
+				if (pNode->_pLeft == _pNil)
+				{
+					//printf("존재하지 않는 값입니다: %d\n", data);
+					return false;
+				}
+				else
+				{
+					pNode = pNode->_pLeft;
+					continue;
+				}
+			}
+
+			if (pNode->_data < data)
+			{
+				if (pNode->_pRight == _pNil)
+				{
+					//printf("존재하지 않는 값입니다: %d\n", data);
+					return false;
+				}
+				else
+				{
+					pNode = pNode->_pRight;
+					continue;
+				}
+			}
+		}
+
+		//printf("Success to Search %d!\n", data);
+		return true;
+	}
+
+private:
+	bool SearchNode(DATA data, Node*& pNode, bool& bNodeLeft)
+	{
+		if (_pRoot == _pNil)
+		{
+			//printf("현재 비어있는 트리입니다.\n");
+			pNode = nullptr;
+			return false;
+		}
+
+		pNode = _pRoot;
+
+		while (pNode->_data != data)
+		{
+			if (pNode->_data > data)
+			{
+				if (pNode->_pLeft == _pNil)
+				{
+					//printf("존재하지 않는 값입니다: %d\n", data);
+					pNode = nullptr;
+					return false;
+				}
+				else
+				{
+					pNode = pNode->_pLeft;
+					bNodeLeft = true;
+					continue;
+				}
+			}
+
+			if (pNode->_data < data)
+			{
+				if (pNode->_pRight == _pNil)
+				{
+					//printf("존재하지 않는 값입니다: %d\n", data);
+					pNode = nullptr;
+					return false;
+				}
+				else
+				{
+					pNode = pNode->_pRight;
+					bNodeLeft = false;
+					continue;
+				}
+			}
+		}
+
+		//printf("Success to Search %d!\n", data);
+		return true;
+	}
+
+public:
+	void PrintAllNode()
+	{
+		InOrderPrintNode(_pRoot);
+		printf("\n");
+	}
+
+	void PrintAllPath()
+	{
+		int leafIdx = 0;
+		int black = 0;
+		int red = 0;
+		
+		printf("\n");
+		PreOrderPrintPath(_pRoot, leafIdx, black, red);
+		printf("\n");
+	}
+
+private:
+	void InOrderPrintNode(Node* pNode)
+	{
+		if (pNode == _pNil) return;
+
+		InOrderPrintNode(pNode->_pLeft);
+		printf("%d", pNode->_data);
+		InOrderPrintNode(pNode->_pRight);
+	}
+
+	void PreOrderPrintPath(Node* pNode, int& leafIdx, int black, int red)
+	{
+		if (pNode == _pNil)
+		{
+			black++;
+			printf("Leaf %d: black-%d, red-%d\n", leafIdx, black, red);
+			leafIdx++;
+			return;
+		}
+
+		if (pNode->_color == BLACK) black++;
+		else if (pNode->_color == RED) red++;
+
+		PreOrderPrintPath(pNode->_pLeft, leafIdx, black, red);
+		PreOrderPrintPath(pNode->_pRight, leafIdx, black, red);
+	}
+
+public:
+	int GetTreeSize()
+	{
+		return _size;
+	}
+
+	void GetAllNode(DATA* dataArray)
+	{
+		int index = 0;
+		InOrderGetNode(_pRoot, dataArray, &index);
+	}
+
+private:
+	void InOrderGetNode(Node* pNode, DATA* dataArray, int* index)
+	{
+		if (pNode == _pNil) return;
+
+		InOrderGetNode(pNode->_pLeft, dataArray, index);
+		dataArray[*index] = pNode->_data;
+		(*index)++;
+		InOrderGetNode(pNode->_pRight, dataArray, index);
+	}
+
+private:
 	void RotateLeft(Node* pNode)
 	{
 		if (pNode->_pRight == _pNil)
@@ -639,27 +664,20 @@ public:
 	}
 
 public:
-	enum class TEST
-	{
-		SUCCESS = 0,
-		DOUBLE_RED,
-		UNBALANCD
-	};
-
-public:
-	TEST TestAllNode()
+	TEST_RETURN TestAllNode()
 	{
 		int leafIdx = 0;
 		int black = 0;
 		int red = 0;
 
-		TEST ret = PreOrderTestNode(_pRoot, leafIdx, black, red, BLACK);
+		TEST_RETURN ret = PreOrderTestNode(_pRoot, leafIdx, black, red, BLACK);
 		_PrevBlack = 0;
 
 		return ret;
 	}
 
-	TEST PreOrderTestNode(Node* pNode, int& leafIdx, int black, int red, COLOR prevColor)
+private:
+	TEST_RETURN PreOrderTestNode(Node* pNode, int& leafIdx, int black, int red, COLOR prevColor)
 	{
 		if (pNode == _pNil)
 		{
@@ -667,11 +685,11 @@ public:
 			if (black != _PrevBlack && _PrevBlack != 0)
 			{
 				printf("Unbalanced! leaf idx %d, data %d\n", leafIdx, pNode->_data);
-				return TEST::UNBALANCD;
+				return TEST_RETURN::UNBALANCD;
 			}
 			_PrevBlack = black;
 			leafIdx++;
-			return TEST::SUCCESS;
+			return TEST_RETURN::SUCCESS;
 		}
 
 		if (pNode->_color == BLACK)
@@ -684,21 +702,20 @@ public:
 			if (prevColor == RED)
 			{
 				printf("Double Red! leaf idx %d, data %d\n", leafIdx, pNode->_data);
-				return TEST::DOUBLE_RED;
+				return TEST_RETURN::DOUBLE_RED;
 			}
 		}
 
-		TEST ret;
+		TEST_RETURN ret;
 		ret = PreOrderTestNode(pNode->_pLeft, leafIdx, black, red, pNode->_color);
-		if (ret != TEST::SUCCESS) return ret;
+		if (ret != TEST_RETURN::SUCCESS) return ret;
 		ret = PreOrderTestNode(pNode->_pRight, leafIdx, black, red, pNode->_color);
-		if (ret != TEST::SUCCESS) return ret;
+		if (ret != TEST_RETURN::SUCCESS) return ret;
 
-		return TEST::SUCCESS;
+		return TEST_RETURN::SUCCESS;
 	}
 
 public:
-
 	void DrawAllNode(HDC hdc, HPEN black, HPEN red, int xPad, int yPad)
 	{
 		HPEN hPen = (HPEN)SelectObject(hdc, black);
@@ -709,6 +726,7 @@ public:
 		SelectObject(hdc, hPen);
 	}
 
+private:
 	void DrawNode(HDC hdc, HPEN red, 
 		Node* pNode, int prevXPos, int prevYPos,
 		int xPos, int yPos, int xPad, int yPad,
@@ -778,7 +796,7 @@ public:
 		return;
 	}
 
-private:
+public:
 	Node* _pNil;
 	Node* _pRoot;
 	int _size = 0;

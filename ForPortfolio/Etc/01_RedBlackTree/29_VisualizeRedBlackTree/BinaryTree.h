@@ -2,16 +2,8 @@
 #include <stdio.h>
 #include <windows.h>
 #include <cmath>
-
-#define TREE_MAX (INT_MAX / 2)
-#define TEXT_LEN 8
-#define TEXT_PAD 8
-#define RADIUS 12
-
-#define X_MAX 1536
-#define X_PIVOT (X_MAX / 2)
-#define Y_PIVOT 50
-#define Y_GAP 50
+#include "TreeSetting.h"
+#include "RedBlackTree.h"
 
 template<typename DATA>
 class BinaryTree
@@ -36,20 +28,20 @@ public:
 	~BinaryTree() {}
 
 public:
-	bool InsertNode(DATA data)
+	INSERT_NODE_RETURN InsertNode(DATA data)
 	{
 		if (_size >= TREE_MAX)
 		{
-			printf("Tree is full. MAX: %d\n", _size);
-			return false;
+			//printf("Tree is full. MAX: %d\n", _size);
+			return INSERT_NODE_RETURN::TREE_IS_FULL;
 		}
 
 		if (_pRoot == nullptr)
 		{
 			_pRoot = new Node(data);
-			printf("Success to Insert %d!\n", data);
+			//printf("Success to Insert %d!\n", data);
 			_size++;
-			return true;
+			return INSERT_NODE_RETURN::SUCCESS;
 		}
 
 		Node* pNode = _pRoot;
@@ -58,8 +50,8 @@ public:
 		{
 			if (pNode->_data == data)
 			{
-				printf("중복되는 값을 넣을 수 없습니다: %d\n", data);
-				return false;
+				//printf("중복되는 값을 넣을 수 없습니다: %d\n", data);
+				return INSERT_NODE_RETURN::DUPLICATE_VALUE;
 			}
 
 			if (pNode->_data > data)
@@ -68,9 +60,9 @@ public:
 				{
 					Node* pNewNode = new Node(data);
 					pNode->_pLeft = pNewNode;
-					printf("Success to Insert %d!\n", data);
+					//printf("Success to Insert %d!\n", data);
 					_size++;
-					return true;
+					return INSERT_NODE_RETURN::SUCCESS;
 				}
 				else
 				{
@@ -85,9 +77,9 @@ public:
 				{
 					Node* pNewNode = new Node(data);
 					pNode->_pRight = pNewNode;
-					printf("Success to Insert %d!\n", data);
+					//printf("Success to Insert %d!\n", data);
 					_size++;
-					return true;
+					return INSERT_NODE_RETURN::SUCCESS;
 				}
 				else
 				{
@@ -96,81 +88,23 @@ public:
 				}
 			}
 		}
-		return false;
-	}
-
-
-private:
-	bool SearchNode(DATA data, Node*& pNode, Node*& pParent, bool& bNodeLeft)
-	{
-		if (_pRoot == nullptr)
-		{
-			printf("현재 비어있는 트리입니다.\n");
-			pNode = nullptr;
-			pParent = nullptr;
-			return false;
-		}
-
-		pParent = nullptr;
-		pNode = _pRoot;
-
-		while (pNode->_data != data)
-		{
-			if (pNode->_data > data)
-			{
-				if (pNode->_pLeft == nullptr)
-				{
-					printf("존재하지 않는 값입니다: %d\n", data);
-					pNode = nullptr;
-					pParent = nullptr;
-					return false;
-				}
-				else
-				{
-					pParent = pNode;
-					pNode = pNode->_pLeft;
-					bNodeLeft = true;
-					continue;
-				}
-			}
-
-			if (pNode->_data < data)
-			{
-				if (pNode->_pRight == nullptr)
-				{
-					printf("존재하지 않는 값입니다: %d\n", data);
-					pNode = nullptr;
-					pParent = nullptr;
-					return false;
-				}
-				else
-				{
-					pParent = pNode;
-					pNode = pNode->_pRight;
-					bNodeLeft = false;
-					continue;
-				}
-			}
-		}
-
-		printf("Success to Search %d!\n", data);
-		return true;
+		return INSERT_NODE_RETURN::UNKNOWN_ERROR;
 	}
 
 public:
-	bool DeleteNode(DATA data)
+	DELETE_NODE_RETURN DeleteNode(DATA data)
 	{
 		Node* pNode = nullptr;
 		Node* pParent = nullptr;
 		bool bNodeLeft = false;
 		if (!SearchNode(data, pNode, pParent, bNodeLeft))
-			return false;
+			return DELETE_NODE_RETURN::CANT_FIND;
 
 		// Delete Input Data Node 
 		if (pNode->_pLeft == nullptr &&
 			pNode->_pRight == nullptr)
 		{
-			printf("(0) ");
+			//printf("(0) ");
 
 			if (pNode == _pRoot)
 				_pRoot = nullptr;
@@ -180,13 +114,13 @@ public:
 				pParent->_pRight = nullptr;
 
 			delete(pNode);
-			printf("Success to Delete %d!\n", data);
+			//printf("Success to Delete %d!\n", data);
 			_size--;
-			return true;
+			return DELETE_NODE_RETURN::SUCCESS;
 		}
 		else if (pNode->_pLeft == nullptr)
 		{
-			printf("(1) ");
+			//printf("(1) ");
 
 			if (pNode == _pRoot)
 				_pRoot = pNode->_pRight;
@@ -196,13 +130,13 @@ public:
 				pParent->_pRight = pNode->_pRight;
 
 			delete(pNode);
-			printf("Success to Delete %d!\n", data);
+			//printf("Success to Delete %d!\n", data);
 			_size--;
-			return true;
+			return DELETE_NODE_RETURN::SUCCESS;
 		}
 		else if (pNode->_pRight == nullptr)
 		{
-			printf("(2) ");
+			//printf("(2) ");
 
 			if (pNode == _pRoot)
 				_pRoot = pNode->_pLeft;
@@ -212,14 +146,14 @@ public:
 				pParent->_pRight = pNode->_pLeft;
 
 			delete(pNode);
-			printf("Success to Delete %d!\n", data);
+			//printf("Success to Delete %d!\n", data);
 			_size--;
-			return true;
+			return DELETE_NODE_RETURN::SUCCESS;
 		}
 
 		// Delete Alternate Node 
 
-		printf("(3) ");
+		//printf("(3) ");
 
 		Node* pAlt = pNode->_pLeft;
 		Node* pAltParent = pNode;
@@ -245,26 +179,149 @@ public:
 
 		delete(pAlt);
 
-		printf("Success to Delete %d!\n", data);
+		//printf("Success to Delete %d!\n", data);
 		_size--;
-		return true;
+		return DELETE_NODE_RETURN::SUCCESS;
 	}
 
-	void PrintAllNode()
+	void DeleteAllNode()
 	{
-		InorderPrintNode(_pRoot);
-		printf("\n");
+		PostOrderDeleteNode(_pRoot);
+		_pRoot = nullptr;
+		_size = 0;
 	}
 
-	void InorderPrintNode(Node* pNode)
+private:
+	void PostOrderDeleteNode(Node* pNode)
 	{
 		if (pNode == nullptr) return;
 
-		InorderPrintNode(pNode->_pLeft);
-		printf("%d", pNode->_data);
-		InorderPrintNode(pNode->_pRight);
+		PostOrderDeleteNode(pNode->_pLeft);
+		PostOrderDeleteNode(pNode->_pRight);
+		delete(pNode);
 	}
 
+public:
+	bool SearchNode(DATA data)
+	{
+		if (_pRoot == nullptr)
+		{
+			//printf("현재 비어있는 트리입니다.\n");
+			return false;
+		}
+
+		Node* pNode = _pRoot;
+
+		while (pNode->_data != data)
+		{
+			if (pNode->_data > data)
+			{
+				if (pNode->_pLeft == nullptr)
+				{
+					//printf("존재하지 않는 값입니다: %d\n", data);
+					return false;
+				}
+				else
+				{
+					pNode = pNode->_pLeft;
+					continue;
+				}
+			}
+
+			if (pNode->_data < data)
+			{
+				if (pNode->_pRight == nullptr)
+				{
+					//printf("존재하지 않는 값입니다: %d\n", data);
+					return false;
+				}
+				else
+				{
+					pNode = pNode->_pRight;
+					continue;
+				}
+			}
+		}
+
+		//printf("Success to Search %d!\n", data);
+		return true;
+	}
+
+private:
+	bool SearchNode(DATA data, Node*& pNode, Node*& pParent, bool& bNodeLeft)
+	{
+		if (_pRoot == nullptr)
+		{
+			//printf("현재 비어있는 트리입니다.\n");
+			pNode = nullptr;
+			pParent = nullptr;
+			return false;
+		}
+
+		pParent = nullptr;
+		pNode = _pRoot;
+
+		while (pNode->_data != data)
+		{
+			if (pNode->_data > data)
+			{
+				if (pNode->_pLeft == nullptr)
+				{
+					//printf("존재하지 않는 값입니다: %d\n", data);
+					pNode = nullptr;
+					pParent = nullptr;
+					return false;
+				}
+				else
+				{
+					pParent = pNode;
+					pNode = pNode->_pLeft;
+					bNodeLeft = true;
+					continue;
+				}
+			}
+
+			if (pNode->_data < data)
+			{
+				if (pNode->_pRight == nullptr)
+				{
+					//printf("존재하지 않는 값입니다: %d\n", data);
+					pNode = nullptr;
+					pParent = nullptr;
+					return false;
+				}
+				else
+				{
+					pParent = pNode;
+					pNode = pNode->_pRight;
+					bNodeLeft = false;
+					continue;
+				}
+			}
+		}
+
+		//printf("Success to Search %d!\n", data);
+		return true;
+	}
+
+public:
+	void PrintAllNode()
+	{
+		InOrderPrintNode(_pRoot);
+		printf("\n");
+	}
+
+private:
+	void InOrderPrintNode(Node* pNode)
+	{
+		if (pNode == nullptr) return;
+
+		InOrderPrintNode(pNode->_pLeft);
+		printf("%d", pNode->_data);
+		InOrderPrintNode(pNode->_pRight);
+	}
+
+public:
 	int GetTreeSize()
 	{
 		return _size;
@@ -273,21 +330,36 @@ public:
 	void GetAllNode(DATA* dataArray)
 	{
 		int index = 0;
-		InorderGetNode(_pRoot, dataArray, &index);
+		InOrderGetNode(_pRoot, dataArray, &index);
 	}
 
-	void InorderGetNode(Node* pNode, DATA* dataArray, int* index)
+private:
+	void InOrderGetNode(Node* pNode, DATA* dataArray, int* index)
 	{
 		if (pNode == nullptr) return;
 
-		InorderGetNode(pNode->_pLeft, dataArray, index);
+		InOrderGetNode(pNode->_pLeft, dataArray, index);
 		dataArray[*index] = pNode->_data;
 		(*index)++;
-		InorderGetNode(pNode->_pRight, dataArray, index);
+		InOrderGetNode(pNode->_pRight, dataArray, index);
 	}
 
 public:
+	void CopyRedBlackTree(RedBlackTree<int>* redBlackTree)
+	{
+		PreOrderCopyNode(redBlackTree->_pRoot, redBlackTree->_pNil);
+	}
 
+	void PreOrderCopyNode(RedBlackTree<int>::Node* pNode, RedBlackTree<int>::Node* pNil)
+	{
+		if (pNode == pNil) return;
+
+		InsertNode(pNode->_data);
+		PreOrderCopyNode(pNode->_pLeft, pNil);
+		PreOrderCopyNode(pNode->_pRight, pNil);
+	}
+
+public:
 	void DrawAllNode(HDC hdc, int xPad, int yPad)
 	{
 		DrawNode(hdc, _pRoot,
@@ -295,6 +367,7 @@ public:
 			xPad, yPad, 0, 0, 0);
 	}
 
+private:
 	void DrawNode(HDC hdc, Node* pNode, int prevXPos, int prevYPos,
 		int xPos, int yPos, int xPad, int yPad,
 		int left, int right, int depth)

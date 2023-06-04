@@ -62,6 +62,7 @@ HBITMAP g_hMemDCBitmap_old;
 HDC g_hMemDC;
 RECT g_MemDCRect;
 
+bool g_bTree = true;
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
@@ -107,14 +108,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             InvalidateRect(hWnd, NULL, TRUE);
             break;
 
-        case VK_NUMPAD0:
-        case 0x30:
-            g_pTreeTester->GetTreeData();
-            break;
-
         case VK_NUMPAD1:
         case 0x31:
-            g_pTreeTester->GetLeafData();
+            g_pTreeTester->SearchNode();
             break;
 
         case VK_NUMPAD2:
@@ -149,12 +145,35 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
         case VK_NUMPAD7:
         case 0x37:
-            g_pTreeTester->TestTree();
-            InvalidateRect(hWnd, NULL, TRUE);
+            g_pTreeTester->PrintNodeData();
             break;
 
         case VK_NUMPAD8:
         case 0x38:
+            g_pTreeTester->PrintPathData();
+            break;
+
+        case VK_NUMPAD9:
+        case 0x39:
+            g_pTreeTester->TestTree();
+            InvalidateRect(hWnd, NULL, TRUE);
+            break;
+
+        case VK_NUMPAD0:
+        case 0x30:
+            g_pTreeTester->SetCompareMode();
+            break;
+
+        case 0x51: // Q
+            g_pTreeTester->PrintCompareResult();
+            break;
+
+        case 0x57: // W
+            g_pTreeTester->ShiftTreeDraw();
+            InvalidateRect(hWnd, NULL, TRUE);
+            break;
+
+        case VK_ESCAPE:
             system("cls");
             g_pTreeTester->PrintMenu();
             break;

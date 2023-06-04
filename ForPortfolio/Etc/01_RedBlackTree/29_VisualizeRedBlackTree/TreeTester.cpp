@@ -3,9 +3,11 @@
 
 #define INPUT_LEN 16
 #define CHECKPOINT 5000000
+
 TreeTester::TreeTester()
 {
     srand(500);
+    printf("This is Red Black Tree Tester!\n");
     PrintMenu();
     _hBlackPen = CreatePen(PS_SOLID, 1, RGB(100, 100, 100));
     _hRedPen = CreatePen(PS_SOLID, 1, RGB(200, 0, 0));
@@ -15,13 +17,48 @@ TreeTester::~TreeTester()
 {
 }
 
-void TreeTester::GetLeafData()
+void TreeTester::SearchNode()
 {
-    _RedBlackTree.PrintAllNodeData();
+    char nodeInput[INPUT_LEN] = { '\0', };
+    printf("Enter Number to Search\n");
+    fgets(nodeInput, INPUT_LEN, stdin);
+    int num = atoi(nodeInput);
+
+    bool ret = false;
+    if (_bCompareMode)
+    {
+        PRO_BEGIN(L"RBT SEARCH");
+        ret = _RedBlackTree.SearchNode(num);
+        PRO_END(L"RBT SEARCH");
+
+        PRO_BEGIN(L"BST SEARCH");
+        _BinaryTree.SearchNode(num);
+        PRO_END(L"BST SEARCH");
+    }
+    else
+    {
+        ret = _RedBlackTree.SearchNode(num);
+    }
+
+    if (ret)
+    {
+        printf("Success to Search %d\n", num);
+    }
+    else
+    {
+        printf("There is no %d\n", num);
+    }
+
     PrintMenu();
 }
 
-void TreeTester::GetTreeData()
+void TreeTester::PrintPathData()
+{
+    _RedBlackTree.PrintAllPath();
+    PrintMenu();
+}
+
+void TreeTester::PrintNodeData()
 {
     int max = _RedBlackTree.GetTreeSize();
     int* data = new int[max];
@@ -52,23 +89,36 @@ void TreeTester::InsertNode()
     printf("Requested Range: %d~%d\n", startNum, endNum);
 
     list<int> dupList;
-    RedBlackTree<int>::INSERT_NODE ret;
+    INSERT_NODE_RETURN ret;
     for (int i = startNum; i <= endNum; i++)
     {
-        ret = _RedBlackTree.InsertNode(i);
+        if (_bCompareMode)
+        {
+            PRO_BEGIN(L"RBT INSERT");
+            ret = _RedBlackTree.InsertNode(i);
+            PRO_END(L"RBT INSERT");
 
-        if (ret == RedBlackTree<int>::INSERT_NODE::TREE_IS_FULL)
+            PRO_BEGIN(L"BST INSERT");
+            _BinaryTree.InsertNode(i);
+            PRO_END(L"BST INSERT");
+        }
+        else
+        {
+            ret = _RedBlackTree.InsertNode(i);
+        }
+        
+        if (ret == INSERT_NODE_RETURN::TREE_IS_FULL)
         {
             printf("Tree is full!\n" 
                 "Cur Data: %d, Success Count: %d, Fail Count: %d\n", 
                 i, i - startNum, endNum - i + 1);
             break;
         }
-        else if (ret == RedBlackTree<int>::INSERT_NODE::DUPLICATE_VALUE)
+        else if (ret == INSERT_NODE_RETURN::DUPLICATE_VALUE)
         {
             dupList.push_back(i);
         }
-        else if (ret == RedBlackTree<int>::INSERT_NODE::UNKNOWN_ERROR)
+        else if (ret == INSERT_NODE_RETURN::UNKNOWN_ERROR)
         {
             printf("Unknown Error!\n"
                 "Cur Data: %d, Success Count: %d, Fail Count: %d\n",
@@ -103,24 +153,37 @@ void TreeTester::InsertRandomNodeUnder9999()
     printf("Requested Count: %d\n", node);
 
     list<int> dupList;
-    RedBlackTree<int>::INSERT_NODE ret;
+    INSERT_NODE_RETURN ret;
     for (int i = 0; i < node; i++)
     {
         int data = rand() % 9999;
-        ret = _RedBlackTree.InsertNode(data);
+        if (_bCompareMode)
+        {
+            PRO_BEGIN(L"RBT INSERT");
+            ret = _RedBlackTree.InsertNode(data);
+            PRO_END(L"RBT INSERT");
 
-        if (ret == RedBlackTree<int>::INSERT_NODE::TREE_IS_FULL)
+            PRO_BEGIN(L"BST INSERT");
+            _BinaryTree.InsertNode(data);
+            PRO_END(L"BST INSERT");
+        }
+        else
+        {
+            ret = _RedBlackTree.InsertNode(data);
+        }
+
+        if (ret == INSERT_NODE_RETURN::TREE_IS_FULL)
         {
             printf("Tree is full!\n"
                 "Cur Data: %d, Success Count: %d, Fail Count: %d\n",
                 data, i, node - i + 1);
             break;
         }
-        else if (ret == RedBlackTree<int>::INSERT_NODE::DUPLICATE_VALUE)
+        else if (ret == INSERT_NODE_RETURN::DUPLICATE_VALUE)
         {
             dupList.push_back(data);
         }
-        else if (ret == RedBlackTree<int>::INSERT_NODE::UNKNOWN_ERROR)
+        else if (ret == INSERT_NODE_RETURN::UNKNOWN_ERROR)
         {
             printf("Unknown Error!\n"
                 "Cur Data: %d, Success Count: %d, Fail Count: %d\n",
@@ -155,27 +218,41 @@ void TreeTester::InsertRandomNode()
     printf("Requested Count: %d\n", node);
 
     list<int> dupList;
-    RedBlackTree<int>::INSERT_NODE ret;
+    INSERT_NODE_RETURN ret;
     for (int i = 0; i < node; i++)
     {
         int rand1 = rand();
         int rand2 = rand();
         rand1 = rand1 << 7;
         rand1 |= rand2;
-        ret = _RedBlackTree.InsertNode(rand1);
 
-        if (ret == RedBlackTree<int>::INSERT_NODE::TREE_IS_FULL)
+        if (_bCompareMode)
+        {
+            PRO_BEGIN(L"RBT INSERT");
+            ret = _RedBlackTree.InsertNode(rand1);
+            PRO_END(L"RBT INSERT");
+
+            PRO_BEGIN(L"BST INSERT");
+            _BinaryTree.InsertNode(rand1);
+            PRO_END(L"BST INSERT");
+        }
+        else
+        {
+            ret = _RedBlackTree.InsertNode(rand1);
+        }
+
+        if (ret == INSERT_NODE_RETURN::TREE_IS_FULL)
         {
             printf("Tree is full!\n"
                 "Cur Data: %d, Success Count: %d, Fail Count: %d\n",
                 rand1, i, node - i + 1);
             break;
         }
-        else if (ret == RedBlackTree<int>::INSERT_NODE::DUPLICATE_VALUE)
+        else if (ret == INSERT_NODE_RETURN::DUPLICATE_VALUE)
         {
             dupList.push_back(rand1);
         }
-        else if (ret == RedBlackTree<int>::INSERT_NODE::UNKNOWN_ERROR)
+        else if (ret == INSERT_NODE_RETURN::UNKNOWN_ERROR)
         {
             printf("Unknown Error!\n"
                 "Cur Data: %d, Success Count: %d, Fail Count: %d\n",
@@ -212,16 +289,29 @@ void TreeTester::DeleteNode()
     if (endNum < 0 || endNum > INT_MAX) endNum = INT_MAX;
     
     list<int> cantFindList;
-    RedBlackTree<int>::DELETE_NODE ret;
+    DELETE_NODE_RETURN ret;
     for(int i = startNum; i <= endNum; i++)
     {
-        ret = _RedBlackTree.DeleteNode(i);
+        if (_bCompareMode)
+        {
+            PRO_BEGIN(L"RBT DELETE");
+            ret = _RedBlackTree.DeleteNode(i);
+            PRO_END(L"RBT DELETE");
 
-        if (ret == RedBlackTree<int>::DELETE_NODE::CANT_FIND)
+            PRO_BEGIN(L"BST DELETE");
+            _BinaryTree.DeleteNode(i);
+            PRO_END(L"BST DELETE");
+        }
+        else
+        {
+            ret = _RedBlackTree.DeleteNode(i);
+        }
+
+        if (ret == DELETE_NODE_RETURN::CANT_FIND)
         {
             cantFindList.push_back(i);
         }
-        else if (ret == RedBlackTree<int>::DELETE_NODE::UNKNOWN_ERROR)
+        else if (ret == DELETE_NODE_RETURN::UNKNOWN_ERROR)
         {
             printf("Unknown Error!\n");
             printf("Cur Data: %d, Success Count: %d, Fail Count: %d\n",
@@ -262,7 +352,7 @@ void TreeTester::DeleteRandomNode()
     _RedBlackTree.GetAllNode(data);
 
     list<int> cantFindList;
-    RedBlackTree<int>::DELETE_NODE ret;
+    DELETE_NODE_RETURN ret;
 
     if (node <= RAND_MAX)
     {
@@ -273,14 +363,29 @@ void TreeTester::DeleteRandomNode()
             {
                 rand1 = (rand() % max);
             }
-            ret = _RedBlackTree.DeleteNode(data[rand1]);
+
+            if (_bCompareMode)
+            {
+                PRO_BEGIN(L"RBT DELETE");
+                ret = _RedBlackTree.DeleteNode(data[rand1]);
+                PRO_END(L"RBT DELETE");
+
+                PRO_BEGIN(L"BST DELETE");
+                _BinaryTree.DeleteNode(data[rand1]);
+                PRO_END(L"BST DELETE");
+            }
+            else
+            {
+                ret = _RedBlackTree.DeleteNode(data[rand1]);
+            }
+
             data[rand1] = -1;
 
-            if (ret == RedBlackTree<int>::DELETE_NODE::CANT_FIND)
+            if (ret == DELETE_NODE_RETURN::CANT_FIND)
             {
                 cantFindList.push_back(rand1);
             }
-            else if (ret == RedBlackTree<int>::DELETE_NODE::UNKNOWN_ERROR)
+            else if (ret == DELETE_NODE_RETURN::UNKNOWN_ERROR)
             {
                 printf("Unknown Error!\n"
                     "Cur Data: %d, Success Count: %d, Fail Count: %d\n",
@@ -308,14 +413,28 @@ void TreeTester::DeleteRandomNode()
                 rand1 %= max;
             }
 
-            ret = _RedBlackTree.DeleteNode(data[rand1]);
+            if (_bCompareMode)
+            {
+                PRO_BEGIN(L"RBT DELETE");
+                ret = _RedBlackTree.DeleteNode(data[rand1]);
+                PRO_END(L"RBT DELETE");
+
+                PRO_BEGIN(L"BST DELETE");
+                _BinaryTree.DeleteNode(data[rand1]);
+                PRO_END(L"BST DELETE");
+            }
+            else
+            {
+                ret = _RedBlackTree.DeleteNode(data[rand1]);
+            }
+
             data[rand1] = -1;
 
-            if (ret == RedBlackTree<int>::DELETE_NODE::CANT_FIND)
+            if (ret == DELETE_NODE_RETURN::CANT_FIND)
             {
                 cantFindList.push_back(rand1);
             }
-            else if (ret == RedBlackTree<int>::DELETE_NODE::UNKNOWN_ERROR)
+            else if (ret == DELETE_NODE_RETURN::UNKNOWN_ERROR)
             {
                 printf("Unknown Error!\n"
                     "Cur Data: %d, Success Count: %d, Fail Count: %d\n",
@@ -402,30 +521,121 @@ void TreeTester::TestTree()
     PrintMenu();
 }
 
+void TreeTester::SetCompareMode()
+{
+    char input[INPUT_LEN] = { '\0', };
+    printf("Press 0 to Compare Mode [OFF], 1 to Compare Mode [ON]\n");
+    fgets(input, INPUT_LEN, stdin);
+    int num = atoi(input);
+
+    if (_bCompareMode && num == 0)
+    {
+        _bCompareMode = false;
+        _bDrawRedBlackTree = true;
+        printf("Now Compare Mode [OFF]\n");
+    }
+    else if (!_bCompareMode && num == 1)
+    {
+        _bCompareMode = true;
+        _BinaryTree.DeleteAllNode();
+        _BinaryTree.CopyRedBlackTree(&_RedBlackTree);
+        printf("Now Compare Mode [ON]\n");
+    }
+    else if (!_bCompareMode && num == 0)
+    {
+        printf("Already Compare Mode [OFF]\n");
+    }
+    else if (_bCompareMode && num == 1)
+    {
+        printf("Already Compare Mode [ON]\n");
+
+    }
+    else
+    {
+        printf("Wrong Input!\n");
+    }
+
+    PrintMenu();
+}
+
+void TreeTester::PrintCompareResult()
+{
+    if (!_bCompareMode) return;
+
+    PRO_PRINT_OUT();
+    PRO_OUT(L"output.txt");
+    PrintMenu();
+}
+
+void TreeTester::ShiftTreeDraw()
+{
+    if (!_bCompareMode) return;
+
+    if (_bDrawRedBlackTree)
+    {
+        _bDrawRedBlackTree = false;
+    }
+    else
+    {
+        _bDrawRedBlackTree = true;
+    }
+}
+
 void TreeTester::DrawTree(HDC hdc)
 {
-    _RedBlackTree.DrawAllNode(
-        hdc, _hBlackPen, _hRedPen, _iXPad, _iYPad);
+    if(_bDrawRedBlackTree)
+    {
+        _RedBlackTree.DrawAllNode(
+            hdc, _hBlackPen, _hRedPen, _iXPad, _iYPad);
+    }
+    else
+    {
+        _BinaryTree.DrawAllNode(hdc, _iXPad, _iYPad);
+    }
 }
 
 void TreeTester::PrintMenu()
 {
-    printf("\n0. Get Tree Data\n"
-        "1. Get Leaf Data\n"
-        "2. Insert Node\n"
-        "3. Insert Random Node (under %d)\n"
-        "4. Insert Random Node (under %d)\n"
-        "5. Delete Node\n"
-        "6. Delete Random Node\n"
-        "7. Test Tree\n"
-        "8. Clear Console\n\n"
-        "Choose number\n",
-        9999, INT_MAX);
+    if(_bCompareMode)
+    {
+        printf("\n1. Search Node\n"
+            "2. Insert Node\n"
+            "3. Insert Random Node (under %d)\n"
+            "4. Insert Random Node (under %d)\n"
+            "5. Delete Node\n"
+            "6. Delete Random Node\n"
+            "7. Print Node Data\n"
+            "8. Print Path Data\n"
+            "9. Test Tree\n"
+            "0. Set Compare Mode with Basic Tree [now: ON]\n"
+            "Q. Print Compare Result with Basic Tree\n"
+            "W. Shift Tree Drawing\n"
+            "ESC. Clear Console\n\n"
+            "Choose number\n",
+            9999, INT_MAX);
+    }
+    else
+    {
+        printf("\n1. Search Node\n"
+            "2. Insert Node\n"
+            "3. Insert Random Node (under %d)\n"
+            "4. Insert Random Node (under %d)\n"
+            "5. Delete Node\n"
+            "6. Delete Random Node\n"
+            "7. Print Node Data\n"
+            "8. Print Path Data\n"
+            "9. Test Tree\n"
+            "0. Set Compare Mode with Basic Tree [now: OFF]\n"        
+            "ESC. Clear Console\n\n"
+            "Choose number\n",
+            9999, INT_MAX);
+    }
+
 }
 
 bool TreeTester::GetTreeDataForTest(set<int>& testSet)
 {
-    if(_RedBlackTree.TestAllNode() != RedBlackTree<int>::TEST::SUCCESS)
+    if(_RedBlackTree.TestAllNode() != TEST_RETURN::SUCCESS)
     {
         return false;
     }
@@ -459,21 +669,35 @@ bool TreeTester::GetTreeDataForTest(set<int>& testSet)
 
 bool TreeTester::InsertForTest(int count, set<int> &testSet)
 {
-    RedBlackTree<int>::INSERT_NODE ret;
+    INSERT_NODE_RETURN ret;
     for (int i = 0; i < count; i++)
     {
         int rand1 = rand();
         int rand2 = rand();
         rand1 = rand1 << 7;
         rand1 |= rand2;
-        ret = _RedBlackTree.InsertNode(rand1);
 
-        if (ret == RedBlackTree<int>::INSERT_NODE::UNKNOWN_ERROR)
+        if (_bCompareMode)
+        {
+            PRO_BEGIN(L"RBT INSERT");
+            ret = _RedBlackTree.InsertNode(rand1);
+            PRO_END(L"RBT INSERT");
+
+            PRO_BEGIN(L"BST DELETE");
+            _BinaryTree.InsertNode(rand1);
+            PRO_END(L"BST DELETE");
+        }
+        else
+        {
+            ret = _RedBlackTree.InsertNode(rand1);
+        }
+
+        if (ret == INSERT_NODE_RETURN::UNKNOWN_ERROR)
         {
             printf("Insert Unknown Error! Cur Data: %d\n", rand1);
             return false;
         }
-        else if (ret == RedBlackTree<int>::INSERT_NODE::TREE_IS_FULL)
+        else if (ret == INSERT_NODE_RETURN::TREE_IS_FULL)
         {
             break;
         }
@@ -490,7 +714,7 @@ bool TreeTester::DeleteForTest(int count, set<int>& testSet)
     _RedBlackTree.GetAllNode(data);
 
     if (count > max) count = max;
-    RedBlackTree<int>::DELETE_NODE ret;
+    DELETE_NODE_RETURN ret;
     for (int i = 0; i < count; i++)
     {
         int rand1 = rand();
@@ -508,11 +732,25 @@ bool TreeTester::DeleteForTest(int count, set<int>& testSet)
             rand1 %= max;
         }
 
-        ret = _RedBlackTree.DeleteNode(data[rand1]);
+        if (_bCompareMode)
+        {
+            PRO_BEGIN(L"RBT DELETE");
+            ret = _RedBlackTree.DeleteNode(data[rand1]);
+            PRO_END(L"RBT DELETE");
+
+            PRO_BEGIN(L"BST DELETE");
+            _BinaryTree.DeleteNode(data[rand1]);
+            PRO_END(L"BST DELETE");
+        }
+        else
+        {
+            ret = _RedBlackTree.DeleteNode(data[rand1]);
+        }
+
         int deleted = data[rand1];
         data[rand1] = -1;
 
-        if (ret == RedBlackTree<int>::DELETE_NODE::UNKNOWN_ERROR)
+        if (ret == DELETE_NODE_RETURN::UNKNOWN_ERROR)
         {
             printf("Delete Unknown Error!: %d\n", rand1);
             delete[] data;
