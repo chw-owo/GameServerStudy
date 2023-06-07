@@ -4,5 +4,5 @@
 #include "windowsx.h"
 #include <iostream>
 
-#include "Map.h"
+#include "PathFindingTool.h"
 #include "Astar.h"

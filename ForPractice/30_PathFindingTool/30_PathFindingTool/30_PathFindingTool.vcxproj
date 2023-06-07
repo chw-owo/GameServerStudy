@@ -136,14 +136,16 @@
     <ClInclude Include="30_PathFindingTool.h" />
     <ClInclude Include="Astar.h" />
     <ClInclude Include="framework.h" />
-    <ClInclude Include="Map.h" />
+    <ClInclude Include="PathFindUtils.h" />
+    <ClInclude Include="PathFindingTool.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="30_PathFindingTool.cpp" />
     <ClCompile Include="Astar.cpp" />
-    <ClCompile Include="Map.cpp" />
+    <ClCompile Include="PathFindUtils.cpp" />
+    <ClCompile Include="PathFindingTool.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="30_PathFindingTool.rc" />

@@ -11,10 +11,10 @@
     <Filter Include="Main">
       <UniqueIdentifier>{8688cd72-abeb-451b-b0a1-e4377dd7f490}</UniqueIdentifier>
     </Filter>
-    <Filter Include="PathFinding">
+    <Filter Include="PathFinder">
       <UniqueIdentifier>{74bde05c-bd9e-44d6-a549-8f30621ee8e1}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Map">
+    <Filter Include="PathFingindTool">
       <UniqueIdentifier>{c7d0f386-9ae5-4ebb-ab8e-c9c0a6c78eb9}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -31,11 +31,14 @@
     <ClInclude Include="30_PathFindingTool.h">
       <Filter>Main</Filter>
     </ClInclude>
-    <ClInclude Include="Map.h">
-      <Filter>Map</Filter>
+    <ClInclude Include="PathFindingTool.h">
+      <Filter>PathFingindTool</Filter>
     </ClInclude>
     <ClInclude Include="Astar.h">
-      <Filter>PathFinding</Filter>
+      <Filter>PathFinder</Filter>
+    </ClInclude>
+    <ClInclude Include="PathFindUtils.h">
+      <Filter>PathFingindTool</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -55,11 +58,14 @@
     <ClCompile Include="30_PathFindingTool.cpp">
       <Filter>Main</Filter>
     </ClCompile>
-    <ClCompile Include="Map.cpp">
-      <Filter>Map</Filter>
+    <ClCompile Include="PathFindingTool.cpp">
+      <Filter>PathFingindTool</Filter>
     </ClCompile>
     <ClCompile Include="Astar.cpp">
-      <Filter>PathFinding</Filter>
+      <Filter>PathFinder</Filter>
+    </ClCompile>
+    <ClCompile Include="PathFindUtils.cpp">
+      <Filter>PathFingindTool</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

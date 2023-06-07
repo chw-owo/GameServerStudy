@@ -55,9 +55,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     return (int)msg.wParam;
 }
 
-CMap* g_pMap;
-HBITMAP g_hMemDCBitmap;
-HBITMAP g_hMemDCBitmap_old;
+CPathFindingTool* g_pPathFindingTool = nullptr;
+HBITMAP g_hMemDCBitMap;
+HBITMAP g_hMemDCBitMap_old;
 HDC g_hMemDC;
 RECT g_MemDCRect;
 
@@ -66,44 +66,52 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     PAINTSTRUCT ps;
     HDC hdc;
 
+    if (g_pPathFindingTool != nullptr &&
+        g_pPathFindingTool->_bFindPath)
+    {
+        g_pPathFindingTool->FindPath();
+    }
+
     switch (message)
     {
     case WM_CREATE:
 
-        g_pMap = new CMap;
+        g_pPathFindingTool = new CPathFindingTool;
 
         hdc = GetDC(hWnd);
         GetClientRect(hWnd, &g_MemDCRect);
-        g_hMemDCBitmap = CreateCompatibleBitmap(hdc, g_MemDCRect.right, g_MemDCRect.bottom);
+        g_hMemDCBitMap = CreateCompatibleBitmap(hdc, g_MemDCRect.right, g_MemDCRect.bottom);
         g_hMemDC = CreateCompatibleDC(hdc);
         ReleaseDC(hWnd, hdc);
-        g_hMemDCBitmap_old = (HBITMAP)SelectObject(g_hMemDC, g_hMemDCBitmap);
+        g_hMemDCBitMap_old = (HBITMAP)SelectObject(g_hMemDC, g_hMemDCBitMap);
 
         break;
 
     case WM_MOUSEWHEEL:
-        g_pMap->SetScale(GET_WHEEL_DELTA_WPARAM(wParam));
+        g_pPathFindingTool->SetScale(GET_WHEEL_DELTA_WPARAM(wParam));
         InvalidateRect(hWnd, NULL, false);
         break;
 
     case WM_LBUTTONDOWN:
-        g_pMap->SetDraw(true);
+        g_pPathFindingTool->SetDraw(true);
+        g_pPathFindingTool->Draw(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
         break;
 
     case WM_LBUTTONUP:
-        g_pMap->SetDraw(false);
+        g_pPathFindingTool->SetDraw(false);
         break;
 
     case WM_RBUTTONDOWN:
-        g_pMap->SetErase(true);
+        g_pPathFindingTool->SetErase(true);
+        g_pPathFindingTool->Draw(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
         break;
 
     case WM_RBUTTONUP:
-        g_pMap->SetErase(false);
+        g_pPathFindingTool->SetErase(false);
         break;
 
     case WM_MOUSEMOVE:
-        g_pMap->Draw(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+        g_pPathFindingTool->Draw(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
         InvalidateRect(hWnd, NULL, false);
         break;
 
@@ -111,36 +119,54 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         switch (wParam)
         {
         case 0x41: // Key A
-            g_pMap->SelectStart(true);
+            g_pPathFindingTool->SelectStart(true);
             break;
 
         case 0x53: // Key S
-            g_pMap->SelectDest(true);
+            g_pPathFindingTool->SelectDest(true);
             break;
 
         case VK_UP:
-            g_pMap->MoveUp();
+            g_pPathFindingTool->MoveUp();
             InvalidateRect(hWnd, NULL, TRUE);
             break;
 
         case VK_DOWN:
-            g_pMap->MoveDown();
+            g_pPathFindingTool->MoveDown();
             InvalidateRect(hWnd, NULL, TRUE);
             break;
 
         case VK_LEFT:
-            g_pMap->MoveLeft();
+            g_pPathFindingTool->MoveLeft();
             InvalidateRect(hWnd, NULL, TRUE);
             break;
 
         case VK_RIGHT:
-            g_pMap->MoveRight();
+            g_pPathFindingTool->MoveRight();
             InvalidateRect(hWnd, NULL, TRUE);
             break;
 
         case VK_SPACE:
-            g_pMap->DrawRandom();
+            g_pPathFindingTool->DrawRandom();
             InvalidateRect(hWnd, NULL, false);
+            break;
+
+        case VK_RETURN:
+            
+            if (g_pPathFindingTool != nullptr && 
+                g_pPathFindingTool->_bFindPath)
+            {
+                printf("It's already finding path\n");
+                break;
+            }
+            else if (g_pPathFindingTool != nullptr &&
+                !g_pPathFindingTool->_bFindPath)
+            {
+                g_pPathFindingTool->StartFindPath();
+            }
+
+            InvalidateRect(hWnd, NULL, false);
+
             break;
 
         default:
@@ -152,20 +178,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         switch (wParam)
         {
         case 0x41: // Key A
-            g_pMap->SelectStart(false);
+            g_pPathFindingTool->SelectStart(false);
             break;
 
         case 0x53: // Key S
-            g_pMap->SelectDest(false);
+            g_pPathFindingTool->SelectDest(false);
             break;
         }
         break;
 
     case WM_PAINT:
-
         PatBlt(g_hMemDC, 0, 0, g_MemDCRect.right, g_MemDCRect.bottom, WHITENESS);
-        g_pMap->RenderGrid(g_hMemDC);
-        g_pMap->RenderColor(g_hMemDC);
+        g_pPathFindingTool->Render(g_hMemDC);
 
         hdc = BeginPaint(hWnd, &ps);
         BitBlt(hdc, 0, 0, g_MemDCRect.right,
@@ -174,24 +198,24 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
 
     case WM_DESTROY:
-        SelectObject(g_hMemDC, g_hMemDCBitmap_old);
+        SelectObject(g_hMemDC, g_hMemDCBitMap_old);
         DeleteObject(g_hMemDC);
-        DeleteObject(g_hMemDCBitmap);
+        DeleteObject(g_hMemDCBitMap);
         PostQuitMessage(0);
         break;
 
     case WM_SIZE:
-        SelectObject(g_hMemDC, g_hMemDCBitmap_old);
+        SelectObject(g_hMemDC, g_hMemDCBitMap_old);
         DeleteObject(g_hMemDC);
-        DeleteObject(g_hMemDCBitmap);
+        DeleteObject(g_hMemDCBitMap);
 
         hdc = GetDC(hWnd);
         GetClientRect(hWnd, &g_MemDCRect);
-        g_hMemDCBitmap = CreateCompatibleBitmap(hdc, g_MemDCRect.right, g_MemDCRect.bottom);
+        g_hMemDCBitMap = CreateCompatibleBitmap(hdc, g_MemDCRect.right, g_MemDCRect.bottom);
         g_hMemDC = CreateCompatibleDC(hdc);
         ReleaseDC(hWnd, hdc);
 
-        g_hMemDCBitmap_old = (HBITMAP)SelectObject(g_hMemDC, g_hMemDCBitmap);
+        g_hMemDCBitMap_old = (HBITMAP)SelectObject(g_hMemDC, g_hMemDCBitMap);
         PatBlt(g_hMemDC, 0, 0, g_MemDCRect.right, g_MemDCRect.bottom, WHITENESS);
 
         break;
