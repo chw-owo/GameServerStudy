@@ -1,35 +1,39 @@
 ﻿#include "framework.h"
-#include "30_PathFindingTool.h"
+#include "31_PathFindingTool.h"
 #pragma comment(linker, "/entry:wWinMainCRTStartup /subsystem:console" )
 
 #define MAX_LOADSTRING 100
-
 LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
 INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
 
-int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
-    _In_opt_ HINSTANCE hPrevInstance,
-    _In_ LPWSTR    lpCmdLine,
-    _In_ int       nCmdShow)
-{
+MapTool* g_pMapTool = nullptr;
+PathFindAlgorithm* g_pPathFindTool = nullptr;
 
+int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
+                     _In_opt_ HINSTANCE hPrevInstance,
+                     _In_ LPWSTR    lpCmdLine,
+                     _In_ int       nCmdShow)
+{
     MSG msg;
     HWND hWnd;
     WNDCLASSEXW wcex;
 
+    g_pMapTool = new MapTool;
+    g_pPathFindTool = new AStar;
+
     wcex.cbSize = sizeof(WNDCLASSEX);
 
-    wcex.style          = CS_HREDRAW | CS_VREDRAW;
-    wcex.lpfnWndProc    = WndProc;
-    wcex.cbClsExtra     = 0;
-    wcex.cbWndExtra     = 0;
-    wcex.hInstance      = hInstance;
-    wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_MY30PATHFINDINGTOOL));
-    wcex.hCursor        = LoadCursor(nullptr, IDC_ARROW);
-    wcex.hbrBackground  = (HBRUSH)(COLOR_WINDOW+1);
-    wcex.lpszMenuName   = MAKEINTRESOURCEW(IDC_MY30PATHFINDINGTOOL);
-    wcex.lpszClassName  = L"ClassName";
-    wcex.hIconSm        = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
+    wcex.style = CS_HREDRAW | CS_VREDRAW;
+    wcex.lpfnWndProc = WndProc;
+    wcex.cbClsExtra = 0;
+    wcex.cbWndExtra = 0;
+    wcex.hInstance = hInstance;
+    wcex.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_MY31PATHFINDINGTOOL));
+    wcex.hCursor = LoadCursor(nullptr, IDC_ARROW);
+    wcex.hbrBackground = (HBRUSH)(COLOR_WINDOW + 1);
+    wcex.lpszMenuName = MAKEINTRESOURCEW(IDC_MY31PATHFINDINGTOOL);
+    wcex.lpszClassName = L"ClassName";
+    wcex.hIconSm = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
     RegisterClassEx(&wcex);
 
     hWnd = CreateWindowW(L"ClassName",
@@ -48,6 +52,9 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     while (GetMessage(&msg, nullptr, 0, 0))
     {
+        if (g_pPathFindTool->GetOn())
+            g_pPathFindTool->FindPath();
+
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
@@ -55,7 +62,6 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     return (int)msg.wParam;
 }
 
-CPathFindingTool* g_pPathFindingTool = nullptr;
 HBITMAP g_hMemDCBitMap;
 HBITMAP g_hMemDCBitMap_old;
 HDC g_hMemDC;
@@ -63,20 +69,12 @@ RECT g_MemDCRect;
 
 LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-    PAINTSTRUCT ps;
     HDC hdc;
-
-    if (g_pPathFindingTool != nullptr &&
-        g_pPathFindingTool->_bFindPath)
-    {
-        g_pPathFindingTool->FindPath();
-    }
+    PAINTSTRUCT ps;
 
     switch (message)
     {
     case WM_CREATE:
-
-        g_pPathFindingTool = new CPathFindingTool;
 
         hdc = GetDC(hWnd);
         GetClientRect(hWnd, &g_MemDCRect);
@@ -84,34 +82,33 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         g_hMemDC = CreateCompatibleDC(hdc);
         ReleaseDC(hWnd, hdc);
         g_hMemDCBitMap_old = (HBITMAP)SelectObject(g_hMemDC, g_hMemDCBitMap);
-
         break;
 
     case WM_MOUSEWHEEL:
-        g_pPathFindingTool->SetScale(GET_WHEEL_DELTA_WPARAM(wParam));
+        g_pMapTool->SetScale(GET_WHEEL_DELTA_WPARAM(wParam));
         InvalidateRect(hWnd, NULL, false);
         break;
 
     case WM_LBUTTONDOWN:
-        g_pPathFindingTool->SetDraw(true);
-        g_pPathFindingTool->Draw(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+        g_pMapTool->SetDraw(true);
+        g_pMapTool->Draw(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
         break;
 
     case WM_LBUTTONUP:
-        g_pPathFindingTool->SetDraw(false);
+        g_pMapTool->SetDraw(false);
         break;
 
     case WM_RBUTTONDOWN:
-        g_pPathFindingTool->SetErase(true);
-        g_pPathFindingTool->Draw(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+        g_pMapTool->SetErase(true);
+        g_pMapTool->Draw(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
         break;
 
     case WM_RBUTTONUP:
-        g_pPathFindingTool->SetErase(false);
+        g_pMapTool->SetErase(false);
         break;
 
     case WM_MOUSEMOVE:
-        g_pPathFindingTool->Draw(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+        g_pMapTool->Draw(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
         InvalidateRect(hWnd, NULL, false);
         break;
 
@@ -119,54 +116,41 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         switch (wParam)
         {
         case 0x41: // Key A
-            g_pPathFindingTool->SelectStart(true);
+            g_pMapTool->SelectStart(true);
             break;
 
         case 0x53: // Key S
-            g_pPathFindingTool->SelectDest(true);
+            g_pMapTool->SelectDest(true);
             break;
 
         case VK_UP:
-            g_pPathFindingTool->MoveUp();
+            g_pMapTool->MoveUp();
             InvalidateRect(hWnd, NULL, TRUE);
             break;
 
         case VK_DOWN:
-            g_pPathFindingTool->MoveDown();
+            g_pMapTool->MoveDown();
             InvalidateRect(hWnd, NULL, TRUE);
             break;
 
         case VK_LEFT:
-            g_pPathFindingTool->MoveLeft();
+            g_pMapTool->MoveLeft();
             InvalidateRect(hWnd, NULL, TRUE);
             break;
 
         case VK_RIGHT:
-            g_pPathFindingTool->MoveRight();
+            g_pMapTool->MoveRight();
             InvalidateRect(hWnd, NULL, TRUE);
             break;
 
         case VK_SPACE:
-            g_pPathFindingTool->DrawRandom();
+            g_pMapTool->DrawRandom();
             InvalidateRect(hWnd, NULL, false);
             break;
 
         case VK_RETURN:
-            
-            if (g_pPathFindingTool != nullptr && 
-                g_pPathFindingTool->_bFindPath)
-            {
-                printf("It's already finding path\n");
-                break;
-            }
-            else if (g_pPathFindingTool != nullptr &&
-                !g_pPathFindingTool->_bFindPath)
-            {
-                g_pPathFindingTool->StartFindPath();
-            }
-
+            g_pPathFindTool->StartFindPath();
             InvalidateRect(hWnd, NULL, false);
-
             break;
 
         default:
@@ -178,18 +162,18 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         switch (wParam)
         {
         case 0x41: // Key A
-            g_pPathFindingTool->SelectStart(false);
+            g_pMapTool->SelectStart(false);
             break;
 
         case 0x53: // Key S
-            g_pPathFindingTool->SelectDest(false);
+            g_pMapTool->SelectDest(false);
             break;
         }
         break;
 
     case WM_PAINT:
         PatBlt(g_hMemDC, 0, 0, g_MemDCRect.right, g_MemDCRect.bottom, WHITENESS);
-        g_pPathFindingTool->Render(g_hMemDC);
+        g_pMapTool->Render(g_hMemDC);
 
         hdc = BeginPaint(hWnd, &ps);
         BitBlt(hdc, 0, 0, g_MemDCRect.right,

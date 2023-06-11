@@ -21,8 +21,8 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{174ab3a3-f84b-49d5-807f-0ff754dbee7c}</ProjectGuid>
-    <RootNamespace>My30PathFindingTool</RootNamespace>
+    <ProjectGuid>{23fab34b-118d-4833-baf2-ba16b50e016e}</ProjectGuid>
+    <RootNamespace>My31PathFindingTool</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -133,25 +133,31 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="30_PathFindingTool.h" />
-    <ClInclude Include="Astar.h" />
+    <ClInclude Include="31_PathFindingTool.h" />
+    <ClInclude Include="AStar.h" />
     <ClInclude Include="framework.h" />
-    <ClInclude Include="PathFindUtils.h" />
-    <ClInclude Include="PathFindingTool.h" />
+    <ClInclude Include="JumpPointSearch.h" />
+    <ClInclude Include="Map.h" />
+    <ClInclude Include="MapTool.h" />
+    <ClInclude Include="Node.h" />
+    <ClInclude Include="PathFindAlgorithm.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="30_PathFindingTool.cpp" />
-    <ClCompile Include="Astar.cpp" />
-    <ClCompile Include="PathFindUtils.cpp" />
-    <ClCompile Include="PathFindingTool.cpp" />
+    <ClCompile Include="31_PathFindingTool.cpp" />
+    <ClCompile Include="AStar.cpp" />
+    <ClCompile Include="JumpPointSearch.cpp" />
+    <ClCompile Include="Map.cpp" />
+    <ClCompile Include="MapTool.cpp" />
+    <ClCompile Include="Node.cpp" />
+    <ClCompile Include="PathFindAlgorithm.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ResourceCompile Include="30_PathFindingTool.rc" />
+    <ResourceCompile Include="31_PathFindingTool.rc" />
   </ItemGroup>
   <ItemGroup>
-    <Image Include="30_PathFindingTool.ico" />
+    <Image Include="31_PathFindingTool.ico" />
     <Image Include="small.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

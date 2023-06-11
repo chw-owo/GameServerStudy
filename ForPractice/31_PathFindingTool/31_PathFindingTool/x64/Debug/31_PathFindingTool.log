@@ -1,0 +1,111 @@
+﻿  31_PathFindingTool.cpp
+  AStar.cpp
+  JumpPointSearch.cpp
+  Map.cpp
+  MapTool.cpp
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.h(13,14): error C2061: 구문 오류: 식별자 'HDC'
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.h(16,18): error C2061: 구문 오류: 식별자 'HDC'
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.h(17,19): error C2061: 구문 오류: 식별자 'HDC'
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.h(18,18): error C2061: 구문 오류: 식별자 'HDC'
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.h(19,28): error C2061: 구문 오류: 식별자 'HDC'
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.h(39,7): error C3646: '_hGridPen': 알 수 없는 재정의 지정자입니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.h(39,16): error C4430: 형식 지정자가 없습니다. int로 가정합니다. 참고: C++에서는 기본 int를 지원하지 않습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.h(40,7): error C3646: '_hPathPen': 알 수 없는 재정의 지정자입니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.h(40,16): error C4430: 형식 지정자가 없습니다. int로 가정합니다. 참고: C++에서는 기본 int를 지원하지 않습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.h(42,9): error C3646: '_hObstacleBrush': 알 수 없는 재정의 지정자입니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.h(42,24): error C4430: 형식 지정자가 없습니다. int로 가정합니다. 참고: C++에서는 기본 int를 지원하지 않습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.h(43,9): error C3646: '_hOpenBrush': 알 수 없는 재정의 지정자입니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.h(43,20): error C4430: 형식 지정자가 없습니다. int로 가정합니다. 참고: C++에서는 기본 int를 지원하지 않습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.h(44,9): error C3646: '_hCloseBrush': 알 수 없는 재정의 지정자입니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.h(44,21): error C4430: 형식 지정자가 없습니다. int로 가정합니다. 참고: C++에서는 기본 int를 지원하지 않습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.h(45,9): error C3646: '_hStartBrush': 알 수 없는 재정의 지정자입니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.h(45,21): error C4430: 형식 지정자가 없습니다. int로 가정합니다. 참고: C++에서는 기본 int를 지원하지 않습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.h(46,9): error C3646: '_hDestBrush': 알 수 없는 재정의 지정자입니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.h(46,20): error C4430: 형식 지정자가 없습니다. int로 가정합니다. 참고: C++에서는 기본 int를 지원하지 않습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(11,5): error C2065: '_hGridPen': 선언되지 않은 식별자입니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(12,5): error C2065: '_hPathPen': 선언되지 않은 식별자입니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(14,5): error C2065: '_hObstacleBrush': 선언되지 않은 식별자입니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(15,5): error C2065: '_hOpenBrush': 선언되지 않은 식별자입니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(16,5): error C2065: '_hCloseBrush': 선언되지 않은 식별자입니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(17,5): error C2065: '_hStartBrush': 선언되지 않은 식별자입니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(18,5): error C2065: '_hDestBrush': 선언되지 않은 식별자입니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(80,15): error C2511: 'void MapTool::Render(HDC)': 오버로드된 멤버 함수가 'MapTool'에 없습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.h(4,7): message : 'MapTool' 선언을 참조하십시오.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(82,5): error C2660: 'MapTool::RenderGrid': 함수는 1개의 인수를 사용하지 않습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.h(16,7): message : 'MapTool::RenderGrid' 선언을 참조하십시오.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(82,5): message : 인수 목록 '(HDC)'을(를) 일치시키는 동안
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(83,5): error C2660: 'MapTool::RenderColor': 함수는 1개의 인수를 사용하지 않습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.h(17,7): message : 'MapTool::RenderColor' 선언을 참조하십시오.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(83,5): message : 인수 목록 '(HDC)'을(를) 일치시키는 동안
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(88,15): error C2511: 'void MapTool::RenderPath(HDC)': 오버로드된 멤버 함수가 'MapTool'에 없습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.h(4,7): message : 'MapTool' 선언을 참조하십시오.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(121,15): error C2511: 'void MapTool::RenderPathFinderData(HDC)': 오버로드된 멤버 함수가 'MapTool'에 없습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.h(4,7): message : 'MapTool' 선언을 참조하십시오.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(155,15): error C2511: 'void MapTool::RenderGrid(HDC)': 오버로드된 멤버 함수가 'MapTool'에 없습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.h(4,7): message : 'MapTool' 선언을 참조하십시오.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(159,44): error C2065: '_hGridPen': 선언되지 않은 식별자입니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(163,34): error C2597: 비정적 멤버 'MapTool::_iXPad'에 대한 참조가 잘못되었습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(163,34): error C3867: 'MapTool::_iXPad': 비표준 구문입니다. '&'를 사용하여 멤버 포인터를 만드세요.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(163,34): error C2568: '+': 함수 오버로드를 확인할 수 없습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(163,36): error C2597: 비정적 멤버 'MapTool::_iYPad'에 대한 참조가 잘못되었습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.h(35,6): message : 'MapTool::_iYPad' 선언을 참조하십시오.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(164,32): error C2597: 비정적 멤버 'MapTool::_iXPad'에 대한 참조가 잘못되었습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(164,32): error C3867: 'MapTool::_iXPad': 비표준 구문입니다. '&'를 사용하여 멤버 포인터를 만드세요.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(164,32): error C2568: '+': 함수 오버로드를 확인할 수 없습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(164,53): error C2597: 비정적 멤버 'MapTool::_iGridSize'에 대한 참조가 잘못되었습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(164,53): error C3867: 'MapTool::_iGridSize': 비표준 구문입니다. '&'를 사용하여 멤버 포인터를 만드세요.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(164,53): error C2568: '*': 함수 오버로드를 확인할 수 없습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(164,9): error C2660: 'LineTo': 함수는 1개의 인수를 사용하지 않습니다.
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.22000.0\um\wingdi.h(4544,24): message : 'LineTo' 선언을 참조하십시오.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(164,9): message : 인수 목록 '(HDC)'을(를) 일치시키는 동안
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(165,25): error C2597: 비정적 멤버 'MapTool::_iGridSize'에 대한 참조가 잘못되었습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(165,25): error C3867: 'MapTool::_iGridSize': 비표준 구문입니다. '&'를 사용하여 멤버 포인터를 만드세요.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(165,25): error C2568: '+=': 함수 오버로드를 확인할 수 없습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(170,23): error C2597: 비정적 멤버 'MapTool::_iXPad'에 대한 참조가 잘못되었습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.h(34,6): message : 'MapTool::_iXPad' 선언을 참조하십시오.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(170,42): error C2597: 비정적 멤버 'MapTool::_iYPad'에 대한 참조가 잘못되었습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(170,42): error C3867: 'MapTool::_iYPad': 비표준 구문입니다. '&'를 사용하여 멤버 포인터를 만드세요.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(170,42): error C2568: '+': 함수 오버로드를 확인할 수 없습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(171,40): error C2597: 비정적 멤버 'MapTool::_iGridSize'에 대한 참조가 잘못되었습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(171,40): error C3867: 'MapTool::_iGridSize': 비표준 구문입니다. '&'를 사용하여 멤버 포인터를 만드세요.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(171,40): error C2568: '*': 함수 오버로드를 확인할 수 없습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(171,61): error C2597: 비정적 멤버 'MapTool::_iYPad'에 대한 참조가 잘못되었습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(171,61): error C3867: 'MapTool::_iYPad': 비표준 구문입니다. '&'를 사용하여 멤버 포인터를 만드세요.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(171,61): error C2568: '+': 함수 오버로드를 확인할 수 없습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(171,9): error C2660: 'LineTo': 함수는 1개의 인수를 사용하지 않습니다.
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.22000.0\um\wingdi.h(4544,24): message : 'LineTo' 선언을 참조하십시오.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(171,9): message : 인수 목록 '(HDC)'을(를) 일치시키는 동안
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(172,25): error C2597: 비정적 멤버 'MapTool::_iGridSize'에 대한 참조가 잘못되었습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(172,25): error C3867: 'MapTool::_iGridSize': 비표준 구문입니다. '&'를 사용하여 멤버 포인터를 만드세요.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(172,25): error C2568: '+=': 함수 오버로드를 확인할 수 없습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(178,15): error C2511: 'void MapTool::RenderColor(HDC)': 오버로드된 멤버 함수가 'MapTool'에 없습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.h(4,7): message : 'MapTool' 선언을 참조하십시오.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(182,50): error C2065: '_hStartBrush': 선언되지 않은 식별자입니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(188,32): error C2597: 비정적 멤버 'MapTool::_iGridSize'에 대한 참조가 잘못되었습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(188,32): error C3867: 'MapTool::_iGridSize': 비표준 구문입니다. '&'를 사용하여 멤버 포인터를 만드세요.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(188,32): error C2568: '*': 함수 오버로드를 확인할 수 없습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(189,32): error C2597: 비정적 멤버 'MapTool::_iGridSize'에 대한 참조가 잘못되었습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(189,32): error C3867: 'MapTool::_iGridSize': 비표준 구문입니다. '&'를 사용하여 멤버 포인터를 만드세요.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(189,32): error C2568: '*': 함수 오버로드를 확인할 수 없습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(197,35): error C2065: '_hObstacleBrush': 선언되지 않은 식별자입니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(201,35): error C2065: '_hOpenBrush': 선언되지 않은 식별자입니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(205,35): error C2065: '_hCloseBrush': 선언되지 않은 식별자입니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(209,35): error C2065: '_hStartBrush': 선언되지 않은 식별자입니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(213,35): error C2065: '_hDestBrush': 선언되지 않은 식별자입니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(217,39): error C2597: 비정적 멤버 'MapTool::_iXPad'에 대한 참조가 잘못되었습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(217,39): error C3867: 'MapTool::_iXPad': 비표준 구문입니다. '&'를 사용하여 멤버 포인터를 만드세요.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(217,39): error C2568: '+': 함수 오버로드를 확인할 수 없습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(217,52): error C2597: 비정적 멤버 'MapTool::_iYPad'에 대한 참조가 잘못되었습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(217,52): error C3867: 'MapTool::_iYPad': 비표준 구문입니다. '&'를 사용하여 멤버 포인터를 만드세요.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(217,52): error C2568: '+': 함수 오버로드를 확인할 수 없습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(218,33): error C2597: 비정적 멤버 'MapTool::_iGridSize'에 대한 참조가 잘못되었습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(218,33): error C3867: 'MapTool::_iGridSize': 비표준 구문입니다. '&'를 사용하여 멤버 포인터를 만드세요.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(218,33): error C2568: '+': 함수 오버로드를 확인할 수 없습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(219,33): error C2597: 비정적 멤버 'MapTool::_iGridSize'에 대한 참조가 잘못되었습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(219,33): error C3867: 'MapTool::_iGridSize': 비표준 구문입니다. '&'를 사용하여 멤버 포인터를 만드세요.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(219,33): error C2568: '+': 함수 오버로드를 확인할 수 없습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(217,13): error C2660: 'Rectangle': 함수는 1개의 인수를 사용하지 않습니다.
+C:\Program Files (x86)\Windows Kits\10\Include\10.0.22000.0\um\wingdi.h(4561,24): message : 'Rectangle' 선언을 참조하십시오.
+C:\Users\Dell\Desktop\GameServer\ForPractice\31_PathFindingTool\31_PathFindingTool\MapTool.cpp(217,13): message : 인수 목록 '(HDC)'을(를) 일치시키는 동안
+  Node.cpp
+  코드를 생성하고 있습니다...

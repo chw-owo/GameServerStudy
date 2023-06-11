@@ -1,16 +1,17 @@
 #pragma once
-#include "windows.h"
-#include "Astar.h"
+#include <windows.h>
+#include "Map.h"
 
-class CPathFindingTool
+#define MOVESPEED 10
+#define DEFAULT_X_PAD 100
+#define DEFAULT_Y_PAD 60
+#define DEFAULT_GRID_SIZE 8
+
+class MapTool
 {
 public:
-	CPathFindingTool();
-	~CPathFindingTool();
-
-public:
-	void StartFindPath();
-	void FindPath();
+	MapTool();
+	~MapTool();
 
 public:
 	void Draw(int xPos, int yPos);
@@ -18,33 +19,34 @@ public:
 	void Render(HDC hdc);
 
 private:
+	void RenderMenu(HDC hdc);
 	void RenderGrid(HDC hdc);
 	void RenderColor(HDC hdc);
 	void RenderPath(HDC hdc);
 	void RenderPathFinderData(HDC hdc);
 
 public:
-	void MoveRight() { _iXPad -= 3; }
-	void MoveLeft() { _iXPad += 3; }
-	void MoveUp() { _iYPad += 3; }
-	void MoveDown() { _iYPad -= 3; }
+	void MoveRight() { _iXPad -= MOVESPEED; }
+	void MoveLeft() { _iXPad += MOVESPEED; }
+	void MoveUp() { _iYPad += MOVESPEED; }
+	void MoveDown() { _iYPad -= MOVESPEED; }
 
 	void SetScale(short wParam);
 	void SetDraw(bool bDraw) { _bDraw = bDraw; }
 	void SetErase(bool bErase) { _bErase = bErase; }
 	void SelectStart(bool bSelectStart) { _bSelectStart = bSelectStart; }
 	void SelectDest(bool bSelectDest) { _bSelectDest = bSelectDest; }
-	
-public:
-	bool _bFindPath = false;
 
 private:
-	int _iXPad = 0;
-	int _iYPad = 0;
-	int _iGridSize = 16;
+	int _iXPad = DEFAULT_X_PAD;
+	int _iYPad = DEFAULT_Y_PAD;
+	int _iGridSize = DEFAULT_GRID_SIZE;
 
 private:
 	HPEN _hGridPen;
+	HPEN _hPathPen;
+	HFONT _hMenuFont;
+	HFONT _hDataFont;
 	HBRUSH _hObstacleBrush;
 	HBRUSH _hOpenBrush;
 	HBRUSH _hCloseBrush;
@@ -58,8 +60,7 @@ private:
 	bool _bSelectDest = false;
 
 private:
-	Pos _pStartPos;
-	Pos _pDestPos;
-	PathFinder* _pathFinder;
+	Map* _pMap = nullptr;
+	NodeMgr* _pNodeMgr = nullptr;
 };
 

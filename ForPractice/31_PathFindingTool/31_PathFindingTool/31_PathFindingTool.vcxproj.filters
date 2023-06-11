@@ -1,0 +1,92 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="리소스 파일">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Main">
+      <UniqueIdentifier>{4293198c-9c25-44b3-909a-5f5342c8d834}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="PathFindAlgorithm">
+      <UniqueIdentifier>{ce90abfb-6ab3-4d01-a978-d6962d24993e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="WindowUtils">
+      <UniqueIdentifier>{fe0156f6-1c4c-4377-a63c-0b1559364f5e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MapData">
+      <UniqueIdentifier>{391acdbf-861d-48b5-80e1-f7397a926d5f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="MapTool">
+      <UniqueIdentifier>{8224cd1c-ddec-414a-830a-17d9dfe836eb}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="framework.h">
+      <Filter>WindowUtils</Filter>
+    </ClInclude>
+    <ClInclude Include="Resource.h">
+      <Filter>WindowUtils</Filter>
+    </ClInclude>
+    <ClInclude Include="targetver.h">
+      <Filter>WindowUtils</Filter>
+    </ClInclude>
+    <ClInclude Include="31_PathFindingTool.h">
+      <Filter>Main</Filter>
+    </ClInclude>
+    <ClInclude Include="AStar.h">
+      <Filter>PathFindAlgorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="JumpPointSearch.h">
+      <Filter>PathFindAlgorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="MapTool.h">
+      <Filter>MapTool</Filter>
+    </ClInclude>
+    <ClInclude Include="PathFindAlgorithm.h">
+      <Filter>PathFindAlgorithm</Filter>
+    </ClInclude>
+    <ClInclude Include="Map.h">
+      <Filter>MapData</Filter>
+    </ClInclude>
+    <ClInclude Include="Node.h">
+      <Filter>MapData</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="31_PathFindingTool.rc">
+      <Filter>리소스 파일</Filter>
+    </ResourceCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="small.ico">
+      <Filter>리소스 파일</Filter>
+    </Image>
+    <Image Include="31_PathFindingTool.ico">
+      <Filter>리소스 파일</Filter>
+    </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="31_PathFindingTool.cpp">
+      <Filter>Main</Filter>
+    </ClCompile>
+    <ClCompile Include="AStar.cpp">
+      <Filter>PathFindAlgorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="JumpPointSearch.cpp">
+      <Filter>PathFindAlgorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="MapTool.cpp">
+      <Filter>MapTool</Filter>
+    </ClCompile>
+    <ClCompile Include="Node.cpp">
+      <Filter>MapData</Filter>
+    </ClCompile>
+    <ClCompile Include="Map.cpp">
+      <Filter>MapData</Filter>
+    </ClCompile>
+    <ClCompile Include="PathFindAlgorithm.cpp">
+      <Filter>PathFindAlgorithm</Filter>
+    </ClCompile>
+  </ItemGroup>
+</Project>
