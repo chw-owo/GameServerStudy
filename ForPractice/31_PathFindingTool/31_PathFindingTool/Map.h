@@ -1,5 +1,5 @@
 #pragma once
-#include "Node.h"
+#include "Pos.h"
 
 #define X_MAX 100
 #define Y_MAX 50
@@ -7,7 +7,7 @@
 class Map
 {
 private:
-	Map() {}
+	Map();
 	~Map() {}
 
 public:
@@ -16,24 +16,23 @@ public:
 public:
 	enum STATE
 	{
-		NONE = 0,
+		EMPTY = 0,
 		OBSTACLE,
 		OPEN,
 		CLOSE,
 		START,
-		DEST
+		DEST,
+		RANGE_OUT
 	};
 
 public:
-	void Initialize();
 	void SetMapState(int x, int y, STATE state);
-	STATE GetMapState(int x, int y) { return (STATE)_chMap[y][x]; }
-	bool CanGo(Pos pos);
+	STATE GetMapState(int x, int y);
 
 public:
 	Pos _startPos;
 	Pos _destPos;
-	char _chMap[Y_MAX][X_MAX] = { STATE::NONE, };
+	char _chMap[Y_MAX][X_MAX] = { STATE::EMPTY, };
 
 private:
 	static Map _Map;

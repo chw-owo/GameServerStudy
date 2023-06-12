@@ -4,7 +4,7 @@
 class JumpPointSearch : public PathFindAlgorithm
 {
 public:
-	void SetStartDestNode(Pos startPos, Pos destPos);
 	void FindPath();
+	void CreateNode(Node* pCurNode);
 };
 

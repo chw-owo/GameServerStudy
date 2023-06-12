@@ -6,6 +6,6 @@ class AStar : public PathFindAlgorithm
 public:
 	void FindPath();
 	void CreateNode(Node* pCurNode);
-
+	void FindShortcut();
 };
 

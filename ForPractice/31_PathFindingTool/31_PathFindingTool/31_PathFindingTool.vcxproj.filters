@@ -20,6 +20,9 @@
     <Filter Include="MapTool">
       <UniqueIdentifier>{8224cd1c-ddec-414a-830a-17d9dfe836eb}</UniqueIdentifier>
     </Filter>
+    <Filter Include="BasicUnit">
+      <UniqueIdentifier>{d86a801a-fc43-4d88-986b-1ff17fd6e4af}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="framework.h">
@@ -50,6 +53,12 @@
       <Filter>MapData</Filter>
     </ClInclude>
     <ClInclude Include="Node.h">
+      <Filter>BasicUnit</Filter>
+    </ClInclude>
+    <ClInclude Include="Pos.h">
+      <Filter>BasicUnit</Filter>
+    </ClInclude>
+    <ClInclude Include="NodeMgr.h">
       <Filter>MapData</Filter>
     </ClInclude>
   </ItemGroup>
@@ -79,14 +88,20 @@
     <ClCompile Include="MapTool.cpp">
       <Filter>MapTool</Filter>
     </ClCompile>
-    <ClCompile Include="Node.cpp">
-      <Filter>MapData</Filter>
-    </ClCompile>
     <ClCompile Include="Map.cpp">
       <Filter>MapData</Filter>
     </ClCompile>
     <ClCompile Include="PathFindAlgorithm.cpp">
       <Filter>PathFindAlgorithm</Filter>
+    </ClCompile>
+    <ClCompile Include="Node.cpp">
+      <Filter>BasicUnit</Filter>
+    </ClCompile>
+    <ClCompile Include="Pos.cpp">
+      <Filter>BasicUnit</Filter>
+    </ClCompile>
+    <ClCompile Include="NodeMgr.cpp">
+      <Filter>MapData</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>

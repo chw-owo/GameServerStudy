@@ -1,6 +1,8 @@
 #pragma once
+#include "NodeMgr.h"
 #include <windows.h>
-#include "Map.h"
+#include <vector>
+using namespace std;
 
 #define MOVESPEED 10
 #define DEFAULT_X_PAD 100
@@ -12,6 +14,9 @@ class MapTool
 public:
 	MapTool();
 	~MapTool();
+
+public:
+	void ClearMapToolData();
 
 public:
 	void Draw(int xPos, int yPos);
@@ -60,7 +65,9 @@ private:
 	bool _bSelectDest = false;
 
 private:
-	Map* _pMap = nullptr;
 	NodeMgr* _pNodeMgr = nullptr;
+
+private:
+	vector<Node*> _NodeListForDebug;
 };
 

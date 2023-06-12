@@ -1,9 +1,9 @@
 #include "JumpPointSearch.h"
 
-void JumpPointSearch::SetStartDestNode(Pos startPos, Pos destPos)
+void JumpPointSearch::FindPath()
 {
 }
 
-void JumpPointSearch::FindPath()
+void JumpPointSearch::CreateNode(Node* pCurNode)
 {
 }

@@ -1,15 +1,15 @@
 #pragma once
-#include "Map.h"
+#include "NodeMgr.h"
 
 enum class DIR
 {
 	UP = 0,
-	UP_R,
 	R,
-	DOWN_R,
 	DOWN,
-	DOWN_L,
 	L,
+	UP_R = 4,
+	DOWN_R,
+	DOWN_L,
 	UP_L,
 	END = 8
 };
@@ -41,6 +41,5 @@ protected:
 protected:
 	bool _bOn = false;
 	Node* _pCurNode = nullptr;
-	Map* _pMap = nullptr;
 	NodeMgr* _pNodeMgr = nullptr;
 };

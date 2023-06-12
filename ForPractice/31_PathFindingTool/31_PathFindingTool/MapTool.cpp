@@ -4,10 +4,8 @@
 MapTool::MapTool()
 {
     srand(unsigned short(200));
-    _pMap = Map::GetInstance();
     _pNodeMgr = NodeMgr::GetInstance();
-    _pMap->Initialize();
-    
+   
     _hGridPen = CreatePen(PS_SOLID, 1, RGB(200, 200, 200)); // Black
     _hPathPen = CreatePen(PS_SOLID, 2, RGB(255, 0, 0));     // Red
 
@@ -28,6 +26,11 @@ MapTool::~MapTool()
 
 }
 
+void MapTool::ClearMapToolData()
+{
+    _NodeListForDebug.clear();
+}
+
 void MapTool::Draw(int xPos, int yPos)
 {
     int iTileX = (xPos - _iXPad) / _iGridSize;
@@ -37,19 +40,19 @@ void MapTool::Draw(int xPos, int yPos)
 
     if (_bDraw && _bSelectStart)
     {
-        _pMap->SetMapState(iTileX, iTileY, Map::START);
+        _pNodeMgr->_pMap->SetMapState(iTileX, iTileY, Map::START);
     }
     else if (_bDraw && _bSelectDest)
     {
-        _pMap->SetMapState(iTileX, iTileY, Map::DEST);
+        _pNodeMgr->_pMap->SetMapState(iTileX, iTileY, Map::DEST);
     }
     else if (_bDraw)
     {
-        _pMap->SetMapState(iTileX, iTileY, Map::OBSTACLE);
+        _pNodeMgr->_pMap->SetMapState(iTileX, iTileY, Map::OBSTACLE);
     }
     else if (_bErase)
     {
-        _pMap->SetMapState(iTileX, iTileY, Map::NONE);
+        _pNodeMgr->_pMap->SetMapState(iTileX, iTileY, Map::EMPTY);
     }
 }
 
@@ -59,7 +62,7 @@ void MapTool::DrawRandom()
     {
         for (int j = 0; j < X_MAX; j++)
         {
-            _pMap->SetMapState(j, i, (Map::STATE)(rand()%(Map::OBSTACLE+1)));
+            _pNodeMgr->_pMap->SetMapState(j, i, (Map::STATE)(rand()%(Map::OBSTACLE+1)));
         }
     }
 }
@@ -71,8 +74,10 @@ void MapTool::Render(HDC hdc)
     RenderGrid(hdc);
     RenderColor(hdc);
     if(_pNodeMgr->_pDest != nullptr)
+    {
         RenderPath(hdc);
-    RenderPathFinderData(hdc);
+        RenderPathFinderData(hdc);
+    }
 }
 
 #define RENDER_MENU_LEN 128
@@ -140,9 +145,9 @@ void MapTool::RenderColor(HDC hdc)
             iX = j * _iGridSize;
             iY = i * _iGridSize;
 
-            switch (_pMap->GetMapState(j, i))
+            switch (_pNodeMgr->_pMap->GetMapState(j, i))
             {
-            case Map::NONE:
+            case Map::EMPTY:
                 continue;
 
             case Map::OBSTACLE:
@@ -163,6 +168,9 @@ void MapTool::RenderColor(HDC hdc)
 
             case Map::DEST:
                 SelectObject(hdc, _hDestBrush);
+                break;
+
+            default:
                 break;
             }
 
@@ -205,6 +213,20 @@ void MapTool::RenderPath(HDC hdc)
 #define RENDER_DATA_LEN 64
 void MapTool::RenderPathFinderData(HDC hdc)
 {
+    while(!_pNodeMgr->_openSet.empty())
+    {
+        Node* pNode = _pNodeMgr->_openSet.top();
+        _NodeListForDebug.push_back(pNode);
+        _pNodeMgr->_openSet.pop();
+    }
+
+    while (!_pNodeMgr->_closeSet.empty())
+    {
+        Node* pNode = _pNodeMgr->_closeSet.top();
+        _NodeListForDebug.push_back(pNode);
+        _pNodeMgr->_closeSet.pop();
+    }
+
     HFONT hOldFont = (HFONT)SelectObject(hdc, _hDataFont);
     SetTextColor(hdc, RGB(200, 200, 200));
     SetBkMode(hdc, TRANSPARENT);
@@ -212,37 +234,19 @@ void MapTool::RenderPathFinderData(HDC hdc)
     WCHAR text[RENDER_DATA_LEN];
     int iX, iY;
 
-
-    set<Node*>::iterator openIter = _pNodeMgr->_openSet.begin();
-    for (; openIter != _pNodeMgr->_openSet.end(); openIter++)
+    vector<Node*>::iterator iter = _NodeListForDebug.begin();
+    for(;iter < _NodeListForDebug.end(); iter++)
     {
-        if ((*openIter)->_pParent != nullptr)
+        if ((*iter)->_pParent != nullptr)
         {
-            iX = (*openIter)->_pos._x * _iGridSize + _iXPad;
-            iY = (*openIter)->_pos._y * _iGridSize + _iYPad;
+            iX = (*iter)->_pos._x * _iGridSize + _iXPad;
+            iY = (*iter)->_pos._y * _iGridSize + _iYPad;
             wmemset(text, L'\0', RENDER_DATA_LEN);
             swprintf_s(text, RENDER_DATA_LEN, L"(%d, %d)",
-                (*openIter)->_pParent->_pos._x, (*openIter)->_pParent->_pos._y);
+                (*iter)->_pParent->_pos._x, (*iter)->_pParent->_pos._y);
             TextOutW(hdc, iX, iY, text, wcslen(text));
         }
     }
-
-
-    map<Pos, Node*>::iterator closeIter = _pNodeMgr->_closeMap.begin();
-    for (; closeIter != _pNodeMgr->_closeMap.end(); closeIter++)
-    {
-        if (closeIter->second->_pParent != nullptr)
-        {
-            iX = closeIter->second->_pos._x * _iGridSize + _iXPad;
-            iY = closeIter->second->_pos._y * _iGridSize + _iYPad;
-            wmemset(text, L'\0', RENDER_DATA_LEN);
-            swprintf_s(text, RENDER_DATA_LEN, L"(%d, %d)",
-                closeIter->second->_pParent->_pos._x,
-                closeIter->second->_pParent->_pos._y);
-            TextOutW(hdc, iX, iY, text, wcslen(text));
-        }
-    }
-
     SelectObject(hdc, hOldFont);
 }
 

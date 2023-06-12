@@ -6,21 +6,22 @@ Map* Map::GetInstance()
 	return &_Map;
 }
 
-void Map::Initialize()
+Map::Map()
 {
-	_startPos._x = 0;
-	_startPos._y = 0;
-	_destPos._x = X_MAX - 1;
-	_destPos._y = Y_MAX - 1;
+	_startPos = Pos(0,0);
+	_destPos = Pos(X_MAX - 1, Y_MAX - 1);
 	_chMap[_startPos._y][_startPos._x] = START;
 	_chMap[_destPos._y][_destPos._x] = DEST;
 }
 
 void Map::SetMapState(int x, int y, STATE state)
 {
+	if (x < 0 || y < 0 || x >= X_MAX || y >= Y_MAX)
+		return;
+
 	switch (state)
 	{
-	case NONE:
+	case EMPTY:
 	case OBSTACLE:
 		_chMap[y][x] = state;
 		break;
@@ -32,14 +33,14 @@ void Map::SetMapState(int x, int y, STATE state)
 		break;
 
 	case START:
-		_chMap[_startPos._y][_startPos._x] = NONE;
+		_chMap[_startPos._y][_startPos._x] = EMPTY;
 		_startPos._x = x;
 		_startPos._y = y;
 		_chMap[_startPos._y][_startPos._x] = START;
 		break;
 
 	case DEST:
-		_chMap[_destPos._y][_destPos._x] = NONE;
+		_chMap[_destPos._y][_destPos._x] = EMPTY;
 		_destPos._x = x;
 		_destPos._y = y;
 		_chMap[_destPos._y][_destPos._x] = DEST;
@@ -49,13 +50,11 @@ void Map::SetMapState(int x, int y, STATE state)
 
 }
 
-bool Map::CanGo(Pos pos)
+Map::STATE Map::GetMapState(int x, int y)
 {
-	if (pos._x < 0 || pos._y < 0 || pos._x >= X_MAX || pos._y >= Y_MAX ||
-		_chMap[pos._y][pos._x] == OBSTACLE)
-	{
-		return false;
-	}
+	if (x < 0 || y < 0 || x >= X_MAX || y >= Y_MAX)
+		return RANGE_OUT;
 
-	return true;
+	return (STATE)_chMap[y][x]; 
 }
+

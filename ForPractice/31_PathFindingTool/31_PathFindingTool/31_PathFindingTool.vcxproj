@@ -140,7 +140,9 @@
     <ClInclude Include="Map.h" />
     <ClInclude Include="MapTool.h" />
     <ClInclude Include="Node.h" />
+    <ClInclude Include="NodeMgr.h" />
     <ClInclude Include="PathFindAlgorithm.h" />
+    <ClInclude Include="Pos.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="targetver.h" />
   </ItemGroup>
@@ -151,7 +153,9 @@
     <ClCompile Include="Map.cpp" />
     <ClCompile Include="MapTool.cpp" />
     <ClCompile Include="Node.cpp" />
+    <ClCompile Include="NodeMgr.cpp" />
     <ClCompile Include="PathFindAlgorithm.cpp" />
+    <ClCompile Include="Pos.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="31_PathFindingTool.rc" />
