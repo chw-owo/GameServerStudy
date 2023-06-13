@@ -7,9 +7,9 @@ public:
 	void FindPath();
 	
 private:
-	void CheckCreateNode(Node* pCurNode, DIR dir);
-	void CheckCorner(Pos curPos, DIR dir, Pos& newPos);
-	void CreateNode(Node* pCurNode, Pos newPos, DIR dir, int newG);
+	void CheckCreateNode(Node* pCurNode);
+	void CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchDir);
+	void CreateNode(Node* pCurNode, Pos newPos, DIR dir, DIR searchDir, int newG);
 	void PrintOpenListForDebug();
 
 private:

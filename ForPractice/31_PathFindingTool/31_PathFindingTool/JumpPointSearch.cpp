@@ -16,7 +16,7 @@ void JumpPointSearch::FindPath()
 	{
 		printf("\n");
 		printf("Cur Node (%d, %d)\n", _pCurNode->_pos._x, _pCurNode->_pos._y);
-		CheckCreateNode(_pCurNode, _pCurNode->_dir);
+		CheckCreateNode(_pCurNode);
 
 		if (_pNodeMgr->_openList.empty())
 		{
@@ -44,51 +44,96 @@ void JumpPointSearch::FindPath()
 	}
 }
 
-void JumpPointSearch::CheckCreateNode(Node* pCurNode, DIR dir)
+void JumpPointSearch::CheckCreateNode(Node* pCurNode)
 {
 	int newG = 0;
 	Pos newPos = Pos(0, 0);
-	
+	DIR dir = pCurNode->_dir;
+	DIR searchDir = DIR::NONE; 
+
 	switch (dir)
 	{
 	case DIR::UP:
+		CheckCorner(pCurNode->_pos, DIR::UP, newPos, searchDir);
+		newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
+		CreateNode(pCurNode, newPos, DIR::UP, searchDir, newG);
 		break;
 
 	case DIR::R:
+		CheckCorner(pCurNode->_pos, DIR::R, newPos, searchDir);
+		newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
+		CreateNode(pCurNode, newPos, DIR::R, searchDir, newG);
 		break;
 
 	case DIR::DOWN:
+		CheckCorner(pCurNode->_pos, DIR::DOWN, newPos, searchDir);
+		newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
+		CreateNode(pCurNode, newPos, DIR::DOWN, searchDir, newG);
 		break;
 
 	case DIR::L:
+		CheckCorner(pCurNode->_pos, DIR::L, newPos, searchDir);
+		newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
+		CreateNode(pCurNode, newPos, DIR::L, searchDir, newG);
 		break;
 
 	case DIR::UP_R:
+		CheckCorner(pCurNode->_pos, DIR::UP, newPos, searchDir);
+		newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
+		CreateNode(pCurNode, newPos, DIR::UP, searchDir, newG);
+
+		CheckCorner(pCurNode->_pos, DIR::R, newPos, searchDir);
+		newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
+		CreateNode(pCurNode, newPos, DIR::R, searchDir, newG);
+
 		break;
 
 	case DIR::DOWN_R:
+		CheckCorner(pCurNode->_pos, DIR::DOWN, newPos, searchDir);
+		newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
+		CreateNode(pCurNode, newPos, DIR::DOWN, searchDir, newG);
+
+		CheckCorner(pCurNode->_pos, DIR::R, newPos, searchDir);
+		newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
+		CreateNode(pCurNode, newPos, DIR::R, searchDir, newG);
 		break;
 
 	case DIR::DOWN_L:
+		CheckCorner(pCurNode->_pos, DIR::DOWN, newPos, searchDir);
+		newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
+		CreateNode(pCurNode, newPos, DIR::DOWN, searchDir, newG);
+
+		CheckCorner(pCurNode->_pos, DIR::L, newPos, searchDir);
+		newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
+		CreateNode(pCurNode, newPos, DIR::L, searchDir, newG);
+
 		break;
 
 	case DIR::UP_L:
+		CheckCorner(pCurNode->_pos, DIR::UP, newPos, searchDir);
+		newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
+		CreateNode(pCurNode, newPos, DIR::UP, searchDir, newG);
+
+		CheckCorner(pCurNode->_pos, DIR::L, newPos, searchDir);
+		newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
+		CreateNode(pCurNode, newPos, DIR::L, searchDir, newG);
+
 		break;
 
 	case DIR::NONE:
-		
+
 		for (int i = (int)DIR::UP; i < (int)DIR::NONE; i++)
 		{
-			CheckCorner(pCurNode->_pos, (DIR)i, newPos);
+			CheckCorner(pCurNode->_pos, dir, newPos, searchDir);
 			newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
-			CreateNode(pCurNode, newPos, (DIR)i, newG);
+			CreateNode(pCurNode, newPos, dir, searchDir, newG);
 		}
 
 		break;
 	}	
 }
 
-void JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos)
+void JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchDir)
 {
 	switch (dir)
 	{
@@ -556,7 +601,7 @@ void JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos)
 	
 }
 
-void JumpPointSearch::CreateNode(Node* pCurNode, Pos newPos, DIR dir, int newG)
+void JumpPointSearch::CreateNode(Node* pCurNode, Pos newPos, DIR dir, DIR searchDir, int newG)
 {
 	Map::STATE state = _pNodeMgr->_pMap->GetMapState(newPos._x, newPos._y);
 	switch (state)
@@ -570,6 +615,7 @@ void JumpPointSearch::CreateNode(Node* pCurNode, Pos newPos, DIR dir, int newG)
 			newG,
 			newPos.GetDistance(_pNodeMgr->_pMap->_destPos),
 			dir,
+			searchDir,
 			pCurNode
 		);
 
@@ -593,7 +639,7 @@ void JumpPointSearch::CreateNode(Node* pCurNode, Pos newPos, DIR dir, int newG)
 
 		if (it != _pNodeMgr->_openList.end())
 		{
-			(*it)->ResetParent(newG, dir, pCurNode);
+			(*it)->ResetParent(newG, dir, searchDir, pCurNode);
 			printf("Already Exist, Reset Parent (%d, %d) (parent: %d, %d)\n",
 				newPos._x, newPos._y, (*it)->_pParent->_pos._x, (*it)->_pParent->_pos._y);
 		}
@@ -614,7 +660,7 @@ void JumpPointSearch::CreateNode(Node* pCurNode, Pos newPos, DIR dir, int newG)
 
 		if (it != _pNodeMgr->_closeList.end())
 		{
-			(*it)->ResetParent(newG, dir, pCurNode);
+			(*it)->ResetParent(newG, dir, searchDir, pCurNode);
 			printf("Already Exist, Reset Parent (%d, %d) (parent: %d, %d)\n",
 				newPos._x, newPos._y, (*it)->_pParent->_pos._x, (*it)->_pParent->_pos._y);
 		}
