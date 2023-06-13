@@ -1,19 +1,6 @@
 #pragma once
 #include "NodeMgr.h"
 
-enum class DIR
-{
-	UP = 0,
-	R,
-	DOWN,
-	L,
-	UP_R = 4,
-	DOWN_R,
-	DOWN_L,
-	UP_L,
-	END = 8
-};
-
 class PathFindAlgorithm
 {
 public:
@@ -26,7 +13,7 @@ public:
 	virtual void FindPath() = 0;
 
 protected:
-	Pos _direction[(int)DIR::END] =
+	Pos _direction[(int)DIR::NONE] =
 	{
 		Pos (0, -1),
 		Pos (1, 0),

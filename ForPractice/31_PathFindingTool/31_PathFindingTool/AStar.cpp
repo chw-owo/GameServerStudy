@@ -204,11 +204,6 @@ void AStar::CreateNode(Node* pCurNode)
 	}
 }
 
-bool AStar::CompareG::operator()(Node*& pNode) const
-{ 
-	return (pNode->_pos == pos && pNode->_g > g); 
-}
-
 void AStar::PrintOpenListForDebug()
 {
 	printf("\n=====================================\n");
@@ -228,5 +223,10 @@ void AStar::PrintOpenListForDebug()
 		_pCurNode->_f);
 
 	printf("\n=====================================\n");
+}
+
+bool AStar::CompareG::operator()(Node*& pNode) const
+{
+	return (pNode->_pos == pos && pNode->_g > g);
 }
 

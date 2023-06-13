@@ -19,7 +19,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     WNDCLASSEXW wcex;
 
     g_pMapTool = new MapTool;
-    g_pPathFindTool = new AStar;
+    g_pPathFindTool = new JumpPointSearch;
 
     wcex.cbSize = sizeof(WNDCLASSEX);
 

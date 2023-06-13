@@ -5,5 +5,4 @@
 #include <iostream>
 
 #include "MapTool.h"
-#include "AStar.h"
-//#include "JumpPointSearch.h"
+#include "JumpPointSearch.h"

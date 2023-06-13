@@ -28,6 +28,8 @@ public:
 public:
 	void SetMapState(int x, int y, STATE state);
 	STATE GetMapState(int x, int y);
+	void SetMapState(Pos pos, STATE state);
+	STATE GetMapState(Pos pos);
 	void ClearOpenCloseState();
 
 public:

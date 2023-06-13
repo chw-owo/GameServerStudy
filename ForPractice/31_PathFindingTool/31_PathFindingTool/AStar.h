@@ -5,6 +5,8 @@ class AStar : public PathFindAlgorithm
 {
 public:
 	void FindPath();
+
+private:
 	void CreateNode(Node* pCurNode);
 	void PrintOpenListForDebug();
 
@@ -20,7 +22,5 @@ private:
 private:
 	CompareF compareF;
 	CompareG compareG;
-
-
 };
 
