@@ -1,15 +1,9 @@
 #include "NodeMgr.h"
+#include <algorithm>
 
-bool cmp::operator() (Node* const left, Node* const right) const
+bool CompareF::operator() (Node* const left, Node* const right) const
 {
-	if (left->_f != right->_f)
-	{
-		return left->_f > right->_f;
-	}
-	else
-	{
-		return (__int64)left > (__int64)right;
-	}
+	return left->_f > right->_f;
 }
 
 NodeMgr::NodeMgr()
@@ -23,21 +17,26 @@ NodeMgr* NodeMgr::GetInstance()
 	return &_NodeMgr;
 }
 
-void NodeMgr::SetStartDestNode()
+void NodeMgr::SetData()
 {
-	_pDest = nullptr;
+	_pMap->ClearOpenCloseState();
 
-	if (_pStart == nullptr)
+	while (!_openList.empty())
 	{
-		printf("create start node (%d, %d)\n", _pMap->_startPos._x, _pMap->_startPos._y);
-		_pStart = new Node(_pMap->_startPos, 0, _pMap->_startPos.GetDistance(_pMap->_destPos));
+		Node* pNode = _openList.back();
+		delete pNode;
+		_openList.pop_back();
 	}
-	else
+
+	while (!_closeList.empty())
 	{
-		printf("reset start node (%d, %d)\n", _pMap->_startPos._x, _pMap->_startPos._y);
-		_pStart->SetData(_pMap->_startPos, 0, _pMap->_startPos.GetDistance(_pMap->_destPos));
+		Node* pNode = _closeList.back();
+		delete pNode;
+		_closeList.pop_back();
 	}
-	
-	_openSet.push(_pStart);
+
+	_pDest = nullptr;
+	_pStart = new Node(_pMap->_startPos, 0, _pMap->_startPos.GetDistance(_pMap->_destPos));
+	printf("\ncreate start node (%d, %d)\n", _pStart->_pos._x, _pStart->_pos._y);
 }
 

@@ -1,6 +1,13 @@
 #include "Pos.h"
 #include <cmath>
 
+Pos& Pos::operator=(const Pos& other)
+{
+	_x = other._x;
+	_y = other._y;
+	return *this;
+}
+
 bool Pos::operator < (const Pos& other) const
 {
 	if (_x != other._x)
@@ -17,7 +24,8 @@ bool Pos::operator > (const Pos& other) const
 		return (_y > other._y);
 }
 
-double Pos::GetDistance(Pos destPos)
+int Pos::GetDistance(Pos destPos)
 {
-	return sqrt(pow(destPos._x - _x, 2) + pow(destPos._y - _y, 2));
+	return (int)((pow(destPos._x - _x, 2) + pow(destPos._y - _y, 2)) * 10); 	
 }
+

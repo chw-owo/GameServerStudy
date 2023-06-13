@@ -150,7 +150,6 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
         case VK_RETURN:
             g_pPathFindTool->StartFindPath();
-            g_pMapTool->ClearMapToolData();
             InvalidateRect(hWnd, NULL, false);
             break;
 

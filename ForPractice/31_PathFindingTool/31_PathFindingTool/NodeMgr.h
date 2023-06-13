@@ -1,11 +1,12 @@
 #pragma once
 #include "Node.h"
 #include "Map.h"
-#include <queue>
+#include <vector>
 using namespace std;
 
-struct cmp
+class CompareF
 {
+public:
 	bool operator() (Node* const left, Node* const right) const;
 };
 
@@ -16,8 +17,8 @@ private:
 
 public:
 	static NodeMgr* GetInstance();
-	void SetStartDestNode();
-
+	void SetData();
+	
 private:
 	static NodeMgr _NodeMgr;
 
@@ -25,7 +26,7 @@ public:
 	Map* _pMap;
 	Node* _pStart = nullptr;
 	Node* _pDest = nullptr;
-	priority_queue<Node*, vector<Node*>, cmp> _openSet;
-	priority_queue<Node*, vector<Node*>, cmp> _closeSet;
+	vector<Node*> _openList;
+	vector<Node*> _closeList;
 };
 

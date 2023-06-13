@@ -5,30 +5,26 @@ MapTool::MapTool()
 {
     srand(unsigned short(200));
     _pNodeMgr = NodeMgr::GetInstance();
-   
-    _hGridPen = CreatePen(PS_SOLID, 1, RGB(200, 200, 200)); // Black
-    _hPathPen = CreatePen(PS_SOLID, 2, RGB(255, 0, 0));     // Red
 
     _hMenuFont = CreateFont(20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         VARIABLE_PITCH | FF_ROMAN, TEXT("Arial"));
-    _hDataFont = CreateFont(10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    _hDataFont = CreateFont(12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         VARIABLE_PITCH | FF_ROMAN, TEXT("Arial"));
 
-    _hObstacleBrush = CreateSolidBrush(RGB(100, 100, 100)); // Gray
-    _hOpenBrush = CreateSolidBrush(RGB(0, 0, 255));         // Blue
-    _hCloseBrush = CreateSolidBrush(RGB(255, 255, 0));      // Yellow
-    _hStartBrush = CreateSolidBrush(RGB(255, 0, 0));        // Red
-    _hDestBrush = CreateSolidBrush(RGB(0, 255, 0));         // Green
+    _hGridPen = CreatePen(PS_SOLID, 1, RGB(200, 200, 200));     // Black
+    _hPathPen = CreatePen(PS_SOLID, 3, RGB(255, 0, 0));         // Red
+    _hParentPen = CreatePen(PS_SOLID, 1, RGB(180, 0, 0));       // Dark Red
+
+    _hObstacleBrush = CreateSolidBrush(RGB(100, 100, 100));     // Gray
+    _hOpenBrush = CreateSolidBrush(RGB(0, 0, 255));             // Blue
+    _hCloseBrush = CreateSolidBrush(RGB(255, 255, 0));          // Yellow
+    _hStartBrush = CreateSolidBrush(RGB(255, 0, 0));            // Red
+    _hDestBrush = CreateSolidBrush(RGB(0, 255, 0));             // Green
 }
 
 MapTool::~MapTool()
 {
 
-}
-
-void MapTool::ClearMapToolData()
-{
-    _NodeListForDebug.clear();
 }
 
 void MapTool::Draw(int xPos, int yPos)
@@ -52,7 +48,8 @@ void MapTool::Draw(int xPos, int yPos)
     }
     else if (_bErase)
     {
-        _pNodeMgr->_pMap->SetMapState(iTileX, iTileY, Map::EMPTY);
+        if(_pNodeMgr->_pMap->GetMapState(iTileX, iTileY) == Map::OBSTACLE)
+            _pNodeMgr->_pMap->SetMapState(iTileX, iTileY, Map::EMPTY);
     }
 }
 
@@ -73,11 +70,18 @@ void MapTool::Render(HDC hdc)
     RenderMenu(hdc);
     RenderGrid(hdc);
     RenderColor(hdc);
-    if(_pNodeMgr->_pDest != nullptr)
+   
+    if (_iGridSize >= 32)
+    {
+        RenderNodeInfo(hdc);
+    }
+
+    if (_pNodeMgr->_pDest != nullptr)
     {
         RenderPath(hdc);
-        RenderPathFinderData(hdc);
     }
+
+    RenderParent(hdc);
 }
 
 #define RENDER_MENU_LEN 128
@@ -183,6 +187,69 @@ void MapTool::RenderColor(HDC hdc)
     SelectObject(hdc, hOldBrush);
 }
 
+void MapTool::RenderParent(HDC hdc)
+{
+    HPEN hOldPen = (HPEN)SelectObject(hdc, _hParentPen);
+
+    int iX = 0;
+    int iY = 0;
+    Node* pNode = nullptr;
+    Node* pParent = nullptr;
+    int nodeCnt = _pNodeMgr->_openList.size();
+
+    for (int i = 0; i < nodeCnt; i++)
+    {
+        if (_pNodeMgr->_openList[i]->_pParent != nullptr)
+        {
+            pNode = _pNodeMgr->_openList[i];
+            iX = (pNode->_pos._x + 0.5f) * _iGridSize + _iXPad;
+            iY = (pNode->_pos._y + 0.5f) * _iGridSize + _iYPad;
+            MoveToEx(hdc, iX, iY, NULL);
+
+            pParent = pNode->_pParent;
+
+            if(pNode->_pos._x - pParent->_pos._x > 0)
+                iX = (pParent->_pos._x + 1) * _iGridSize + _iXPad;
+            else if (pNode->_pos._x - pParent->_pos._x < 0)
+                iX = pParent->_pos._x * _iGridSize + _iXPad;
+
+            if (pNode->_pos._y - pParent->_pos._y > 0)
+                iY = (pParent->_pos._y + 1) * _iGridSize + _iYPad;
+            else if (pNode->_pos._y - pParent->_pos._y < 0)
+                iY = pParent->_pos._y * _iGridSize + _iYPad;
+
+            LineTo(hdc, iX, iY);
+        }
+    }
+
+    nodeCnt = _pNodeMgr->_closeList.size();
+    for (int i = 0; i < nodeCnt; i++)
+    {
+        if (_pNodeMgr->_closeList[i]->_pParent != nullptr)
+        {
+            pNode = _pNodeMgr->_closeList[i];
+            iX = (pNode->_pos._x + 0.5f) * _iGridSize + _iXPad;
+            iY = (pNode->_pos._y + 0.5f) * _iGridSize + _iYPad;
+            MoveToEx(hdc, iX, iY, NULL);
+
+            pParent = pNode->_pParent;
+
+            if (pNode->_pos._x - pParent->_pos._x > 0)
+                iX = (pParent->_pos._x + 1) * _iGridSize + _iXPad;
+            else if (pNode->_pos._x - pParent->_pos._x < 0)
+                iX = pParent->_pos._x * _iGridSize + _iXPad;
+
+            if (pNode->_pos._y - pParent->_pos._y > 0)
+                iY = (pParent->_pos._y + 1) * _iGridSize + _iYPad;
+            else if (pNode->_pos._y - pParent->_pos._y < 0)
+                iY = pParent->_pos._y * _iGridSize + _iYPad;
+
+            LineTo(hdc, iX, iY);
+        }
+    }
+
+    SelectObject(hdc, hOldPen);
+}
 
 void MapTool::RenderPath(HDC hdc)
 {
@@ -196,14 +263,11 @@ void MapTool::RenderPath(HDC hdc)
     {
         x = (pNode->_pos._x + 0.5f) * _iGridSize + _iXPad;
         y = (pNode->_pos._y + 0.5f) * _iGridSize + _iYPad;
-
         MoveToEx(hdc, x, y, NULL);
 
         pNode = pNode->_pParent;
-
         x = (pNode->_pos._x + 0.5f) * _iGridSize + _iXPad;
         y = (pNode->_pos._y + 0.5f) * _iGridSize + _iYPad;
-
         LineTo(hdc, x, y);
     }
 
@@ -211,42 +275,65 @@ void MapTool::RenderPath(HDC hdc)
 }
 
 #define RENDER_DATA_LEN 64
-void MapTool::RenderPathFinderData(HDC hdc)
+void MapTool::RenderNodeInfo(HDC hdc)
 {
-    while(!_pNodeMgr->_openSet.empty())
-    {
-        Node* pNode = _pNodeMgr->_openSet.top();
-        _NodeListForDebug.push_back(pNode);
-        _pNodeMgr->_openSet.pop();
-    }
-
-    while (!_pNodeMgr->_closeSet.empty())
-    {
-        Node* pNode = _pNodeMgr->_closeSet.top();
-        _NodeListForDebug.push_back(pNode);
-        _pNodeMgr->_closeSet.pop();
-    }
+    int iX = 0;
+    int iY = 0;
+    Node* pNode = nullptr;
 
     HFONT hOldFont = (HFONT)SelectObject(hdc, _hDataFont);
     SetTextColor(hdc, RGB(200, 200, 200));
     SetBkMode(hdc, TRANSPARENT);
-
     WCHAR text[RENDER_DATA_LEN];
-    int iX, iY;
 
-    vector<Node*>::iterator iter = _NodeListForDebug.begin();
-    for(;iter < _NodeListForDebug.end(); iter++)
+    int nodeCnt = _pNodeMgr->_openList.size();
+    for(int i = 0; i < nodeCnt; i++)
     {
-        if ((*iter)->_pParent != nullptr)
+        if (_pNodeMgr->_openList[i]->_pParent != nullptr)
         {
-            iX = (*iter)->_pos._x * _iGridSize + _iXPad;
-            iY = (*iter)->_pos._y * _iGridSize + _iYPad;
+            pNode = _pNodeMgr->_openList[i];
+            iX = pNode->_pos._x * _iGridSize + _iXPad;
+            iY = pNode->_pos._y * _iGridSize + _iYPad;
             wmemset(text, L'\0', RENDER_DATA_LEN);
-            swprintf_s(text, RENDER_DATA_LEN, L"(%d, %d)",
-                (*iter)->_pParent->_pos._x, (*iter)->_pParent->_pos._y);
+            swprintf_s(text, RENDER_DATA_LEN, L"%d", pNode->_g);
+            TextOutW(hdc, iX, iY, text, wcslen(text));
+
+            iY = pNode->_pos._y * _iGridSize + _iYPad + (_iGridSize * 1 / 3);
+            wmemset(text, L'\0', RENDER_DATA_LEN);
+            swprintf_s(text, RENDER_DATA_LEN, L"%d", pNode->_h);
+            TextOutW(hdc, iX, iY, text, wcslen(text));
+
+            iY = pNode->_pos._y * _iGridSize + _iYPad + (_iGridSize * 2 / 3);
+            wmemset(text, L'\0', RENDER_DATA_LEN);
+            swprintf_s(text, RENDER_DATA_LEN, L"%d", pNode->_f);
             TextOutW(hdc, iX, iY, text, wcslen(text));
         }
     }
+
+    nodeCnt = _pNodeMgr->_closeList.size();
+    for (int i = 0; i < nodeCnt; i++)
+    {
+        if (_pNodeMgr->_closeList[i]->_pParent != nullptr)
+        {
+            pNode = _pNodeMgr->_closeList[i];
+            iX = pNode->_pos._x * _iGridSize + _iXPad;
+            iY = pNode->_pos._y * _iGridSize + _iYPad;
+            wmemset(text, L'\0', RENDER_DATA_LEN);
+            swprintf_s(text, RENDER_DATA_LEN, L"%d", pNode->_g);
+            TextOutW(hdc, iX, iY, text, wcslen(text));
+
+            iY = pNode->_pos._y * _iGridSize + _iYPad + (_iGridSize * 1 / 3);
+            wmemset(text, L'\0', RENDER_DATA_LEN);
+            swprintf_s(text, RENDER_DATA_LEN, L"%d", pNode->_h);
+            TextOutW(hdc, iX, iY, text, wcslen(text));
+
+            iY = pNode->_pos._y * _iGridSize + _iYPad + (_iGridSize * 2 / 3);
+            wmemset(text, L'\0', RENDER_DATA_LEN);
+            swprintf_s(text, RENDER_DATA_LEN, L"%d", pNode->_f);
+            TextOutW(hdc, iX, iY, text, wcslen(text));
+        }
+    }
+
     SelectObject(hdc, hOldFont);
 }
 

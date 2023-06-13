@@ -4,13 +4,13 @@
 struct Node
 {
 public:
-	Node(Pos pos, double g, double h, Node* pParent = nullptr)
+	Node(Pos pos, int g, int h, Node* pParent = nullptr)
 		: _pos(pos), _g(g), _h(h), _f(g + h), _pParent(pParent) {}
 	~Node() {}
 
 public:
-	void SetData(Pos pos, double g, double h, Node* pParent = nullptr);
-	void ResetParent(double g, Node* pParent);
+	void SetData(Pos pos, int g, int h, Node* pParent = nullptr);
+	void ResetParent(int g, Node* pParent);
 
 public:
 	bool operator==(const Node& other) { return _f == other._f; }
@@ -22,9 +22,10 @@ public:
 
 public:
 	Pos _pos;
-	double _g;
-	double _h;
-	double _f;
+	int _g;
+	int _h;
+	int _f;
 	Node* _pParent;
+
 };
 

@@ -1,4 +1,5 @@
 #include "Map.h"
+#include <stdio.h>
 
 Map* Map::GetInstance()
 {
@@ -56,5 +57,19 @@ Map::STATE Map::GetMapState(int x, int y)
 		return RANGE_OUT;
 
 	return (STATE)_chMap[y][x]; 
+}
+
+void Map::ClearOpenCloseState()
+{
+	for (int y = 0; y < Y_MAX; y++)
+	{
+		for (int x = 0; x < X_MAX; x++)
+		{
+			if ((STATE)_chMap[y][x] == OPEN || (STATE)_chMap[y][x] == CLOSE)
+			{
+				_chMap[y][x] = EMPTY;
+			}
+		}
+	}
 }
 

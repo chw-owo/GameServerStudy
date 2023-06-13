@@ -1,8 +1,7 @@
 #pragma once
 #include "NodeMgr.h"
 #include <windows.h>
-#include <vector>
-using namespace std;
+
 
 #define MOVESPEED 10
 #define DEFAULT_X_PAD 100
@@ -16,9 +15,6 @@ public:
 	~MapTool();
 
 public:
-	void ClearMapToolData();
-
-public:
 	void Draw(int xPos, int yPos);
 	void DrawRandom();
 	void Render(HDC hdc);
@@ -27,8 +23,9 @@ private:
 	void RenderMenu(HDC hdc);
 	void RenderGrid(HDC hdc);
 	void RenderColor(HDC hdc);
+	void RenderParent(HDC hdc);
 	void RenderPath(HDC hdc);
-	void RenderPathFinderData(HDC hdc);
+	void RenderNodeInfo(HDC hdc);
 
 public:
 	void MoveRight() { _iXPad -= MOVESPEED; }
@@ -48,10 +45,12 @@ private:
 	int _iGridSize = DEFAULT_GRID_SIZE;
 
 private:
-	HPEN _hGridPen;
-	HPEN _hPathPen;
 	HFONT _hMenuFont;
 	HFONT _hDataFont;
+	HPEN _hGridPen;
+	HPEN _hPathPen;
+	HPEN _hParentPen;
+
 	HBRUSH _hObstacleBrush;
 	HBRUSH _hOpenBrush;
 	HBRUSH _hCloseBrush;
@@ -66,8 +65,5 @@ private:
 
 private:
 	NodeMgr* _pNodeMgr = nullptr;
-
-private:
-	vector<Node*> _NodeListForDebug;
 };
 
