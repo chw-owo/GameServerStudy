@@ -49,7 +49,7 @@ void MapTool::Draw(int xPos, int yPos)
     else if (_bErase)
     {
         if(_pNodeMgr->_pMap->GetMapState(iTileX, iTileY) == Map::OBSTACLE)
-            _pNodeMgr->_pMap->SetMapState(iTileX, iTileY, Map::EMPTY);
+            _pNodeMgr->_pMap->SetMapState(iTileX, iTileY, Map::NONE);
     }
 }
 
@@ -151,7 +151,7 @@ void MapTool::RenderColor(HDC hdc)
 
             switch (_pNodeMgr->_pMap->GetMapState(j, i))
             {
-            case Map::EMPTY:
+            case Map::NONE:
                 continue;
 
             case Map::OBSTACLE:

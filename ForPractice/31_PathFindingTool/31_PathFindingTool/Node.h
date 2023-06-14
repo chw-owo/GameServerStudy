@@ -11,7 +11,11 @@ enum class DIR
 	DOWN_R,
 	DOWN_L,
 	UP_L,
-	NONE = 8
+	NONE = 8,
+
+	// For Search Node
+	R_L,
+	UP_DOWN
 };
 
 struct Node

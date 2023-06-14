@@ -22,7 +22,7 @@ void Map::SetMapState(int x, int y, STATE state)
 
 	switch (state)
 	{
-	case EMPTY:
+	case NONE:
 	case OBSTACLE:
 		_chMap[y][x] = state;
 		break;
@@ -34,14 +34,14 @@ void Map::SetMapState(int x, int y, STATE state)
 		break;
 
 	case START:
-		_chMap[_startPos._y][_startPos._x] = EMPTY;
+		_chMap[_startPos._y][_startPos._x] = NONE;
 		_startPos._x = x;
 		_startPos._y = y;
 		_chMap[_startPos._y][_startPos._x] = START;
 		break;
 
 	case DEST:
-		_chMap[_destPos._y][_destPos._x] = EMPTY;
+		_chMap[_destPos._y][_destPos._x] = NONE;
 		_destPos._x = x;
 		_destPos._y = y;
 		_chMap[_destPos._y][_destPos._x] = DEST;
@@ -69,7 +69,7 @@ void Map::SetMapState(Pos pos, STATE state)
 
 	switch (state)
 	{
-	case EMPTY:
+	case NONE:
 	case OBSTACLE:
 		_chMap[y][x] = state;
 		break;
@@ -81,14 +81,14 @@ void Map::SetMapState(Pos pos, STATE state)
 		break;
 
 	case START:
-		_chMap[_startPos._y][_startPos._x] = EMPTY;
+		_chMap[_startPos._y][_startPos._x] = NONE;
 		_startPos._x = x;
 		_startPos._y = y;
 		_chMap[_startPos._y][_startPos._x] = START;
 		break;
 
 	case DEST:
-		_chMap[_destPos._y][_destPos._x] = EMPTY;
+		_chMap[_destPos._y][_destPos._x] = NONE;
 		_destPos._x = x;
 		_destPos._y = y;
 		_chMap[_destPos._y][_destPos._x] = DEST;
@@ -118,7 +118,7 @@ void Map::ClearOpenCloseState()
 		{
 			if ((STATE)_chMap[y][x] == OPEN || (STATE)_chMap[y][x] == CLOSE)
 			{
-				_chMap[y][x] = EMPTY;
+				_chMap[y][x] = NONE;
 			}
 		}
 	}

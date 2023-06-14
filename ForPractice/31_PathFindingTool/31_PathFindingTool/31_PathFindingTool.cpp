@@ -115,6 +115,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_KEYDOWN:
         switch (wParam)
         {
+        case 0x51: // Key Q (For Debug)
+            //g_pPathFindTool->_bOn = true;
+            break;
+
         case 0x41: // Key A
             g_pMapTool->SelectStart(true);
             break;

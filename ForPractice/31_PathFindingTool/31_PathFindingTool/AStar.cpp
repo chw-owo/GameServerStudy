@@ -55,7 +55,7 @@ void AStar::CreateNode(Node* pCurNode)
 
 		switch (state)
 		{
-		case Map::EMPTY:
+		case Map::NONE:
 		case Map::START:
 		case Map::DEST:
 		{
@@ -132,7 +132,7 @@ void AStar::CreateNode(Node* pCurNode)
 		Map::STATE state = _pNodeMgr->_pMap->GetMapState(newPos._x, newPos._y);
 		switch (state)
 		{
-		case Map::EMPTY:
+		case Map::NONE:
 		case Map::START:
 		case Map::DEST:
 		{

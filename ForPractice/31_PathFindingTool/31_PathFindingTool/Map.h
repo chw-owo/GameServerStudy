@@ -16,7 +16,7 @@ public:
 public:
 	enum STATE
 	{
-		EMPTY = 0,
+		NONE = 0,
 		OBSTACLE,
 		OPEN,
 		CLOSE,
@@ -35,7 +35,7 @@ public:
 public:
 	Pos _startPos;
 	Pos _destPos;
-	char _chMap[Y_MAX][X_MAX] = { STATE::EMPTY, };
+	char _chMap[Y_MAX][X_MAX] = { STATE::NONE, };
 
 private:
 	static Map _Map;
