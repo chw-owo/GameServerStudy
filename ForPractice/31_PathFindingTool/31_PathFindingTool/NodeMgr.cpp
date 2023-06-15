@@ -37,6 +37,8 @@ void NodeMgr::SetData()
 
 	_pDest = nullptr;
 	_pStart = new Node(_pMap->_startPos, 0, _pMap->_startPos.GetDistance(_pMap->_destPos));
+	_pCurNode = _pStart;
+
 	printf("\ncreate start node (%d, %d)\n", _pStart->_pos._x, _pStart->_pos._y);
 }
 

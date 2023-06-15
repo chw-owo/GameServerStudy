@@ -7,30 +7,28 @@ using namespace std;
 
 void AStar::FindPath()
 {
-	if (!_bOn) return;
+	if (!_bFindPathOn) return;
 
-	if(_pCurNode == nullptr)
-		_pCurNode = _pNodeMgr->_pStart;
-
-	if (_pCurNode->_pos != _pNodeMgr->_pMap->_destPos)
+	if (_pNodeMgr->_pCurNode->_pos != _pNodeMgr->_pMap->_destPos)
 	{
 		printf("\n");
-		printf("Cur Node (%d, %d)\n", _pCurNode->_pos._x, _pCurNode->_pos._y);
-		CreateNode(_pCurNode);
+		printf("Cur Node (%d, %d)\n", 
+			_pNodeMgr->_pCurNode->_pos._x, _pNodeMgr->_pCurNode->_pos._y);
+		CreateNode(_pNodeMgr->_pCurNode);
 
 		if (_pNodeMgr->_openList.empty())
 		{
 			printf("Can't Find Path!\n");
-			_bOn = false;
-			_pCurNode = nullptr;
+			_bFindPathOn = false;
 			return;
 		}
 
-		_pNodeMgr->_closeList.push_back(_pCurNode);
-		_pNodeMgr->_pMap->SetMapState(_pCurNode->_pos._x, _pCurNode->_pos._y, Map::CLOSE);
+		_pNodeMgr->_closeList.push_back(_pNodeMgr->_pCurNode);
+		_pNodeMgr->_pMap->SetMapState(
+			_pNodeMgr->_pCurNode->_pos._x, _pNodeMgr->_pCurNode->_pos._y, Map::CLOSE);
 
 		make_heap(_pNodeMgr->_openList.begin(), _pNodeMgr->_openList.end(), compareF);
-		_pCurNode = _pNodeMgr->_openList.front();
+		_pNodeMgr->_pCurNode = _pNodeMgr->_openList.front();
 		//PrintOpenListForDebug();
 		pop_heap(_pNodeMgr->_openList.begin(), _pNodeMgr->_openList.end());
 		_pNodeMgr->_openList.pop_back();
@@ -38,9 +36,48 @@ void AStar::FindPath()
 	else
 	{
 		printf("Complete Find Path\n=================================\n");
-		_bOn = false;
-		_pNodeMgr->_pDest = _pCurNode;
-		_pCurNode = nullptr;
+		_pNodeMgr->_pDest = _pNodeMgr->_pCurNode;
+		_bFindPathOn = false;
+	}
+}
+
+void AStar::FindPathStepInto()
+{
+	if (!_bFindPathStepOn)
+	{
+		_pNodeMgr->SetData();
+		_bFindPathStepOn = true;
+	}
+
+	if (_pNodeMgr->_pCurNode->_pos != _pNodeMgr->_pMap->_destPos)
+	{
+		printf("\n");
+		printf("Cur Node (%d, %d)\n", 
+			_pNodeMgr->_pCurNode->_pos._x, _pNodeMgr->_pCurNode->_pos._y);
+		CreateNode(_pNodeMgr->_pCurNode);
+
+		if (_pNodeMgr->_openList.empty())
+		{
+			printf("Can't Find Path!\n");
+			_bFindPathStepOn = false;
+			return;
+		}
+
+		_pNodeMgr->_closeList.push_back(_pNodeMgr->_pCurNode);
+		_pNodeMgr->_pMap->SetMapState(
+			_pNodeMgr->_pCurNode->_pos._x, _pNodeMgr->_pCurNode->_pos._y, Map::CLOSE);
+
+		make_heap(_pNodeMgr->_openList.begin(), _pNodeMgr->_openList.end(), compareF);
+		_pNodeMgr->_pCurNode = _pNodeMgr->_openList.front();
+		//PrintOpenListForDebug();
+		pop_heap(_pNodeMgr->_openList.begin(), _pNodeMgr->_openList.end());
+		_pNodeMgr->_openList.pop_back();
+	}
+	else
+	{
+		printf("Complete Find Path\n=================================\n");
+		_pNodeMgr->_pDest = _pNodeMgr->_pCurNode;
+		_bFindPathStepOn = false;
 	}
 }
 
@@ -218,9 +255,9 @@ void AStar::PrintOpenListForDebug()
 	}
 
 	printf("\nCurNode : (%d, %d), %d\n",
-		_pCurNode->_pos._x,
-		_pCurNode->_pos._y,
-		_pCurNode->_f);
+		_pNodeMgr->_pCurNode->_pos._x,
+		_pNodeMgr->_pCurNode->_pos._y,
+		_pNodeMgr->_pCurNode->_f);
 
 	printf("\n=====================================\n");
 }

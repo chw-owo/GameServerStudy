@@ -19,6 +19,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     WNDCLASSEXW wcex;
 
     g_pMapTool = new MapTool;
+    //g_pPathFindTool = new AStar;
     g_pPathFindTool = new JumpPointSearch;
 
     wcex.cbSize = sizeof(WNDCLASSEX);
@@ -52,8 +53,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
 
     while (GetMessage(&msg, nullptr, 0, 0))
     {
-        if (g_pPathFindTool->GetOn())
+        if (g_pPathFindTool->GetFindPathOn())
+        {
             g_pPathFindTool->FindPath();
+            InvalidateRect(hWnd, NULL, false);
+        }
 
         TranslateMessage(&msg);
         DispatchMessage(&msg);
@@ -115,8 +119,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_KEYDOWN:
         switch (wParam)
         {
-        case 0x51: // Key Q (For Debug)
-            //g_pPathFindTool->_bOn = true;
+        case 0x51: // Key Q
+            g_pMapTool->DrawRandom();
+            InvalidateRect(hWnd, NULL, false);
+            break;
+
+        case 0x57: // Key W
+            g_pMapTool->ClearMap();
+            InvalidateRect(hWnd, NULL, false);
             break;
 
         case 0x41: // Key A
@@ -125,6 +135,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
         case 0x53: // Key S
             g_pMapTool->SelectDest(true);
+            break;
+
+        case VK_BACK:
+            system("cls");
             break;
 
         case VK_UP:
@@ -148,7 +162,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             break;
 
         case VK_SPACE:
-            g_pMapTool->DrawRandom();
+            g_pPathFindTool->FindPathStepInto();
             InvalidateRect(hWnd, NULL, false);
             break;
 

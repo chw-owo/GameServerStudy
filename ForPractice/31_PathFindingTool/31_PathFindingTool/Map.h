@@ -22,16 +22,17 @@ public:
 		CLOSE,
 		START,
 		DEST,
+		DIAG_CUZ,
 		RANGE_OUT
 	};
 
 public:
+	void ClearOpenCloseState();
 	void SetMapState(int x, int y, STATE state);
 	STATE GetMapState(int x, int y);
 	void SetMapState(Pos pos, STATE state);
 	STATE GetMapState(Pos pos);
-	void ClearOpenCloseState();
-
+	
 public:
 	Pos _startPos;
 	Pos _destPos;

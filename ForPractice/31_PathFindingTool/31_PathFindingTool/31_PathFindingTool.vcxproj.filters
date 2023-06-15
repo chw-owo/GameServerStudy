@@ -5,9 +5,6 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
-    <Filter Include="Main">
-      <UniqueIdentifier>{4293198c-9c25-44b3-909a-5f5342c8d834}</UniqueIdentifier>
-    </Filter>
     <Filter Include="PathFindAlgorithm">
       <UniqueIdentifier>{ce90abfb-6ab3-4d01-a978-d6962d24993e}</UniqueIdentifier>
     </Filter>
@@ -22,6 +19,9 @@
     </Filter>
     <Filter Include="BasicUnit">
       <UniqueIdentifier>{d86a801a-fc43-4d88-986b-1ff17fd6e4af}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Main">
+      <UniqueIdentifier>{4293198c-9c25-44b3-909a-5f5342c8d834}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>

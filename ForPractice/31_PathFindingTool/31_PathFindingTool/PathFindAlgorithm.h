@@ -8,9 +8,10 @@ public:
 	~PathFindAlgorithm() {}
 
 public:
-	bool GetOn() { return _bOn; }
+	bool GetFindPathOn() { return _bFindPathOn; }
 	void StartFindPath();
 	virtual void FindPath() = 0;
+	virtual void FindPathStepInto() = 0;
 
 protected:
 	Pos _direction[(int)DIR::NONE] =
@@ -27,9 +28,9 @@ protected:
 	};
 
 public:
-	bool _bOn = false;
+	bool _bFindPathOn = false;
+	bool _bFindPathStepOn = false;
 
 protected:
-	Node* _pCurNode = nullptr;
 	NodeMgr* _pNodeMgr = nullptr;
 };

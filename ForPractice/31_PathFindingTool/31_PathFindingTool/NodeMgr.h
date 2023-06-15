@@ -24,6 +24,7 @@ private:
 
 public:
 	Map* _pMap;
+	Node* _pCurNode = nullptr;
 	Node* _pStart = nullptr;
 	Node* _pDest = nullptr;
 	vector<Node*> _openList;

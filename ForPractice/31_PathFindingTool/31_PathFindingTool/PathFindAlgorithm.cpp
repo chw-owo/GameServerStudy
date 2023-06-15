@@ -7,8 +7,9 @@ PathFindAlgorithm::PathFindAlgorithm()
 
 void PathFindAlgorithm::StartFindPath()
 {
-	_bOn = true;
 	_pNodeMgr->SetData();
+	_bFindPathStepOn = false;
+	_bFindPathOn = true;
 }
 
 

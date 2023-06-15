@@ -5,7 +5,7 @@
 
 #define MOVESPEED 10
 #define DEFAULT_X_PAD 100
-#define DEFAULT_Y_PAD 60
+#define DEFAULT_Y_PAD 80
 #define DEFAULT_GRID_SIZE 8
 
 class MapTool
@@ -17,6 +17,7 @@ public:
 public:
 	void Draw(int xPos, int yPos);
 	void DrawRandom();
+	void ClearMap();
 	void Render(HDC hdc);
 
 private:
@@ -56,6 +57,7 @@ private:
 	HBRUSH _hCloseBrush;
 	HBRUSH _hStartBrush;
 	HBRUSH _hDestBrush;
+	HBRUSH _hDiagCuzBrush;
 
 private:
 	bool _bDraw = false;

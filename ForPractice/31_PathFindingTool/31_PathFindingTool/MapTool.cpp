@@ -20,6 +20,7 @@ MapTool::MapTool()
     _hCloseBrush = CreateSolidBrush(RGB(255, 255, 0));          // Yellow
     _hStartBrush = CreateSolidBrush(RGB(255, 0, 0));            // Red
     _hDestBrush = CreateSolidBrush(RGB(0, 255, 0));             // Green
+    _hDiagCuzBrush = CreateSolidBrush(RGB(155, 255, 255));      // Mint
 }
 
 MapTool::~MapTool()
@@ -48,7 +49,7 @@ void MapTool::Draw(int xPos, int yPos)
     }
     else if (_bErase)
     {
-        if(_pNodeMgr->_pMap->GetMapState(iTileX, iTileY) == Map::OBSTACLE)
+        if (_pNodeMgr->_pMap->GetMapState(iTileX, iTileY) == Map::OBSTACLE)
             _pNodeMgr->_pMap->SetMapState(iTileX, iTileY, Map::NONE);
     }
 }
@@ -64,6 +65,16 @@ void MapTool::DrawRandom()
     }
 }
 
+void MapTool::ClearMap()
+{
+    for (int i = 0; i < Y_MAX; i++)
+    {
+        for (int j = 0; j < X_MAX; j++)
+        {
+            _pNodeMgr->_pMap->SetMapState(j, i, Map::NONE);
+        }
+    }
+}
 
 void MapTool::Render(HDC hdc)
 {
@@ -92,21 +103,27 @@ void MapTool::RenderMenu(HDC hdc)
     WCHAR text[RENDER_MENU_LEN] = { '\0', };
 
     swprintf_s(text, RENDER_MENU_LEN,
-        L"휠 : 맵 크기 조정 / 키보드 상하좌우: 맵 위치 조정 ");
+        L"마우스 휠: 맵 크기 조정 / 키보드 상하좌우: 맵 위치 조정 / 백 스페이스: 콘솔창 초기화");
     int iX = _iXPad;
     int iY = DEFAULT_Y_PAD * -1 + _iYPad;
     TextOutW(hdc, iX, iY, text, wcslen(text));
 
     wmemset(text, L'\0', RENDER_MENU_LEN);
     swprintf_s(text, RENDER_MENU_LEN,
-        L"마우스 왼쪽 + 드래그: 맵 그리기 / 마우스 오른쪽 + 드래그 : 맵 지우기 / 스페이스 : 랜덤 맵 생성 / ");
-    iY = DEFAULT_Y_PAD * ((float) -1 * 2 / 3) + _iYPad;
+        L"마우스 L: 장애물 그리기 / 마우스 R: 장애물 지우기 / Q: 랜덤 장애물 / W: 장애물 초기화");
+    iY = DEFAULT_Y_PAD * ((float) -1 * 3 / 4) + _iYPad;
     TextOutW(hdc, iX, iY, text, wcslen(text));
 
     wmemset(text, L'\0', RENDER_MENU_LEN);
     swprintf_s(text, RENDER_MENU_LEN,
-        L"A키 + 마우스 왼쪽 : 출발지 지정 / S키 + 마우스 왼쪽 클릭 : 목적지 지정 / 엔터: 길찾기 시작");
-    iY = DEFAULT_Y_PAD * ((float) -1 / 3) + _iYPad;
+        L"A + 마우스 L: 출발지 지정 / S + 마우스 L: 목적지 지정");
+    iY = DEFAULT_Y_PAD * ((float) -1 * 2 / 4) + _iYPad;
+    TextOutW(hdc, iX, iY, text, wcslen(text));
+
+    wmemset(text, L'\0', RENDER_MENU_LEN);
+    swprintf_s(text, RENDER_MENU_LEN,
+        L"엔터: 한번에 길찾기 / 스페이스: 한단계씩 길찾기");
+    iY = DEFAULT_Y_PAD * ((float) -1 * 1 / 4) + _iYPad;
     TextOutW(hdc, iX, iY, text, wcslen(text));
 
     SelectObject(hdc, hOldFont);
@@ -172,6 +189,10 @@ void MapTool::RenderColor(HDC hdc)
 
             case Map::DEST:
                 SelectObject(hdc, _hDestBrush);
+                break;
+
+            case Map::DIAG_CUZ:
+                SelectObject(hdc, _hDiagCuzBrush);
                 break;
 
             default:

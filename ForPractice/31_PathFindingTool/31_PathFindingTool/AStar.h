@@ -5,6 +5,7 @@ class AStar : public PathFindAlgorithm
 {
 public:
 	void FindPath();
+	void FindPathStepInto();
 
 private:
 	void CreateNode(Node* pCurNode);

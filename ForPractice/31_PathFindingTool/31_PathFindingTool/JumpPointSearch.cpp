@@ -7,30 +7,70 @@ using namespace std;
 
 void JumpPointSearch::FindPath()
 {
-	if (!_bOn) return;
+	if (!_bFindPathOn) return;
 
-	if (_pCurNode == nullptr)
-		_pCurNode = _pNodeMgr->_pStart;
-
-	if (_pCurNode->_pos != _pNodeMgr->_pMap->_destPos)
+	if (_pNodeMgr->_pCurNode->_pos != _pNodeMgr->_pMap->_destPos)
 	{
 		printf("\n");
-		printf("Cur Node (%d, %d)\n", _pCurNode->_pos._x, _pCurNode->_pos._y);
-		CheckCreateNode(_pCurNode);
+		printf("Cur Node (%d, %d)\n", 
+			_pNodeMgr->_pCurNode->_pos._x, _pNodeMgr->_pCurNode->_pos._y);
+		CheckCreateNode(_pNodeMgr->_pCurNode);
 
 		if (_pNodeMgr->_openList.empty())
 		{
 			printf("Can't Find Path!\n");
-			_bOn = false;
-			_pCurNode = nullptr;
+			_bFindPathOn = false;
 			return;
 		}
 
-		_pNodeMgr->_closeList.push_back(_pCurNode);
-		_pNodeMgr->_pMap->SetMapState(_pCurNode->_pos._x, _pCurNode->_pos._y, Map::CLOSE);
+		_pNodeMgr->_closeList.push_back(_pNodeMgr->_pCurNode);
+		_pNodeMgr->_pMap->SetMapState(
+			_pNodeMgr->_pCurNode->_pos._x, _pNodeMgr->_pCurNode->_pos._y, Map::CLOSE);
 
 		make_heap(_pNodeMgr->_openList.begin(), _pNodeMgr->_openList.end(), compareF);
-		_pCurNode = _pNodeMgr->_openList.front();
+		_pNodeMgr->_pCurNode = _pNodeMgr->_openList.front();
+		PrintOpenListForDebug();
+		pop_heap(_pNodeMgr->_openList.begin(), _pNodeMgr->_openList.end());
+		_pNodeMgr->_openList.pop_back();
+
+		printf("\n");
+	}
+	else
+	{
+		printf("Complete Find Path\n=================================\n");
+		_pNodeMgr->_pDest = _pNodeMgr->_pCurNode;
+		_bFindPathOn = false;
+	}
+}
+
+void JumpPointSearch::FindPathStepInto()
+{
+	if (!_bFindPathStepOn)
+	{
+		_pNodeMgr->SetData();
+		_bFindPathStepOn = true;
+	}
+
+	if (_pNodeMgr->_pCurNode->_pos != _pNodeMgr->_pMap->_destPos)
+	{
+		printf("\n");
+		printf("Cur Node (%d, %d)\n", 
+			_pNodeMgr->_pCurNode->_pos._x, _pNodeMgr->_pCurNode->_pos._y);
+		CheckCreateNode(_pNodeMgr->_pCurNode);
+
+		if (_pNodeMgr->_openList.empty())
+		{
+			printf("Can't Find Path!\n");
+			_bFindPathStepOn = false;
+			return;
+		}
+
+		_pNodeMgr->_closeList.push_back(_pNodeMgr->_pCurNode);
+		_pNodeMgr->_pMap->SetMapState(
+			_pNodeMgr->_pCurNode->_pos._x, _pNodeMgr->_pCurNode->_pos._y, Map::CLOSE);
+
+		make_heap(_pNodeMgr->_openList.begin(), _pNodeMgr->_openList.end(), compareF);
+		_pNodeMgr->_pCurNode = _pNodeMgr->_openList.front();
 		PrintOpenListForDebug();
 		pop_heap(_pNodeMgr->_openList.begin(), _pNodeMgr->_openList.end());
 		_pNodeMgr->_openList.pop_back();
@@ -38,9 +78,8 @@ void JumpPointSearch::FindPath()
 	else
 	{
 		printf("Complete Find Path\n=================================\n");
-		_bOn = false;
-		_pNodeMgr->_pDest = _pCurNode;
-		_pCurNode = nullptr;
+		_pNodeMgr->_pDest = _pNodeMgr->_pCurNode;
+		_bFindPathStepOn = false;
 	}
 }
 
@@ -52,7 +91,7 @@ void JumpPointSearch::CheckCreateNode(Node* pCurNode)
 	DIR searchDir = pCurNode->_searchDir;
 	DIR newSearchDir = DIR::NONE; 
 
-	printf("(%d, %d): dir - %d, searchDir - %d\n",
+	printf("\n(%d, %d): dir - %d, searchDir - %d\n",
 		pCurNode->_pos._x, pCurNode->_pos._y, dir, searchDir );
 
 	switch (dir)
@@ -477,24 +516,29 @@ void JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 		while (up._y >= 0)
 		{
 			if (_pNodeMgr->_pMap->GetMapState(up) == Map::OBSTACLE)
+			{
+				printf("UP: Obstacle (%d, %d)\n", up._x, up._y);
 				return;
+			}
 
 			if (_pNodeMgr->_pMap->GetMapState(up) == Map::DEST)
 			{
 				newPos = up;
 				searchDir = DIR::NONE;
+				printf("UP: Dest (%d, %d)\n", up._x, up._y);
 				return;
 			}
 
 			if (_pNodeMgr->_pMap->GetMapState(up_r) == Map::OBSTACLE &&
-				_pNodeMgr->_pMap->GetMapState(up_r_front) == Map::NONE)
+				_pNodeMgr->_pMap->GetMapState(up_r_front) != Map::OBSTACLE)
 			{
 				newPos = up;
 				searchDir = DIR::R;
+				printf("UP: R (%d, %d)\n", up._x, up._y);
 			}
 
 			if (_pNodeMgr->_pMap->GetMapState(up_l) == Map::OBSTACLE &&
-				_pNodeMgr->_pMap->GetMapState(up_l_front) == Map::NONE)
+				_pNodeMgr->_pMap->GetMapState(up_l_front) != Map::OBSTACLE)
 			{
 				if (searchDir == DIR::R)
 				{
@@ -505,6 +549,7 @@ void JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 					newPos = up;
 					searchDir = DIR::L;
 				}
+				printf("UP: L (%d, %d)\n", up._x, up._y);
 			}
 
 			if (searchDir != DIR::NONE)
@@ -530,24 +575,29 @@ void JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 		while (down._y < Y_MAX)
 		{
 			if (_pNodeMgr->_pMap->GetMapState(down) == Map::OBSTACLE)
+			{
+				printf("DOWN: Obstacle (%d, %d)\n", down._x, down._y);
 				return;
+			}
 
 			if (_pNodeMgr->_pMap->GetMapState(down) == Map::DEST)
 			{
 				newPos = down;
 				searchDir = DIR::NONE;
+				printf("DOWN: Dest (%d, %d)\n", down._x, down._y);
 				return;
 			}
 
 			if (_pNodeMgr->_pMap->GetMapState(down_r) == Map::OBSTACLE &&
-				_pNodeMgr->_pMap->GetMapState(down_r_front) == Map::NONE)
+				_pNodeMgr->_pMap->GetMapState(down_r_front) != Map::OBSTACLE)
 			{
 				newPos = down;
 				searchDir = DIR::R;
+				printf("DOWN: R (%d, %d)\n", down._x, down._y);
 			}
 
 			if (_pNodeMgr->_pMap->GetMapState(down_l) == Map::OBSTACLE &&
-				_pNodeMgr->_pMap->GetMapState(down_l_front) == Map::NONE)
+				_pNodeMgr->_pMap->GetMapState(down_l_front) != Map::OBSTACLE)
 			{
 				if (searchDir == DIR::R)
 				{
@@ -558,6 +608,7 @@ void JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 					newPos = down;
 					searchDir = DIR::L;
 				}
+				printf("DOWN: L (%d, %d)\n", down._x, down._y);
 			}
 
 			if (searchDir != DIR::NONE)
@@ -583,24 +634,29 @@ void JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 		while (r._x < X_MAX)
 		{
 			if (_pNodeMgr->_pMap->GetMapState(r) == Map::OBSTACLE)
+			{
+				printf("R: Obstacle (%d, %d)\n", r._x, r._y);
 				return;
+			}
 
 			if (_pNodeMgr->_pMap->GetMapState(r) == Map::DEST)
 			{
 				newPos = r;
 				searchDir = DIR::NONE;
+				printf("R: Dest (%d, %d)\n", r._x, r._y);
 				return;
 			}
 
 			if (_pNodeMgr->_pMap->GetMapState(r_up) == Map::OBSTACLE &&
-				_pNodeMgr->_pMap->GetMapState(r_up_front) == Map::NONE)
+				_pNodeMgr->_pMap->GetMapState(r_up_front) != Map::OBSTACLE)
 			{
 				newPos = r;
 				searchDir = DIR::UP;
+				printf("R: Up (%d, %d)\n", r._x, r._y);
 			}
 
 			if (_pNodeMgr->_pMap->GetMapState(r_down) == Map::OBSTACLE &&
-				_pNodeMgr->_pMap->GetMapState(r_down_front) == Map::NONE)
+				_pNodeMgr->_pMap->GetMapState(r_down_front) != Map::OBSTACLE)
 			{
 				if (searchDir == DIR::UP)
 				{
@@ -611,6 +667,7 @@ void JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 					newPos = r;
 					searchDir = DIR::DOWN;
 				}
+				printf("R: Down (%d, %d)\n", r._x, r._y);
 			}
 
 			if (searchDir != DIR::NONE)
@@ -636,24 +693,29 @@ void JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 		while (l._x >= 0)
 		{
 			if (_pNodeMgr->_pMap->GetMapState(l) == Map::OBSTACLE)
+			{
+				printf("L: Obstacle (%d, %d)\n", l._x, l._y);
 				return;
+			}
 
 			if (_pNodeMgr->_pMap->GetMapState(l) == Map::DEST)
 			{
 				newPos = l;
 				searchDir = DIR::NONE;
+				printf("L: Dest (%d, %d)\n", l._x, l._y);
 				return;
 			}
 
 			if (_pNodeMgr->_pMap->GetMapState(l_up) == Map::OBSTACLE &&
-				_pNodeMgr->_pMap->GetMapState(l_up_front) == Map::NONE)
+				_pNodeMgr->_pMap->GetMapState(l_up_front) != Map::OBSTACLE)
 			{
 				newPos = l;
 				searchDir = DIR::UP;
+				printf("L: Up (%d, %d)\n", l._x, l._y);
 			}
 
 			if (_pNodeMgr->_pMap->GetMapState(l_down) == Map::OBSTACLE &&
-				_pNodeMgr->_pMap->GetMapState(l_down_front) == Map::NONE)
+				_pNodeMgr->_pMap->GetMapState(l_down_front) != Map::OBSTACLE)
 			{
 				if (searchDir == DIR::UP)
 				{
@@ -664,6 +726,8 @@ void JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 					newPos = l;
 					searchDir = DIR::DOWN;
 				}
+
+				printf("L: Down (%d, %d)\n", l._x, l._y);
 			}
 
 			if (searchDir != DIR::NONE)
@@ -701,20 +765,28 @@ void JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 		while (diag._x < X_MAX && diag._y >= 0)
 		{
 			// 대각선 방향 체크
+			if (_pNodeMgr->_pMap->GetMapState(diag) == Map::OBSTACLE)
+			{
+				printf("UP_R: Obstacle (%d, %d)\n", diag._x, diag._y);
+				return;
+			}
+
 			if (_pNodeMgr->_pMap->GetMapState(diag) == Map::DEST)
 			{
 				newPos = diag;
 				searchDir = DIR::NONE;
+				printf("UP_R: Dest (%d, %d)\n", diag._x, diag._y);
 				return;
 			}
 
 			if (_pNodeMgr->_pMap->GetMapState(diag_l) == Map::OBSTACLE &&
 				_pNodeMgr->_pMap->GetMapState(diag_down) == Map::OBSTACLE &&
-				_pNodeMgr->_pMap->GetMapState(diag_upl) == Map::NONE &&
-				_pNodeMgr->_pMap->GetMapState(diag_downr) == Map::NONE)
+				_pNodeMgr->_pMap->GetMapState(diag_upl) != Map::OBSTACLE &&
+				_pNodeMgr->_pMap->GetMapState(diag_downr) != Map::OBSTACLE)
 			{
 				newPos = diag;
 				searchDir = DIR::UP_R;
+				printf("UP_R: UP_R (%d, %d)\n", diag._x, diag._y);
 				return;
 			}
 			
@@ -722,26 +794,40 @@ void JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 			// 오른쪽 방향 체크
 			while (diag_r._x < X_MAX)
 			{
+				if (_pNodeMgr->_pMap->GetMapState(diag_r) == Map::OBSTACLE)
+				{
+					break;
+				}
+
 				if (_pNodeMgr->_pMap->GetMapState(diag_r) == Map::DEST)
 				{
 					newPos = diag;
 					searchDir = DIR::R;
+					printf("UP_R: R, Dest (%d, %d) (%d, %d)\n", 
+						diag._x, diag._y, diag_r._x, diag_r._y);
+					_pNodeMgr->_pMap->SetMapState(diag_r._x, diag_r._y, Map::DIAG_CUZ);
 					return;
 				}
 
 				if (_pNodeMgr->_pMap->GetMapState(diag_r_up) == Map::OBSTACLE &&
-					_pNodeMgr->_pMap->GetMapState(diag_r_up_front) == Map::NONE)
+					_pNodeMgr->_pMap->GetMapState(diag_r_up_front) != Map::OBSTACLE)
 				{
 					newPos = diag;
 					searchDir = DIR::R;
+					printf("UP_R: R, Up (%d, %d) (%d, %d)\n",
+						diag._x, diag._y, diag_r_up._x, diag_r_up._y);
+					_pNodeMgr->_pMap->SetMapState(diag_r._x, diag_r._y, Map::DIAG_CUZ);
 					return;
 				}
 
 				if (_pNodeMgr->_pMap->GetMapState(diag_r_down) == Map::OBSTACLE &&
-					_pNodeMgr->_pMap->GetMapState(diag_r_down_front) == Map::NONE)
+					_pNodeMgr->_pMap->GetMapState(diag_r_down_front) != Map::OBSTACLE)
 				{
 					newPos = diag;
 					searchDir = DIR::R;
+					printf("UP_R: R, Down (%d, %d) (%d, %d)\n",
+						diag._x, diag._y, diag_r_down._x, diag_r_down._y);
+					_pNodeMgr->_pMap->SetMapState(diag_r._x, diag_r._y, Map::DIAG_CUZ);
 					return;
 				}
 
@@ -755,26 +841,40 @@ void JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 			// 위쪽 방향 체크
 			while (diag_up._y >= 0)
 			{
+				if (_pNodeMgr->_pMap->GetMapState(diag_up) == Map::OBSTACLE)
+				{
+					break;
+				}
+
 				if (_pNodeMgr->_pMap->GetMapState(diag_up) == Map::DEST)
 				{
 					newPos = diag;
 					searchDir = DIR::UP;
+					printf("UP_R: UP, Dest (%d, %d) (%d, %d)\n",
+						diag._x, diag._y, diag_up._x, diag_up._y);
+					_pNodeMgr->_pMap->SetMapState(diag_up._x, diag_up._y, Map::DIAG_CUZ);
 					return;
 				}
 
 				if (_pNodeMgr->_pMap->GetMapState(diag_up_r) == Map::OBSTACLE &&
-					_pNodeMgr->_pMap->GetMapState(diag_up_r_front) == Map::NONE)
+					_pNodeMgr->_pMap->GetMapState(diag_up_r_front) != Map::OBSTACLE)
 				{
 					newPos = diag;
 					searchDir = DIR::UP;
+					printf("UP_R: UP, R (%d, %d) (%d, %d)\n",
+						diag._x, diag._y, diag_up_r._x, diag_up_r._y);
+					_pNodeMgr->_pMap->SetMapState(diag_up._x, diag_up._y, Map::DIAG_CUZ);
 					return;
 				}
 
 				if (_pNodeMgr->_pMap->GetMapState(diag_up_l) == Map::OBSTACLE &&
-					_pNodeMgr->_pMap->GetMapState(diag_up_l_front) == Map::NONE)
+					_pNodeMgr->_pMap->GetMapState(diag_up_l_front) != Map::OBSTACLE)
 				{
 					newPos = diag;
 					searchDir = DIR::UP;
+					printf("UP_R: UP, L (%d, %d) (%d, %d)\n",
+						diag._x, diag._y, diag_up_l._x, diag_up_l._y);
+					_pNodeMgr->_pMap->SetMapState(diag_up._x, diag_up._y, Map::DIAG_CUZ);
 					return;
 				}
 
@@ -784,9 +884,6 @@ void JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 				diag_up_r_front = diag_up_r + _direction[(int)DIR::UP];
 				diag_up_l_front = diag_up_l + _direction[(int)DIR::UP];
 			}
-
-			if (_pNodeMgr->_pMap->GetMapState(diag) == Map::OBSTACLE)
-				return;
 
 			diag = diag + _direction[(int)dir];
 
@@ -833,46 +930,68 @@ void JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 		while (diag._x < X_MAX && diag._y < Y_MAX)
 		{
 			// 대각선 방향 체크
+			if (_pNodeMgr->_pMap->GetMapState(diag) == Map::OBSTACLE)
+			{
+				printf("DOWN_R: Obstacle (%d, %d)\n", diag._x, diag._y);
+				return;
+			}
+
 			if (_pNodeMgr->_pMap->GetMapState(diag) == Map::DEST)
 			{
 				newPos = diag;
 				searchDir = DIR::NONE;
+				printf("DOWN_R: Dest (%d, %d)\n", diag._x, diag._y);
 				return;
 			}
 
 			if (_pNodeMgr->_pMap->GetMapState(diag_l) == Map::OBSTACLE &&
 				_pNodeMgr->_pMap->GetMapState(diag_up) == Map::OBSTACLE &&
-				_pNodeMgr->_pMap->GetMapState(diag_upr) == Map::NONE &&
-				_pNodeMgr->_pMap->GetMapState(diag_downl) == Map::NONE)
+				_pNodeMgr->_pMap->GetMapState(diag_upr) != Map::OBSTACLE &&
+				_pNodeMgr->_pMap->GetMapState(diag_downl) != Map::OBSTACLE)
 			{
 				newPos = diag;
 				searchDir = DIR::DOWN_R;
+				printf("DOWN_R: DOWN_R (%d, %d)\n", diag._x, diag._y);
 				return;
 			}
 
 			// 오른쪽 방향 체크
 			while (diag_r._x < X_MAX)
 			{
+				if (_pNodeMgr->_pMap->GetMapState(diag_r) == Map::OBSTACLE)
+				{
+					break;
+				}
+
 				if (_pNodeMgr->_pMap->GetMapState(diag_r) == Map::DEST)
 				{
 					newPos = diag;
 					searchDir = DIR::R;
+					printf("DOWN_R: R, Dest (%d, %d) (%d, %d)\n",
+						diag._x, diag._y, diag_r._x, diag_r._y);
+					_pNodeMgr->_pMap->SetMapState(diag_r._x, diag_r._y, Map::DIAG_CUZ);
 					return;
 				}
 
 				if (_pNodeMgr->_pMap->GetMapState(diag_r_up) == Map::OBSTACLE &&
-					_pNodeMgr->_pMap->GetMapState(diag_r_up_front) == Map::NONE)
+					_pNodeMgr->_pMap->GetMapState(diag_r_up_front) != Map::OBSTACLE)
 				{
 					newPos = diag;
 					searchDir = DIR::R;
+					printf("DOWN_R: R, Up (%d, %d) (%d, %d)\n",
+						diag._x, diag._y, diag_r_up._x, diag_r_up._y);
+					_pNodeMgr->_pMap->SetMapState(diag_r._x, diag_r._y, Map::DIAG_CUZ);
 					return;
 				}
 
 				if (_pNodeMgr->_pMap->GetMapState(diag_r_down) == Map::OBSTACLE &&
-					_pNodeMgr->_pMap->GetMapState(diag_r_down_front) == Map::NONE)
+					_pNodeMgr->_pMap->GetMapState(diag_r_down_front) != Map::OBSTACLE)
 				{
 					newPos = diag;
 					searchDir = DIR::R;
+					printf("DOWN_R: R, Down (%d, %d) (%d, %d)\n",
+						diag._x, diag._y, diag_r_down._x, diag_r_down._y);
+					_pNodeMgr->_pMap->SetMapState(diag_r._x, diag_r._y, Map::DIAG_CUZ);
 					return;
 				}
 
@@ -886,26 +1005,40 @@ void JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 			// 아래쪽 방향 체크
 			while (diag_down._y < Y_MAX)
 			{
+				if (_pNodeMgr->_pMap->GetMapState(diag_down) == Map::OBSTACLE)
+				{
+					break;
+				}
+
 				if (_pNodeMgr->_pMap->GetMapState(diag_down) == Map::DEST)
 				{
 					newPos = diag;
 					searchDir = DIR::DOWN;
+					printf("DOWN_R: DOWN, Dest (%d, %d) (%d, %d)\n",
+						diag._x, diag._y, diag_down._x, diag_down._y);
+					_pNodeMgr->_pMap->SetMapState(diag_down._x, diag_down._y, Map::DIAG_CUZ);
 					return;
 				}
 
 				if (_pNodeMgr->_pMap->GetMapState(diag_down_r) == Map::OBSTACLE &&
-					_pNodeMgr->_pMap->GetMapState(diag_down_r_front) == Map::NONE)
+					_pNodeMgr->_pMap->GetMapState(diag_down_r_front) != Map::OBSTACLE)
 				{
 					newPos = diag;
 					searchDir = DIR::DOWN;
+					printf("DOWN_R: DOWN, R (%d, %d) (%d, %d)\n",
+						diag._x, diag._y, diag_down_r._x, diag_down_r._y);
+					_pNodeMgr->_pMap->SetMapState(diag_down._x, diag_down._y, Map::DIAG_CUZ);
 					return;
 				}
 
 				if (_pNodeMgr->_pMap->GetMapState(diag_down_l) == Map::OBSTACLE &&
-					_pNodeMgr->_pMap->GetMapState(diag_down_l_front) == Map::NONE)
+					_pNodeMgr->_pMap->GetMapState(diag_down_l_front) != Map::OBSTACLE)
 				{
 					newPos = diag;
 					searchDir = DIR::DOWN;
+					printf("DOWN_R: DOWN, L (%d, %d) (%d, %d)\n",
+						diag._x, diag._y, diag_down_l._x, diag_down_l._y);
+					_pNodeMgr->_pMap->SetMapState(diag_down._x, diag_down._y, Map::DIAG_CUZ);
 					return;
 				}
 
@@ -914,12 +1047,6 @@ void JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 				diag_down_l = diag_down + _direction[(int)DIR::L];
 				diag_down_r_front = diag_down_r + _direction[(int)DIR::DOWN];
 				diag_down_l_front = diag_down_l + _direction[(int)DIR::DOWN];
-			}
-
-			if (_pNodeMgr->_pMap->GetMapState(diag) == Map::OBSTACLE)
-			{
-				printf("\naaaaaa\n");
-				return;
 			}
 
 			diag = diag + _direction[(int)dir];
@@ -967,46 +1094,68 @@ void JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 		while (diag._x >= 0 && diag._y < Y_MAX)
 		{
 			// 대각선 방향 체크
+			if (_pNodeMgr->_pMap->GetMapState(diag) == Map::OBSTACLE)
+			{
+				printf("DOWN_L: Obstacle (%d, %d)\n", diag._x, diag._y);
+				return;
+			}
+
 			if (_pNodeMgr->_pMap->GetMapState(diag) == Map::DEST)
 			{
 				newPos = diag;
 				searchDir = DIR::NONE;
+				printf("DOWN_L: Dest (%d, %d)\n", diag._x, diag._y);
 				return;
 			}
 
 			if (_pNodeMgr->_pMap->GetMapState(diag_l) == Map::OBSTACLE &&
 				_pNodeMgr->_pMap->GetMapState(diag_down) == Map::OBSTACLE &&
-				_pNodeMgr->_pMap->GetMapState(diag_upl) == Map::NONE &&
-				_pNodeMgr->_pMap->GetMapState(diag_downr) == Map::NONE)
+				_pNodeMgr->_pMap->GetMapState(diag_upl) != Map::OBSTACLE &&
+				_pNodeMgr->_pMap->GetMapState(diag_downr) != Map::OBSTACLE)
 			{
 				newPos = diag;
 				searchDir = DIR::DOWN_L;
+				printf("DOWN_L: DOWN_L (%d, %d)\n", diag._x, diag._y);
 				return;
 			}
 
 			// 왼쪽 방향 체크
 			while (diag_l._x >= 0)
 			{
+				if (_pNodeMgr->_pMap->GetMapState(diag_l) == Map::OBSTACLE)
+				{
+					break;
+				}
+
 				if (_pNodeMgr->_pMap->GetMapState(diag_l) == Map::DEST)
 				{
 					newPos = diag;
 					searchDir = DIR::L;
+					printf("DOWN_L: L, Dest (%d, %d) (%d, %d)\n",
+						diag._x, diag._y, diag_l._x, diag_l._y);
+					_pNodeMgr->_pMap->SetMapState(diag_l._x, diag_l._y, Map::DIAG_CUZ);
 					return;
 				}
 
 				if (_pNodeMgr->_pMap->GetMapState(diag_l_up) == Map::OBSTACLE &&
-					_pNodeMgr->_pMap->GetMapState(diag_l_up_front) == Map::NONE)
+					_pNodeMgr->_pMap->GetMapState(diag_l_up_front) != Map::OBSTACLE)
 				{
 					newPos = diag;
 					searchDir = DIR::L;
+					printf("DOWN_L: L, Up (%d, %d) (%d, %d)\n",
+						diag._x, diag._y, diag_l_up._x, diag_l_up._y);
+					_pNodeMgr->_pMap->SetMapState(diag_l._x, diag_l._y, Map::DIAG_CUZ);
 					return;
 				}
 
 				if (_pNodeMgr->_pMap->GetMapState(diag_l_down) == Map::OBSTACLE &&
-					_pNodeMgr->_pMap->GetMapState(diag_l_down_front) == Map::NONE)
+					_pNodeMgr->_pMap->GetMapState(diag_l_down_front) != Map::OBSTACLE)
 				{
 					newPos = diag;
 					searchDir = DIR::L;
+					printf("DOWN_L: L, Down (%d, %d) (%d, %d)\n",
+						diag._x, diag._y, diag_l_down._x, diag_l_down._y);
+					_pNodeMgr->_pMap->SetMapState(diag_l._x, diag_l._y, Map::DIAG_CUZ);
 					return;
 				}
 
@@ -1020,26 +1169,40 @@ void JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 			// 아래쪽 방향 체크
 			while (diag_down._y < Y_MAX)
 			{
+				if (_pNodeMgr->_pMap->GetMapState(diag_down) == Map::OBSTACLE)
+				{
+					break;
+				}
+
 				if (_pNodeMgr->_pMap->GetMapState(diag_down) == Map::DEST)
 				{
 					newPos = diag;
 					searchDir = DIR::DOWN;
+					printf("DOWN_L: Down, Dest (%d, %d) (%d, %d)\n",
+						diag._x, diag._y, diag_down._x, diag_down._y);
+					_pNodeMgr->_pMap->SetMapState(diag_down._x, diag_down._y, Map::DIAG_CUZ);
 					return;
 				}
 
 				if (_pNodeMgr->_pMap->GetMapState(diag_down_r) == Map::OBSTACLE &&
-					_pNodeMgr->_pMap->GetMapState(diag_down_r_front) == Map::NONE)
+					_pNodeMgr->_pMap->GetMapState(diag_down_r_front) != Map::OBSTACLE)
 				{
 					newPos = diag;
 					searchDir = DIR::DOWN;
+					printf("DOWN_L: Down, R (%d, %d) (%d, %d)\n",
+						diag._x, diag._y, diag_down_r._x, diag_down_r._y);
+					_pNodeMgr->_pMap->SetMapState(diag_down._x, diag_down._y, Map::DIAG_CUZ);
 					return;
 				}
 
 				if (_pNodeMgr->_pMap->GetMapState(diag_down_l) == Map::OBSTACLE &&
-					_pNodeMgr->_pMap->GetMapState(diag_down_l_front) == Map::NONE)
+					_pNodeMgr->_pMap->GetMapState(diag_down_l_front) != Map::OBSTACLE)
 				{
 					newPos = diag;
 					searchDir = DIR::DOWN;
+					printf("DOWN_L: Down, L (%d, %d) (%d, %d)\n",
+						diag._x, diag._y, diag_down_l._x, diag_down_l._y);
+					_pNodeMgr->_pMap->SetMapState(diag_down._x, diag_down._y, Map::DIAG_CUZ);
 					return;
 				}
 
@@ -1049,9 +1212,6 @@ void JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 				diag_down_r_front = diag_down_r + _direction[(int)DIR::DOWN];
 				diag_down_l_front = diag_down_l + _direction[(int)DIR::DOWN];
 			}
-
-			if (_pNodeMgr->_pMap->GetMapState(diag) == Map::OBSTACLE)
-				return;
 
 			diag = diag + _direction[(int)dir];
 
@@ -1098,20 +1258,28 @@ void JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 		while (diag._x >= 0 && diag._y >= 0)
 		{
 			// 대각선 방향 체크
+			if (_pNodeMgr->_pMap->GetMapState(diag) == Map::OBSTACLE)
+			{
+				printf("UP_L: Obstacle (%d, %d)\n", diag._x, diag._y);
+				return;
+			}
+
 			if (_pNodeMgr->_pMap->GetMapState(diag) == Map::DEST)
 			{
 				newPos = diag;
 				searchDir = DIR::NONE;
+				printf("UP_L: Dest (%d, %d)\n", diag._x, diag._y);
 				return;
 			}
 
 			if (_pNodeMgr->_pMap->GetMapState(diag_r) == Map::OBSTACLE &&
 				_pNodeMgr->_pMap->GetMapState(diag_up) == Map::OBSTACLE &&
-				_pNodeMgr->_pMap->GetMapState(diag_upr) == Map::NONE &&
-				_pNodeMgr->_pMap->GetMapState(diag_downl) == Map::NONE)
+				_pNodeMgr->_pMap->GetMapState(diag_upr) != Map::OBSTACLE &&
+				_pNodeMgr->_pMap->GetMapState(diag_downl) != Map::OBSTACLE)
 			{
 				newPos = diag;
 				searchDir = DIR::UP_L;
+				printf("UP_L: UP_L (%d, %d)\n", diag._x, diag._y);
 				return;
 			}
 
@@ -1119,26 +1287,40 @@ void JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 			// 왼쪽 방향 체크
 			while (diag_l._x >= 0)
 			{
+				if (_pNodeMgr->_pMap->GetMapState(diag_l) == Map::OBSTACLE)
+				{
+					break;
+				}
+
 				if (_pNodeMgr->_pMap->GetMapState(diag_l) == Map::DEST)
 				{
 					newPos = diag;
 					searchDir = DIR::L;
+					printf("UP_L: L, Dest (%d, %d) (%d, %d)\n",
+						diag._x, diag._y, diag_l._x, diag_l._y);
+					_pNodeMgr->_pMap->SetMapState(diag_l._x, diag_l._y, Map::DIAG_CUZ);
 					return;
 				}
 
 				if (_pNodeMgr->_pMap->GetMapState(diag_l_up) == Map::OBSTACLE &&
-					_pNodeMgr->_pMap->GetMapState(diag_l_up_front) == Map::NONE)
+					_pNodeMgr->_pMap->GetMapState(diag_l_up_front) != Map::OBSTACLE)
 				{
 					newPos = diag;
 					searchDir = DIR::L;
+					printf("UP_L: L, Up (%d, %d) (%d, %d)\n",
+						diag._x, diag._y, diag_l_up._x, diag_l_up._y);
+					_pNodeMgr->_pMap->SetMapState(diag_l._x, diag_l._y, Map::DIAG_CUZ);
 					return;
 				}
 
 				if (_pNodeMgr->_pMap->GetMapState(diag_l_down) == Map::OBSTACLE &&
-					_pNodeMgr->_pMap->GetMapState(diag_l_down_front) == Map::NONE)
+					_pNodeMgr->_pMap->GetMapState(diag_l_down_front) != Map::OBSTACLE)
 				{
 					newPos = diag;
 					searchDir = DIR::L;
+					printf("UP_L: L, Down (%d, %d) (%d, %d)\n",
+						diag._x, diag._y, diag_l_down._x, diag_l_down._y);
+					_pNodeMgr->_pMap->SetMapState(diag_l._x, diag_l._y, Map::DIAG_CUZ);
 					return;
 				}
 
@@ -1152,26 +1334,40 @@ void JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 			// 위쪽 방향 체크
 			while (diag_up._y >= 0)
 			{
+				if (_pNodeMgr->_pMap->GetMapState(diag_up) == Map::OBSTACLE)
+				{
+					break;
+				}
+
 				if (_pNodeMgr->_pMap->GetMapState(diag_up) == Map::DEST)
 				{
 					newPos = diag;
 					searchDir = DIR::UP;
+					printf("UP_L: Up, Dest (%d, %d) (%d, %d)\n",
+						diag._x, diag._y, diag_up._x, diag_up._y);
+					_pNodeMgr->_pMap->SetMapState(diag_up._x, diag_up._y, Map::DIAG_CUZ);
 					return;
 				}
 
 				if (_pNodeMgr->_pMap->GetMapState(diag_up_r) == Map::OBSTACLE &&
-					_pNodeMgr->_pMap->GetMapState(diag_up_r_front) == Map::NONE)
+					_pNodeMgr->_pMap->GetMapState(diag_up_r_front) != Map::OBSTACLE)
 				{
 					newPos = diag;
 					searchDir = DIR::UP;
+					printf("UP_L: Up, R (%d, %d) (%d, %d)\n",
+						diag._x, diag._y, diag_up_r._x, diag_up_r._y);
+					_pNodeMgr->_pMap->SetMapState(diag_up._x, diag_up._y, Map::DIAG_CUZ);
 					return;
 				}
 
 				if (_pNodeMgr->_pMap->GetMapState(diag_up_l) == Map::OBSTACLE &&
-					_pNodeMgr->_pMap->GetMapState(diag_up_l_front) == Map::NONE)
+					_pNodeMgr->_pMap->GetMapState(diag_up_l_front) != Map::OBSTACLE)
 				{
 					newPos = diag;
 					searchDir = DIR::UP;
+					printf("UP_L: Up, L (%d, %d) (%d, %d)\n",
+						diag._x, diag._y, diag_up_l._x, diag_up_l._y);
+					_pNodeMgr->_pMap->SetMapState(diag_up._x, diag_up._y, Map::DIAG_CUZ);
 					return;
 				}
 
@@ -1181,9 +1377,6 @@ void JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 				diag_up_r_front = diag_up_r + _direction[(int)DIR::UP];
 				diag_up_l_front = diag_up_l + _direction[(int)DIR::UP];
 			}
-
-			if (_pNodeMgr->_pMap->GetMapState(diag) == Map::OBSTACLE)
-				return;
 
 			diag = diag + _direction[(int)dir];
 
@@ -1218,6 +1411,7 @@ void JumpPointSearch::CreateNode(Node* pCurNode, Pos newPos, DIR dir, DIR search
 	case Map::NONE:
 	case Map::START:
 	case Map::DEST:
+	case Map::DIAG_CUZ:
 	{
 		Node* pNew = new Node(
 			newPos,
@@ -1296,9 +1490,9 @@ void JumpPointSearch::PrintOpenListForDebug()
 	}
 
 	printf("\nCurNode : (%d, %d), %d\n",
-		_pCurNode->_pos._x,
-		_pCurNode->_pos._y,
-		_pCurNode->_f);
+		_pNodeMgr->_pCurNode->_pos._x,
+		_pNodeMgr->_pCurNode->_pos._y,
+		_pNodeMgr->_pCurNode->_f);
 
 	printf("\n=====================================\n");
 }

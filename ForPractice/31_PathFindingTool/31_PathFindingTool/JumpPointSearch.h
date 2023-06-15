@@ -5,6 +5,7 @@ class JumpPointSearch : public PathFindAlgorithm
 {
 public:
 	void FindPath();
+	void FindPathStepInto();
 	
 private:
 	void CheckCreateNode(Node* pCurNode);
