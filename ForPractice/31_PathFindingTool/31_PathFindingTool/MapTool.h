@@ -15,9 +15,12 @@ public:
 	~MapTool();
 
 public:
-	void Draw(int xPos, int yPos);
-	void DrawRandom();
-	void ClearMap();
+	void SetMap(int xPos, int yPos);
+	void SetRandomObstacles();
+	void ClearObstacles();
+	void FillObstacles();
+	
+public:
 	void Render(HDC hdc);
 
 private:
@@ -57,7 +60,10 @@ private:
 	HBRUSH _hCloseBrush;
 	HBRUSH _hStartBrush;
 	HBRUSH _hDestBrush;
+
 	HBRUSH _hDiagCuzBrush;
+	HBRUSH _hCheckedBrush;
+	HBRUSH _hCheckedDiagBrush;
 
 private:
 	bool _bDraw = false;

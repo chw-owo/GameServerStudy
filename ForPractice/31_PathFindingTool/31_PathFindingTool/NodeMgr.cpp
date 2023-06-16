@@ -35,6 +35,8 @@ void NodeMgr::SetData()
 		_closeList.pop_back();
 	}
 
+	_diagCuzList.clear();
+
 	_pDest = nullptr;
 	_pStart = new Node(_pMap->_startPos, 0, _pMap->_startPos.GetDistance(_pMap->_destPos));
 	_pCurNode = _pStart;

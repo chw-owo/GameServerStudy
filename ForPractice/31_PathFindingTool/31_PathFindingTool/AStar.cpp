@@ -47,6 +47,7 @@ void AStar::FindPathStepInto()
 	{
 		_pNodeMgr->SetData();
 		_bFindPathStepOn = true;
+		_bFindPathOn = false;
 	}
 
 	if (_pNodeMgr->_pCurNode->_pos != _pNodeMgr->_pMap->_destPos)

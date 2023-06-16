@@ -29,5 +29,10 @@ public:
 	Node* _pDest = nullptr;
 	vector<Node*> _openList;
 	vector<Node*> _closeList;
+
+public:
+	vector<Pos> _diagCuzList;
+	vector<Pos> _checkedList;
+	vector<Pos> _checkedDiagList;
 };
 

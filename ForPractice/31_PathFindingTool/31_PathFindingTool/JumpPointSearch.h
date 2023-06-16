@@ -9,8 +9,12 @@ public:
 	
 private:
 	void CheckCreateNode(Node* pCurNode);
-	void CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchDir);
+	bool CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchDir);
+	bool CheckDiagCorner(Pos diag, DIR diagDir, DIR searchDir, Pos& newPos, DIR& newSearchDir);
 	void CreateNode(Node* pCurNode, Pos newPos, DIR dir, DIR searchDir, int newG);
+	
+private:
+	void PrintDirForDebug(Node* pCurNode);
 	void PrintOpenListForDebug();
 
 private:

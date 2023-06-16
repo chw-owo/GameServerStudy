@@ -20,7 +20,10 @@ MapTool::MapTool()
     _hCloseBrush = CreateSolidBrush(RGB(255, 255, 0));          // Yellow
     _hStartBrush = CreateSolidBrush(RGB(255, 0, 0));            // Red
     _hDestBrush = CreateSolidBrush(RGB(0, 255, 0));             // Green
+
     _hDiagCuzBrush = CreateSolidBrush(RGB(155, 255, 255));      // Mint
+    _hCheckedBrush = CreateSolidBrush(RGB(255, 210, 210));      // Pink
+    _hCheckedDiagBrush = CreateSolidBrush(RGB(255, 240, 240));  // Light Pink
 }
 
 MapTool::~MapTool()
@@ -28,7 +31,7 @@ MapTool::~MapTool()
 
 }
 
-void MapTool::Draw(int xPos, int yPos)
+void MapTool::SetMap(int xPos, int yPos)
 {
     int iTileX = (xPos - _iXPad) / _iGridSize;
     int iTileY = (yPos - _iYPad) / _iGridSize;
@@ -54,7 +57,7 @@ void MapTool::Draw(int xPos, int yPos)
     }
 }
 
-void MapTool::DrawRandom()
+void MapTool::SetRandomObstacles()
 {
     for (int i = 0; i < Y_MAX; i++)
     {
@@ -65,7 +68,7 @@ void MapTool::DrawRandom()
     }
 }
 
-void MapTool::ClearMap()
+void MapTool::ClearObstacles()
 {
     for (int i = 0; i < Y_MAX; i++)
     {
@@ -76,11 +79,22 @@ void MapTool::ClearMap()
     }
 }
 
+void MapTool::FillObstacles()
+{
+    for (int i = 0; i < Y_MAX; i++)
+    {
+        for (int j = 0; j < X_MAX; j++)
+        {
+            _pNodeMgr->_pMap->SetMapState(j, i, Map::OBSTACLE);
+        }
+    }
+}
+
 void MapTool::Render(HDC hdc)
 {
     RenderMenu(hdc);
-    RenderGrid(hdc);
     RenderColor(hdc);
+    RenderGrid(hdc);
    
     if (_iGridSize >= 32)
     {
@@ -110,7 +124,7 @@ void MapTool::RenderMenu(HDC hdc)
 
     wmemset(text, L'\0', RENDER_MENU_LEN);
     swprintf_s(text, RENDER_MENU_LEN,
-        L"마우스 L: 장애물 그리기 / 마우스 R: 장애물 지우기 / Q: 랜덤 장애물 / W: 장애물 초기화");
+        L"마우스 L: 장애물 그리기 / 마우스 R: 장애물 지우기 / Q: 랜덤 장애물 / W: 장애물 비우기 / E: 장애물 채우기");
     iY = DEFAULT_Y_PAD * ((float) -1 * 3 / 4) + _iYPad;
     TextOutW(hdc, iX, iY, text, wcslen(text));
 
@@ -157,7 +171,42 @@ void MapTool::RenderColor(HDC hdc)
 {
     int iX, iY;
     SelectObject(hdc, GetStockObject(NULL_PEN));
-    HBRUSH hOldBrush = (HBRUSH)SelectObject(hdc, _hStartBrush);
+
+    HBRUSH hOldBrush = (HBRUSH)SelectObject(hdc, _hCheckedDiagBrush);
+
+    for (int i = 0; i < _pNodeMgr->_checkedDiagList.size(); i++)
+    {
+        iX = _pNodeMgr->_checkedDiagList[i]._x * _iGridSize;
+        iY = _pNodeMgr->_checkedDiagList[i]._y * _iGridSize;
+
+        Rectangle(hdc, iX + _iXPad, iY + _iYPad,
+            iX + _iGridSize + 2 + _iXPad,
+            iY + _iGridSize + 2 + _iYPad);
+    }
+    
+    SelectObject(hdc, _hCheckedBrush);
+
+    for (int i = 0; i < _pNodeMgr->_checkedList.size(); i++)
+    {
+        iX = _pNodeMgr->_checkedList[i]._x * _iGridSize;
+        iY = _pNodeMgr->_checkedList[i]._y * _iGridSize;
+
+        Rectangle(hdc, iX + _iXPad, iY + _iYPad,
+            iX + _iGridSize + 2 + _iXPad,
+            iY + _iGridSize + 2 + _iYPad);
+    }
+
+    SelectObject(hdc, _hDiagCuzBrush);
+
+    for (int i = 0; i < _pNodeMgr->_diagCuzList.size(); i++)
+    {
+        iX = _pNodeMgr->_diagCuzList[i]._x * _iGridSize;
+        iY = _pNodeMgr->_diagCuzList[i]._y * _iGridSize;
+
+        Rectangle(hdc, iX + _iXPad, iY + _iYPad,
+            iX + _iGridSize + 2 + _iXPad,
+            iY + _iGridSize + 2 + _iYPad);
+    }
 
     for (int i = 0; i < Y_MAX; i++)
     {
@@ -189,10 +238,6 @@ void MapTool::RenderColor(HDC hdc)
 
             case Map::DEST:
                 SelectObject(hdc, _hDestBrush);
-                break;
-
-            case Map::DIAG_CUZ:
-                SelectObject(hdc, _hDiagCuzBrush);
                 break;
 
             default:

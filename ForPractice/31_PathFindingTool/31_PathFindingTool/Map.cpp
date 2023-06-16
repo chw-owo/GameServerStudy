@@ -26,7 +26,6 @@ void Map::SetMapState(int x, int y, STATE state)
 	case OBSTACLE:
 	case OPEN:
 	case CLOSE:
-	case DIAG_CUZ:
 		if (_chMap[y][x] != START && _chMap[y][x] != DEST)
 			_chMap[y][x] = state;
 		break;
@@ -71,7 +70,6 @@ void Map::SetMapState(Pos pos, STATE state)
 	case OBSTACLE:
 	case OPEN:
 	case CLOSE:
-	case DIAG_CUZ:
 		if (_chMap[y][x] != START && _chMap[y][x] != DEST)
 			_chMap[y][x] = state;
 		break;

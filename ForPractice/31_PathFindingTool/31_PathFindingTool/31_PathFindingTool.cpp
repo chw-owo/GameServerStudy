@@ -95,7 +95,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     case WM_LBUTTONDOWN:
         g_pMapTool->SetDraw(true);
-        g_pMapTool->Draw(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+        g_pMapTool->SetMap(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
         break;
 
     case WM_LBUTTONUP:
@@ -104,7 +104,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
     case WM_RBUTTONDOWN:
         g_pMapTool->SetErase(true);
-        g_pMapTool->Draw(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+        g_pMapTool->SetMap(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
         break;
 
     case WM_RBUTTONUP:
@@ -112,7 +112,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         break;
 
     case WM_MOUSEMOVE:
-        g_pMapTool->Draw(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
+        g_pMapTool->SetMap(GET_X_LPARAM(lParam), GET_Y_LPARAM(lParam));
         InvalidateRect(hWnd, NULL, false);
         break;
 
@@ -120,12 +120,17 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         switch (wParam)
         {
         case 0x51: // Key Q
-            g_pMapTool->DrawRandom();
+            g_pMapTool->SetRandomObstacles();
             InvalidateRect(hWnd, NULL, false);
             break;
 
         case 0x57: // Key W
-            g_pMapTool->ClearMap();
+            g_pMapTool->ClearObstacles();
+            InvalidateRect(hWnd, NULL, false);
+            break;
+
+        case 0x45: // Key E
+            g_pMapTool->FillObstacles();
             InvalidateRect(hWnd, NULL, false);
             break;
 

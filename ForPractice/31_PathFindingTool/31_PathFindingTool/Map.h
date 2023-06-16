@@ -22,7 +22,6 @@ public:
 		CLOSE,
 		START,
 		DEST,
-		DIAG_CUZ,
 		RANGE_OUT
 	};
 
