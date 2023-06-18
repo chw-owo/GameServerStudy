@@ -19,8 +19,12 @@ int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
     WNDCLASSEXW wcex;
 
     g_pMapTool = new MapTool;
+
     //g_pPathFindTool = new AStar;
+    //printf("Select AStar Algorithm\n");
+
     g_pPathFindTool = new JumpPointSearch;
+    printf("Select JPS Algorithm\n");
 
     wcex.cbSize = sizeof(WNDCLASSEX);
 
@@ -119,20 +123,22 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_KEYDOWN:
         switch (wParam)
         {
+
+        // About Algorithm ===================================
+
         case 0x51: // Key Q
-            g_pMapTool->SetRandomObstacles();
-            InvalidateRect(hWnd, NULL, false);
+            printf("Select AStar Algorithm\n");
+            delete g_pPathFindTool;
+            g_pPathFindTool = new AStar;
             break;
 
         case 0x57: // Key W
-            g_pMapTool->ClearObstacles();
-            InvalidateRect(hWnd, NULL, false);
+            printf("Select JPS Algorithm\n");
+            delete g_pPathFindTool;
+            g_pPathFindTool = new JumpPointSearch;
             break;
 
-        case 0x45: // Key E
-            g_pMapTool->FillObstacles();
-            InvalidateRect(hWnd, NULL, false);
-            break;
+        // About Start/Dest ==================================
 
         case 0x41: // Key A
             g_pMapTool->SelectStart(true);
@@ -142,9 +148,54 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             g_pMapTool->SelectDest(true);
             break;
 
+        // About Obstacle ====================================
+
+        case 0x44: // Key D
+            g_pMapTool->SetRandomObstacles();
+            InvalidateRect(hWnd, NULL, false);
+            break;
+
+        case 0x46: // Key F
+            g_pMapTool->ClearObstacles();
+            InvalidateRect(hWnd, NULL, false);
+            break;
+
+        case 0x47: // Key G
+            g_pMapTool->FillObstacles();
+            InvalidateRect(hWnd, NULL, false);
+            break;
+
+        // About Console =====================================
+
+        case 0x5A: // Key Z
+            g_pPathFindTool->SetDebugCreateNode(true);
+            break;
+
+        case 0x58: // Key X
+            g_pPathFindTool->SetDebugCreateNode(false);
+            break;
+
+        case 0x43: // Key C
+            g_pPathFindTool->SetDebugFindCorner(true);
+            break;
+
+        case 0x56: // Key V
+            g_pPathFindTool->SetDebugFindCorner(false);
+            break;
+
+        case 0x42: // Key B
+            g_pPathFindTool->SetDebugOpenList(true);
+            break;
+
+        case 0x4E: // Key N
+            g_pPathFindTool->SetDebugOpenList(false);
+            break;
+
         case VK_BACK:
             system("cls");
             break;
+
+        // About Window =====================================
 
         case VK_UP:
             g_pMapTool->MoveUp();
@@ -166,6 +217,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
             InvalidateRect(hWnd, NULL, TRUE);
             break;
 
+        // About Find Path =================================
+        
         case VK_SPACE:
             g_pPathFindTool->FindPathStepInto();
             InvalidateRect(hWnd, NULL, false);
@@ -184,6 +237,8 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_KEYUP:
         switch (wParam)
         {
+        // About Start/Dest ==================================
+
         case 0x41: // Key A
             g_pMapTool->SelectStart(false);
             break;

@@ -27,6 +27,8 @@ public:
 	Node* _pCurNode = nullptr;
 	Node* _pStart = nullptr;
 	Node* _pDest = nullptr;
+
+public:
 	vector<Node*> _openList;
 	vector<Node*> _closeList;
 

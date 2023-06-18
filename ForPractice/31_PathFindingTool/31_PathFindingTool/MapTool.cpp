@@ -117,26 +117,26 @@ void MapTool::RenderMenu(HDC hdc)
     WCHAR text[RENDER_MENU_LEN] = { '\0', };
 
     swprintf_s(text, RENDER_MENU_LEN,
-        L"마우스 휠: 맵 크기 조정 / 키보드 상하좌우: 맵 위치 조정 / 백 스페이스: 콘솔창 초기화");
+        L"마우스 휠: 맵 크기 조정 / 키보드 상하좌우: 맵 위치 조정 / Q: Astar / W: JPS");
     int iX = _iXPad;
     int iY = DEFAULT_Y_PAD * -1 + _iYPad;
     TextOutW(hdc, iX, iY, text, wcslen(text));
 
     wmemset(text, L'\0', RENDER_MENU_LEN);
     swprintf_s(text, RENDER_MENU_LEN,
-        L"마우스 L: 장애물 그리기 / 마우스 R: 장애물 지우기 / Q: 랜덤 장애물 / W: 장애물 비우기 / E: 장애물 채우기");
+        L"마우스 L: 장애물 그리기 / 마우스 R: 장애물 지우기 / A + 마우스 L: 출발지 지정 / S + 마우스 L: 목적지 지정");
     iY = DEFAULT_Y_PAD * ((float) -1 * 3 / 4) + _iYPad;
     TextOutW(hdc, iX, iY, text, wcslen(text));
 
     wmemset(text, L'\0', RENDER_MENU_LEN);
     swprintf_s(text, RENDER_MENU_LEN,
-        L"A + 마우스 L: 출발지 지정 / S + 마우스 L: 목적지 지정");
+        L"D: 랜덤 장애물 / F: 장애물 비우기 / G: 장애물 채우기 / Enter: 한번에 길찾기 / Space: 한단계씩 길찾기");
     iY = DEFAULT_Y_PAD * ((float) -1 * 2 / 4) + _iYPad;
     TextOutW(hdc, iX, iY, text, wcslen(text));
 
     wmemset(text, L'\0', RENDER_MENU_LEN);
     swprintf_s(text, RENDER_MENU_LEN,
-        L"엔터: 한번에 길찾기 / 스페이스: 한단계씩 길찾기");
+        L"Z-X: CreateNode LOG ON-OFF / C-V: FindCorner LOG ON-OFF / B-N: OpenList LOG ON-OFF / Backspace: 콘솔창 초기화");
     iY = DEFAULT_Y_PAD * ((float) -1 * 1 / 4) + _iYPad;
     TextOutW(hdc, iX, iY, text, wcslen(text));
 

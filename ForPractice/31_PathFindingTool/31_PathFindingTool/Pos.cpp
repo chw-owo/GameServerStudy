@@ -24,8 +24,21 @@ bool Pos::operator > (const Pos& other) const
 		return (_y > other._y);
 }
 
-int Pos::GetDistance(Pos destPos)
+int Pos::GetDistanceToDest(Pos destPos)
 {
-	return (int)((pow(destPos._x - _x, 2) + pow(destPos._y - _y, 2)) * 10); 	
+	return (abs(destPos._x - _x) + abs(destPos._y - _y)) * VERT_DIST;
+}
+
+
+int Pos::GetDistance(Pos pos2, bool vert)
+{
+	if (vert)
+	{
+		return (abs(pos2._x - _x) + abs(pos2._y - _y))* VERT_DIST;
+	}
+	else
+	{
+		return abs(pos2._x - _x) * DIAG_DIST;
+	}
 }
 

@@ -9,6 +9,8 @@ public:
 
 private:
 	void CreateNode(Node* pCurNode);
+
+private:
 	void PrintOpenListForDebug();
 
 private:

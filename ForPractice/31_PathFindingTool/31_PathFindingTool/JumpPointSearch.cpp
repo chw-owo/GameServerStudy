@@ -14,8 +14,8 @@ void JumpPointSearch::FindPath()
 
 	if (_pNodeMgr->_pCurNode->_pos != _pNodeMgr->_pMap->_destPos)
 	{
-		printf("\n");
-		//printf("Cur Node (%d, %d)\n", _pNodeMgr->_pCurNode->_pos._x, _pNodeMgr->_pCurNode->_pos._y);
+		if(_debugCreateNode) 
+			printf("\nCur Node (%d, %d)\n", _pNodeMgr->_pCurNode->_pos._x, _pNodeMgr->_pCurNode->_pos._y);
 
 		_pNodeMgr->_closeList.push_back(_pNodeMgr->_pCurNode);
 		_pNodeMgr->_pMap->SetMapState(
@@ -25,23 +25,21 @@ void JumpPointSearch::FindPath()
 
 		if (_pNodeMgr->_openList.empty())
 		{
-			printf("\nCan't Find Path!\n");
+			printf("\nCan't Find Path!\n\n");
 			_bFindPathOn = false;
 			return;
 		}
-
 		make_heap(_pNodeMgr->_openList.begin(), _pNodeMgr->_openList.end(), compareF);
 		_pNodeMgr->_pCurNode = _pNodeMgr->_openList.front();
-		//PrintOpenListForDebug();
+		if (_debugOpenList) PrintOpenListForDebug();
 		pop_heap(_pNodeMgr->_openList.begin(), _pNodeMgr->_openList.end());
 		_pNodeMgr->_openList.pop_back();
 
-		printf("\n");
 	}
 	else
 	{
-		printf("\nComplete Find Path\n=================================\n");
 		_pNodeMgr->_pDest = _pNodeMgr->_pCurNode;
+		printf("\nComplete Find Path! (JPS: %d)\n\n", _pNodeMgr->_pDest->_g);
 		_bFindPathOn = false;
 	}
 }
@@ -60,8 +58,8 @@ void JumpPointSearch::FindPathStepInto()
 
 	if (_pNodeMgr->_pCurNode->_pos != _pNodeMgr->_pMap->_destPos)
 	{
-		printf("\n");
-		//printf("Cur Node (%d, %d)\n", _pNodeMgr->_pCurNode->_pos._x, _pNodeMgr->_pCurNode->_pos._y);
+		if (_debugCreateNode) 
+			printf("\nCur Node (%d, %d)\n", _pNodeMgr->_pCurNode->_pos._x, _pNodeMgr->_pCurNode->_pos._y);
 		
 		_pNodeMgr->_closeList.push_back(_pNodeMgr->_pCurNode);
 		_pNodeMgr->_pMap->SetMapState(
@@ -71,21 +69,22 @@ void JumpPointSearch::FindPathStepInto()
 
 		if (_pNodeMgr->_openList.empty())
 		{
-			printf("\nCan't Find Path!\n");
+			printf("\nCan't Find Path!\n\n");
 			_bFindPathStepOn = false;
 			return;
 		}
 
 		make_heap(_pNodeMgr->_openList.begin(), _pNodeMgr->_openList.end(), compareF);
 		_pNodeMgr->_pCurNode = _pNodeMgr->_openList.front();
-		//PrintOpenListForDebug();
+		if(_debugOpenList) PrintOpenListForDebug();
 		pop_heap(_pNodeMgr->_openList.begin(), _pNodeMgr->_openList.end());
 		_pNodeMgr->_openList.pop_back();
+
 	}
 	else
 	{
-		printf("\nComplete Find Path\n=================================\n");
 		_pNodeMgr->_pDest = _pNodeMgr->_pCurNode;
+		printf("\nComplete Find Path! (JPS: %d)\n\n", _pNodeMgr->_pDest->_g);
 		_bFindPathStepOn = false;
 	}
 }
@@ -165,7 +164,12 @@ void JumpPointSearch::CheckCreateNode(Node* pCurNode)
 	DIR searchDir = pCurNode->_searchDir;
 	DIR newSearchDir = DIR::NONE; 
 
-	PrintDirForDebug(pCurNode);
+	if(_debugFindCorner) 
+	{
+		printf("\n");
+		PrintDirForDebug(pCurNode);
+		printf("\n");
+	}
 
 	switch (dir)
 	{
@@ -176,72 +180,48 @@ void JumpPointSearch::CheckCreateNode(Node* pCurNode)
 		case DIR::UP:
 			if (CheckCorner(pCurNode->_pos, DIR::UP_R, newPos, newSearchDir))
 			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
 				CreateNode(pCurNode, newPos, DIR::UP_R, newSearchDir, newG);
 			}
 
 			if (CheckCorner(pCurNode->_pos, DIR::UP, newPos, newSearchDir))
 			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
 				CreateNode(pCurNode, newPos, DIR::UP, newSearchDir, newG);
 			}
 
 			if (CheckCorner(pCurNode->_pos, DIR::UP_L, newPos, newSearchDir))
 			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
 				CreateNode(pCurNode, newPos, DIR::UP_L, newSearchDir, newG);
 			}
 			break;
 
 		case DIR::UP_R:
-			if (CheckCorner(pCurNode->_pos, DIR::R, newPos, newSearchDir))
-			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
-				CreateNode(pCurNode, newPos, DIR::R, newSearchDir, newG);
-			}
-
 			if (CheckCorner(pCurNode->_pos, DIR::UP_R, newPos, newSearchDir))
 			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
 				CreateNode(pCurNode, newPos, DIR::UP_R, newSearchDir, newG);
 			}
 
 			if (CheckCorner(pCurNode->_pos, DIR::UP, newPos, newSearchDir))
 			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
 				CreateNode(pCurNode, newPos, DIR::UP, newSearchDir, newG);
-			}
-
-			if (CheckCorner(pCurNode->_pos, DIR::UP_L, newPos, newSearchDir))
-			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
-				CreateNode(pCurNode, newPos, DIR::UP_L, newSearchDir, newG);
 			}
 			break;
 
 		case DIR::UP_L:
-			if(CheckCorner(pCurNode->_pos, DIR::UP_R, newPos, newSearchDir))
-			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
-				CreateNode(pCurNode, newPos, DIR::UP_R, newSearchDir, newG);
-			}
-		
 			if(CheckCorner(pCurNode->_pos, DIR::UP, newPos, newSearchDir))
 			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
 				CreateNode(pCurNode, newPos, DIR::UP, newSearchDir, newG);
 			}
 
 			if(CheckCorner(pCurNode->_pos, DIR::UP_L, newPos, newSearchDir))
 			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
 				CreateNode(pCurNode, newPos, DIR::UP_L, newSearchDir, newG);	
-			}
-
-			if(CheckCorner(pCurNode->_pos, DIR::L, newPos, newSearchDir))
-			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
-				CreateNode(pCurNode, newPos, DIR::L, newSearchDir, newG);
 			}
 			break;
 
@@ -255,72 +235,48 @@ void JumpPointSearch::CheckCreateNode(Node* pCurNode)
 		case DIR::R:
 			if (CheckCorner(pCurNode->_pos, DIR::UP_R, newPos, newSearchDir))
 			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
 				CreateNode(pCurNode, newPos, DIR::UP_R, newSearchDir, newG);
 			}
 
 			if (CheckCorner(pCurNode->_pos, DIR::R, newPos, newSearchDir))
 			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
 				CreateNode(pCurNode, newPos, DIR::R, newSearchDir, newG);
 			}
 
 			if (CheckCorner(pCurNode->_pos, DIR::DOWN_R, newPos, newSearchDir))
 			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
 				CreateNode(pCurNode, newPos, DIR::DOWN_R, newSearchDir, newG);
 			}
 			break;
 
 		case DIR::UP_R:
-			if (CheckCorner(pCurNode->_pos, DIR::UP, newPos, newSearchDir))
-			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
-				CreateNode(pCurNode, newPos, DIR::UP, newSearchDir, newG);
-			}
-
 			if (CheckCorner(pCurNode->_pos, DIR::UP_R, newPos, newSearchDir))
 			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
 				CreateNode(pCurNode, newPos, DIR::UP_R, newSearchDir, newG);
 			}
 
 			if (CheckCorner(pCurNode->_pos, DIR::R, newPos, newSearchDir))
 			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
 				CreateNode(pCurNode, newPos, DIR::R, newSearchDir, newG);
-			}
-
-			if (CheckCorner(pCurNode->_pos, DIR::DOWN_R, newPos, newSearchDir))
-			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
-				CreateNode(pCurNode, newPos, DIR::DOWN_R, newSearchDir, newG);
 			}
 			break;
 
 		case DIR::DOWN_R:
-			if (CheckCorner(pCurNode->_pos, DIR::UP_R, newPos, newSearchDir))
-			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
-				CreateNode(pCurNode, newPos, DIR::UP_R, newSearchDir, newG);
-			}
-
 			if (CheckCorner(pCurNode->_pos, DIR::R, newPos, newSearchDir))
 			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
 				CreateNode(pCurNode, newPos, DIR::R, newSearchDir, newG);
 			}
 
 			if (CheckCorner(pCurNode->_pos, DIR::DOWN_R, newPos, newSearchDir))
 			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
 				CreateNode(pCurNode, newPos, DIR::DOWN_R, newSearchDir, newG);
-			}
-
-			if (CheckCorner(pCurNode->_pos, DIR::DOWN, newPos, newSearchDir))
-			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
-				CreateNode(pCurNode, newPos, DIR::DOWN, newSearchDir, newG);
 			}
 			break;
 		}
@@ -333,72 +289,48 @@ void JumpPointSearch::CheckCreateNode(Node* pCurNode)
 		case DIR::DOWN:
 			if (CheckCorner(pCurNode->_pos, DIR::DOWN_R, newPos, newSearchDir))
 			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
 				CreateNode(pCurNode, newPos, DIR::DOWN_R, newSearchDir, newG);
 			}
 
 			if (CheckCorner(pCurNode->_pos, DIR::DOWN, newPos, newSearchDir))
 			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
 				CreateNode(pCurNode, newPos, DIR::DOWN, newSearchDir, newG);
 			}
 
 			if (CheckCorner(pCurNode->_pos, DIR::DOWN_L, newPos, newSearchDir))
 			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
 				CreateNode(pCurNode, newPos, DIR::DOWN_L, newSearchDir, newG);
 			}
 			break;
 
 		case DIR::DOWN_L:
-			if (CheckCorner(pCurNode->_pos, DIR::DOWN_R, newPos, newSearchDir))
-			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
-				CreateNode(pCurNode, newPos, DIR::DOWN_R, newSearchDir, newG);
-			}
-
 			if (CheckCorner(pCurNode->_pos, DIR::DOWN, newPos, newSearchDir))
 			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
 				CreateNode(pCurNode, newPos, DIR::DOWN, newSearchDir, newG);
 			}
 
 			if (CheckCorner(pCurNode->_pos, DIR::DOWN_L, newPos, newSearchDir))
 			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
 				CreateNode(pCurNode, newPos, DIR::DOWN_L, newSearchDir, newG);
-			}
-
-			if (CheckCorner(pCurNode->_pos, DIR::L, newPos, newSearchDir))
-			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
-				CreateNode(pCurNode, newPos, DIR::L, newSearchDir, newG);
 			}
 			break;
 
 		case DIR::DOWN_R:
-			if (CheckCorner(pCurNode->_pos, DIR::R, newPos, newSearchDir))
-			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
-				CreateNode(pCurNode, newPos, DIR::R, newSearchDir, newG);
-			}
-
 			if (CheckCorner(pCurNode->_pos, DIR::DOWN_R, newPos, newSearchDir))
 			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
 				CreateNode(pCurNode, newPos, DIR::DOWN_R, newSearchDir, newG);
 			}
 
 			if (CheckCorner(pCurNode->_pos, DIR::DOWN, newPos, newSearchDir))
 			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
 				CreateNode(pCurNode, newPos, DIR::DOWN, newSearchDir, newG);
-			}
-
-			if (CheckCorner(pCurNode->_pos, DIR::DOWN_L, newPos, newSearchDir))
-			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
-				CreateNode(pCurNode, newPos, DIR::DOWN_L, newSearchDir, newG);
 			}
 			break;
 		}
@@ -411,72 +343,49 @@ void JumpPointSearch::CheckCreateNode(Node* pCurNode)
 		case DIR::L:
 			if (CheckCorner(pCurNode->_pos, DIR::UP_L, newPos, newSearchDir))
 			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
 				CreateNode(pCurNode, newPos, DIR::UP_L, newSearchDir, newG);
 			}
 
 			if (CheckCorner(pCurNode->_pos, DIR::L, newPos, newSearchDir))
 			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
 				CreateNode(pCurNode, newPos, DIR::L, newSearchDir, newG);
 			}
 
 			if (CheckCorner(pCurNode->_pos, DIR::DOWN_L, newPos, newSearchDir))
 			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
 				CreateNode(pCurNode, newPos, DIR::DOWN_L, newSearchDir, newG);
 			}
 			break;
 
 		case DIR::UP_L:
-			if (CheckCorner(pCurNode->_pos, DIR::UP, newPos, newSearchDir))
-			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
-				CreateNode(pCurNode, newPos, DIR::UP, newSearchDir, newG);
-			}
 
 			if (CheckCorner(pCurNode->_pos, DIR::UP_L, newPos, newSearchDir))
 			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
 				CreateNode(pCurNode, newPos, DIR::UP_L, newSearchDir, newG);
 			}
 
 			if (CheckCorner(pCurNode->_pos, DIR::L, newPos, newSearchDir))
 			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
 				CreateNode(pCurNode, newPos, DIR::L, newSearchDir, newG);
-			}
-
-			if (CheckCorner(pCurNode->_pos, DIR::DOWN_L, newPos, newSearchDir))
-			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
-				CreateNode(pCurNode, newPos, DIR::DOWN_L, newSearchDir, newG);
 			}
 			break;
 
 		case DIR::DOWN_L:
-			if (CheckCorner(pCurNode->_pos, DIR::UP_L, newPos, newSearchDir))
-			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
-				CreateNode(pCurNode, newPos, DIR::UP_L, newSearchDir, newG);
-			}
-
 			if (CheckCorner(pCurNode->_pos, DIR::L, newPos, newSearchDir))
 			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
 				CreateNode(pCurNode, newPos, DIR::L, newSearchDir, newG);
 			}
 
 			if (CheckCorner(pCurNode->_pos, DIR::DOWN_L, newPos, newSearchDir))
 			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
 				CreateNode(pCurNode, newPos, DIR::DOWN_L, newSearchDir, newG);
-			}
-
-			if (CheckCorner(pCurNode->_pos, DIR::DOWN, newPos, newSearchDir))
-			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
-				CreateNode(pCurNode, newPos, DIR::DOWN, newSearchDir, newG);
 			}
 			break;
 		}
@@ -484,152 +393,588 @@ void JumpPointSearch::CheckCreateNode(Node* pCurNode)
 
 	case DIR::UP_R:
 
-		if(CheckCorner(pCurNode->_pos, DIR::UP_L, newPos, newSearchDir))
+		switch (searchDir)
 		{
-			newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
-			CreateNode(pCurNode, newPos, DIR::UP_L, newSearchDir, newG);
-		}
+		case DIR::UP:
 
-		if(CheckCorner(pCurNode->_pos, DIR::UP, newPos, newSearchDir))
-		{
-			newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
-			CreateNode(pCurNode, newPos, DIR::UP, newSearchDir, newG);
-		}
+			if (CheckCorner(pCurNode->_pos, DIR::UP, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
+				CreateNode(pCurNode, newPos, DIR::UP, newSearchDir, newG);
+			}
+			break;
 
-		if(CheckCorner(pCurNode->_pos, DIR::UP_R, newPos, newSearchDir))
-		{
-			newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
-			CreateNode(pCurNode, newPos, DIR::UP_R, newSearchDir, newG);	
-		}
+		case DIR::UP_R:
 
-		if(CheckCorner(pCurNode->_pos, DIR::R, newPos, newSearchDir))
-		{
-			newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
-			CreateNode(pCurNode, newPos, DIR::R, newSearchDir, newG);	
-		}
+			if (CheckCorner(pCurNode->_pos, DIR::UP_R, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
+				CreateNode(pCurNode, newPos, DIR::UP_R, newSearchDir, newG);
+			}
+			break;
 
-		if(CheckCorner(pCurNode->_pos, DIR::DOWN_R, newPos, newSearchDir))
-		{
-			newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
-			CreateNode(pCurNode, newPos, DIR::DOWN_R, newSearchDir, newG);
-		}
+		case DIR::R:
 
+			if (CheckCorner(pCurNode->_pos, DIR::R, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
+				CreateNode(pCurNode, newPos, DIR::R, newSearchDir, newG);
+			}
+			break;
+
+		case DIR::UP_L:
+
+			if (CheckCorner(pCurNode->_pos, DIR::UP_L, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
+				CreateNode(pCurNode, newPos, DIR::UP_L, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::UP, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
+				CreateNode(pCurNode, newPos, DIR::UP, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::UP_R, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
+				CreateNode(pCurNode, newPos, DIR::UP_R, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::R, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
+				CreateNode(pCurNode, newPos, DIR::R, newSearchDir, newG);
+			}
+
+			break;
+
+		case DIR::DOWN_R:
+			if (CheckCorner(pCurNode->_pos, DIR::UP, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
+				CreateNode(pCurNode, newPos, DIR::UP, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::UP_R, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
+				CreateNode(pCurNode, newPos, DIR::UP_R, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::R, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
+				CreateNode(pCurNode, newPos, DIR::R, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::DOWN_R, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
+				CreateNode(pCurNode, newPos, DIR::DOWN_R, newSearchDir, newG);
+			}
+			break;
+
+		case DIR::NONE:
+
+			if (CheckCorner(pCurNode->_pos, DIR::UP, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
+				CreateNode(pCurNode, newPos, DIR::UP, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::UP_R, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
+				CreateNode(pCurNode, newPos, DIR::UP_R, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::R, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
+				CreateNode(pCurNode, newPos, DIR::R, newSearchDir, newG);
+			}
+			break;
+
+		case DIR::ALL:
+
+			if (CheckCorner(pCurNode->_pos, DIR::UP_L, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
+				CreateNode(pCurNode, newPos, DIR::UP_L, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::UP, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
+				CreateNode(pCurNode, newPos, DIR::UP, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::UP_R, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
+				CreateNode(pCurNode, newPos, DIR::UP_R, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::R, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
+				CreateNode(pCurNode, newPos, DIR::R, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::DOWN_R, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
+				CreateNode(pCurNode, newPos, DIR::DOWN_R, newSearchDir, newG);
+			}
+			break;
+		}
 		break;
 
 	case DIR::DOWN_R:
 		
-		if(CheckCorner(pCurNode->_pos, DIR::DOWN_L, newPos, newSearchDir))
+		switch (searchDir)
 		{
-			newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
-			CreateNode(pCurNode, newPos, DIR::DOWN_L, newSearchDir, newG);
-		}
+		case DIR::DOWN:
+			if (CheckCorner(pCurNode->_pos, DIR::DOWN, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
+				CreateNode(pCurNode, newPos, DIR::DOWN, newSearchDir, newG);
+			}
+			break;
 
-		if(CheckCorner(pCurNode->_pos, DIR::DOWN, newPos, newSearchDir))
-		{
-			newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
-			CreateNode(pCurNode, newPos, DIR::DOWN, newSearchDir, newG);
-		}
+		case DIR::R:
+			if (CheckCorner(pCurNode->_pos, DIR::R, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
+				CreateNode(pCurNode, newPos, DIR::R, newSearchDir, newG);
+			}
+			break;
 
-		if(CheckCorner(pCurNode->_pos, DIR::DOWN_R, newPos, newSearchDir))
-		{
-			newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
-			CreateNode(pCurNode, newPos, DIR::DOWN_R, newSearchDir, newG);
-		}
+		case DIR::DOWN_R:
+			if (CheckCorner(pCurNode->_pos, DIR::DOWN_R, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
+				CreateNode(pCurNode, newPos, DIR::DOWN_R, newSearchDir, newG);
+			}
+			break;
 
-		if(CheckCorner(pCurNode->_pos, DIR::R, newPos, newSearchDir))
-		{
-			newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
-			CreateNode(pCurNode, newPos, DIR::R, newSearchDir, newG);
-		}
+		case DIR::UP_R:
+			if (CheckCorner(pCurNode->_pos, DIR::DOWN, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
+				CreateNode(pCurNode, newPos, DIR::DOWN, newSearchDir, newG);
+			}
 
-		if(CheckCorner(pCurNode->_pos, DIR::UP_R, newPos, newSearchDir))
-		{
-			newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
-			CreateNode(pCurNode, newPos, DIR::UP_R, newSearchDir, newG);
+			if (CheckCorner(pCurNode->_pos, DIR::DOWN_R, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
+				CreateNode(pCurNode, newPos, DIR::DOWN_R, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::R, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
+				CreateNode(pCurNode, newPos, DIR::R, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::UP_R, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
+				CreateNode(pCurNode, newPos, DIR::UP_R, newSearchDir, newG);
+			}
+			break;
+
+		case DIR::DOWN_L:
+			if (CheckCorner(pCurNode->_pos, DIR::DOWN_L, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
+				CreateNode(pCurNode, newPos, DIR::DOWN_L, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::DOWN, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
+				CreateNode(pCurNode, newPos, DIR::DOWN, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::DOWN_R, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
+				CreateNode(pCurNode, newPos, DIR::DOWN_R, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::R, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
+				CreateNode(pCurNode, newPos, DIR::R, newSearchDir, newG);
+			}
+			break;
+		
+		case DIR::NONE:
+			if (CheckCorner(pCurNode->_pos, DIR::DOWN, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
+				CreateNode(pCurNode, newPos, DIR::DOWN, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::DOWN_R, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
+				CreateNode(pCurNode, newPos, DIR::DOWN_R, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::R, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
+				CreateNode(pCurNode, newPos, DIR::R, newSearchDir, newG);
+			}
+			break;
+
+		case DIR::ALL:
+
+			if (CheckCorner(pCurNode->_pos, DIR::DOWN_L, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
+				CreateNode(pCurNode, newPos, DIR::DOWN_L, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::DOWN, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
+				CreateNode(pCurNode, newPos, DIR::DOWN, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::DOWN_R, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
+				CreateNode(pCurNode, newPos, DIR::DOWN_R, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::R, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
+				CreateNode(pCurNode, newPos, DIR::R, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::UP_R, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
+				CreateNode(pCurNode, newPos, DIR::UP_R, newSearchDir, newG);
+			}
+			break;
 		}
 
 		break;
 
 	case DIR::DOWN_L:
 
-		if(CheckCorner(pCurNode->_pos, DIR::DOWN_R, newPos, newSearchDir))
+		switch (searchDir)
 		{
-			newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
-			CreateNode(pCurNode, newPos, DIR::DOWN_R, newSearchDir, newG);
-		}
+		case DIR::L:
+			if (CheckCorner(pCurNode->_pos, DIR::L, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
+				CreateNode(pCurNode, newPos, DIR::L, newSearchDir, newG);
+			}
+			break;
 
-		if(CheckCorner(pCurNode->_pos, DIR::DOWN, newPos, newSearchDir))
-		{
-			newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
-			CreateNode(pCurNode, newPos, DIR::DOWN, newSearchDir, newG);
-		}
+		case DIR::DOWN:
+			if (CheckCorner(pCurNode->_pos, DIR::DOWN, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
+				CreateNode(pCurNode, newPos, DIR::DOWN, newSearchDir, newG);
+			}
+			break;
 
-		if(CheckCorner(pCurNode->_pos, DIR::DOWN_L, newPos, newSearchDir))
-		{
-			newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
-			CreateNode(pCurNode, newPos, DIR::DOWN_L, newSearchDir, newG);
-		}
+		case DIR::DOWN_L:
+			if (CheckCorner(pCurNode->_pos, DIR::DOWN_L, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
+				CreateNode(pCurNode, newPos, DIR::DOWN_L, newSearchDir, newG);
+			}
+			break;
 
-		if(CheckCorner(pCurNode->_pos, DIR::L, newPos, newSearchDir))
-		{
-			newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
-			CreateNode(pCurNode, newPos, DIR::L, newSearchDir, newG);
-		}
+		case DIR::DOWN_R:
+			if (CheckCorner(pCurNode->_pos, DIR::DOWN_R, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
+				CreateNode(pCurNode, newPos, DIR::DOWN_R, newSearchDir, newG);
+			}
 
-		if(CheckCorner(pCurNode->_pos, DIR::UP_L, newPos, newSearchDir))
-		{
-			newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
-			CreateNode(pCurNode, newPos, DIR::UP_L, newSearchDir, newG);
+			if (CheckCorner(pCurNode->_pos, DIR::DOWN, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
+				CreateNode(pCurNode, newPos, DIR::DOWN, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::DOWN_L, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
+				CreateNode(pCurNode, newPos, DIR::DOWN_L, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::L, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
+				CreateNode(pCurNode, newPos, DIR::L, newSearchDir, newG);
+			}
+			break;
+
+		case DIR::UP_L:
+			if (CheckCorner(pCurNode->_pos, DIR::DOWN, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
+				CreateNode(pCurNode, newPos, DIR::DOWN, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::DOWN_L, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
+				CreateNode(pCurNode, newPos, DIR::DOWN_L, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::L, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
+				CreateNode(pCurNode, newPos, DIR::L, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::UP_L, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
+				CreateNode(pCurNode, newPos, DIR::UP_L, newSearchDir, newG);
+			}
+			break;
+
+		case DIR::NONE:
+			if (CheckCorner(pCurNode->_pos, DIR::DOWN, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
+				CreateNode(pCurNode, newPos, DIR::DOWN, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::DOWN_L, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
+				CreateNode(pCurNode, newPos, DIR::DOWN_L, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::L, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
+				CreateNode(pCurNode, newPos, DIR::L, newSearchDir, newG);
+			}
+			break;
+
+		case DIR::ALL:
+			if (CheckCorner(pCurNode->_pos, DIR::DOWN_R, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
+				CreateNode(pCurNode, newPos, DIR::DOWN_R, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::DOWN, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
+				CreateNode(pCurNode, newPos, DIR::DOWN, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::DOWN_L, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
+				CreateNode(pCurNode, newPos, DIR::DOWN_L, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::L, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
+				CreateNode(pCurNode, newPos, DIR::L, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::UP_L, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
+				CreateNode(pCurNode, newPos, DIR::UP_L, newSearchDir, newG);
+			}
+			break;
 		}
 
 		break;
 
 	case DIR::UP_L:
 
-		if(CheckCorner(pCurNode->_pos, DIR::UP_R, newPos, newSearchDir))
+		switch (searchDir)
 		{
-			newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
-			CreateNode(pCurNode, newPos, DIR::UP_R, newSearchDir, newG);	
-		}
+		case DIR::UP:
+			if (CheckCorner(pCurNode->_pos, DIR::UP, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
+				CreateNode(pCurNode, newPos, DIR::UP, newSearchDir, newG);
+			}
+			break;
 
-		if(CheckCorner(pCurNode->_pos, DIR::UP, newPos, newSearchDir))
-		{
-			newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
-			CreateNode(pCurNode, newPos, DIR::UP, newSearchDir, newG);	
-		}
+		case DIR::L:
+			if (CheckCorner(pCurNode->_pos, DIR::L, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
+				CreateNode(pCurNode, newPos, DIR::L, newSearchDir, newG);
+			}
+			break;
 
-		if(CheckCorner(pCurNode->_pos, DIR::UP_L, newPos, newSearchDir))
-		{
-			newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
-			CreateNode(pCurNode, newPos, DIR::UP_L, newSearchDir, newG);		
-		}
+		case DIR::UP_L:
+			if (CheckCorner(pCurNode->_pos, DIR::UP_L, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
+				CreateNode(pCurNode, newPos, DIR::UP_L, newSearchDir, newG);
+			}
+			break;
 
-		if(CheckCorner(pCurNode->_pos, DIR::L, newPos, newSearchDir))
-		{
-			newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
-			CreateNode(pCurNode, newPos, DIR::L, newSearchDir, newG);
-		}
 
-		if(CheckCorner(pCurNode->_pos, DIR::DOWN_L, newPos, newSearchDir))
-		{
-			newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
-			CreateNode(pCurNode, newPos, DIR::DOWN_L, newSearchDir, newG);
+		case DIR::UP_R:
+			if (CheckCorner(pCurNode->_pos, DIR::UP_R, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
+				CreateNode(pCurNode, newPos, DIR::UP_R, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::UP, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
+				CreateNode(pCurNode, newPos, DIR::UP, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::UP_L, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
+				CreateNode(pCurNode, newPos, DIR::UP_L, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::L, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
+				CreateNode(pCurNode, newPos, DIR::L, newSearchDir, newG);
+			}
+			break;
+
+
+		case DIR::DOWN_L:
+			if (CheckCorner(pCurNode->_pos, DIR::UP_R, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
+				CreateNode(pCurNode, newPos, DIR::UP_R, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::UP, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
+				CreateNode(pCurNode, newPos, DIR::UP, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::UP_L, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
+				CreateNode(pCurNode, newPos, DIR::UP_L, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::L, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
+				CreateNode(pCurNode, newPos, DIR::L, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::DOWN_L, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
+				CreateNode(pCurNode, newPos, DIR::DOWN_L, newSearchDir, newG);
+			}
+			break;
+
+		case DIR::NONE:
+
+			if (CheckCorner(pCurNode->_pos, DIR::UP, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
+				CreateNode(pCurNode, newPos, DIR::UP, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::UP_L, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
+				CreateNode(pCurNode, newPos, DIR::UP_L, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::L, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
+				CreateNode(pCurNode, newPos, DIR::L, newSearchDir, newG);
+			}
+
+			break;
+
+		case DIR::ALL:
+			if (CheckCorner(pCurNode->_pos, DIR::UP_R, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
+				CreateNode(pCurNode, newPos, DIR::UP_R, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::UP, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
+				CreateNode(pCurNode, newPos, DIR::UP, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::UP_L, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
+				CreateNode(pCurNode, newPos, DIR::UP_L, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::L, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
+				CreateNode(pCurNode, newPos, DIR::L, newSearchDir, newG);
+			}
+
+			if (CheckCorner(pCurNode->_pos, DIR::DOWN_L, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
+				CreateNode(pCurNode, newPos, DIR::DOWN_L, newSearchDir, newG);
+			}
+			break;
 		}
 
 		break;
 
 	case DIR::NONE:
 
-		for (int i = (int)DIR::UP; i < (int)DIR::NONE; i++)
+		for (int i = (int)DIR::UP; i <= (int)DIR::L; i++)
 		{
 			if(CheckCorner(pCurNode->_pos, (DIR)i, newPos, newSearchDir))
 			{
-				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos);
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, true);
 				CreateNode(pCurNode, newPos, (DIR)i, newSearchDir, newG);
 			}
 		}
+
+		for (int i = (int)DIR::UP_R; i <= (int)DIR::UP_L; i++)
+		{
+			if (CheckCorner(pCurNode->_pos, (DIR)i, newPos, newSearchDir))
+			{
+				newG = pCurNode->_g + pCurNode->_pos.GetDistance(newPos, false);
+				CreateNode(pCurNode, newPos, (DIR)i, newSearchDir, newG);
+			}
+		}
+
 		break;
 	}	
+
+	if (_debugFindCorner)
+	{
+		printf("\n");
+	}
 }
 
 bool JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchDir)
@@ -648,7 +993,7 @@ bool JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 
 		if (_pNodeMgr->_pMap->GetMapState(up) == Map::OBSTACLE)
 		{
-			printf("UP: Obstacle (%d, %d)\n", up._x, up._y);
+			if(_debugFindCorner) printf("UP: Obstacle (%d, %d)\n", up._x, up._y);
 			return false;
 		}
 
@@ -656,13 +1001,13 @@ bool JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 		{
 			newPos = up;
 			searchDir = DIR::NONE;
-			printf("★★★ UP: Dest (%d, %d)\n", up._x, up._y);
+			if(_debugFindCorner) printf("★★★ UP: Dest (%d, %d)\n", up._x, up._y);
 			return true;
 		}
 
 		if (up._y < 0)
 		{
-			printf("UP: Range Out\n");
+			if(_debugFindCorner) printf("UP: Range Out\n");
 			return false;
 		}
 
@@ -674,32 +1019,34 @@ bool JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 				_pNodeMgr->_pMap->GetMapState(up_r_front) != Map::OBSTACLE)
 			{
 				newPos = up;
-				searchDir = DIR::UP_L;
+				searchDir = DIR::UP_R;
 			}
 
 			if (_pNodeMgr->_pMap->GetMapState(up_l) == Map::OBSTACLE &&
 				_pNodeMgr->_pMap->GetMapState(up_l_front) != Map::OBSTACLE)
 			{
-				if (searchDir == DIR::UP_L)
+				if (searchDir == DIR::UP_R)
 				{
-					searchDir == DIR::UP_R;
+					searchDir = DIR::UP;
 				}
 				else
 				{
 					newPos = up;
-					searchDir = DIR::UP;
+					searchDir = DIR::UP_L;
 				}
 			}
 
 			if (searchDir != DIR::NONE)
 			{
-				if (searchDir == DIR::UP)
-					printf("★★★ UP: R L Corner (%d, %d)\n", up._x, up._y);
-				else if (searchDir == DIR::UP_R)
-					printf("★★★ UP: L Corner (%d, %d)\n", up._x, up._y);
-				else if (searchDir == DIR::UP_L)
-					printf("★★★ UP: R Corner (%d, %d)\n", up._x, up._y);
-
+				if (_debugFindCorner)
+				{
+					if (searchDir == DIR::UP)
+						printf("★★★ UP: R L Corner (%d, %d)\n", up._x, up._y);
+					else if (searchDir == DIR::UP_R)
+						printf("★★★ UP: L Corner (%d, %d)\n", up._x, up._y);
+					else if (searchDir == DIR::UP_L)
+						printf("★★★ UP: R Corner (%d, %d)\n", up._x, up._y);
+				}
 				return true;
 			}
 
@@ -711,7 +1058,7 @@ bool JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 
 			if (_pNodeMgr->_pMap->GetMapState(up) == Map::OBSTACLE)
 			{
-				printf("UP: Obstacle (%d, %d)\n", up._x, up._y);
+				if(_debugFindCorner) printf("UP: Obstacle (%d, %d)\n", up._x, up._y);
 				return false;
 			}
 
@@ -719,14 +1066,14 @@ bool JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 			{
 				newPos = up;
 				searchDir = DIR::NONE;
-				printf("★★★ UP: Dest (%d, %d)\n", up._x, up._y);
+				if(_debugFindCorner) printf("★★★ UP: Dest (%d, %d)\n", up._x, up._y);
 				return true;
 			}
 
 			_pNodeMgr->_checkedList.push_back(Pos(up._x, up._y));
 		}
 
-		printf("UP: Range Out\n");
+		if(_debugFindCorner) printf("UP: Range Out\n");
 		return false;
 	}
 	break;
@@ -741,7 +1088,7 @@ bool JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 
 		if (_pNodeMgr->_pMap->GetMapState(down) == Map::OBSTACLE)
 		{
-			printf("DOWN: Obstacle (%d, %d)\n", down._x, down._y);
+			if(_debugFindCorner) printf("DOWN: Obstacle (%d, %d)\n", down._x, down._y);
 			return false;
 		}
 
@@ -749,13 +1096,13 @@ bool JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 		{
 			newPos = down;
 			searchDir = DIR::NONE;
-			printf("★★★ DOWN: Dest (%d, %d)\n", down._x, down._y);
+			if(_debugFindCorner) printf("★★★ DOWN: Dest (%d, %d)\n", down._x, down._y);
 			return true;
 		}
 
 		if (down._y >= Y_MAX)
 		{
-			printf("DOWN: Range Out\n");
+			if(_debugFindCorner) printf("DOWN: Range Out\n");
 			return false;
 		}
 
@@ -767,32 +1114,34 @@ bool JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 				_pNodeMgr->_pMap->GetMapState(down_r_front) != Map::OBSTACLE)
 			{
 				newPos = down;
-				searchDir = DIR::DOWN_L;
+				searchDir = DIR::DOWN_R;
 			}
 
 			if (_pNodeMgr->_pMap->GetMapState(down_l) == Map::OBSTACLE &&
 				_pNodeMgr->_pMap->GetMapState(down_l_front) != Map::OBSTACLE)
 			{
-				if (searchDir == DIR::DOWN_L)
+				if (searchDir == DIR::DOWN_R)
 				{
 					searchDir = DIR::DOWN;
 				}
 				else
 				{
 					newPos = down;
-					searchDir = DIR::DOWN_R;
+					searchDir = DIR::DOWN_L;
 				}
 			}
 
 			if (searchDir != DIR::NONE)
 			{
-				if (searchDir == DIR::DOWN)
-					printf("★★★ DOWN: R L Corner (%d, %d)\n", down._x, down._y);
-				else if (searchDir == DIR::DOWN_L)
-					printf("★★★ DOWN: R Corner (%d, %d)\n", down._x, down._y);
-				else if (searchDir == DIR::DOWN_R)
-					printf("★★★ DOWN: L Co (%d, %d)\n", down._x, down._y);
-
+				if (_debugFindCorner)
+				{
+					if (searchDir == DIR::DOWN)
+						printf("★★★ DOWN: R L Corner (%d, %d)\n", down._x, down._y);
+					else if (searchDir == DIR::DOWN_L)
+						printf("★★★ DOWN: R Corner (%d, %d)\n", down._x, down._y);
+					else if (searchDir == DIR::DOWN_R)
+						printf("★★★ DOWN: L Corner (%d, %d)\n", down._x, down._y);
+				}
 				return true;
 			}
 
@@ -804,7 +1153,7 @@ bool JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 
 			if (_pNodeMgr->_pMap->GetMapState(down) == Map::OBSTACLE)
 			{
-				printf("DOWN: Obstacle (%d, %d)\n", down._x, down._y);
+				if(_debugFindCorner) printf("DOWN: Obstacle (%d, %d)\n", down._x, down._y);
 				return false;
 			}
 
@@ -812,14 +1161,14 @@ bool JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 			{
 				newPos = down;
 				searchDir = DIR::NONE;
-				printf("★★★ DOWN: Dest (%d, %d)\n", down._x, down._y);
+				if(_debugFindCorner) printf("★★★ DOWN: Dest (%d, %d)\n", down._x, down._y);
 				return true;
 			}
 
 			_pNodeMgr->_checkedList.push_back(Pos(down._x, down._y));
 		}
 
-		printf("DOWN: Range Out\n");
+		if(_debugFindCorner) printf("DOWN: Range Out\n");
 		return false;
 	}
 	break;
@@ -834,7 +1183,7 @@ bool JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 
 		if (_pNodeMgr->_pMap->GetMapState(r) == Map::OBSTACLE)
 		{
-			printf("R: Obstacle (%d, %d)\n", r._x, r._y);
+			if(_debugFindCorner) printf("R: Obstacle (%d, %d)\n", r._x, r._y);
 			return false;
 		}
 
@@ -842,13 +1191,13 @@ bool JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 		{
 			newPos = r;
 			searchDir = DIR::NONE;
-			printf("★★★ R: Dest (%d, %d)\n", r._x, r._y);
+			if(_debugFindCorner) printf("★★★ R: Dest (%d, %d)\n", r._x, r._y);
 			return true;
 		}
 
 		if (r._x >= X_MAX)
 		{
-			printf("R: Range Out\n");
+			if(_debugFindCorner) printf("R: Range Out\n");
 			return false;
 		}
 
@@ -860,32 +1209,34 @@ bool JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 				_pNodeMgr->_pMap->GetMapState(r_up_front) != Map::OBSTACLE)
 			{
 				newPos = r;
-				searchDir = DIR::DOWN_R;
+				searchDir = DIR::UP_R;
 			}
 
 			if (_pNodeMgr->_pMap->GetMapState(r_down) == Map::OBSTACLE &&
 				_pNodeMgr->_pMap->GetMapState(r_down_front) != Map::OBSTACLE)
 			{
-				if (searchDir == DIR::DOWN_R)
+				if (searchDir == DIR::UP_R)
 				{
 					searchDir = DIR::R;
 				}
 				else
 				{
 					newPos = r;
-					searchDir = DIR::UP_R;
+					searchDir = DIR::DOWN_R;
 				}
 			}
 
 			if (searchDir != DIR::NONE)
 			{
-				if (searchDir == DIR::R)
-					printf("★★★ R: Up Down Corner (%d, %d)\n", r._x, r._y);
-				else if (searchDir == DIR::DOWN_R)
-					printf("★★★ R: UP Corner (%d, %d)\n", r._x, r._y);
-				else if (searchDir == DIR::UP_R)
-					printf("★★★ R: Down Corner (%d, %d)\n", r._x, r._y);
-
+				if (_debugFindCorner)
+				{
+					if (searchDir == DIR::R)
+						printf("★★★ R: Up Down Corner (%d, %d)\n", r._x, r._y);
+					else if (searchDir == DIR::DOWN_R)
+						printf("★★★ R: UP Corner (%d, %d)\n", r._x, r._y);
+					else if (searchDir == DIR::UP_R)
+						printf("★★★ R: Down Corner (%d, %d)\n", r._x, r._y);
+				}
 				return true;
 			}
 
@@ -897,7 +1248,7 @@ bool JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 
 			if (_pNodeMgr->_pMap->GetMapState(r) == Map::OBSTACLE)
 			{
-				printf("R: Obstacle (%d, %d)\n", r._x, r._y);
+				if(_debugFindCorner) printf("R: Obstacle (%d, %d)\n", r._x, r._y);
 				return false;
 			}
 
@@ -905,14 +1256,14 @@ bool JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 			{
 				newPos = r;
 				searchDir = DIR::NONE;
-				printf("★★★ R: Dest (%d, %d)\n", r._x, r._y);
+				if(_debugFindCorner) printf("★★★ R: Dest (%d, %d)\n", r._x, r._y);
 				return true;
 			}
 
 			_pNodeMgr->_checkedList.push_back(Pos(r._x, r._y));
 		}
 
-		printf("R: Range Out\n");
+		if(_debugFindCorner) printf("R: Range Out\n");
 		return false;
 	}
 	break;
@@ -927,7 +1278,7 @@ bool JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 
 		if (_pNodeMgr->_pMap->GetMapState(l) == Map::OBSTACLE)
 		{
-			printf("L: Obstacle (%d, %d)\n", l._x, l._y);
+			if(_debugFindCorner) printf("L: Obstacle (%d, %d)\n", l._x, l._y);
 			return false;
 		}
 
@@ -935,13 +1286,13 @@ bool JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 		{
 			newPos = l;
 			searchDir = DIR::NONE;
-			printf("★★★ L: Dest (%d, %d)\n", l._x, l._y);
+			if(_debugFindCorner) printf("★★★ L: Dest (%d, %d)\n", l._x, l._y);
 			return true;
 		}
 
 		if (l._x < 0)
 		{
-			printf("L: Range Out\n");
+			if(_debugFindCorner) printf("L: Range Out\n");
 			return false;
 		}
 
@@ -953,32 +1304,34 @@ bool JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 				_pNodeMgr->_pMap->GetMapState(l_up_front) != Map::OBSTACLE)
 			{
 				newPos = l;
-				searchDir = DIR::DOWN_L;
+				searchDir = DIR::UP_L;
 			}
 
 			if (_pNodeMgr->_pMap->GetMapState(l_down) == Map::OBSTACLE &&
 				_pNodeMgr->_pMap->GetMapState(l_down_front) != Map::OBSTACLE)
 			{
-				if (searchDir == DIR::DOWN_L)
+				if (searchDir == DIR::UP_L)
 				{
 					searchDir = DIR::L;
 				}
 				else
 				{
 					newPos = l;
-					searchDir = DIR::UP_L;
+					searchDir = DIR::DOWN_L;
 				}
 			}
 
 			if (searchDir != DIR::NONE)
 			{
-				if (searchDir == DIR::L)
-					printf("★★★ L: Up Down Corner (%d, %d)\n", l._x, l._y);
-				else if (searchDir == DIR::DOWN_L)
-					printf("★★★ L: Up Corner (%d, %d)\n", l._x, l._y);
-				else if (searchDir == DIR::UP_L)
-					printf("★★★ L: Down Corner (%d, %d)\n", l._x, l._y);
-
+				if (_debugFindCorner)
+				{
+					if (searchDir == DIR::L)
+						printf("★★★ L: Up Down Corner (%d, %d)\n", l._x, l._y);
+					else if (searchDir == DIR::DOWN_L)
+						printf("★★★ L: Up Corner (%d, %d)\n", l._x, l._y);
+					else if (searchDir == DIR::UP_L)
+						printf("★★★ L: Down Corner (%d, %d)\n", l._x, l._y);
+				}
 				return true;
 			}
 
@@ -990,7 +1343,7 @@ bool JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 
 			if (_pNodeMgr->_pMap->GetMapState(l) == Map::OBSTACLE)
 			{
-				printf("L: Obstacle (%d, %d)\n", l._x, l._y);
+				if(_debugFindCorner) printf("L: Obstacle (%d, %d)\n", l._x, l._y);
 				return false;
 			}
 
@@ -998,14 +1351,14 @@ bool JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 			{
 				newPos = l;
 				searchDir = DIR::NONE;
-				printf("★★★ L: Dest (%d, %d)\n", l._x, l._y);
+				if(_debugFindCorner) printf("★★★ L: Dest (%d, %d)\n", l._x, l._y);
 				return true;
 			}
 
 			_pNodeMgr->_checkedList.push_back(Pos(l._x, l._y));
 		}
 
-		printf("L: Range Out\n");
+		if(_debugFindCorner) printf("L: Range Out\n");
 		return false;
 	}
 	break;
@@ -1020,15 +1373,15 @@ bool JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 		{
 			if (_pNodeMgr->_pMap->GetMapState(diag) == Map::OBSTACLE)
 			{
-				printf("UP_R: Obstacle (%d, %d)\n", diag._x, diag._y);
+				if(_debugFindCorner) printf("UP_R: Obstacle (%d, %d)\n", diag._x, diag._y);
 				return false;
 			}
 
 			if (_pNodeMgr->_pMap->GetMapState(diag) == Map::DEST)
 			{
 				newPos = diag;
-				searchDir = DIR::NONE;
-				printf("★★★ UP_R: Dest (%d, %d)\n", diag._x, diag._y);
+				searchDir = DIR::UP_R;
+				if(_debugFindCorner) printf("★★★ UP_R: Dest (%d, %d)\n", diag._x, diag._y);
 				return true;
 			}
 
@@ -1036,22 +1389,37 @@ bool JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 				_pNodeMgr->_pMap->GetMapState(diag_down) == Map::OBSTACLE)
 			{
 				newPos = diag;
-				searchDir = DIR::UP_R;
-				printf("★★★ UP_R: UP_R (%d, %d)\n", diag._x, diag._y);
+				searchDir = DIR::ALL;
+				if(_debugFindCorner) printf("★★★ UP_R: UP_R (%d, %d)\n", diag._x, diag._y);
 				return true;
 			}
 			
 			_pNodeMgr->_checkedList.push_back(Pos(diag._x, diag._y));
 
-			if (CheckDiagCorner(diag, DIR::UP_R, DIR::R, newPos, searchDir)) return true;
-			if (CheckDiagCorner(diag, DIR::UP_R, DIR::UP, newPos, searchDir)) return true;
+			if (CheckDiagCorner(diag, DIR::UP_R, DIR::R, newPos, searchDir))
+			{
+				if (searchDir == DIR::UP_R)
+				{
+					searchDir = DIR::DOWN_R;
+				}
+				return true;
+			}
+
+			if (CheckDiagCorner(diag, DIR::UP_R, DIR::UP, newPos, searchDir))
+			{
+				if (searchDir == DIR::UP_R)
+				{
+					searchDir = DIR::UP_L;
+				}
+				return true;
+			}
 
 			diag = diag + _direction[(int)dir];
 			diag_l = diag + _direction[(int)DIR::L];
 			diag_down = diag + _direction[(int)DIR::DOWN];
 		}
 
-		printf("UP_R: Range Out\n");
+		if(_debugFindCorner) printf("UP_R: Range Out\n");
 		return false;
 	}
 	break;
@@ -1067,15 +1435,15 @@ bool JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 			// 대각선 방향 체크
 			if (_pNodeMgr->_pMap->GetMapState(diag) == Map::OBSTACLE)
 			{
-				printf("DOWN_R: Obstacle (%d, %d)\n", diag._x, diag._y);
+				if(_debugFindCorner) printf("DOWN_R: Obstacle (%d, %d)\n", diag._x, diag._y);
 				return false;
 			}
 
 			if (_pNodeMgr->_pMap->GetMapState(diag) == Map::DEST)
 			{
 				newPos = diag;
-				searchDir = DIR::NONE;
-				printf("★★★ DOWN_R: Dest (%d, %d)\n", diag._x, diag._y);
+				searchDir = DIR::DOWN_R;
+				if(_debugFindCorner) printf("★★★ DOWN_R: Dest (%d, %d)\n", diag._x, diag._y);
 				return true;
 			}
 
@@ -1083,22 +1451,37 @@ bool JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 				_pNodeMgr->_pMap->GetMapState(diag_up) == Map::OBSTACLE)
 			{
 				newPos = diag;
-				searchDir = DIR::DOWN_R;
-				printf("★★★ DOWN_R: DOWN_R (%d, %d)\n", diag._x, diag._y);
+				searchDir = DIR::ALL;
+				if(_debugFindCorner) printf("★★★ DOWN_R: DOWN_R (%d, %d)\n", diag._x, diag._y);
 				return true;
 			}
 
 			_pNodeMgr->_checkedList.push_back(Pos(diag._x, diag._y));
 
-			if (CheckDiagCorner(diag, DIR::DOWN_R, DIR::R, newPos, searchDir)) return true;
-			if (CheckDiagCorner(diag, DIR::DOWN_R, DIR::DOWN, newPos, searchDir)) return true;
+			if (CheckDiagCorner(diag, DIR::DOWN_R, DIR::R, newPos, searchDir))
+			{
+				if (searchDir == DIR::DOWN_R)
+				{
+					searchDir = DIR::UP_R;
+				}
+				return true;
+			}
+
+			if (CheckDiagCorner(diag, DIR::DOWN_R, DIR::DOWN, newPos, searchDir))
+			{
+				if (searchDir == DIR::DOWN_R)
+				{
+					searchDir = DIR::DOWN_L;
+				}
+				return true;
+			}
 
 			diag = diag + _direction[(int)dir];
 			diag_l = diag + _direction[(int)DIR::L];
 			diag_up = diag + _direction[(int)DIR::UP];
 
 		}
-		printf("DOWN_R: Range Out\n");
+		if(_debugFindCorner) printf("DOWN_R: Range Out\n");
 		return false;
 	}
 	break;
@@ -1114,15 +1497,15 @@ bool JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 			// 대각선 방향 체크
 			if (_pNodeMgr->_pMap->GetMapState(diag) == Map::OBSTACLE)
 			{
-				printf("DOWN_L: Obstacle (%d, %d)\n", diag._x, diag._y);
+				if(_debugFindCorner) printf("DOWN_L: Obstacle (%d, %d)\n", diag._x, diag._y);
 				return false;
 			}
 
 			if (_pNodeMgr->_pMap->GetMapState(diag) == Map::DEST)
 			{
 				newPos = diag;
-				searchDir = DIR::NONE;
-				printf("★★★ DOWN_L: Dest (%d, %d)\n", diag._x, diag._y);
+				searchDir = DIR::DOWN_L;
+				if(_debugFindCorner) printf("★★★ DOWN_L: Dest (%d, %d)\n", diag._x, diag._y);
 				return true;
 			}
 
@@ -1130,21 +1513,36 @@ bool JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 				_pNodeMgr->_pMap->GetMapState(diag_up) == Map::OBSTACLE)
 			{
 				newPos = diag;
-				searchDir = DIR::DOWN_L;
-				printf("★★★ DOWN_L: DOWN_L (%d, %d)\n", diag._x, diag._y);
+				searchDir = DIR::ALL;
+				if(_debugFindCorner) printf("★★★ DOWN_L: DOWN_L (%d, %d)\n", diag._x, diag._y);
 				return true;
 			}
 
 			_pNodeMgr->_checkedList.push_back(Pos(diag._x, diag._y));
 
-			if (CheckDiagCorner(diag, DIR::DOWN_L, DIR::L, newPos, searchDir)) return true;
-			if (CheckDiagCorner(diag, DIR::DOWN_L, DIR::DOWN, newPos, searchDir)) return true;
+			if (CheckDiagCorner(diag, DIR::DOWN_L, DIR::L, newPos, searchDir))
+			{
+				if (searchDir == DIR::DOWN_L)
+				{
+					searchDir = DIR::UP_L;
+				}
+				return true;
+			}
+
+			if (CheckDiagCorner(diag, DIR::DOWN_L, DIR::DOWN, newPos, searchDir))
+			{
+				if (searchDir == DIR::DOWN_L)
+				{
+					searchDir = DIR::DOWN_R;
+				}
+				return true;
+			}
 
 			diag = diag + _direction[(int)dir];
 			diag_r = diag + _direction[(int)DIR::R];
 			diag_up = diag + _direction[(int)DIR::UP];
 		}
-		printf("DOWN_L: Range Out\n");
+		if(_debugFindCorner) printf("DOWN_L: Range Out\n");
 		return false;
 	}
 	break;
@@ -1160,15 +1558,15 @@ bool JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 			// 대각선 방향 체크
 			if (_pNodeMgr->_pMap->GetMapState(diag) == Map::OBSTACLE)
 			{
-				printf("UP_L: Obstacle (%d, %d)\n", diag._x, diag._y);
+				if(_debugFindCorner) printf("UP_L: Obstacle (%d, %d)\n", diag._x, diag._y);
 				return false;
 			}
 
 			if (_pNodeMgr->_pMap->GetMapState(diag) == Map::DEST)
 			{
 				newPos = diag;
-				searchDir = DIR::NONE;
-				printf("★★★ UP_L: Dest (%d, %d)\n", diag._x, diag._y);
+				searchDir = DIR::UP_L;
+				if(_debugFindCorner) printf("★★★ UP_L: Dest (%d, %d)\n", diag._x, diag._y);
 				return true;
 			}
 
@@ -1176,21 +1574,36 @@ bool JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 				_pNodeMgr->_pMap->GetMapState(diag_down) == Map::OBSTACLE)
 			{
 				newPos = diag;
-				searchDir = DIR::UP_L;
-				printf("★★★ UP_L: UP_L (%d, %d)\n", diag._x, diag._y);
+				searchDir = DIR::ALL;
+				if(_debugFindCorner) printf("★★★ UP_L: UP_L (%d, %d)\n", diag._x, diag._y);
 				return true;
 			}
 
 			_pNodeMgr->_checkedList.push_back(Pos(diag._x, diag._y));
 
-			if (CheckDiagCorner(diag, DIR::UP_L, DIR::L, newPos, searchDir)) return true;
-			if (CheckDiagCorner(diag, DIR::UP_L, DIR::UP, newPos, searchDir)) return true;
+			if (CheckDiagCorner(diag, DIR::UP_L, DIR::L, newPos, searchDir))
+			{
+				if (searchDir == DIR::UP_L)
+				{
+					searchDir = DIR::DOWN_L;
+				}
+				return true;
+			}
+
+			if (CheckDiagCorner(diag, DIR::UP_L, DIR::UP, newPos, searchDir)) 
+			{
+				if (searchDir == DIR::UP_L)
+				{
+					searchDir = DIR::UP_R;
+				}
+				return true;
+			}
 
 			diag = diag + _direction[(int)dir];
 			diag_r = diag + _direction[(int)DIR::R];
 			diag_down = diag + _direction[(int)DIR::DOWN];
 		}
-		printf("UP_L: Range Out\n");
+		if(_debugFindCorner) printf("UP_L: Range Out\n");
 		return false;
 	}
 	break;
@@ -1199,76 +1612,140 @@ bool JumpPointSearch::CheckCorner(Pos curPos, DIR dir, Pos& newPos, DIR& searchD
 
 bool JumpPointSearch::CheckDiagCorner(Pos diag, DIR diagDir, DIR searchDir, Pos& newPos, DIR& newSearchDir)
 {
-	Pos checkDir;
+	DIR includeDir;
+	DIR excludeDir;
+
+	char dirText[8] = {'\0',};
+
+	if (_debugFindCorner)
+	{
+		switch (diagDir)
+		{
+		case DIR::UP_R:
+			strcpy_s(dirText, 8, "UP_R");
+			break;
+
+		case DIR::DOWN_R:
+			strcpy_s(dirText, 8, "DOWN_R");
+			break;
+
+		case DIR::DOWN_L:
+			strcpy_s(dirText, 8, "DOWN_L");
+			break;
+
+		case DIR::UP_L:
+			strcpy_s(dirText, 8, "UP_L");
+			break;
+		}
+	}
 
 	switch (searchDir)
 	{
 	case DIR::R:
 	{
 		if(diagDir == DIR::UP_R)
-			checkDir = _direction[(int)DIR::DOWN];
-		else if (diagDir == DIR::DOWN_R)
-			checkDir = _direction[(int)DIR::UP];
-
-		Pos diag_r = diag;
-		Pos diag_r_side = diag_r + checkDir;
-		Pos diag_r_side_front = diag_r_side + _direction[(int)searchDir];
-
-		if (_pNodeMgr->_pMap->GetMapState(diag_r) == Map::OBSTACLE)
 		{
-			return false;
+			includeDir = DIR::DOWN;
+			excludeDir = DIR::UP;
+		}
+		else if (diagDir == DIR::DOWN_R)
+		{
+			includeDir = DIR::UP;
+			excludeDir = DIR::DOWN;
 		}
 
-		if (_pNodeMgr->_pMap->GetMapState(diag_r) == Map::DEST)
+		Pos r = diag;
+		Pos r_includeDir = r + _direction[(int)includeDir];
+		Pos r_includeDir_front = r_includeDir + _direction[(int)searchDir];
+
+		if (r_includeDir_front._x < X_MAX &&
+			_pNodeMgr->_pMap->GetMapState(r_includeDir) == Map::OBSTACLE &&
+			_pNodeMgr->_pMap->GetMapState(r_includeDir_front) != Map::OBSTACLE)
 		{
 			newPos = diag;
-			newSearchDir = DIR::R;
-			printf("★★★ DIAG: R, Dest (%d, %d) (%d, %d)\n",
-				diag._x, diag._y, diag_r._x, diag_r._y);
+			newSearchDir = diagDir;
+			if(_debugFindCorner) printf("★★★ %s: R, Side (%d, %d) (%d, %d)\n", dirText,
+				diag._x, diag._y, r_includeDir._x, r_includeDir._y);
+			_pNodeMgr->_diagCuzList.push_back(Pos(r._x, r._y));
 			return true;
 		}
 
-		if (diag_r._x >= X_MAX)
+		_pNodeMgr->_checkedDiagList.push_back(Pos(r._x, r._y));
+
+		r = r + _direction[(int)searchDir];
+		r_includeDir = r + _direction[(int)includeDir];
+		r_includeDir_front = r_includeDir + _direction[(int)searchDir];
+		Pos r_excludeDir = r + _direction[(int)excludeDir];
+		Pos r_excludeDir_front = r_excludeDir + _direction[(int)searchDir];
+
+		if (r._x >= X_MAX)
 		{
-			printf("DIAG: Range Out\n");
 			return false;
 		}
 
-		_pNodeMgr->_checkedDiagList.push_back(Pos(diag_r._x, diag_r._y));
-
-		while (diag_r_side_front._x < X_MAX)
+		if (_pNodeMgr->_pMap->GetMapState(r) == Map::OBSTACLE)
 		{
-			if (_pNodeMgr->_pMap->GetMapState(diag_r_side) == Map::OBSTACLE &&
-				_pNodeMgr->_pMap->GetMapState(diag_r_side_front) != Map::OBSTACLE)
+			return false;
+		}
+
+		if (_pNodeMgr->_pMap->GetMapState(r) == Map::DEST)
+		{
+			newPos = diag;
+			newSearchDir = DIR::R;
+			if(_debugFindCorner) printf("★★★ %s: R, Dest (%d, %d) (%d, %d)\n", dirText,
+				diag._x, diag._y, r._x, r._y);
+			return true;
+		}
+
+		while (r_includeDir_front._x < X_MAX)
+		{
+			if (_pNodeMgr->_pMap->GetMapState(r_includeDir) == Map::OBSTACLE &&
+				_pNodeMgr->_pMap->GetMapState(r_includeDir_front) != Map::OBSTACLE)
 			{
 				newPos = diag;
-				newSearchDir = DIR::R;
-				printf("★★★ DIAG: R, Side (%d, %d) (%d, %d)\n",
-					diag._x, diag._y, diag_r_side._x, diag_r_side._y);
-				_pNodeMgr->_diagCuzList.push_back(Pos(diag_r._x, diag_r._y));
+				newSearchDir = DIR::NONE;
+				if(_debugFindCorner) printf("★★★ %s: R, Side (%d, %d) (%d, %d)\n", dirText,
+					diag._x, diag._y, r_includeDir._x, r_includeDir._y);
+				_pNodeMgr->_diagCuzList.push_back(Pos(r._x, r._y));
 				return true;
 			}
 
-			diag_r = diag_r + _direction[(int)searchDir];
-			diag_r_side = diag_r + checkDir;
-			diag_r_side_front = diag_r_side + _direction[(int)searchDir];
+			if (_pNodeMgr->_pMap->GetMapState(r_excludeDir) == Map::OBSTACLE &&
+				_pNodeMgr->_pMap->GetMapState(r_excludeDir_front) != Map::OBSTACLE)
+			{
+				newPos = diag;
+				newSearchDir = DIR::NONE;
+				if(_debugFindCorner) printf("★★★ %s: R, Side (%d, %d) (%d, %d)\n", dirText,
+					diag._x, diag._y, r_excludeDir._x, r_excludeDir._y);
+				_pNodeMgr->_diagCuzList.push_back(Pos(r._x, r._y));
+				return true;
+			}
 
-			if (_pNodeMgr->_pMap->GetMapState(diag_r) == Map::OBSTACLE)
+			_pNodeMgr->_checkedDiagList.push_back(Pos(r._x, r._y));
+
+			r = r + _direction[(int)searchDir];
+			r_includeDir = r + _direction[(int)includeDir];
+			r_includeDir_front = r_includeDir + _direction[(int)searchDir];
+			r_excludeDir = r + _direction[(int)excludeDir];
+			r_excludeDir_front = r_excludeDir + _direction[(int)searchDir];
+
+			if (_pNodeMgr->_pMap->GetMapState(r) == Map::OBSTACLE)
 			{
 				return false;
 			}
 
-			if (_pNodeMgr->_pMap->GetMapState(diag_r) == Map::DEST)
+			if (_pNodeMgr->_pMap->GetMapState(r) == Map::DEST)
 			{
 				newPos = diag;
 				newSearchDir = DIR::R;
-				printf("★★★ DIAG: R, Dest (%d, %d) (%d, %d)\n",
-					diag._x, diag._y, diag_r._x, diag_r._y);
+				if(_debugFindCorner) printf("★★★ %s: R, Dest (%d, %d) (%d, %d)\n", dirText,
+					diag._x, diag._y, r._x, r._y);
 				return true;
 			}
-
-			_pNodeMgr->_checkedDiagList.push_back(Pos(diag_r._x, diag_r._y));
 		}
+		
+		_pNodeMgr->_checkedDiagList.push_back(Pos(r._x, r._y));
+
 		return false;
 	}
 	break;
@@ -1276,69 +1753,107 @@ bool JumpPointSearch::CheckDiagCorner(Pos diag, DIR diagDir, DIR searchDir, Pos&
 	case DIR::UP:
 	{
 		if (diagDir == DIR::UP_R)
-			checkDir = _direction[(int)DIR::L];
-		else if (diagDir == DIR::UP_L)
-			checkDir = _direction[(int)DIR::R];
-
-		Pos diag_up = diag;
-		Pos diag_up_side = diag_up + checkDir;
-		Pos diag_up_side_front = diag_up_side + _direction[(int)searchDir];
-
-		if (_pNodeMgr->_pMap->GetMapState(diag_up) == Map::OBSTACLE)
 		{
-			return false;
+			includeDir = DIR::L;
+			excludeDir = DIR::R;
+		}
+		else if (diagDir == DIR::UP_L)
+		{
+			includeDir = DIR::R;
+			excludeDir = DIR::L;
 		}
 
-		if (_pNodeMgr->_pMap->GetMapState(diag_up) == Map::DEST)
+		Pos up = diag;
+		Pos up_includeDir = up + _direction[(int)includeDir];
+		Pos up_includeDir_front = up_includeDir + _direction[(int)searchDir];
+
+		if (up_includeDir_front._y >= 0 &&
+			_pNodeMgr->_pMap->GetMapState(up_includeDir) == Map::OBSTACLE &&
+			_pNodeMgr->_pMap->GetMapState(up_includeDir_front) != Map::OBSTACLE)
 		{
 			newPos = diag;
-			newSearchDir = DIR::UP;
-			printf("★★★ DIAG: UP, Dest (%d, %d) (%d, %d)\n",
-				diag._x, diag._y, diag_up._x, diag_up._y);
+			newSearchDir = diagDir;
+			if(_debugFindCorner) printf("★★★ %s: UP, Side (%d, %d) (%d, %d)\n", dirText,
+				diag._x, diag._y, up_includeDir._x, up_includeDir._y);
+			_pNodeMgr->_diagCuzList.push_back(Pos(up._x, up._y));
 			return true;
 		}
 
-		if (diag_up._y < 0)
+		_pNodeMgr->_checkedDiagList.push_back(Pos(up._x, up._y));
+
+		up = up + _direction[(int)searchDir];
+		up_includeDir = up + _direction[(int)includeDir];
+		up_includeDir_front = up_includeDir + _direction[(int)searchDir];
+		Pos up_excludeDir = up + _direction[(int)excludeDir];
+		Pos up_excludeDir_front = up_excludeDir + _direction[(int)searchDir];
+
+		if (up._y < 0)
 		{
-			printf("DIAG: Range Out\n");
 			return false;
 		}
 
-		_pNodeMgr->_checkedDiagList.push_back(Pos(diag_up._x, diag_up._y));
-
-		while (diag_up_side_front._y >= 0)
+		if (_pNodeMgr->_pMap->GetMapState(up) == Map::OBSTACLE)
 		{
-			if (_pNodeMgr->_pMap->GetMapState(diag_up_side) == Map::OBSTACLE &&
-				_pNodeMgr->_pMap->GetMapState(diag_up_side_front) != Map::OBSTACLE)
+			return false;
+		}
+
+		if (_pNodeMgr->_pMap->GetMapState(up) == Map::DEST)
+		{
+			newPos = diag;
+			newSearchDir = DIR::UP;
+			if(_debugFindCorner) printf("★★★ %s: UP, Dest (%d, %d) (%d, %d)\n", dirText,
+				diag._x, diag._y, up._x, up._y);
+			return true;
+		}
+
+		while (up_includeDir_front._y >= 0)
+		{
+			if (_pNodeMgr->_pMap->GetMapState(up_includeDir) == Map::OBSTACLE &&
+				_pNodeMgr->_pMap->GetMapState(up_includeDir_front) != Map::OBSTACLE)
 			{
 				newPos = diag;
-				newSearchDir = DIR::UP;
-				printf("★★★ DIAG: UP, Side (%d, %d) (%d, %d)\n",
-					diag._x, diag._y, diag_up_side._x, diag_up_side._y);
-				_pNodeMgr->_diagCuzList.push_back(Pos(diag_up._x, diag_up._y));
+				newSearchDir = DIR::NONE;
+				if(_debugFindCorner) printf("★★★ %s: UP, Side (%d, %d) (%d, %d)\n", dirText,
+					diag._x, diag._y, up_includeDir._x, up_includeDir._y);
+				_pNodeMgr->_diagCuzList.push_back(Pos(up._x, up._y));
 				return true;
 			}
 
-			diag_up = diag_up + _direction[(int)searchDir];
-			diag_up_side = diag_up + checkDir;
-			diag_up_side_front = diag_up_side + _direction[(int)searchDir];
+			if (_pNodeMgr->_pMap->GetMapState(up_excludeDir) == Map::OBSTACLE &&
+				_pNodeMgr->_pMap->GetMapState(up_excludeDir_front) != Map::OBSTACLE)
+			{
+				newPos = diag;
+				newSearchDir = DIR::NONE;
+				if(_debugFindCorner) printf("★★★ %s: UP, Side (%d, %d) (%d, %d)\n", dirText,
+					diag._x, diag._y, up_excludeDir._x, up_excludeDir._y);
+				_pNodeMgr->_diagCuzList.push_back(Pos(up._x, up._y));
+				return true;
+			}
+		
+			_pNodeMgr->_checkedDiagList.push_back(Pos(up._x, up._y));
 
-			if (_pNodeMgr->_pMap->GetMapState(diag_up) == Map::OBSTACLE)
+			up = up + _direction[(int)searchDir];
+			up_includeDir = up + _direction[(int)includeDir];
+			up_includeDir_front = up_includeDir + _direction[(int)searchDir];
+			up_excludeDir = up + _direction[(int)excludeDir];
+			up_excludeDir_front = up_excludeDir + _direction[(int)searchDir];
+
+			if (_pNodeMgr->_pMap->GetMapState(up) == Map::OBSTACLE)
 			{
 				return false;
 			}
 
-			if (_pNodeMgr->_pMap->GetMapState(diag_up) == Map::DEST)
+			if (_pNodeMgr->_pMap->GetMapState(up) == Map::DEST)
 			{
 				newPos = diag;
 				newSearchDir = DIR::UP;
-				printf("★★★ DIAG: UP, Dest (%d, %d) (%d, %d)\n",
-					diag._x, diag._y, diag_up._x, diag_up._y);
+				if(_debugFindCorner) printf("★★★ %s: UP, Dest (%d, %d) (%d, %d)\n", dirText,
+					diag._x, diag._y, up._x, up._y);
 				return true;
 			}
-
-			_pNodeMgr->_checkedDiagList.push_back(Pos(diag_up._x, diag_up._y));
 		}
+
+		_pNodeMgr->_checkedDiagList.push_back(Pos(up._x, up._y));
 		return false;
 	}
 		break;
@@ -1346,70 +1861,107 @@ bool JumpPointSearch::CheckDiagCorner(Pos diag, DIR diagDir, DIR searchDir, Pos&
 	case DIR::L:
 	{
 		if (diagDir == DIR::UP_L)
-			checkDir = _direction[(int)DIR::DOWN];
-		else if (diagDir == DIR::DOWN_L)
-			checkDir = _direction[(int)DIR::UP];
-
-		Pos diag_l = diag;
-		Pos diag_l_side = diag_l + checkDir;
-		Pos diag_l_side_front = diag_l_side + _direction[(int)searchDir];
-
-		if (_pNodeMgr->_pMap->GetMapState(diag_l) == Map::OBSTACLE)
 		{
-			return false;
+			includeDir = DIR::DOWN;
+			excludeDir = DIR::UP;
+		}
+		else if (diagDir == DIR::DOWN_L)
+		{
+			includeDir = DIR::UP;
+			excludeDir = DIR::DOWN;
 		}
 
-		if (_pNodeMgr->_pMap->GetMapState(diag_l) == Map::DEST)
+		Pos l = diag;
+		Pos l_includeDir = l + _direction[(int)includeDir];
+		Pos l_includeDir_front = l_includeDir + _direction[(int)searchDir];
+
+		if (l_includeDir_front._x >= 0 &&
+			_pNodeMgr->_pMap->GetMapState(l_includeDir) == Map::OBSTACLE &&
+			_pNodeMgr->_pMap->GetMapState(l_includeDir_front) != Map::OBSTACLE)
 		{
 			newPos = diag;
-			newSearchDir = DIR::L;
-			printf("★★★ DIAG: L, Dest (%d, %d) (%d, %d)\n",
-				diag._x, diag._y, diag_l._x, diag_l._y);
+			newSearchDir = diagDir;
+			if(_debugFindCorner) printf("★★★ %s: L, Side (%d, %d) (%d, %d)\n", dirText,
+				diag._x, diag._y, l_includeDir._x, l_includeDir._y);
+			_pNodeMgr->_diagCuzList.push_back(Pos(l._x, l._y));
 			return true;
 		}
 
-		if (diag_l._x < 0)
+		_pNodeMgr->_checkedDiagList.push_back(Pos(l._x, l._y));
+
+		l = l + _direction[(int)searchDir];
+		l_includeDir = l + _direction[(int)includeDir];
+		l_includeDir_front = l_includeDir + _direction[(int)searchDir];
+		Pos l_excludeDir = l + _direction[(int)excludeDir];
+		Pos l_excludeDir_front = l_excludeDir + _direction[(int)searchDir];
+		
+		if (l._x < 0)
 		{
-			printf("DIAG: Range Out\n");
 			return false;
 		}
 
-		_pNodeMgr->_checkedDiagList.push_back(Pos(diag_l._x, diag_l._y));
-
-		while (diag_l_side_front._x >= 0)
+		if (_pNodeMgr->_pMap->GetMapState(l) == Map::OBSTACLE)
 		{
-			if (_pNodeMgr->_pMap->GetMapState(diag_l_side) == Map::OBSTACLE &&
-				_pNodeMgr->_pMap->GetMapState(diag_l_side_front) != Map::OBSTACLE)
+			return false;
+		}
+
+		if (_pNodeMgr->_pMap->GetMapState(l) == Map::DEST)
+		{
+			newPos = diag;
+			newSearchDir = DIR::L;
+			if(_debugFindCorner) printf("★★★ %s: L, Dest (%d, %d) (%d, %d)\n", dirText,
+				diag._x, diag._y, l._x, l._y);
+			return true;
+		}
+
+		while (l_includeDir_front._x >= 0)
+		{
+			if (_pNodeMgr->_pMap->GetMapState(l_includeDir) == Map::OBSTACLE &&
+				_pNodeMgr->_pMap->GetMapState(l_includeDir_front) != Map::OBSTACLE)
 			{
 				newPos = diag;
-				newSearchDir = DIR::L;
-				printf("★★★ DIAG: L, Up (%d, %d) (%d, %d)\n",
-					diag._x, diag._y, diag_l_side._x, diag_l_side._y);
-				_pNodeMgr->_diagCuzList.push_back(Pos(diag_l._x, diag_l._y));
+				newSearchDir = DIR::NONE;
+				if(_debugFindCorner) printf("★★★ %s: L, Side (%d, %d) (%d, %d)\n", dirText,
+					diag._x, diag._y, l_includeDir._x, l_includeDir._y);
+				_pNodeMgr->_diagCuzList.push_back(Pos(l._x, l._y));
 				return true;
 			}
 
-			diag_l = diag_l + _direction[(int)searchDir];
-			diag_l_side = diag_l + checkDir;
-			diag_l_side_front = diag_l_side + _direction[(int)searchDir];
+			if (_pNodeMgr->_pMap->GetMapState(l_excludeDir) == Map::OBSTACLE &&
+				_pNodeMgr->_pMap->GetMapState(l_excludeDir_front) != Map::OBSTACLE)
+			{
+				newPos = diag;
+				newSearchDir = DIR::NONE;
+				if(_debugFindCorner) printf("★★★ %s: L, Side (%d, %d) (%d, %d)\n", dirText,
+					diag._x, diag._y, l_excludeDir._x, l_excludeDir._y);
+				_pNodeMgr->_diagCuzList.push_back(Pos(l._x, l._y));
+				return true;
+			}
 
-			if (_pNodeMgr->_pMap->GetMapState(diag_l) == Map::OBSTACLE)
+			_pNodeMgr->_checkedDiagList.push_back(Pos(l._x, l._y));
+
+			l = l + _direction[(int)searchDir];
+			l_includeDir = l + _direction[(int)includeDir];
+			l_includeDir_front = l_includeDir + _direction[(int)searchDir];
+			l_excludeDir = l + _direction[(int)excludeDir];
+			l_excludeDir_front = l_excludeDir + _direction[(int)searchDir];
+
+			if (_pNodeMgr->_pMap->GetMapState(l) == Map::OBSTACLE)
 			{
 				return false;
 			}
 
-			if (_pNodeMgr->_pMap->GetMapState(diag_l) == Map::DEST)
+			if (_pNodeMgr->_pMap->GetMapState(l) == Map::DEST)
 			{
 				newPos = diag;
 				newSearchDir = DIR::L;
-				printf("★★★ DIAG: L, Dest (%d, %d) (%d, %d)\n",
-					diag._x, diag._y, diag_l._x, diag_l._y);
+				if(_debugFindCorner) printf("★★★ %s: L, Dest (%d, %d) (%d, %d)\n", dirText,
+					diag._x, diag._y, l._x, l._y);
 				return true;
 			}
-
-			_pNodeMgr->_checkedDiagList.push_back(Pos(diag_l._x, diag_l._y));
 		}
 
+		_pNodeMgr->_checkedDiagList.push_back(Pos(l._x, l._y));
 		return false;
 	}
 		break;
@@ -1417,70 +1969,107 @@ bool JumpPointSearch::CheckDiagCorner(Pos diag, DIR diagDir, DIR searchDir, Pos&
 	case DIR::DOWN:
 	{
 		if (diagDir == DIR::DOWN_R)
-			checkDir = _direction[(int)DIR::L];
-		else if (diagDir == DIR::DOWN_L)
-			checkDir = _direction[(int)DIR::R];
-
-		Pos diag_down = diag;
-		Pos diag_down_side = diag_down + checkDir;
-		Pos diag_down_side_front = diag_down_side + _direction[(int)searchDir];
-
-		if (_pNodeMgr->_pMap->GetMapState(diag_down) == Map::OBSTACLE)
 		{
-			return false;
+			includeDir = DIR::L;
+			excludeDir = DIR::R;
+		}
+		else if (diagDir == DIR::DOWN_L)
+		{
+			includeDir = DIR::R;
+			excludeDir = DIR::L;
 		}
 
-		if (_pNodeMgr->_pMap->GetMapState(diag_down) == Map::DEST)
+		Pos down = diag;
+		Pos down_includeDir = down + _direction[(int)includeDir];
+		Pos down_includeDir_front = down_includeDir + _direction[(int)searchDir];
+
+		if (down_includeDir_front._y < Y_MAX &&
+			_pNodeMgr->_pMap->GetMapState(down_includeDir) == Map::OBSTACLE &&
+			_pNodeMgr->_pMap->GetMapState(down_includeDir_front) != Map::OBSTACLE)
 		{
 			newPos = diag;
-			newSearchDir = DIR::DOWN;
-			printf("★★★ DIAG: Down, Dest (%d, %d) (%d, %d)\n",
-				diag._x, diag._y, diag_down._x, diag_down._y);
+			newSearchDir = diagDir;
+			if(_debugFindCorner) printf("★★★ %s: Down, Side (%d, %d) (%d, %d)\n", dirText,
+				diag._x, diag._y, down_includeDir._x, down_includeDir._y);
+			_pNodeMgr->_diagCuzList.push_back(Pos(down._x, down._y));
 			return true;
 		}
 
-		if (diag_down._y >= Y_MAX)
+		_pNodeMgr->_checkedDiagList.push_back(Pos(down._x, down._y));
+
+		down = down + _direction[(int)searchDir];
+		down_includeDir = down + _direction[(int)includeDir];
+		down_includeDir_front = down_includeDir + _direction[(int)searchDir];
+		Pos down_excludeDir = down + _direction[(int)excludeDir];
+		Pos down_excludeDir_front = down_excludeDir + _direction[(int)searchDir];
+
+		if (down._y >= Y_MAX)
 		{
-			printf("DIAG: Range Out\n");
 			return false;
 		}
 
-		_pNodeMgr->_checkedDiagList.push_back(Pos(diag_down._x, diag_down._y));
-
-		while (diag_down_side_front._y < Y_MAX)
+		if (_pNodeMgr->_pMap->GetMapState(down) == Map::OBSTACLE)
 		{
-			if (_pNodeMgr->_pMap->GetMapState(diag_down_side) == Map::OBSTACLE &&
-				_pNodeMgr->_pMap->GetMapState(diag_down_side_front) != Map::OBSTACLE)
+			return false;
+		}
+
+		if (_pNodeMgr->_pMap->GetMapState(down) == Map::DEST)
+		{
+			newPos = diag;
+			newSearchDir = DIR::DOWN;
+			if(_debugFindCorner) printf("★★★ %s: Down, Dest (%d, %d) (%d, %d)\n", dirText,
+				diag._x, diag._y, down._x, down._y);
+			return true;
+		}
+
+		while (down_includeDir_front._y < Y_MAX)
+		{
+			if (_pNodeMgr->_pMap->GetMapState(down_includeDir) == Map::OBSTACLE &&
+				_pNodeMgr->_pMap->GetMapState(down_includeDir_front) != Map::OBSTACLE)
 			{
 				newPos = diag;
-				newSearchDir = DIR::DOWN;
-				printf("★★★ DIAG: Down, R (%d, %d) (%d, %d)\n",
-					diag._x, diag._y, diag_down_side._x, diag_down_side._y);
-				_pNodeMgr->_diagCuzList.push_back(Pos(diag_down._x, diag_down._y));
+				newSearchDir = DIR::NONE;
+				if(_debugFindCorner) printf("★★★ %s: Down, Side (%d, %d) (%d, %d)\n", dirText,
+					diag._x, diag._y, down_includeDir._x, down_includeDir._y);
+				_pNodeMgr->_diagCuzList.push_back(Pos(down._x, down._y));
 				return true;
 			}
 
-			diag_down = diag_down + _direction[(int)searchDir];
-			diag_down_side = diag_down + checkDir;
-			diag_down_side_front = diag_down_side + _direction[(int)searchDir];
+			if (_pNodeMgr->_pMap->GetMapState(down_excludeDir) == Map::OBSTACLE &&
+				_pNodeMgr->_pMap->GetMapState(down_excludeDir_front) != Map::OBSTACLE)
+			{
+				newPos = diag;
+				newSearchDir = DIR::NONE;
+				if(_debugFindCorner) printf("★★★ %s: Down, Side (%d, %d) (%d, %d)\n", dirText,
+					diag._x, diag._y, down_excludeDir._x, down_excludeDir._y);
+				_pNodeMgr->_diagCuzList.push_back(Pos(down._x, down._y));
+				return true;
+			}
 
-			if (_pNodeMgr->_pMap->GetMapState(diag_down) == Map::OBSTACLE)
+			_pNodeMgr->_checkedDiagList.push_back(Pos(down._x, down._y));
+
+			down = down + _direction[(int)searchDir];
+			down_includeDir = down + _direction[(int)includeDir];
+			down_includeDir_front = down_includeDir + _direction[(int)searchDir];
+			down_excludeDir = down + _direction[(int)excludeDir];
+			down_excludeDir_front = down_excludeDir + _direction[(int)searchDir];
+
+			if (_pNodeMgr->_pMap->GetMapState(down) == Map::OBSTACLE)
 			{
 				return false;
 			}
 
-			if (_pNodeMgr->_pMap->GetMapState(diag_down) == Map::DEST)
+			if (_pNodeMgr->_pMap->GetMapState(down) == Map::DEST)
 			{
 				newPos = diag;
 				newSearchDir = DIR::DOWN;
-				printf("★★★ DIAG: Down, Dest (%d, %d) (%d, %d)\n",
-					diag._x, diag._y, diag_down._x, diag_down._y);
+				if(_debugFindCorner) printf("★★★ %s: Down, Dest (%d, %d) (%d, %d)\n", dirText,
+					diag._x, diag._y, down._x, down._y);
 				return true;
 			}
-
-			_pNodeMgr->_checkedDiagList.push_back(Pos(diag_down._x, diag_down._y));
 		}
 
+		_pNodeMgr->_checkedDiagList.push_back(Pos(down._x, down._y));
 		return false;
 	}
 		break;
@@ -1500,18 +2089,19 @@ void JumpPointSearch::CreateNode(Node* pCurNode, Pos newPos, DIR dir, DIR search
 		Node* pNew = new Node(
 			newPos,
 			newG,
-			newPos.GetDistance(_pNodeMgr->_pMap->_destPos),
+			newPos.GetDistanceToDest(_pNodeMgr->_pMap->_destPos),
 			dir,
 			searchDir,
 			pCurNode
 		);
 
-		/*
-		printf("Create New Node (%d, %d) (parent: %d, %d) (%d + %d = %d)\n",
-			pNew->_pos._x, pNew->_pos._y,
-			pNew->_pParent->_pos._x, pNew->_pParent->_pos._y,
-			pNew->_g, pNew->_h, pNew->_f);
-		*/
+		if (_debugCreateNode) 
+		{
+			printf("Create New Node (%d, %d) (parent: %d, %d) (%d + %d = %d)\n",
+				pNew->_pos._x, pNew->_pos._y,
+				pNew->_pParent->_pos._x, pNew->_pParent->_pos._y,
+				pNew->_g, pNew->_h, pNew->_f);
+		}
 
 		_pNodeMgr->_openList.push_back(pNew);
 		_pNodeMgr->_pMap->SetMapState(pNew->_pos._x, pNew->_pos._y, Map::OPEN);
@@ -1529,12 +2119,12 @@ void JumpPointSearch::CreateNode(Node* pCurNode, Pos newPos, DIR dir, DIR search
 		if (it != _pNodeMgr->_openList.end())
 		{
 			(*it)->ResetParent(newG, dir, searchDir, pCurNode);
-			//printf("Already Exist, Reset Parent (%d, %d) (parent: %d, %d)\n",
-			//	newPos._x, newPos._y, (*it)->_pParent->_pos._x, (*it)->_pParent->_pos._y);
+			if (_debugCreateNode) printf("Already Exist, Reset Parent (%d, %d) (parent: %d, %d)\n",
+				newPos._x, newPos._y, (*it)->_pParent->_pos._x, (*it)->_pParent->_pos._y);
 		}
 		else
 		{
-			//printf("Already Exist (%d, %d)\n", newPos._x, newPos._y);
+			if (_debugCreateNode) printf("Already Exist (%d, %d)\n", newPos._x, newPos._y);
 		}
 	}
 	break;
@@ -1550,19 +2140,19 @@ void JumpPointSearch::CreateNode(Node* pCurNode, Pos newPos, DIR dir, DIR search
 		if (it != _pNodeMgr->_closeList.end())
 		{
 			(*it)->ResetParent(newG, dir, searchDir, pCurNode);
-			//printf("Already Exist, Reset Parent (%d, %d) (parent: %d, %d)\n",
-			//	newPos._x, newPos._y, (*it)->_pParent->_pos._x, (*it)->_pParent->_pos._y);
+			if (_debugCreateNode) printf("Already Exist, Reset Parent (%d, %d) (parent: %d, %d)\n",
+				newPos._x, newPos._y, (*it)->_pParent->_pos._x, (*it)->_pParent->_pos._y);
 		}
 		else
 		{
-			//printf("Already Exist (%d, %d)\n", newPos._x, newPos._y);
+			if (_debugCreateNode) printf("Already Exist (%d, %d)\n", newPos._x, newPos._y);
 		}
 	}
 	break;
 
 	case Map::OBSTACLE:
 	case Map::RANGE_OUT:
-		//printf("Can't Go (%d, %d)\n", newPos._x, newPos._y);
+		if (_debugCreateNode) printf("Can't Go (%d, %d)\n", newPos._x, newPos._y);
 		break;
 
 	}
@@ -1571,6 +2161,7 @@ void JumpPointSearch::CreateNode(Node* pCurNode, Pos newPos, DIR dir, DIR search
 void JumpPointSearch::PrintOpenListForDebug()
 {
 	printf("\n=====================================\n");
+	printf("<Open List>\n\n");
 	for (int i = 0; i < _pNodeMgr->_openList.size(); i++)
 	{
 		printf("(%d, %d) : %d + %d = %d\n",
@@ -1586,11 +2177,16 @@ void JumpPointSearch::PrintOpenListForDebug()
 		_pNodeMgr->_pCurNode->_pos._y,
 		_pNodeMgr->_pCurNode->_f);
 
-	printf("\n=====================================\n");
+	printf("=====================================\n");
 }
 
 
 bool JumpPointSearch::CompareG::operator()(Node*& pNode) const
 {
-	return (pNode->_pos == pos && pNode->_g > g);
+	if (pNode->_pos == pos)
+	{
+		printf("(%d, %d) %d, %d\n", pNode->_pos._x, pNode->_pos._y, pNode->_g, g);
+	}
+
+	return (pNode->_pos == pos && pNode->_g >= g);
 }

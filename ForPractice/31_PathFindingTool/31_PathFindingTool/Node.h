@@ -11,10 +11,11 @@ enum class DIR
 	DOWN_R,
 	DOWN_L,
 	UP_L,
-	NONE = 8
+	NONE = 8,
+	ALL
 };
 
-struct Node
+class Node
 {
 public:
 	Node(Pos pos, int g, int h, Node* pParent = nullptr)

@@ -36,11 +36,16 @@ void NodeMgr::SetData()
 	}
 
 	_diagCuzList.clear();
+	_checkedList.clear();
+	_checkedDiagList.clear();
 
 	_pDest = nullptr;
-	_pStart = new Node(_pMap->_startPos, 0, _pMap->_startPos.GetDistance(_pMap->_destPos));
+	_pStart = new Node(_pMap->_startPos, 0, _pMap->_startPos.GetDistanceToDest(_pMap->_destPos));
 	_pCurNode = _pStart;
 
-	printf("\ncreate start node (%d, %d)\n", _pStart->_pos._x, _pStart->_pos._y);
+	printf("Start Find Path (%d, %d) -> (%d, %d)\n", 
+		_pMap->_startPos._x, _pMap->_startPos._y, _pMap->_destPos._x, _pMap->_destPos._y);
 }
+
+
 

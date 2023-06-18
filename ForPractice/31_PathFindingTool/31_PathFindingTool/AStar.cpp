@@ -11,32 +11,32 @@ void AStar::FindPath()
 
 	if (_pNodeMgr->_pCurNode->_pos != _pNodeMgr->_pMap->_destPos)
 	{
-		printf("\n");
-		printf("Cur Node (%d, %d)\n", 
-			_pNodeMgr->_pCurNode->_pos._x, _pNodeMgr->_pCurNode->_pos._y);
-		CreateNode(_pNodeMgr->_pCurNode);
-
-		if (_pNodeMgr->_openList.empty())
-		{
-			printf("Can't Find Path!\n");
-			_bFindPathOn = false;
-			return;
-		}
-
+		if (_debugCreateNode)
+			printf("\nCur Node (%d, %d)\n", _pNodeMgr->_pCurNode->_pos._x, _pNodeMgr->_pCurNode->_pos._y);
+		
 		_pNodeMgr->_closeList.push_back(_pNodeMgr->_pCurNode);
 		_pNodeMgr->_pMap->SetMapState(
 			_pNodeMgr->_pCurNode->_pos._x, _pNodeMgr->_pCurNode->_pos._y, Map::CLOSE);
 
+		CreateNode(_pNodeMgr->_pCurNode);
+
+		if (_pNodeMgr->_openList.empty())
+		{
+			printf("\nCan't Find Path!\n\n");
+			_bFindPathOn = false;
+			return;
+		}
+
 		make_heap(_pNodeMgr->_openList.begin(), _pNodeMgr->_openList.end(), compareF);
 		_pNodeMgr->_pCurNode = _pNodeMgr->_openList.front();
-		//PrintOpenListForDebug();
+		if (_debugOpenList) PrintOpenListForDebug();
 		pop_heap(_pNodeMgr->_openList.begin(), _pNodeMgr->_openList.end());
 		_pNodeMgr->_openList.pop_back();
 	}
 	else
 	{
-		printf("Complete Find Path\n=================================\n");
 		_pNodeMgr->_pDest = _pNodeMgr->_pCurNode;
+		printf("\nComplete Find Path! (AStar: %d)\n\n", _pNodeMgr->_pDest->_g);
 		_bFindPathOn = false;
 	}
 }
@@ -52,39 +52,38 @@ void AStar::FindPathStepInto()
 
 	if (_pNodeMgr->_pCurNode->_pos != _pNodeMgr->_pMap->_destPos)
 	{
-		printf("\n");
-		printf("Cur Node (%d, %d)\n", 
-			_pNodeMgr->_pCurNode->_pos._x, _pNodeMgr->_pCurNode->_pos._y);
-		CreateNode(_pNodeMgr->_pCurNode);
-
-		if (_pNodeMgr->_openList.empty())
-		{
-			printf("Can't Find Path!\n");
-			_bFindPathStepOn = false;
-			return;
-		}
-
+		if (_debugCreateNode)
+			printf("\nCur Node (%d, %d)\n", _pNodeMgr->_pCurNode->_pos._x, _pNodeMgr->_pCurNode->_pos._y);
+		
 		_pNodeMgr->_closeList.push_back(_pNodeMgr->_pCurNode);
 		_pNodeMgr->_pMap->SetMapState(
 			_pNodeMgr->_pCurNode->_pos._x, _pNodeMgr->_pCurNode->_pos._y, Map::CLOSE);
 
+		CreateNode(_pNodeMgr->_pCurNode);
+
+		if (_pNodeMgr->_openList.empty())
+		{
+			printf("\nCan't Find Path!\n");
+			_bFindPathStepOn = false;
+			return;
+		}
+
 		make_heap(_pNodeMgr->_openList.begin(), _pNodeMgr->_openList.end(), compareF);
 		_pNodeMgr->_pCurNode = _pNodeMgr->_openList.front();
-		//PrintOpenListForDebug();
+		if (_debugOpenList) PrintOpenListForDebug();
 		pop_heap(_pNodeMgr->_openList.begin(), _pNodeMgr->_openList.end());
 		_pNodeMgr->_openList.pop_back();
 	}
 	else
 	{
-		printf("Complete Find Path\n=================================\n");
 		_pNodeMgr->_pDest = _pNodeMgr->_pCurNode;
+		printf("\nComplete Find Path! (AStar: %d)\n\n", _pNodeMgr->_pDest->_g);
 		_bFindPathStepOn = false;
 	}
 }
 
 void AStar::CreateNode(Node* pCurNode)
 {
-
 	// 수직 수평 노드 생성
 	for (int i = (int)DIR::UP; i <= (int)DIR::L; i++)
 	{
@@ -100,15 +99,17 @@ void AStar::CreateNode(Node* pCurNode)
 			Node* pNew = new Node(
 				newPos,
 				pCurNode->_g + VERT_DIST,
-				newPos.GetDistance(_pNodeMgr->_pMap->_destPos),
+				newPos.GetDistanceToDest(_pNodeMgr->_pMap->_destPos),
 				pCurNode
 			);
 
-			printf("%d. Create New Node (%d, %d) (parent: %d, %d) (%d + %d = %d)\n",
-				i, pNew->_pos._x, pNew->_pos._y,
-				pNew->_pParent->_pos._x, pNew->_pParent->_pos._y, 
-				pNew->_g, pNew->_h, pNew->_f);
-
+			if (_debugCreateNode)
+			{
+				printf("%d. Create New Node (%d, %d) (parent: %d, %d) (%d + %d = %d)\n",
+					i, pNew->_pos._x, pNew->_pos._y,
+					pNew->_pParent->_pos._x, pNew->_pParent->_pos._y,
+					pNew->_g, pNew->_h, pNew->_f);
+			}
 			_pNodeMgr->_openList.push_back(pNew);
 			_pNodeMgr->_pMap->SetMapState(pNew->_pos._x, pNew->_pos._y, Map::OPEN);
 		}
@@ -125,12 +126,12 @@ void AStar::CreateNode(Node* pCurNode)
 			if (it != _pNodeMgr->_openList.end())
 			{
 				(*it)->ResetParent(pCurNode->_g + VERT_DIST, pCurNode);
-				printf("%d. Already Exist, Reset Parent (%d, %d) (parent: %d, %d)\n", 
+				if (_debugCreateNode) printf("%d. Already Exist, Reset Parent (%d, %d) (parent: %d, %d)\n",
 					i, newPos._x, newPos._y, (*it)->_pParent->_pos._x, (*it)->_pParent->_pos._y);
 			}
 			else
 			{
-				printf("%d. Already Exist (%d, %d)\n", i, newPos._x, newPos._y);
+				if (_debugCreateNode) printf("%d. Already Exist (%d, %d)\n", i, newPos._x, newPos._y);
 			}	
 		}
 		break;
@@ -146,19 +147,19 @@ void AStar::CreateNode(Node* pCurNode)
 			if (it != _pNodeMgr->_closeList.end())
 			{
 				(*it)->ResetParent(pCurNode->_g + VERT_DIST, pCurNode);
-				printf("%d. Already Exist, Reset Parent (%d, %d) (parent: %d, %d)\n",
+				if (_debugCreateNode) printf("%d. Already Exist, Reset Parent (%d, %d) (parent: %d, %d)\n",
 					i, newPos._x, newPos._y, (*it)->_pParent->_pos._x, (*it)->_pParent->_pos._y);
 			}
 			else
 			{
-				printf("%d. Already Exist (%d, %d)\n", i, newPos._x, newPos._y);
+				if (_debugCreateNode) printf("%d. Already Exist (%d, %d)\n", i, newPos._x, newPos._y);
 			}
 		}
 			break;
 
 		case Map::OBSTACLE:
 		case Map::RANGE_OUT:
-			printf("%d. Can't Go (%d, %d)\n", i, newPos._x, newPos._y);
+			if (_debugCreateNode) printf("%d. Can't Go (%d, %d)\n", i, newPos._x, newPos._y);
 			break;
 		}
 	}
@@ -177,14 +178,17 @@ void AStar::CreateNode(Node* pCurNode)
 			Node* pNew = new Node(
 				newPos,
 				pCurNode->_g + DIAG_DIST,
-				newPos.GetDistance(_pNodeMgr->_pMap->_destPos),
+				newPos.GetDistanceToDest(_pNodeMgr->_pMap->_destPos),
 				pCurNode
 			);
 
-			printf("%d. Create New Node (%d, %d) (parent: %d, %d) (%d + %d = %d)\n",
-				i, pNew->_pos._x, pNew->_pos._y,
-				pNew->_pParent->_pos._x, pNew->_pParent->_pos._y,
-				pNew->_g, pNew->_h, pNew->_f);
+			if (_debugCreateNode)
+			{
+				printf("%d. Create New Node (%d, %d) (parent: %d, %d) (%d + %d = %d)\n",
+					i, pNew->_pos._x, pNew->_pos._y,
+					pNew->_pParent->_pos._x, pNew->_pParent->_pos._y,
+					pNew->_g, pNew->_h, pNew->_f);
+			}
 
 			_pNodeMgr->_openList.push_back(pNew);
 			_pNodeMgr->_pMap->SetMapState(pNew->_pos._x, pNew->_pos._y, Map::OPEN);
@@ -202,12 +206,12 @@ void AStar::CreateNode(Node* pCurNode)
 			if (it != _pNodeMgr->_openList.end())
 			{
 				(*it)->ResetParent(pCurNode->_g + DIAG_DIST, pCurNode);
-				printf("%d. Already Exist, Reset Parent (%d, %d) (parent: %d, %d)\n",
+				if (_debugCreateNode)  printf("%d. Already Exist, Reset Parent (%d, %d) (parent: %d, %d)\n",
 					i, newPos._x, newPos._y, (*it)->_pParent->_pos._x, (*it)->_pParent->_pos._y);
 			}
 			else
 			{
-				printf("%d. Already Exist (%d, %d)\n", i, newPos._x, newPos._y);
+				if (_debugCreateNode)  printf("%d. Already Exist (%d, %d)\n", i, newPos._x, newPos._y);
 			}
 
 		}
@@ -224,19 +228,19 @@ void AStar::CreateNode(Node* pCurNode)
 			if (it != _pNodeMgr->_closeList.end())
 			{
 				(*it)->ResetParent(pCurNode->_g + DIAG_DIST, pCurNode);
-				printf("%d. Already Exist, Reset Parent (%d, %d) (parent: %d, %d)\n",
+				if (_debugCreateNode)  printf("%d. Already Exist, Reset Parent (%d, %d) (parent: %d, %d)\n",
 					i, newPos._x, newPos._y, (*it)->_pParent->_pos._x, (*it)->_pParent->_pos._y);
 			}
 			else
 			{
-				printf("%d. Already Exist (%d, %d)\n", i, newPos._x, newPos._y);
+				if (_debugCreateNode)  printf("%d. Already Exist (%d, %d)\n", i, newPos._x, newPos._y);
 			}
 		}
 		break;
 
 		case Map::OBSTACLE:
 		case Map::RANGE_OUT:
-			printf("%d. Can't Go (%d, %d)\n", i, newPos._x, newPos._y);
+			if (_debugCreateNode)  printf("%d. Can't Go (%d, %d)\n", i, newPos._x, newPos._y);
 			break;
 		}
 	}
@@ -245,6 +249,7 @@ void AStar::CreateNode(Node* pCurNode)
 void AStar::PrintOpenListForDebug()
 {
 	printf("\n=====================================\n");
+	printf("<Open List>\n\n");
 	for (int i = 0; i < _pNodeMgr->_openList.size(); i++)
 	{
 		printf("(%d, %d) : %d + %d = %d\n",
@@ -260,11 +265,11 @@ void AStar::PrintOpenListForDebug()
 		_pNodeMgr->_pCurNode->_pos._y,
 		_pNodeMgr->_pCurNode->_f);
 
-	printf("\n=====================================\n");
+	printf("=====================================\n");
 }
 
 bool AStar::CompareG::operator()(Node*& pNode) const
 {
-	return (pNode->_pos == pos && pNode->_g > g);
+	return (pNode->_pos == pos && pNode->_g >= g);
 }
 
