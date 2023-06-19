@@ -12,6 +12,7 @@ public:
 	void StartFindPath();
 	virtual void FindPath() = 0;
 	virtual void FindPathStepInto() = 0;
+	virtual void CorrectPath() = 0;
 
 public:
 
@@ -63,6 +64,6 @@ protected:
 protected:
 	bool _debugCreateNode = false;
 	bool _debugOpenList = false;
-	bool _debugFindCorner = false;
+	bool _debugFindCorner = true;
 
 };

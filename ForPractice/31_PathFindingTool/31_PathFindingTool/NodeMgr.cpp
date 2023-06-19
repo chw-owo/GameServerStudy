@@ -38,6 +38,8 @@ void NodeMgr::SetData()
 	_diagCuzList.clear();
 	_checkedList.clear();
 	_checkedDiagList.clear();
+	_correctedList.clear();
+	_checkedPathList.clear();
 
 	_pDest = nullptr;
 	_pStart = new Node(_pMap->_startPos, 0, _pMap->_startPos.GetDistanceToDest(_pMap->_destPos));

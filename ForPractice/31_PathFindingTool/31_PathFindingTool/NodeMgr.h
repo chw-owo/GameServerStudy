@@ -10,6 +10,17 @@ public:
 	bool operator() (Node* const left, Node* const right) const;
 };
 
+class DiagCuz
+{
+public:
+	DiagCuz(int x, int y, Pos parentPos) : _x(x), _y(y), _parentPos(parentPos) {}
+
+public:
+	int _x;
+	int _y;
+	Pos _parentPos;
+};
+
 class NodeMgr
 {
 private:
@@ -31,9 +42,11 @@ public:
 public:
 	vector<Node*> _openList;
 	vector<Node*> _closeList;
+	vector<Node*> _correctedList;
+	vector<Pos> _checkedPathList;
 
 public:
-	vector<Pos> _diagCuzList;
+	vector<DiagCuz> _diagCuzList;
 	vector<Pos> _checkedList;
 	vector<Pos> _checkedDiagList;
 };

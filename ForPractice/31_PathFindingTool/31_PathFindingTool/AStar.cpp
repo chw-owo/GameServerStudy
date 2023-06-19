@@ -36,6 +36,7 @@ void AStar::FindPath()
 	else
 	{
 		_pNodeMgr->_pDest = _pNodeMgr->_pCurNode;
+		CorrectPath();
 		printf("\nComplete Find Path! (AStar: %d)\n\n", _pNodeMgr->_pDest->_g);
 		_bFindPathOn = false;
 	}
@@ -77,6 +78,7 @@ void AStar::FindPathStepInto()
 	else
 	{
 		_pNodeMgr->_pDest = _pNodeMgr->_pCurNode;
+		CorrectPath();
 		printf("\nComplete Find Path! (AStar: %d)\n\n", _pNodeMgr->_pDest->_g);
 		_bFindPathStepOn = false;
 	}
@@ -244,6 +246,11 @@ void AStar::CreateNode(Node* pCurNode)
 			break;
 		}
 	}
+}
+
+void AStar::CorrectPath()
+{
+
 }
 
 void AStar::PrintOpenListForDebug()

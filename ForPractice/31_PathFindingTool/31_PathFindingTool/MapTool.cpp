@@ -6,24 +6,27 @@ MapTool::MapTool()
     srand(unsigned short(200));
     _pNodeMgr = NodeMgr::GetInstance();
 
-    _hMenuFont = CreateFont(20, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+    _hMenuFont = CreateFont(15, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         VARIABLE_PITCH | FF_ROMAN, TEXT("Arial"));
     _hDataFont = CreateFont(12, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
         VARIABLE_PITCH | FF_ROMAN, TEXT("Arial"));
 
-    _hGridPen = CreatePen(PS_SOLID, 1, RGB(200, 200, 200));     // Black
-    _hPathPen = CreatePen(PS_SOLID, 3, RGB(255, 0, 0));         // Red
-    _hParentPen = CreatePen(PS_SOLID, 1, RGB(180, 0, 0));       // Dark Red
+    _hGridPen = CreatePen(PS_SOLID, 1, RGB(200, 200, 200));         // Black
+    _hPathPen = CreatePen(PS_SOLID, 3, RGB(255, 0, 0));             // Red
+    _hCorrectedPathPen = CreatePen(PS_SOLID, 3, RGB(0, 255, 0));    // Green
+    _hParentPen = CreatePen(PS_SOLID, 1, RGB(180, 0, 0));           // Dark Red
+    _hDiagCuzPen = CreatePen(PS_SOLID, 1, RGB(220, 180, 180));      // Dark Red Gray
 
-    _hObstacleBrush = CreateSolidBrush(RGB(100, 100, 100));     // Gray
-    _hOpenBrush = CreateSolidBrush(RGB(0, 0, 255));             // Blue
-    _hCloseBrush = CreateSolidBrush(RGB(255, 255, 0));          // Yellow
-    _hStartBrush = CreateSolidBrush(RGB(255, 0, 0));            // Red
-    _hDestBrush = CreateSolidBrush(RGB(0, 255, 0));             // Green
+    _hObstacleBrush = CreateSolidBrush(RGB(100, 100, 100));         // Gray
+    _hOpenBrush = CreateSolidBrush(RGB(0, 0, 255));                 // Blue
+    _hCloseBrush = CreateSolidBrush(RGB(255, 255, 0));              // Yellow
+    _hStartBrush = CreateSolidBrush(RGB(255, 0, 0));                // Red
+    _hDestBrush = CreateSolidBrush(RGB(0, 255, 0));                 // Green
 
-    _hDiagCuzBrush = CreateSolidBrush(RGB(155, 255, 255));      // Mint
-    _hCheckedBrush = CreateSolidBrush(RGB(255, 210, 210));      // Pink
-    _hCheckedDiagBrush = CreateSolidBrush(RGB(255, 240, 240));  // Light Pink
+    _hDiagCuzBrush = CreateSolidBrush(RGB(0, 255, 255));          // Mint
+    _hCheckedBrush = CreateSolidBrush(RGB(255, 210, 210));          // Pink
+    _hCheckedDiagBrush = CreateSolidBrush(RGB(255, 240, 240));      // Light Pink
+    _hCheckedPathBrush = CreateSolidBrush(RGB(200, 255, 200));      // Light Green
 }
 
 MapTool::~MapTool()
@@ -117,27 +120,33 @@ void MapTool::RenderMenu(HDC hdc)
     WCHAR text[RENDER_MENU_LEN] = { '\0', };
 
     swprintf_s(text, RENDER_MENU_LEN,
-        L"마우스 휠: 맵 크기 조정 / 키보드 상하좌우: 맵 위치 조정 / Q: Astar / W: JPS");
+        L"마우스 휠: 맵 크기 조정 / 키보드 상하좌우: 맵 위치 조정");
     int iX = _iXPad;
     int iY = DEFAULT_Y_PAD * -1 + _iYPad;
     TextOutW(hdc, iX, iY, text, wcslen(text));
 
     wmemset(text, L'\0', RENDER_MENU_LEN);
     swprintf_s(text, RENDER_MENU_LEN,
-        L"마우스 L: 장애물 그리기 / 마우스 R: 장애물 지우기 / A + 마우스 L: 출발지 지정 / S + 마우스 L: 목적지 지정");
-    iY = DEFAULT_Y_PAD * ((float) -1 * 3 / 4) + _iYPad;
+        L"Q: Astar / W: JPS / Enter: 한번에 길찾기 / Space: 한단계씩 길찾기");
+    iY = DEFAULT_Y_PAD * ((float) -1 * 4 / 5) + _iYPad;
     TextOutW(hdc, iX, iY, text, wcslen(text));
 
     wmemset(text, L'\0', RENDER_MENU_LEN);
     swprintf_s(text, RENDER_MENU_LEN,
-        L"D: 랜덤 장애물 / F: 장애물 비우기 / G: 장애물 채우기 / Enter: 한번에 길찾기 / Space: 한단계씩 길찾기");
-    iY = DEFAULT_Y_PAD * ((float) -1 * 2 / 4) + _iYPad;
+        L"D: 랜덤 장애물 / F: 전체 장애물 비우기 / G: 전체 장애물 채우기");
+    iY = DEFAULT_Y_PAD * ((float) -1 * 3 / 5) + _iYPad;
+    TextOutW(hdc, iX, iY, text, wcslen(text));
+
+    wmemset(text, L'\0', RENDER_MENU_LEN);
+    swprintf_s(text, RENDER_MENU_LEN,
+        L"마우스 L: 장애물 그리기 / 마우스 R: 장애물 지우기 / A + 마우스 L: 출발지 지정 / S + 마우스 L: 목적지 지정");
+    iY = DEFAULT_Y_PAD * ((float)-1 * 2 / 5) + _iYPad;
     TextOutW(hdc, iX, iY, text, wcslen(text));
 
     wmemset(text, L'\0', RENDER_MENU_LEN);
     swprintf_s(text, RENDER_MENU_LEN,
         L"Z-X: CreateNode LOG ON-OFF / C-V: FindCorner LOG ON-OFF / B-N: OpenList LOG ON-OFF / Backspace: 콘솔창 초기화");
-    iY = DEFAULT_Y_PAD * ((float) -1 * 1 / 4) + _iYPad;
+    iY = DEFAULT_Y_PAD * ((float) -1 * 1 / 5) + _iYPad;
     TextOutW(hdc, iX, iY, text, wcslen(text));
 
     SelectObject(hdc, hOldFont);
@@ -250,15 +259,51 @@ void MapTool::RenderColor(HDC hdc)
         }
     }
 
+    SelectObject(hdc, _hCheckedPathBrush);
+
+    for (int i = 0; i < _pNodeMgr->_checkedPathList.size(); i++)
+    {
+        iX = _pNodeMgr->_checkedPathList[i]._x * _iGridSize;
+        iY = _pNodeMgr->_checkedPathList[i]._y * _iGridSize;
+
+        Rectangle(hdc, iX + _iXPad, iY + _iYPad,
+            iX + _iGridSize + 2 + _iXPad,
+            iY + _iGridSize + 2 + _iYPad);
+    }
+
     SelectObject(hdc, hOldBrush);
 }
 
 void MapTool::RenderParent(HDC hdc)
 {
-    HPEN hOldPen = (HPEN)SelectObject(hdc, _hParentPen);
+    HPEN hOldPen = (HPEN)SelectObject(hdc, _hDiagCuzPen); 
 
     int iX = 0;
     int iY = 0;
+
+    for (int i = 0; i < _pNodeMgr->_diagCuzList.size(); i++)
+    {
+        iX = (_pNodeMgr->_diagCuzList[i]._x + 0.5f) * _iGridSize + _iXPad;
+        iY = (_pNodeMgr->_diagCuzList[i]._y + 0.5f) * _iGridSize + _iYPad;
+        MoveToEx(hdc, iX, iY, NULL);
+
+        Pos parentPos = _pNodeMgr->_diagCuzList[i]._parentPos;
+
+        if (_pNodeMgr->_diagCuzList[i]._x - parentPos._x > 0)
+            iX = (parentPos._x + 1) * _iGridSize + _iXPad;
+        else if (_pNodeMgr->_diagCuzList[i]._x - parentPos._x < 0)
+            iX = parentPos._x * _iGridSize + _iXPad;
+
+        if (_pNodeMgr->_diagCuzList[i]._y - parentPos._y > 0)
+            iY = (parentPos._y + 1) * _iGridSize + _iYPad;
+        else if (_pNodeMgr->_diagCuzList[i]._y - parentPos._y < 0)
+            iY = parentPos._y * _iGridSize + _iYPad;
+
+        LineTo(hdc, iX, iY);
+    }
+
+    SelectObject(hdc, _hParentPen);
+
     Node* pNode = nullptr;
     Node* pParent = nullptr;
     int nodeCnt = _pNodeMgr->_openList.size();
@@ -335,6 +380,22 @@ void MapTool::RenderPath(HDC hdc)
         x = (pNode->_pos._x + 0.5f) * _iGridSize + _iXPad;
         y = (pNode->_pos._y + 0.5f) * _iGridSize + _iYPad;
         LineTo(hdc, x, y);
+    }
+
+    SelectObject(hdc, _hCorrectedPathPen);
+
+    int cnt = _pNodeMgr->_correctedList.size() - 1;
+    for (int i = 0; i < cnt; i++)
+    {
+        pNode = _pNodeMgr->_correctedList[i];
+        x = (pNode->_pos._x + 0.5f) * _iGridSize + _iXPad;
+        y = (pNode->_pos._y + 0.5f) * _iGridSize + _iYPad;
+        MoveToEx(hdc, x, y, NULL);
+
+        pNode = _pNodeMgr->_correctedList[i + 1];
+        x = (pNode->_pos._x + 0.5f) * _iGridSize + _iXPad;
+        y = (pNode->_pos._y + 0.5f) * _iGridSize + _iYPad;
+        LineTo(hdc, x, y);   
     }
 
     SelectObject(hdc, hOldPen);

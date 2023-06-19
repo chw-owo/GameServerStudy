@@ -39,6 +39,7 @@ void JumpPointSearch::FindPath()
 	else
 	{
 		_pNodeMgr->_pDest = _pNodeMgr->_pCurNode;
+		CorrectPath();
 		printf("\nComplete Find Path! (JPS: %d)\n\n", _pNodeMgr->_pDest->_g);
 		_bFindPathOn = false;
 	}
@@ -84,6 +85,7 @@ void JumpPointSearch::FindPathStepInto()
 	else
 	{
 		_pNodeMgr->_pDest = _pNodeMgr->_pCurNode;
+		CorrectPath();
 		printf("\nComplete Find Path! (JPS: %d)\n\n", _pNodeMgr->_pDest->_g);
 		_bFindPathStepOn = false;
 	}
@@ -1666,7 +1668,7 @@ bool JumpPointSearch::CheckDiagCorner(Pos diag, DIR diagDir, DIR searchDir, Pos&
 			newSearchDir = diagDir;
 			if(_debugFindCorner) printf("¡Ú¡Ú¡Ú %s: R, Side (%d, %d) (%d, %d)\n", dirText,
 				diag._x, diag._y, r_includeDir._x, r_includeDir._y);
-			_pNodeMgr->_diagCuzList.push_back(Pos(r._x, r._y));
+			if (_debugFindCorner) _pNodeMgr->_diagCuzList.push_back(DiagCuz(r._x, r._y, newPos));
 			return true;
 		}
 
@@ -1706,7 +1708,7 @@ bool JumpPointSearch::CheckDiagCorner(Pos diag, DIR diagDir, DIR searchDir, Pos&
 				newSearchDir = DIR::NONE;
 				if(_debugFindCorner) printf("¡Ú¡Ú¡Ú %s: R, Side (%d, %d) (%d, %d)\n", dirText,
 					diag._x, diag._y, r_includeDir._x, r_includeDir._y);
-				_pNodeMgr->_diagCuzList.push_back(Pos(r._x, r._y));
+				if (_debugFindCorner) _pNodeMgr->_diagCuzList.push_back(DiagCuz(r._x, r._y, newPos));
 				return true;
 			}
 
@@ -1717,7 +1719,7 @@ bool JumpPointSearch::CheckDiagCorner(Pos diag, DIR diagDir, DIR searchDir, Pos&
 				newSearchDir = DIR::NONE;
 				if(_debugFindCorner) printf("¡Ú¡Ú¡Ú %s: R, Side (%d, %d) (%d, %d)\n", dirText,
 					diag._x, diag._y, r_excludeDir._x, r_excludeDir._y);
-				_pNodeMgr->_diagCuzList.push_back(Pos(r._x, r._y));
+				if (_debugFindCorner) _pNodeMgr->_diagCuzList.push_back(DiagCuz(r._x, r._y, newPos));
 				return true;
 			}
 
@@ -1775,7 +1777,7 @@ bool JumpPointSearch::CheckDiagCorner(Pos diag, DIR diagDir, DIR searchDir, Pos&
 			newSearchDir = diagDir;
 			if(_debugFindCorner) printf("¡Ú¡Ú¡Ú %s: UP, Side (%d, %d) (%d, %d)\n", dirText,
 				diag._x, diag._y, up_includeDir._x, up_includeDir._y);
-			_pNodeMgr->_diagCuzList.push_back(Pos(up._x, up._y));
+			if (_debugFindCorner) _pNodeMgr->_diagCuzList.push_back(DiagCuz(up._x, up._y, newPos));
 			return true;
 		}
 
@@ -1815,7 +1817,7 @@ bool JumpPointSearch::CheckDiagCorner(Pos diag, DIR diagDir, DIR searchDir, Pos&
 				newSearchDir = DIR::NONE;
 				if(_debugFindCorner) printf("¡Ú¡Ú¡Ú %s: UP, Side (%d, %d) (%d, %d)\n", dirText,
 					diag._x, diag._y, up_includeDir._x, up_includeDir._y);
-				_pNodeMgr->_diagCuzList.push_back(Pos(up._x, up._y));
+				if (_debugFindCorner) _pNodeMgr->_diagCuzList.push_back(DiagCuz(up._x, up._y, newPos));
 				return true;
 			}
 
@@ -1826,7 +1828,7 @@ bool JumpPointSearch::CheckDiagCorner(Pos diag, DIR diagDir, DIR searchDir, Pos&
 				newSearchDir = DIR::NONE;
 				if(_debugFindCorner) printf("¡Ú¡Ú¡Ú %s: UP, Side (%d, %d) (%d, %d)\n", dirText,
 					diag._x, diag._y, up_excludeDir._x, up_excludeDir._y);
-				_pNodeMgr->_diagCuzList.push_back(Pos(up._x, up._y));
+				if (_debugFindCorner) _pNodeMgr->_diagCuzList.push_back(DiagCuz(up._x, up._y, newPos));
 				return true;
 			}
 		
@@ -1883,7 +1885,7 @@ bool JumpPointSearch::CheckDiagCorner(Pos diag, DIR diagDir, DIR searchDir, Pos&
 			newSearchDir = diagDir;
 			if(_debugFindCorner) printf("¡Ú¡Ú¡Ú %s: L, Side (%d, %d) (%d, %d)\n", dirText,
 				diag._x, diag._y, l_includeDir._x, l_includeDir._y);
-			_pNodeMgr->_diagCuzList.push_back(Pos(l._x, l._y));
+			if (_debugFindCorner) _pNodeMgr->_diagCuzList.push_back(DiagCuz(l._x, l._y, newPos));
 			return true;
 		}
 
@@ -1923,7 +1925,7 @@ bool JumpPointSearch::CheckDiagCorner(Pos diag, DIR diagDir, DIR searchDir, Pos&
 				newSearchDir = DIR::NONE;
 				if(_debugFindCorner) printf("¡Ú¡Ú¡Ú %s: L, Side (%d, %d) (%d, %d)\n", dirText,
 					diag._x, diag._y, l_includeDir._x, l_includeDir._y);
-				_pNodeMgr->_diagCuzList.push_back(Pos(l._x, l._y));
+				if (_debugFindCorner) _pNodeMgr->_diagCuzList.push_back(DiagCuz(l._x, l._y, newPos));
 				return true;
 			}
 
@@ -1934,7 +1936,7 @@ bool JumpPointSearch::CheckDiagCorner(Pos diag, DIR diagDir, DIR searchDir, Pos&
 				newSearchDir = DIR::NONE;
 				if(_debugFindCorner) printf("¡Ú¡Ú¡Ú %s: L, Side (%d, %d) (%d, %d)\n", dirText,
 					diag._x, diag._y, l_excludeDir._x, l_excludeDir._y);
-				_pNodeMgr->_diagCuzList.push_back(Pos(l._x, l._y));
+				if (_debugFindCorner) _pNodeMgr->_diagCuzList.push_back(DiagCuz(l._x, l._y, newPos));
 				return true;
 			}
 
@@ -1991,7 +1993,7 @@ bool JumpPointSearch::CheckDiagCorner(Pos diag, DIR diagDir, DIR searchDir, Pos&
 			newSearchDir = diagDir;
 			if(_debugFindCorner) printf("¡Ú¡Ú¡Ú %s: Down, Side (%d, %d) (%d, %d)\n", dirText,
 				diag._x, diag._y, down_includeDir._x, down_includeDir._y);
-			_pNodeMgr->_diagCuzList.push_back(Pos(down._x, down._y));
+			if (_debugFindCorner) _pNodeMgr->_diagCuzList.push_back(DiagCuz(down._x, down._y, newPos));
 			return true;
 		}
 
@@ -2031,7 +2033,7 @@ bool JumpPointSearch::CheckDiagCorner(Pos diag, DIR diagDir, DIR searchDir, Pos&
 				newSearchDir = DIR::NONE;
 				if(_debugFindCorner) printf("¡Ú¡Ú¡Ú %s: Down, Side (%d, %d) (%d, %d)\n", dirText,
 					diag._x, diag._y, down_includeDir._x, down_includeDir._y);
-				_pNodeMgr->_diagCuzList.push_back(Pos(down._x, down._y));
+				if (_debugFindCorner) _pNodeMgr->_diagCuzList.push_back(DiagCuz(down._x, down._y, newPos));
 				return true;
 			}
 
@@ -2042,7 +2044,7 @@ bool JumpPointSearch::CheckDiagCorner(Pos diag, DIR diagDir, DIR searchDir, Pos&
 				newSearchDir = DIR::NONE;
 				if(_debugFindCorner) printf("¡Ú¡Ú¡Ú %s: Down, Side (%d, %d) (%d, %d)\n", dirText,
 					diag._x, diag._y, down_excludeDir._x, down_excludeDir._y);
-				_pNodeMgr->_diagCuzList.push_back(Pos(down._x, down._y));
+				if (_debugFindCorner) _pNodeMgr->_diagCuzList.push_back(DiagCuz(down._x, down._y, newPos));
 				return true;
 			}
 
@@ -2156,6 +2158,207 @@ void JumpPointSearch::CreateNode(Node* pCurNode, Pos newPos, DIR dir, DIR search
 		break;
 
 	}
+}
+
+void JumpPointSearch::CorrectPath()
+{
+	Node* pNode1 = _pNodeMgr->_pDest;
+	Node* pNode2 = pNode1->_pParent;
+	Node* pPrevNode = nullptr;
+
+	_pNodeMgr->_correctedList.push_back(pNode1);
+
+	while (pNode2 != _pNodeMgr->_pStart)
+	{
+		if (CheckObstacle(pNode1, pNode2))
+		{
+			printf("(%d, %d) - (%d, %d): Obstacle!! ",
+				pNode1->_pos._x, pNode1->_pos._y, pNode2->_pos._x, pNode2->_pos._y);
+
+			if (pPrevNode == nullptr) return;
+
+			_pNodeMgr->_correctedList.push_back(pPrevNode);
+			pNode1 = pPrevNode;
+			pNode2 = pPrevNode->_pParent;
+
+			printf("Change Node (%d, %d) - (%d, %d)\n",
+				pNode1->_pos._x, pNode1->_pos._y, pNode2->_pos._x, pNode2->_pos._y);
+
+		}
+		else
+		{
+			printf("(%d, %d) - (%d, %d): Can pass. ",
+				pNode1->_pos._x, pNode1->_pos._y, pNode2->_pos._x, pNode2->_pos._y);
+
+			pPrevNode = pNode2;
+			pNode2 = pNode2->_pParent;
+
+			printf("Change Node (%d, %d) - (%d, %d)\n",
+				pNode1->_pos._x, pNode1->_pos._y, pNode2->_pos._x, pNode2->_pos._y);
+		}
+	}
+
+	_pNodeMgr->_correctedList.push_back(pNode2);
+}
+
+bool JumpPointSearch::CheckObstacle(Node* pNode1, Node* pNode2)
+{
+	int curX = pNode1->_pos._x;
+	int curY = pNode1->_pos._y;
+	int destX = pNode2->_pos._x;
+	int destY = pNode2->_pos._y;
+
+	int dX = destX - curX;
+	int dY = destY - curY;
+
+	if (dX == 0)
+	{
+		int yUnit = dY / abs(dY);
+		while (curY != destY)
+		{
+			curY += yUnit;
+			if (_pNodeMgr->_pMap->GetMapState(curX, curY) == Map::OBSTACLE)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	if (dY == 0)
+	{
+		int xUnit = dX / abs(dX);
+		while (curX != destX)
+		{
+			curX += xUnit;
+			if (_pNodeMgr->_pMap->GetMapState(curX, curY) == Map::OBSTACLE)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	int accX = 0;
+	int accY = 0;
+	int	xUnit = dX / abs(dX);
+	int yUnit = dY / abs(dY);
+
+	if (abs(dX) >= abs(dY))
+	{
+		int dX1 = abs(dX / 2);
+		int dY1 = abs(dY / 2);
+
+		while (accY < dY1)
+		{
+			accX += dY1;
+			curX += xUnit;
+
+			if (accX > dX1)
+			{
+				accX -= dX1;
+				accY++;
+				curY += yUnit;
+			}
+
+			if (_pNodeMgr->_pMap->GetMapState(curX, curY) == Map::OBSTACLE)
+			{
+				return true;
+			}
+		}
+
+		curX += xUnit;
+		curY += yUnit;
+
+		if (_pNodeMgr->_pMap->GetMapState(curX, curY) == Map::OBSTACLE)
+		{
+			return true;
+		}
+
+		accX = 0;
+		accY = dY1 + 1;
+		int dX2 = abs(dX) - dX1 + 1;
+		int dY2 = abs(dY) - dY1 + 1;
+
+		while (accY < dY2)
+		{
+			accX += dY2;
+			curX += xUnit;
+
+			if (accX > dX2)
+			{
+				accX -= dX2;
+				accY++;
+				curY += yUnit;
+			}
+
+			if (_pNodeMgr->_pMap->GetMapState(curX, curY) == Map::OBSTACLE)
+			{
+				return true;
+			}
+		}
+
+		return false;
+	}
+	else
+	{
+		int dX1 = abs(dX / 2);
+		int dY1 = abs(dY / 2);
+
+		while (accX < dX1)
+		{
+			accY += dX1;
+			curY += yUnit;
+
+			if (accY > dY1)
+			{
+				accY -= dY1;
+				accX++;
+				curX += xUnit;
+			}
+
+			if (_pNodeMgr->_pMap->GetMapState(curX, curY) == Map::OBSTACLE)
+			{
+				return true;
+			}
+		}
+
+		curX += xUnit;
+		curY += yUnit;
+
+		if (_pNodeMgr->_pMap->GetMapState(curX, curY) == Map::OBSTACLE)
+		{
+			return true;
+		}
+
+		accX = dX1 + 1;
+		accY = 0;
+		int dX2 = abs(dX) - dX1 + 1;
+		int dY2 = abs(dY) - dY1 + 1;
+
+		while (accX < dX2)
+		{
+			accY += dX2;
+			curY += yUnit;
+
+			if (accY > dY2)
+			{
+				accY -= dY2;
+				accX++;
+				curX += xUnit;
+			}
+
+			if (_pNodeMgr->_pMap->GetMapState(curX, curY) == Map::OBSTACLE)
+			{
+				return true;
+			}
+
+		}
+
+		return false;
+	}
+
+	return false;
 }
 
 void JumpPointSearch::PrintOpenListForDebug()

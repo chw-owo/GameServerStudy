@@ -14,6 +14,10 @@ private:
 	void CreateNode(Node* pCurNode, Pos newPos, DIR dir, DIR searchDir, int newG);
 	
 private:
+	void CorrectPath();
+	bool CheckObstacle(Node* pNode1, Node* pNode2);
+
+private:
 	void PrintDirForDebug(Node* pCurNode);
 	void PrintOpenListForDebug();
 

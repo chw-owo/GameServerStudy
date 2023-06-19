@@ -5,8 +5,8 @@
 
 #define MOVESPEED 10
 #define DEFAULT_X_PAD 100
-#define DEFAULT_Y_PAD 80
-#define DEFAULT_GRID_SIZE 8
+#define DEFAULT_Y_PAD 100
+#define DEFAULT_GRID_SIZE 9
 
 class MapTool
 {
@@ -51,19 +51,22 @@ private:
 private:
 	HFONT _hMenuFont;
 	HFONT _hDataFont;
+
 	HPEN _hGridPen;
 	HPEN _hPathPen;
+	HPEN _hCorrectedPathPen;
 	HPEN _hParentPen;
+	HPEN _hDiagCuzPen;
 
 	HBRUSH _hObstacleBrush;
 	HBRUSH _hOpenBrush;
 	HBRUSH _hCloseBrush;
 	HBRUSH _hStartBrush;
 	HBRUSH _hDestBrush;
-
 	HBRUSH _hDiagCuzBrush;
 	HBRUSH _hCheckedBrush;
 	HBRUSH _hCheckedDiagBrush;
+	HBRUSH _hCheckedPathBrush;
 
 private:
 	bool _bDraw = false;
