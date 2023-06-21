@@ -43,7 +43,6 @@ public:
 	vector<Node*> _openList;
 	vector<Node*> _closeList;
 	vector<Node*> _correctedList;
-	vector<Pos> _checkedPathList;
 
 public:
 	vector<DiagCuz> _diagCuzList;

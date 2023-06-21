@@ -6,13 +6,9 @@ class AStar : public PathFindAlgorithm
 public:
 	void FindPath();
 	void FindPathStepInto();
-	void CorrectPath();
 
 private:
 	void CreateNode(Node* pCurNode);
-
-private:
-	void PrintOpenListForDebug();
 
 private:
 	class CompareG

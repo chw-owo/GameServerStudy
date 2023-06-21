@@ -10,9 +10,17 @@ public:
 public:
 	bool GetFindPathOn() { return _bFindPathOn; }
 	void StartFindPath();
+
+public:
 	virtual void FindPath() = 0;
 	virtual void FindPathStepInto() = 0;
-	virtual void CorrectPath() = 0;
+
+protected:
+	void CorrectPath();
+	void PrintOpenListForDebug();
+
+private:
+	bool CheckObstacle(Node* pNode1, Node* pNode2);
 
 public:
 
@@ -40,6 +48,14 @@ public:
 		_debugFindCorner = debugFindCorner; 
 	}
 
+	void SetCorrectPath(bool correctPath)
+	{
+		if (correctPath) printf("\nDebug FindCorner ON\n");
+		else printf("\nDebug FindCorner OFF\n");
+
+		_correctPath = correctPath;
+	}
+
 protected:
 	Pos _direction[(int)DIR::NONE] =
 	{
@@ -65,5 +81,6 @@ protected:
 	bool _debugCreateNode = false;
 	bool _debugOpenList = false;
 	bool _debugFindCorner = true;
+	bool _correctPath = true;
 
 };

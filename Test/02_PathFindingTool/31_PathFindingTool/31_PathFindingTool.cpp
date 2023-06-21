@@ -123,16 +123,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
     case WM_KEYDOWN:
         switch (wParam)
         {
-
         // About Algorithm ===================================
-
-        case 0x51: // Key Q
+        case 0x31: // Key Num 1
             printf("Select AStar Algorithm\n");
             delete g_pPathFindTool;
             g_pPathFindTool = new AStar;
             break;
 
-        case 0x57: // Key W
+        case 0x32: // Key Num 2
             printf("Select JPS Algorithm\n");
             delete g_pPathFindTool;
             g_pPathFindTool = new JumpPointSearch;
@@ -140,55 +138,63 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
         // About Start/Dest ==================================
 
-        case 0x41: // Key A
+        case 0x33: // Key Num 3
             g_pMapTool->SelectStart(true);
             break;
 
-        case 0x53: // Key S
+        case 0x34: // Key Num 4
             g_pMapTool->SelectDest(true);
             break;
 
         // About Obstacle ====================================
 
-        case 0x44: // Key D
+        case 0x35: // Key Num 5
             g_pMapTool->SetRandomObstacles();
             InvalidateRect(hWnd, NULL, false);
             break;
 
-        case 0x46: // Key F
+        case 0x36: // Key Num 6
             g_pMapTool->ClearObstacles();
             InvalidateRect(hWnd, NULL, false);
             break;
 
-        case 0x47: // Key G
+        case 0x37: // Key Num 7
             g_pMapTool->FillObstacles();
             InvalidateRect(hWnd, NULL, false);
             break;
 
-        // About Console =====================================
+        // About Console ======================================
 
-        case 0x5A: // Key Z
+        case 0x51: // Key Q
             g_pPathFindTool->SetDebugCreateNode(true);
             break;
-
-        case 0x58: // Key X
+    
+        case 0x57: // Key W
             g_pPathFindTool->SetDebugCreateNode(false);
             break;
 
-        case 0x43: // Key C
+        case 0x41: // Key A
             g_pPathFindTool->SetDebugFindCorner(true);
             break;
 
-        case 0x56: // Key V
+        case 0x53: // Key S
             g_pPathFindTool->SetDebugFindCorner(false);
             break;
 
-        case 0x42: // Key B
+        case 0x5A: // Key Z
             g_pPathFindTool->SetDebugOpenList(true);
             break;
 
-        case 0x4E: // Key N
+        case 0x58: // Key X
             g_pPathFindTool->SetDebugOpenList(false);
+            break;
+
+        case 0x43: // Key C
+            g_pPathFindTool->SetCorrectPath(true);
+            break;
+
+        case 0x56: // Key V
+            g_pPathFindTool->SetCorrectPath(false);
             break;
 
         case VK_BACK:
@@ -239,11 +245,11 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
         {
         // About Start/Dest ==================================
 
-        case 0x41: // Key A
+        case 0x33: // Key Num3
             g_pMapTool->SelectStart(false);
             break;
 
-        case 0x53: // Key S
+        case 0x34: // Key Num 4
             g_pMapTool->SelectDest(false);
             break;
         }

@@ -39,7 +39,7 @@ void JumpPointSearch::FindPath()
 	else
 	{
 		_pNodeMgr->_pDest = _pNodeMgr->_pCurNode;
-		CorrectPath();
+		if (_correctPath) CorrectPath();
 		printf("\nComplete Find Path! (JPS: %d)\n\n", _pNodeMgr->_pDest->_g);
 		_bFindPathOn = false;
 	}
@@ -85,77 +85,10 @@ void JumpPointSearch::FindPathStepInto()
 	else
 	{
 		_pNodeMgr->_pDest = _pNodeMgr->_pCurNode;
-		CorrectPath();
+		if (_correctPath) CorrectPath();
 		printf("\nComplete Find Path! (JPS: %d)\n\n", _pNodeMgr->_pDest->_g);
 		_bFindPathStepOn = false;
 	}
-}
-
-void JumpPointSearch::PrintDirForDebug(Node* pCurNode)
-{
-	switch (pCurNode->_dir)
-	{
-	case DIR::UP:
-		printf("(%d, %d) is UP", pCurNode->_pos._x, pCurNode->_pos._y);
-		break;
-	case DIR::R:
-		printf("(%d, %d) is R", pCurNode->_pos._x, pCurNode->_pos._y);
-		break;
-	case DIR::DOWN:
-		printf("(%d, %d) is DOWN", pCurNode->_pos._x, pCurNode->_pos._y);
-		break;
-	case DIR::L:
-		printf("(%d, %d) is L", pCurNode->_pos._x, pCurNode->_pos._y);
-		break;
-	case DIR::UP_R:
-		printf("(%d, %d) is UP_R", pCurNode->_pos._x, pCurNode->_pos._y);
-		break;
-	case DIR::DOWN_R:
-		printf("(%d, %d) is DOWN_R", pCurNode->_pos._x, pCurNode->_pos._y);
-		break;
-	case DIR::DOWN_L:
-		printf("(%d, %d) is DOWN_L", pCurNode->_pos._x, pCurNode->_pos._y);
-		break;
-	case DIR::UP_L:
-		printf("(%d, %d) is UP_L", pCurNode->_pos._x, pCurNode->_pos._y);
-		break;
-	case DIR::NONE:
-		printf("(%d, %d) is NONE", pCurNode->_pos._x, pCurNode->_pos._y);
-		break;
-	};
-
-	switch (pCurNode->_searchDir)
-	{
-	case DIR::UP:
-		printf(", UP");
-		break;
-	case DIR::R:
-		printf(", R");
-		break;
-	case DIR::DOWN:
-		printf(", DOWN");
-		break;
-	case DIR::L:
-		printf(", L");
-		break;
-	case DIR::UP_R:
-		printf(", UP_R");
-		break;
-	case DIR::DOWN_R:
-		printf(", DOWN_R");
-		break;
-	case DIR::DOWN_L:
-		printf(", DOWN_L");
-		break;
-	case DIR::UP_L:
-		printf(", UP_L");
-		break;
-	case DIR::NONE:
-		printf(", NONE");
-		break;
-	};
-
-	printf("\n\n");
 }
 
 void JumpPointSearch::CheckCreateNode(Node* pCurNode)
@@ -169,8 +102,69 @@ void JumpPointSearch::CheckCreateNode(Node* pCurNode)
 	if(_debugFindCorner) 
 	{
 		printf("\n");
-		PrintDirForDebug(pCurNode);
-		printf("\n");
+		switch (pCurNode->_dir)
+		{
+		case DIR::UP:
+			printf("(%d, %d) is UP", pCurNode->_pos._x, pCurNode->_pos._y);
+			break;
+		case DIR::R:
+			printf("(%d, %d) is R", pCurNode->_pos._x, pCurNode->_pos._y);
+			break;
+		case DIR::DOWN:
+			printf("(%d, %d) is DOWN", pCurNode->_pos._x, pCurNode->_pos._y);
+			break;
+		case DIR::L:
+			printf("(%d, %d) is L", pCurNode->_pos._x, pCurNode->_pos._y);
+			break;
+		case DIR::UP_R:
+			printf("(%d, %d) is UP_R", pCurNode->_pos._x, pCurNode->_pos._y);
+			break;
+		case DIR::DOWN_R:
+			printf("(%d, %d) is DOWN_R", pCurNode->_pos._x, pCurNode->_pos._y);
+			break;
+		case DIR::DOWN_L:
+			printf("(%d, %d) is DOWN_L", pCurNode->_pos._x, pCurNode->_pos._y);
+			break;
+		case DIR::UP_L:
+			printf("(%d, %d) is UP_L", pCurNode->_pos._x, pCurNode->_pos._y);
+			break;
+		case DIR::NONE:
+			printf("(%d, %d) is NONE", pCurNode->_pos._x, pCurNode->_pos._y);
+			break;
+		};
+
+		switch (pCurNode->_searchDir)
+		{
+		case DIR::UP:
+			printf(", UP");
+			break;
+		case DIR::R:
+			printf(", R");
+			break;
+		case DIR::DOWN:
+			printf(", DOWN");
+			break;
+		case DIR::L:
+			printf(", L");
+			break;
+		case DIR::UP_R:
+			printf(", UP_R");
+			break;
+		case DIR::DOWN_R:
+			printf(", DOWN_R");
+			break;
+		case DIR::DOWN_L:
+			printf(", DOWN_L");
+			break;
+		case DIR::UP_L:
+			printf(", UP_L");
+			break;
+		case DIR::NONE:
+			printf(", NONE");
+			break;
+		};
+
+		printf("\n\n");
 	}
 
 	switch (dir)
@@ -2159,230 +2153,6 @@ void JumpPointSearch::CreateNode(Node* pCurNode, Pos newPos, DIR dir, DIR search
 
 	}
 }
-
-void JumpPointSearch::CorrectPath()
-{
-	Node* pNode1 = _pNodeMgr->_pDest;
-	Node* pNode2 = pNode1->_pParent;
-	Node* pPrevNode = nullptr;
-
-	_pNodeMgr->_correctedList.push_back(pNode1);
-
-	while (pNode2 != _pNodeMgr->_pStart)
-	{
-		if (CheckObstacle(pNode1, pNode2))
-		{
-			printf("(%d, %d) - (%d, %d): Obstacle!! ",
-				pNode1->_pos._x, pNode1->_pos._y, pNode2->_pos._x, pNode2->_pos._y);
-
-			if (pPrevNode == nullptr) return;
-
-			_pNodeMgr->_correctedList.push_back(pPrevNode);
-			pNode1 = pPrevNode;
-			pNode2 = pPrevNode->_pParent;
-
-			printf("Change Node (%d, %d) - (%d, %d)\n",
-				pNode1->_pos._x, pNode1->_pos._y, pNode2->_pos._x, pNode2->_pos._y);
-
-		}
-		else
-		{
-			printf("(%d, %d) - (%d, %d): Can pass. ",
-				pNode1->_pos._x, pNode1->_pos._y, pNode2->_pos._x, pNode2->_pos._y);
-
-			pPrevNode = pNode2;
-			pNode2 = pNode2->_pParent;
-
-			printf("Change Node (%d, %d) - (%d, %d)\n",
-				pNode1->_pos._x, pNode1->_pos._y, pNode2->_pos._x, pNode2->_pos._y);
-		}
-	}
-
-	_pNodeMgr->_correctedList.push_back(pNode2);
-}
-
-bool JumpPointSearch::CheckObstacle(Node* pNode1, Node* pNode2)
-{
-	int curX = pNode1->_pos._x;
-	int curY = pNode1->_pos._y;
-	int destX = pNode2->_pos._x;
-	int destY = pNode2->_pos._y;
-
-	int dX = destX - curX;
-	int dY = destY - curY;
-
-	if (dX == 0)
-	{
-		int yUnit = dY / abs(dY);
-		while (curY != destY)
-		{
-			curY += yUnit;
-			if (_pNodeMgr->_pMap->GetMapState(curX, curY) == Map::OBSTACLE)
-			{
-				return true;
-			}
-		}
-		return false;
-	}
-
-	if (dY == 0)
-	{
-		int xUnit = dX / abs(dX);
-		while (curX != destX)
-		{
-			curX += xUnit;
-			if (_pNodeMgr->_pMap->GetMapState(curX, curY) == Map::OBSTACLE)
-			{
-				return true;
-			}
-		}
-		return false;
-	}
-
-	int accX = 0;
-	int accY = 0;
-	int	xUnit = dX / abs(dX);
-	int yUnit = dY / abs(dY);
-
-	if (abs(dX) >= abs(dY))
-	{
-		int dX1 = abs(dX / 2);
-		int dY1 = abs(dY / 2);
-
-		while (accY < dY1)
-		{
-			accX += dY1;
-			curX += xUnit;
-
-			if (accX > dX1)
-			{
-				accX -= dX1;
-				accY++;
-				curY += yUnit;
-			}
-
-			if (_pNodeMgr->_pMap->GetMapState(curX, curY) == Map::OBSTACLE)
-			{
-				return true;
-			}
-		}
-
-		curX += xUnit;
-		curY += yUnit;
-
-		if (_pNodeMgr->_pMap->GetMapState(curX, curY) == Map::OBSTACLE)
-		{
-			return true;
-		}
-
-		accX = 0;
-		accY = dY1 + 1;
-		int dX2 = abs(dX) - dX1 + 1;
-		int dY2 = abs(dY) - dY1 + 1;
-
-		while (accY < dY2)
-		{
-			accX += dY2;
-			curX += xUnit;
-
-			if (accX > dX2)
-			{
-				accX -= dX2;
-				accY++;
-				curY += yUnit;
-			}
-
-			if (_pNodeMgr->_pMap->GetMapState(curX, curY) == Map::OBSTACLE)
-			{
-				return true;
-			}
-		}
-
-		return false;
-	}
-	else
-	{
-		int dX1 = abs(dX / 2);
-		int dY1 = abs(dY / 2);
-
-		while (accX < dX1)
-		{
-			accY += dX1;
-			curY += yUnit;
-
-			if (accY > dY1)
-			{
-				accY -= dY1;
-				accX++;
-				curX += xUnit;
-			}
-
-			if (_pNodeMgr->_pMap->GetMapState(curX, curY) == Map::OBSTACLE)
-			{
-				return true;
-			}
-		}
-
-		curX += xUnit;
-		curY += yUnit;
-
-		if (_pNodeMgr->_pMap->GetMapState(curX, curY) == Map::OBSTACLE)
-		{
-			return true;
-		}
-
-		accX = dX1 + 1;
-		accY = 0;
-		int dX2 = abs(dX) - dX1 + 1;
-		int dY2 = abs(dY) - dY1 + 1;
-
-		while (accX < dX2)
-		{
-			accY += dX2;
-			curY += yUnit;
-
-			if (accY > dY2)
-			{
-				accY -= dY2;
-				accX++;
-				curX += xUnit;
-			}
-
-			if (_pNodeMgr->_pMap->GetMapState(curX, curY) == Map::OBSTACLE)
-			{
-				return true;
-			}
-
-		}
-
-		return false;
-	}
-
-	return false;
-}
-
-void JumpPointSearch::PrintOpenListForDebug()
-{
-	printf("\n=====================================\n");
-	printf("<Open List>\n\n");
-	for (int i = 0; i < _pNodeMgr->_openList.size(); i++)
-	{
-		printf("(%d, %d) : %d + %d = %d\n",
-			_pNodeMgr->_openList[i]->_pos._x,
-			_pNodeMgr->_openList[i]->_pos._y,
-			_pNodeMgr->_openList[i]->_g,
-			_pNodeMgr->_openList[i]->_h,
-			_pNodeMgr->_openList[i]->_f);
-	}
-
-	printf("\nCurNode : (%d, %d), %d\n",
-		_pNodeMgr->_pCurNode->_pos._x,
-		_pNodeMgr->_pCurNode->_pos._y,
-		_pNodeMgr->_pCurNode->_f);
-
-	printf("=====================================\n");
-}
-
 
 bool JumpPointSearch::CompareG::operator()(Node*& pNode) const
 {

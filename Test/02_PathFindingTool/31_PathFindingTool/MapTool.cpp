@@ -26,7 +26,6 @@ MapTool::MapTool()
     _hDiagCuzBrush = CreateSolidBrush(RGB(0, 255, 255));          // Mint
     _hCheckedBrush = CreateSolidBrush(RGB(255, 210, 210));          // Pink
     _hCheckedDiagBrush = CreateSolidBrush(RGB(255, 240, 240));      // Light Pink
-    _hCheckedPathBrush = CreateSolidBrush(RGB(200, 255, 200));      // Light Green
 }
 
 MapTool::~MapTool()
@@ -120,33 +119,21 @@ void MapTool::RenderMenu(HDC hdc)
     WCHAR text[RENDER_MENU_LEN] = { '\0', };
 
     swprintf_s(text, RENDER_MENU_LEN,
-        L"마우스 휠: 맵 크기 조정 / 키보드 상하좌우: 맵 위치 조정");
+        L"1: Astar / 2: JPS / 3 + 마우스 왼쪽: 출발지 지정 / 4 + 마우스 왼쪽: 목적지 지정 / 5: 랜덤 장애물 / 6: 전체 장애물 비우기 / 7: 전체 장애물 채우기");
     int iX = _iXPad;
-    int iY = DEFAULT_Y_PAD * -1 + _iYPad;
+    int iY = DEFAULT_Y_PAD * -1 + _iYPad + 5;
+    TextOutW(hdc, iX, iY, text, wcslen(text));
+    
+    wmemset(text, L'\0', RENDER_MENU_LEN);
+    swprintf_s(text, RENDER_MENU_LEN,
+        L"Enter: 한번에 길찾기 / Space: 한단계씩 길찾기 / 마우스 왼쪽: 장애물 그리기 / 마우스 오른쪽: 장애물 지우기 / 마우스 휠: 맵 크기 조정 / 상하좌우 키: 맵 위치 조정");
+    iY = DEFAULT_Y_PAD * ((float) -1 * 2 / 3) + _iYPad + 5;
     TextOutW(hdc, iX, iY, text, wcslen(text));
 
     wmemset(text, L'\0', RENDER_MENU_LEN);
     swprintf_s(text, RENDER_MENU_LEN,
-        L"Q: Astar / W: JPS / Enter: 한번에 길찾기 / Space: 한단계씩 길찾기");
-    iY = DEFAULT_Y_PAD * ((float) -1 * 4 / 5) + _iYPad;
-    TextOutW(hdc, iX, iY, text, wcslen(text));
-
-    wmemset(text, L'\0', RENDER_MENU_LEN);
-    swprintf_s(text, RENDER_MENU_LEN,
-        L"D: 랜덤 장애물 / F: 전체 장애물 비우기 / G: 전체 장애물 채우기");
-    iY = DEFAULT_Y_PAD * ((float) -1 * 3 / 5) + _iYPad;
-    TextOutW(hdc, iX, iY, text, wcslen(text));
-
-    wmemset(text, L'\0', RENDER_MENU_LEN);
-    swprintf_s(text, RENDER_MENU_LEN,
-        L"마우스 L: 장애물 그리기 / 마우스 R: 장애물 지우기 / A + 마우스 L: 출발지 지정 / S + 마우스 L: 목적지 지정");
-    iY = DEFAULT_Y_PAD * ((float)-1 * 2 / 5) + _iYPad;
-    TextOutW(hdc, iX, iY, text, wcslen(text));
-
-    wmemset(text, L'\0', RENDER_MENU_LEN);
-    swprintf_s(text, RENDER_MENU_LEN,
-        L"Z-X: CreateNode LOG ON-OFF / C-V: FindCorner LOG ON-OFF / B-N: OpenList LOG ON-OFF / Backspace: 콘솔창 초기화");
-    iY = DEFAULT_Y_PAD * ((float) -1 * 1 / 5) + _iYPad;
+        L"Q-W: 노드 생성 로그 ON-OFF / A-S: 코너 찾기 로그 ON-OFF / Z-X: 오픈 노드 출력 ON-OFF / C-V: 길 보정 ON-OFF / Backspace: 콘솔창 초기화");
+    iY = DEFAULT_Y_PAD * ((float) -1 * 1 / 3) + _iYPad + 5;
     TextOutW(hdc, iX, iY, text, wcslen(text));
 
     SelectObject(hdc, hOldFont);
@@ -257,18 +244,6 @@ void MapTool::RenderColor(HDC hdc)
                 iX + _iGridSize + 2 + _iXPad,
                 iY + _iGridSize + 2 + _iYPad);
         }
-    }
-
-    SelectObject(hdc, _hCheckedPathBrush);
-
-    for (int i = 0; i < _pNodeMgr->_checkedPathList.size(); i++)
-    {
-        iX = _pNodeMgr->_checkedPathList[i]._x * _iGridSize;
-        iY = _pNodeMgr->_checkedPathList[i]._y * _iGridSize;
-
-        Rectangle(hdc, iX + _iXPad, iY + _iYPad,
-            iX + _iGridSize + 2 + _iXPad,
-            iY + _iGridSize + 2 + _iYPad);
     }
 
     SelectObject(hdc, hOldBrush);

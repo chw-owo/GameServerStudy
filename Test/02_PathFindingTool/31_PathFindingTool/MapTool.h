@@ -4,9 +4,9 @@
 
 
 #define MOVESPEED 10
-#define DEFAULT_X_PAD 100
-#define DEFAULT_Y_PAD 100
-#define DEFAULT_GRID_SIZE 9
+#define DEFAULT_X_PAD 40
+#define DEFAULT_Y_PAD 70
+#define DEFAULT_GRID_SIZE 10
 
 class MapTool
 {
@@ -66,7 +66,6 @@ private:
 	HBRUSH _hDiagCuzBrush;
 	HBRUSH _hCheckedBrush;
 	HBRUSH _hCheckedDiagBrush;
-	HBRUSH _hCheckedPathBrush;
 
 private:
 	bool _bDraw = false;

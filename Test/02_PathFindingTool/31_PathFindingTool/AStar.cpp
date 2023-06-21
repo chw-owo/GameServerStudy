@@ -36,7 +36,7 @@ void AStar::FindPath()
 	else
 	{
 		_pNodeMgr->_pDest = _pNodeMgr->_pCurNode;
-		CorrectPath();
+		if (_correctPath) CorrectPath();
 		printf("\nComplete Find Path! (AStar: %d)\n\n", _pNodeMgr->_pDest->_g);
 		_bFindPathOn = false;
 	}
@@ -78,7 +78,7 @@ void AStar::FindPathStepInto()
 	else
 	{
 		_pNodeMgr->_pDest = _pNodeMgr->_pCurNode;
-		CorrectPath();
+		if (_correctPath) CorrectPath();
 		printf("\nComplete Find Path! (AStar: %d)\n\n", _pNodeMgr->_pDest->_g);
 		_bFindPathStepOn = false;
 	}
@@ -246,33 +246,6 @@ void AStar::CreateNode(Node* pCurNode)
 			break;
 		}
 	}
-}
-
-void AStar::CorrectPath()
-{
-
-}
-
-void AStar::PrintOpenListForDebug()
-{
-	printf("\n=====================================\n");
-	printf("<Open List>\n\n");
-	for (int i = 0; i < _pNodeMgr->_openList.size(); i++)
-	{
-		printf("(%d, %d) : %d + %d = %d\n",
-			_pNodeMgr->_openList[i]->_pos._x,
-			_pNodeMgr->_openList[i]->_pos._y,
-			_pNodeMgr->_openList[i]->_g,
-			_pNodeMgr->_openList[i]->_h,
-			_pNodeMgr->_openList[i]->_f);
-	}
-
-	printf("\nCurNode : (%d, %d), %d\n",
-		_pNodeMgr->_pCurNode->_pos._x,
-		_pNodeMgr->_pCurNode->_pos._y,
-		_pNodeMgr->_pCurNode->_f);
-
-	printf("=====================================\n");
 }
 
 bool AStar::CompareG::operator()(Node*& pNode) const
