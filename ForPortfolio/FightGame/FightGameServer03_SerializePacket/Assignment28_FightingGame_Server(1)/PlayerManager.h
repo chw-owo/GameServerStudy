@@ -1,7 +1,5 @@
 #pragma once
-
 #include "List.h"
- 
 #include "Player.h"
 #include "SerializePacket.h"
 
