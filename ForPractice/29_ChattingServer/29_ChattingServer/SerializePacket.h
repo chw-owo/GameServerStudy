@@ -55,6 +55,7 @@ public:
 	SerializePacket& operator >> (char& chValue);
 	SerializePacket& operator >> (BYTE& byValue);
 
+	SerializePacket& operator >> (wchar_t& szValue);
 	SerializePacket& operator >> (short& shValue);
 	SerializePacket& operator >> (WORD& wValue);
 

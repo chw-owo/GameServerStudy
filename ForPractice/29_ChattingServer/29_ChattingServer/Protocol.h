@@ -8,10 +8,9 @@
 //--------------------------------------------------
 
 #define dfNETWORK_PORT		6000
-
 #define dfNICK_MAX_LEN		15			// 유니코드 글자 길이 NULL 문자 포함
 #define dfPACKET_CODE		0x89
-
+#define dfHEADER_SIZE		sizeof(st_PACKET_HEADER)
 
 //------------------------------------------------------
 //  패킷헤더
@@ -45,7 +44,6 @@ struct st_PACKET_HEADER
 #define df_REQ_LOGIN	1
 
 
-
 //------------------------------------------------------------
 // 2 Res 로그인                              
 // 
@@ -58,10 +56,6 @@ struct st_PACKET_HEADER
 #define df_RESULT_LOGIN_DNICK	2
 #define df_RESULT_LOGIN_MAX		3
 #define df_RESULT_LOGIN_ETC		4
-
-
-
-
 
 
 //------------------------------------------------------------

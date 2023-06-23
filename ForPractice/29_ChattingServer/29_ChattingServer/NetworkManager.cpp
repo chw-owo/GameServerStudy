@@ -1,9 +1,12 @@
 #include "NetworkManager.h"
-#include "Main.h"
+#include "ContentManager.h"
 #include "Protocol.h"
+#include "Session.h"
+#include "Main.h"
 #include <stdio.h>
 
 #define IP L"0.0.0.0"
+#define dfDEFAULT_SESSIONS_MAX 1000
 
 NetworkManager::NetworkManager()
 {
@@ -11,6 +14,7 @@ NetworkManager::NetworkManager()
 	int bindRet;
 	int listenRet;
 	int ioctRet;
+	_allSessions.resize(dfDEFAULT_SESSIONS_MAX);
 
 	// Initialize Winsock
 	WSADATA wsa;
@@ -73,11 +77,11 @@ NetworkManager::NetworkManager()
 NetworkManager::~NetworkManager()
 {
 	// Disconnect All Connected Session 
-	vector<Session*>::iterator i = _sessionArray.begin();
-	for (; i != _sessionArray.end();)
+	vector<Session*>::iterator i = _allSessions.begin();
+	for (; i != _allSessions.end();)
 	{
 		Session* pSession = *i;
-		i = _sessionArray.erase(i);
+		i = _allSessions.erase(i);
 		closesocket(pSession->_socket);
 		delete(pSession);
 	}
@@ -94,22 +98,51 @@ NetworkManager* NetworkManager::GetInstance()
 
 void NetworkManager::Update()
 {
-	// Intialize Socket Set
-	FD_ZERO(&_rset);
-	FD_ZERO(&_wset);
-	FD_SET(_listensock, &_rset);
-	for (int i = 0; i < _sessionArray.size(); i++)
-	{
-		FD_SET(_sessionArray[i]->_socket, &_rset);
-		if (_sessionArray[i]->_sendBuf.GetUseSize() > 0)
-			FD_SET(_sessionArray[i]->_socket, &_wset);
+	FD_SET rset;
+	FD_SET wset;
+
+	int idx = 1;
+	FD_ZERO(&rset);
+	FD_ZERO(&wset);
+	FD_SET(_listensock, &rset);
+	memset(_sessionArray, 0, sizeof(_sessionArray));
+	
+	vector<Session*>::iterator i = _allSessions.begin();
+	for (; i != _allSessions.end(); i++)
+	{		
+		FD_SET((*i)->_socket, &rset);
+		if ((*i)->_sendBuf.GetUseSize() > 0)
+			FD_SET((*i)->_socket, &wset);
+		_sessionArray[idx] = (*i);
+		idx++;
+
+		if (idx == FD_SETSIZE)
+		{
+			SelectProc(rset, wset, FD_SETSIZE);
+			
+			idx = 1;
+			FD_ZERO(&rset);
+			FD_ZERO(&wset);
+			FD_SET(_listensock, &rset);
+			memset(_sessionArray, 0, sizeof(_sessionArray));
+		}
 	}
 
+	if (idx > 1)
+	{
+		SelectProc(rset, wset, idx);
+	}
+
+	DisconnectSession();
+}
+
+void NetworkManager::SelectProc(FD_SET rset, FD_SET wset, int max)
+{
 	// Select Socket Set
 	timeval time;
 	time.tv_sec = 0;
 	time.tv_usec = 0;
-	int selectRet = select(0, &_rset, &_wset, NULL, &time);
+	int selectRet = select(0, &rset, &wset, NULL, &time);
 	if (selectRet == SOCKET_ERROR)
 	{
 		int err = WSAGetLastError();
@@ -121,19 +154,17 @@ void NetworkManager::Update()
 	// Handle Selected Socket
 	else if (selectRet > 0)
 	{
-		if (FD_ISSET(_listensock, &_rset))
+		if (FD_ISSET(_listensock, &rset))
 			AcceptProc();
 
-		for (int i = 0; i < _sessionArray.size(); i++)
+		for (int i = 1; i < max; i++)
 		{
-			if (FD_ISSET(_sessionArray[i]->_socket, &_wset))
+			if (FD_ISSET(_sessionArray[i]->_socket, &wset))
 				SendProc(_sessionArray[i]);
 
-			if (FD_ISSET(_sessionArray[i]->_socket, &_rset))
+			if (FD_ISSET(_sessionArray[i]->_socket, &rset))
 				RecvProc(_sessionArray[i]);
 		}
-
-		DisconnectSession();
 	}
 }
 
@@ -142,6 +173,7 @@ void NetworkManager::AcceptProc()
 	SOCKADDR_IN clientaddr;
 	int addrlen = sizeof(clientaddr);
 	Session* pSession = new Session(_sessionID++);
+
 	if (pSession == nullptr)
 	{
 		printf("Error! Func %s Line %d: fail new\n", __func__, __LINE__);
@@ -157,17 +189,42 @@ void NetworkManager::AcceptProc()
 		return;
 	}
 
-	_sessionArray.push_back(pSession);
+	pSession->SetSessionAlive();
+	pSession->_addr = clientaddr;
+	_allSessions.push_back(pSession);
+
+	if (_pContentManager == nullptr)
+		_pContentManager = ContentManager::GetInstance();
+
+	_pContentManager->CreateUser(pSession);
 }
 
 void NetworkManager::RecvProc(Session* pSession)
 {
 	int recvRet = recv(pSession->_socket,
 		pSession->_recvBuf.GetWriteBufferPtr(),
-		pSession->_recvBuf.GetFreeSize(), 0);
+		pSession->_recvBuf.DirectEnqueueSize(), 0);
 
-	if (recvRet == SOCKET_ERROR || recvRet == 0)
+	if (recvRet == SOCKET_ERROR)
 	{
+		int err = WSAGetLastError();
+		if (err != WSAEWOULDBLOCK)
+		{
+			printf("Error! Func %s Line %d: %d\n", __func__, __LINE__, err);
+			pSession->SetSessionDead();
+			return;
+		}
+	}
+	else if(recvRet == 0)
+	{
+		pSession->SetSessionDead();
+		return;
+	}
+
+	int moveRet = pSession->_recvBuf.MoveWritePos(recvRet);
+	if (recvRet != moveRet)
+	{
+		printf("Error! Func %s Line %d\n", __func__, __LINE__);
 		pSession->SetSessionDead();
 		return;
 	}
@@ -175,12 +232,28 @@ void NetworkManager::RecvProc(Session* pSession)
 
 void NetworkManager::SendProc(Session* pSession)
 {
-	int sendRet = recv(pSession->_socket,
+	if (pSession->_sendBuf.GetUseSize() <= 0)
+		return;
+
+	int sendRet = send(pSession->_socket,
 		pSession->_sendBuf.GetReadBufferPtr(),
-		pSession->_sendBuf.GetUseSize(), 0);
+		pSession->_sendBuf.DirectDequeueSize(), 0);
 
 	if (sendRet == SOCKET_ERROR)
 	{
+		int err = WSAGetLastError();
+		if (err != WSAEWOULDBLOCK)
+		{
+			printf("Error! Func %s Line %d: %d\n", __func__, __LINE__, err);
+			pSession->SetSessionDead();
+			return;
+		}
+	}
+
+	int moveRet = pSession->_sendBuf.MoveReadPos(sendRet);
+	if (sendRet != moveRet)
+	{
+		printf("Error! Func %s Line %d\n", __func__, __LINE__);
 		pSession->SetSessionDead();
 		return;
 	}
@@ -189,13 +262,13 @@ void NetworkManager::SendProc(Session* pSession)
 
 void NetworkManager::DisconnectSession()
 {
-	vector<Session*>::iterator i = _sessionArray.begin();
-	for (; i != _sessionArray.end();)
+	vector<Session*>::iterator i = _allSessions.begin();
+	for (; i != _allSessions.end();)
 	{
 		if (!(*i)->GetSessionAlive())
 		{
 			Session* pSession = *i;
-			i = _sessionArray.erase(i);
+			i = _allSessions.erase(i);
 			closesocket(pSession->_socket);
 			delete(pSession);
 		}
@@ -225,8 +298,8 @@ void NetworkManager::EnqueueBroadcast(char* msg, int size, Session* pExpSession)
 
 	if (pExpSession == nullptr)
 	{
-		vector<Session*>::iterator i = _sessionArray.begin();
-		for (; i != _sessionArray.end(); i++)
+		vector<Session*>::iterator i = _allSessions.begin();
+		for (; i != _allSessions.end(); i++)
 		{
 			if ((*i)->GetSessionAlive())
 			{
@@ -241,8 +314,8 @@ void NetworkManager::EnqueueBroadcast(char* msg, int size, Session* pExpSession)
 	}
 	else
 	{
-		vector<Session*>::iterator i = _sessionArray.begin();
-		for (; i != _sessionArray.end(); i++)
+		vector<Session*>::iterator i = _allSessions.begin();
+		for (; i != _allSessions.end(); i++)
 		{
 			if ((*i)->GetSessionAlive() && pExpSession->_socket != (*i)->_socket)
 			{

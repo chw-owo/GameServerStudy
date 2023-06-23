@@ -14,7 +14,10 @@
     <Filter Include="Content">
       <UniqueIdentifier>{28cdd676-c9f3-47cf-9c9e-ea3986e56352}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Network\NetworkUtils">
+    <Filter Include="Protocol">
+      <UniqueIdentifier>{3283e8e7-9dea-43c3-8492-a3bc062e48e6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetworkUtils">
       <UniqueIdentifier>{32e3892d-c108-4ae2-b848-0e91af75016c}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -23,10 +26,10 @@
       <Filter>Main</Filter>
     </ClCompile>
     <ClCompile Include="RingBuffer.cpp">
-      <Filter>Network\NetworkUtils</Filter>
+      <Filter>NetworkUtils</Filter>
     </ClCompile>
     <ClCompile Include="SerializePacket.cpp">
-      <Filter>Network\NetworkUtils</Filter>
+      <Filter>NetworkUtils</Filter>
     </ClCompile>
     <ClCompile Include="NetworkManager.cpp">
       <Filter>Network</Filter>
@@ -34,13 +37,25 @@
     <ClCompile Include="ContentManager.cpp">
       <Filter>Content</Filter>
     </ClCompile>
+    <ClCompile Include="CreateSCPacket.cpp">
+      <Filter>Protocol</Filter>
+    </ClCompile>
+    <ClCompile Include="User.cpp">
+      <Filter>Content</Filter>
+    </ClCompile>
+    <ClCompile Include="Room.cpp">
+      <Filter>Content</Filter>
+    </ClCompile>
+    <ClCompile Include="Session.cpp">
+      <Filter>Network</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="RingBuffer.h">
-      <Filter>Network\NetworkUtils</Filter>
+      <Filter>NetworkUtils</Filter>
     </ClInclude>
     <ClInclude Include="SerializePacket.h">
-      <Filter>Network\NetworkUtils</Filter>
+      <Filter>NetworkUtils</Filter>
     </ClInclude>
     <ClInclude Include="NetworkManager.h">
       <Filter>Network</Filter>
@@ -52,7 +67,22 @@
       <Filter>Main</Filter>
     </ClInclude>
     <ClInclude Include="Protocol.h">
-      <Filter>Main</Filter>
+      <Filter>Protocol</Filter>
+    </ClInclude>
+    <ClInclude Include="CreateSCPacket.h">
+      <Filter>Protocol</Filter>
+    </ClInclude>
+    <ClInclude Include="User.h">
+      <Filter>Content</Filter>
+    </ClInclude>
+    <ClInclude Include="Room.h">
+      <Filter>Content</Filter>
+    </ClInclude>
+    <ClInclude Include="Session.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="ContentData.h">
+      <Filter>Content</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

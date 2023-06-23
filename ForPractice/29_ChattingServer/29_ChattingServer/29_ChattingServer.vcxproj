@@ -20,18 +20,27 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ContentManager.cpp" />
+    <ClCompile Include="CreateSCPacket.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="NetworkManager.cpp" />
     <ClCompile Include="RingBuffer.cpp" />
+    <ClCompile Include="Room.cpp" />
     <ClCompile Include="SerializePacket.cpp" />
+    <ClCompile Include="Session.cpp" />
+    <ClCompile Include="User.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ContentData.h" />
     <ClInclude Include="ContentManager.h" />
+    <ClInclude Include="CreateSCPacket.h" />
     <ClInclude Include="Main.h" />
     <ClInclude Include="NetworkManager.h" />
     <ClInclude Include="Protocol.h" />
     <ClInclude Include="RingBuffer.h" />
+    <ClInclude Include="Room.h" />
     <ClInclude Include="SerializePacket.h" />
+    <ClInclude Include="Session.h" />
+    <ClInclude Include="User.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>

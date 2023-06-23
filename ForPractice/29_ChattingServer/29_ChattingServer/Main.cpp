@@ -6,13 +6,13 @@ bool g_bShutdown = false;
 
 int main()
 {
-	NetworkManager* networkManager = NetworkManager::GetInstance();
-	ContentManager* contentManager = ContentManager::GetInstance();
+	NetworkManager* pNetworkManager = NetworkManager::GetInstance();
+	ContentManager* pContentManager = ContentManager::GetInstance();
 
 	while (!g_bShutdown)
 	{
-		networkManager->Update();
-		contentManager->Update();
+		pNetworkManager->Update();
+		pContentManager->Update();
 	}
 
 	return 0;

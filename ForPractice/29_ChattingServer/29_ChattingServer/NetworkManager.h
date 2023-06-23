@@ -1,33 +1,11 @@
 #pragma once
-
 #pragma comment(lib, "ws2_32")
 #include <ws2tcpip.h>
 #include <vector>
-//#include <unordered_map>
-#include "SerializePacket.h"
-#include "RingBuffer.h"
 using namespace std;
 
-class Session
-{
-public:
-	Session(int ID) { _ID = ID; }
-
-public:
-	void SetSessionAlive() { _alive = true; }
-	void SetSessionDead() { _alive = false; }
-	bool GetSessionAlive() { return _alive; }
-
-private:
-	bool _alive = true;
-	int _ID;
-
-public:
-	SOCKET _socket;
-	RingBuffer _recvBuf;
-	RingBuffer _sendBuf;
-};
-
+class Session;
+class ContentManager;
 class NetworkManager
 {
 private:
@@ -39,6 +17,7 @@ public:
 	void Update();
 
 private:
+	void SelectProc(FD_SET rset, FD_SET wset, int max);
 	void AcceptProc();
 	void RecvProc(Session* pSession);
 	void SendProc(Session* pSession);
@@ -52,10 +31,13 @@ private:
 	static NetworkManager _networkManager;
 
 private:
-	FD_SET _rset;
-	FD_SET _wset;
 	SOCKET _listensock;
-	vector<Session*> _sessionArray;
+	vector<Session*> _allSessions;
+	Session* _sessionArray[FD_SETSIZE]; 
+
+private:
 	int _sessionID = 0;
-	//unordered_map<int, Session> _sessionMap;
+
+private:
+	ContentManager* _pContentManager = nullptr;
 };

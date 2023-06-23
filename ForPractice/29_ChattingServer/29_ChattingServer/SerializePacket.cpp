@@ -251,6 +251,22 @@ SerializePacket& SerializePacket::operator>>(char& chValue)
     return *this;
 }
 
+SerializePacket& SerializePacket::operator>>(wchar_t& szValue)
+{
+    if (_iWritePos - _iReadPos < sizeof(wchar_t))
+    {
+        printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n",
+            _iWritePos - _iReadPos, sizeof(wchar_t), __func__, __LINE__);
+        return *this;
+    }
+
+    memcpy_s(&szValue, sizeof(wchar_t),
+        &_chpBuffer[_iReadPos], sizeof(wchar_t));
+
+    _iReadPos += sizeof(wchar_t);
+    return *this;
+}
+
 SerializePacket& SerializePacket::operator>>(short& shValue)
 {
     if (_iWritePos - _iReadPos < sizeof(short))
