@@ -1,0 +1,33 @@
+#pragma once
+#define TREE_MAX INT_MAX
+#define TEXT_LEN 8
+#define TEXT_PAD 8
+#define RADIUS 12
+
+#define X_MAX 1024
+#define X_PIVOT (X_MAX / 2)
+#define Y_PIVOT 50
+#define Y_GAP 50
+
+enum class INSERT_NODE_RETURN
+{
+	SUCCESS = 0,
+	TREE_IS_FULL,
+	DUPLICATE_VALUE,
+	UNKNOWN_ERROR
+};
+
+enum class DELETE_NODE_RETURN
+{
+	SUCCESS = 0,
+	CANT_FIND,
+	UNKNOWN_ERROR
+};
+
+enum class TEST_RETURN
+{
+	SUCCESS = 0,
+	DOUBLE_RED,
+	UNBALANCD,
+	UNKNOWN_ERROR
+};

@@ -50,8 +50,8 @@ public:
 
 	void SetCorrectPath(bool correctPath)
 	{
-		if (correctPath) printf("\nDebug FindCorner ON\n");
-		else printf("\nDebug FindCorner OFF\n");
+		if (correctPath) printf("\nCorrectPath ON\n");
+		else printf("\nCorrectPath OFF\n");
 
 		_correctPath = correctPath;
 	}
