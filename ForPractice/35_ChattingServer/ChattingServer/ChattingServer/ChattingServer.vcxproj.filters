@@ -1,0 +1,76 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="리소스 파일">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Main">
+      <UniqueIdentifier>{231bbbfc-2a94-4ee2-91bf-dd86071c1316}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetworkUtils">
+      <UniqueIdentifier>{38c053ab-6444-4cb5-8a1b-5240ff860637}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Protocol">
+      <UniqueIdentifier>{95103052-9f35-4f22-b8ff-88d9f93fbf3c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Data">
+      <UniqueIdentifier>{d331cf9c-8803-43e1-95a2-43619e911bef}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Main.cpp">
+      <Filter>Main</Filter>
+    </ClCompile>
+    <ClCompile Include="Server.cpp">
+      <Filter>Main</Filter>
+    </ClCompile>
+    <ClCompile Include="RingBuffer.cpp">
+      <Filter>NetworkUtils</Filter>
+    </ClCompile>
+    <ClCompile Include="SerializePacket.cpp">
+      <Filter>NetworkUtils</Filter>
+    </ClCompile>
+    <ClCompile Include="CreateSCPacket.cpp">
+      <Filter>Protocol</Filter>
+    </ClCompile>
+    <ClCompile Include="User.cpp">
+      <Filter>Data</Filter>
+    </ClCompile>
+    <ClCompile Include="Session.cpp">
+      <Filter>Data</Filter>
+    </ClCompile>
+    <ClCompile Include="Room.cpp">
+      <Filter>Data</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Server.h">
+      <Filter>Main</Filter>
+    </ClInclude>
+    <ClInclude Include="RingBuffer.h">
+      <Filter>NetworkUtils</Filter>
+    </ClInclude>
+    <ClInclude Include="SerializePacket.h">
+      <Filter>NetworkUtils</Filter>
+    </ClInclude>
+    <ClInclude Include="Main.h">
+      <Filter>Main</Filter>
+    </ClInclude>
+    <ClInclude Include="Protocol.h">
+      <Filter>Protocol</Filter>
+    </ClInclude>
+    <ClInclude Include="CreateSCPacket.h">
+      <Filter>Protocol</Filter>
+    </ClInclude>
+    <ClInclude Include="User.h">
+      <Filter>Data</Filter>
+    </ClInclude>
+    <ClInclude Include="Session.h">
+      <Filter>Data</Filter>
+    </ClInclude>
+    <ClInclude Include="Room.h">
+      <Filter>Data</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
