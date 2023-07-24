@@ -18,14 +18,6 @@ public:
 	bool GetUserAlive() { return _alive; }
 
 public:
-	void Handle_REQ_LOGIN();
-	void Handle_REQ_ROOM_LIST();
-	void Handle_REQ_ROOM_CREATE();
-	void Handle_REQ_ROOM_ENTER();
-	void Handle_REQ_CHAT();
-	void Handle_REQ_ROOM_LEAVE();
-
-public:
 	bool _alive = true;
 	int _ID;
 

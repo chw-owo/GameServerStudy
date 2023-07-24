@@ -1,5 +1,4 @@
 #include "CreateSCPacket.h"
-#include "SerializePacket.h"
 #include <stdio.h>
 
 void CreatePacket_HEADER(st_PACKET_HEADER& header, BYTE checkSum, WORD type, WORD size)
