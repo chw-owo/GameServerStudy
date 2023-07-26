@@ -70,7 +70,7 @@ int RingBuffer::Enqueue(char* chpData, int iSize)
     {
         if (!Resize(_bufferSize + (int)(iSize * 1.5f)))
         {
-            printf("Error! Func %s Function %s Line %d\n", __func__, __func__, __LINE__);
+            printf("Error! Func %s Line %d\n", __func__, __LINE__);
             return -1;
         }
     }
@@ -79,6 +79,17 @@ int RingBuffer::Enqueue(char* chpData, int iSize)
     if (iSize <= directEnqueueSize)
     {
         memcpy_s(&_buffer[(_writePos + 1) % _bufferSize], iSize, chpData, iSize);
+        /*
+        printf("RingBuffer Input: ");
+        for (int i = 0; i < iSize; i++)
+            printf("%x ", chpData[i]);
+
+        printf("\nRingBuffer: ");
+        for (int i = 0; i < iSize; i++)
+            printf("%x ", _buffer[((_writePos + 1) % _bufferSize) + i]);
+
+        printf("\n");
+        */
     }
     else
     {
@@ -86,12 +97,26 @@ int RingBuffer::Enqueue(char* chpData, int iSize)
         int size2 = iSize - size1;
         memcpy_s(&_buffer[(_writePos + 1) % _bufferSize], size1, chpData, size1);
         memcpy_s(_buffer, size2, &chpData[size1], size2);
+        
+        /*
+        printf("RingBuffer Input: ");
+        for (int i = 0; i < iSize; i++)
+            printf("%x ", chpData[i]);
+
+        printf("\nRingBuffer: ");
+        for (int i = 0; i < size1; i++)
+            printf("%x ", _buffer[((_writePos + 1) % _bufferSize) + i]);
+        for (int i = 0; i < size2; i++)
+            printf("%x ", _buffer[i]);
+
+        printf("\n");        
+        */
     }
 
     _useSize += iSize;
     _freeSize -= iSize;
     _writePos = (_writePos + iSize) % _bufferSize;
-
+     
     return iSize;
 }
 
@@ -99,7 +124,8 @@ int RingBuffer::Dequeue(char* chpData, int iSize)
 {
     if (iSize > _useSize)
     {
-        printf("Error! Func %s Function %s Line %d\n", __func__, __func__, __LINE__);
+        printf("Error! Func %s Line %d (used size - %d, req size - %d)\n", 
+            __func__, __LINE__, _useSize, iSize);
         return -1;
     }
 
@@ -127,7 +153,8 @@ int RingBuffer::Peek(char* chpDest, int iSize)
 {
     if (iSize > _useSize)
     {
-        printf("Error! Func %s Line %d\n", __func__, __LINE__);
+        printf("Error! Func %s Line %d (used size - %d, req size - %d)\n",
+            __func__, __LINE__, _useSize, iSize);
         return -1;
     }
 
@@ -161,13 +188,15 @@ bool RingBuffer::Resize(int iSize)
 {
     if (iSize > MAX_BUF_SIZE)
     {
-        printf("Error! Func %s Function %s Line %d\n", __func__, __func__, __LINE__);
+        printf("Error! Func %s Line %d (max size - %d, req size - %d)\n", 
+            __func__, __LINE__, MAX_BUF_SIZE, iSize);
         return false;
     }
 
     if (iSize < _useSize)
     {
-        printf("Error! Func %s Function %s Line %d\n", __func__, __func__, __LINE__);
+        printf("Error! Func %s Line %d (used size - %d, req size - %d)\n",
+            __func__, __LINE__, _useSize, iSize);
         return false;
     }
 
@@ -199,7 +228,8 @@ int RingBuffer::MoveReadPos(int iSize)
 {
     if (iSize > _useSize)
     {
-        printf("Error! Func %s Function %s Line %d\n", __func__, __func__, __LINE__);
+        printf("Error! Func %s Line %d (used size - %d, req size - %d)\n",
+            __func__, __LINE__, _useSize, iSize);
         return -1;
     }
 
@@ -216,7 +246,7 @@ int RingBuffer::MoveWritePos(int iSize)
     {
         if (!Resize(_bufferSize + (int)(iSize * 1.5f)))
         {
-            printf("Error! Func %s Function %s Line %d\n", __func__, __func__, __LINE__);
+            printf("Error! Func %s Line %d\n", __func__, __LINE__);
             return -1;
         }
     }

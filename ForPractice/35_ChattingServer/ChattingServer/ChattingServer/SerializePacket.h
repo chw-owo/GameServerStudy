@@ -64,6 +64,8 @@ public:
 	SerializePacket& operator >> (__int64& iValue);
 
 	int	GetData(char* chpDest, int iSize);
+	int	PeekData(char* chpDest, int iSize);
+	int CheckData(int iSize);
 	int	PutData(char* chpSrc, int iSrcSize);
 
 protected:

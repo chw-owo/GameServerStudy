@@ -362,15 +362,46 @@ int SerializePacket::GetData(char* chpDest, int iSize)
     return iSize;
 }
 
+int SerializePacket::PeekData(char* chpDest, int iSize)
+{
+    if (_iWritePos - _iReadPos < iSize)
+    {
+        printf("Used Size(%d) is small than Requested Size(%d)!\n",
+            _iWritePos - _iReadPos, iSize);
+        return -1;
+    }
+
+    memcpy_s(chpDest, iSize, &_chpBuffer[_iReadPos], iSize);
+    return iSize;
+}
+
+int SerializePacket::CheckData(int iSize)
+{
+    if (_iWritePos - _iReadPos < iSize)
+    {
+        printf("Used Size(%d) is small than Requested Size(%d)!\n",
+            _iWritePos - _iReadPos, iSize);
+        return -1;
+    }
+
+    printf("SerializePacket: ");
+    for (int i = 0; i < iSize; i++)
+    {
+        printf("%x ", _chpBuffer[_iReadPos + i]);
+    }
+    printf("\n");
+}
+
 int SerializePacket::PutData(char* chpSrc, int iSrcSize)
 {
     if (_iBufferSize - _iWritePos < iSrcSize)
         Resize(_iBufferSize + (int)(iSrcSize * 1.5f));
 
-    memcpy_s(&_chpBuffer[_iReadPos],
+    memcpy_s(&_chpBuffer[_iWritePos],
         _iBufferSize - _iWritePos,
         chpSrc, iSrcSize);
 
     _iWritePos += iSrcSize;
     return iSrcSize;
 }
+

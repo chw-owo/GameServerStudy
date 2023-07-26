@@ -1,9 +1,14 @@
 #include "Server.h"
 #include <wchar.h>
+#include <stdio.h>
 #include "Main.h"
 #include "Protocol.h"
 #include "SerializePacket.h"
 #include "CreateSCPacket.h"
+
+// TO-DO: 방 생성 후 모든 유저에게 Room List 전송
+// TO-DO: 이름 이상하게 뜸
+// TO-DO: 유저 이름, 방 이름 등 delete
 
 Server::Server()
 {
@@ -76,11 +81,11 @@ Server::Server()
 
 Server::~Server()
 {
-	vector<User*>::iterator userIter = _userArray.begin();
-	for (; userIter != _userArray.end(); userIter++)
+	vector<User*>::iterator userIter = _allUsers.begin();
+	for (; userIter != _allUsers.end(); userIter++)
 	{
 		User* pUser = *userIter;
-		userIter = _userArray.erase(userIter);
+		userIter = _allUsers.erase(userIter);
 		delete(pUser);
 	}
 
@@ -220,13 +225,16 @@ void Server::AcceptProc()
 	pSession->SetSessionAlive();
 	pSession->_addr = clientaddr;
 	_allSessions.push_back(pSession);
-	CreateUser(pSession);
 }
 
 void Server::RecvProc(Session* pSession)
 {
+	User* pUser = nullptr;
 	unordered_map<Session*, User*>::iterator userIter = _SessionUserMap.find(pSession);
-	User* user = userIter->second;
+	if (userIter != _SessionUserMap.end())
+	{
+		pUser = userIter->second;
+	}
 
 	int recvRet = recv(pSession->_socket,
 		pSession->_recvBuf.GetWriteBufferPtr(),
@@ -235,16 +243,22 @@ void Server::RecvProc(Session* pSession)
 	if (recvRet == SOCKET_ERROR)
 	{
 		int err = WSAGetLastError();
-		if (err != WSAEWOULDBLOCK)
+		if (err != WSAEWOULDBLOCK || err != WSAECONNRESET)
 		{
 			printf("Error! Func %s Line %d: %d\n", __func__, __LINE__, err);
-			user->SetUserDead();
+			if (pUser == nullptr)
+				pSession->SetSessionDead();
+			else
+				pUser->SetUserDead();
 			return;
 		}
 	}
 	else if (recvRet == 0)
 	{
-		user->SetUserDead();
+		if (pUser == nullptr)
+			pSession->SetSessionDead();
+		else
+			pUser->SetUserDead();
 		return;
 	}
 
@@ -252,10 +266,13 @@ void Server::RecvProc(Session* pSession)
 	if (recvRet != moveRet)
 	{
 		printf("Error! Func %s Line %d\n", __func__, __LINE__);
-		user->SetUserDead();
+		if (pUser == nullptr)
+			pSession->SetSessionDead();
+		else
+			pUser->SetUserDead();
 		return;
 	}
-
+	
 	int useSize = pSession->_recvBuf.GetUseSize();
 	while (useSize > 0)
 	{
@@ -267,14 +284,20 @@ void Server::RecvProc(Session* pSession)
 		if (peekRet != dfHEADER_SIZE)
 		{
 			printf("Error! Func %s Line %d\n", __func__, __LINE__);
-			user->SetUserDead();
+			if (pUser == nullptr)
+				pSession->SetSessionDead();
+			else
+				pUser->SetUserDead();
 			return;
 		}
 
 		if ((char)header.byCode != (char)dfPACKET_CODE)
 		{
 			printf("Error! Wrong Header Code! %x - Func %s Line %d\n", header.byCode, __func__, __LINE__);
-			user->SetUserDead();
+			if (pUser == nullptr)
+				pSession->SetSessionDead();
+			else
+				pUser->SetUserDead();
 			return;
 		}
 
@@ -285,155 +308,376 @@ void Server::RecvProc(Session* pSession)
 		if (moveReadRet != dfHEADER_SIZE)
 		{
 			printf("Error! Func %s Line %d\n", __func__, __LINE__);
-			user->SetUserDead();
+			if (pUser == nullptr)
+				pSession->SetSessionDead();
+			else
+				pUser->SetUserDead();
 			return;
 		}
 
-		Handle_RecvPacket(user, header.wMsgType);
+		if (!Handle_RecvPacket(pSession, pUser, header.wMsgType))
+		{
+			printf("Error! Func %s Line %d\n", __func__, __LINE__);
+			if (pUser == nullptr)
+				pSession->SetSessionDead();
+			else
+				pUser->SetUserDead();
+			return;
+		}
+
 		useSize = pSession->_recvBuf.GetUseSize();
 	}
 }
 
-void Server::Handle_RecvPacket(User* user, WORD type)
+bool Server::Handle_RecvPacket(Session* pSession, User* pUser, WORD type)
 {
 	switch (type)
 	{
 	case df_REQ_LOGIN:
 	{
-		LOGIN_RESULT ret = Handle_REQ_LOGIN(user);
+		printf("===================================\n");
+		printf("<Login>\n");
+		
+		wchar_t* name = nullptr;
+		if(!Handle_REQ_LOGIN(pSession, pUser, name))
+		{
+			printf("Error! Func %s Line %d\n", __func__, __LINE__);
+			return false;
+		}
+		printf("Complete Handle REQ_LOGIN\n");
+
+		BYTE res = CreateUser(pSession, pUser, name);
+		printf("Complete CreateUser\n");
+
 		SerializePacket buffer;
 		int packetSize;
-
-		switch (ret)
+		if (res == df_RESULT_LOGIN_OK)
 		{
-		case LOGIN_RESULT::OK:
-			packetSize = CreatePacket_RES_LOGIN(&buffer, df_RESULT_LOGIN_OK, user->_ID);
-			break;
-		case LOGIN_RESULT::DNICK:
-			packetSize = CreatePacket_RES_LOGIN(&buffer, df_RESULT_LOGIN_DNICK, user->_ID);
-			break;
-		case LOGIN_RESULT::MAX:
-			packetSize = CreatePacket_RES_LOGIN(&buffer, df_RESULT_LOGIN_MAX, user->_ID);
-			break;
-		case LOGIN_RESULT::ETC:
-			packetSize = CreatePacket_RES_LOGIN(&buffer, df_RESULT_LOGIN_ETC, user->_ID);
-			printf("Error! Func %s Line %d\n", __func__, __LINE__);
-			break;
+			packetSize = CreatePacket_RES_LOGIN(&buffer, res, pUser->_ID);
 		}
-		
-		int enqueueRet = user->_pSession->_sendBuf.Enqueue(buffer.GetReadPtr(), packetSize);
+		else
+		{
+			packetSize = CreatePacket_RES_LOGIN(&buffer, res, 0);
+		}
+
+		printf("Complete Packet RES_LOGIN\n");
+
+		int enqueueRet = pSession->_sendBuf.Enqueue(buffer.GetReadPtr(), packetSize);
 		if (enqueueRet != packetSize)
 		{
 			printf("Error! Func %s Line %d\n", __func__, __LINE__);
-			user->SetUserDead();
-			return;
+			return false;
 		}
+		printf("Complete Enqueue Packet to Send Buffer\n");
+		printf("===================================\n\n");
+		return true;
 	}
 	break;
 
 	case df_REQ_ROOM_LIST:
 	{
-		RLIST_RESULT ret = Handle_REQ_ROOM_LIST(user);
-		SerializePacket buffer;
-		int packetSize;
-		switch (ret)
-		{
-		case RLIST_RESULT::OK:
-		{
-			unordered_map<int, Room*>::iterator i = _roomMap.begin();
-			for(;i!= _roomMap.end(); i++)
-			{
-				Room* room = i->second;
-				packetSize = CreatePacket_RES_ROOM_LIST(&buffer, room->_ID,
-					wcslen(room->_title), room->_title, room->_userArray.size(), user->_name);
+		printf("===================================\n");
+		printf("<Room List>\n");
 
-				int enqueueRet = user->_pSession->_sendBuf.Enqueue(buffer.GetReadPtr(), packetSize);
-				if (enqueueRet != packetSize)
-				{
-					printf("Error! Func %s Line %d\n", __func__, __LINE__);
-					user->SetUserDead();
-					return;
-				}
-			}
-		}
-			break;
-
-		case RLIST_RESULT::ETC:
+		if(!Handle_REQ_ROOM_LIST(pUser))
+		{
 			printf("Error! Func %s Line %d\n", __func__, __LINE__);
-			break;
+			return false;
 		}
+
+		printf("Complete Handle REQ_ROOM_LIST\n");
+
+		int roomCnt = _roomIDMap.size();
+		int* roomIDs = new int(roomCnt);
+		short* roomNameLens = new short(roomCnt);
+		BYTE* headcounts = new BYTE(roomCnt);
+		int roomNamesTotalLen = 0;
+		int userNamesTotalLen = 0;
+
+		int idx = 0;
+		unordered_map<int, Room*>::iterator roomIter = _roomIDMap.begin();
+		for (; roomIter != _roomIDMap.end(); roomIter++)
+		{
+			Room* room = roomIter->second;
+			roomIDs[idx] = room->_ID;
+			roomNameLens[idx] = wcslen(room->_title);
+			headcounts[idx] = room->_userArray.size();
+			roomNamesTotalLen += roomNameLens[idx];
+			userNamesTotalLen += headcounts[idx];
+			idx++;
+		}
+		userNamesTotalLen *= dfNICK_MAX_LEN;
+
+		idx = 0;
+		roomIter = _roomIDMap.begin();
+		wchar_t* roomNames = new wchar_t(roomNamesTotalLen);
+		wchar_t* userNames = new wchar_t(userNamesTotalLen);
+
+		for (; roomIter != _roomIDMap.end(); roomIter++)
+		{
+			Room* room = roomIter->second;
+			wcscat_s(roomNames, roomNameLens[idx], room->_title);
+			vector<User*>::iterator userIter = room->_userArray.begin(); //Error
+			for (; userIter != room->_userArray.end(); userIter++)
+			{
+				wcscat_s(userNames, userNamesTotalLen, (*userIter)->_name);
+			}	
+		}
+
+		SerializePacket buffer;
+		int packetSize = CreatePacket_RES_ROOM_LIST(&buffer, 
+			roomCnt, roomIDs, roomNameLens, roomNames, headcounts, userNames);
+		printf("Complete CreatePacket RES_ROOM_LIST\n");
+
+		int enqueueRet = pSession->_sendBuf.Enqueue(buffer.GetReadPtr(), packetSize);
+		if (enqueueRet != packetSize)
+		{
+			printf("Error! Func %s Line %d\n", __func__, __LINE__);
+			return false;
+		}
+		printf("Complete Enqueue Packet to Send Buffer\n");
+		printf("===================================\n\n");
+
+		return true;
 	}
 	break;
 
 	case df_REQ_ROOM_CREATE:
 	{
-		wchar_t* title;
-		RCREATE_RESULT ret = Handle_REQ_ROOM_CREATE(user, title);
-		CreateRoom(title); 
-		// TO-DO: result를 얘에서 받아야겠구나
-		// enum 만든 건 다 없애고 BYTE로 반환하도록 수정...
-
-		switch (ret)
+		printf("===================================\n");
+		printf("<Room Create>\n");
+		short titleLen = 0;
+		wchar_t* title = nullptr;
+		if(!Handle_REQ_ROOM_CREATE(pUser, titleLen, title))
 		{
-		case RCREATE_RESULT::OK:
-			//CreatePacket_RES_ROOM_CREATE(SerializePacket * buffer, 
-			//			int roomID, short roomNameLen, wchar_t* roomName);
-			break;
-		case RCREATE_RESULT::DNICK:
-			break;
-		case RCREATE_RESULT::MAX:
-			break;
-		case RCREATE_RESULT::ETC:
-			break;
+			printf("Error! Func %s Line %d\n", __func__, __LINE__);
+			return false;
 		}
+		printf("Complete Handle REQ_ROOM_CREATE\n");
+
+		int roomID = -1;
+		BYTE res = CreateRoom(titleLen, title, roomID);
+		printf("Complete CreateRoom\n");
+
+		int packetSize;
+		SerializePacket buffer;
+		if (res == df_RESULT_ROOM_CREATE_OK)
+		{			
+			packetSize = CreatePacket_RES_ROOM_CREATE(
+				&buffer, res, roomID, wcslen(title), title);
+
+			printf("Complete Packet RES_ROOM_CREATE\n");
+
+			vector<User*>::iterator i = _allUsers.begin();
+			for (; i != _allUsers.end(); i++)
+			{
+				int enqueueRet = (*i)->_pSession->_sendBuf.Enqueue(buffer.GetReadPtr(), packetSize);
+				if (enqueueRet != packetSize)
+				{
+					printf("Error! Func %s Line %d\n", __func__, __LINE__);
+					return false;
+				}
+			}
+			printf("Complete Enqueue Packet to All Send Buffer\n");
+		}
+		else
+		{
+			packetSize = CreatePacket_RES_ROOM_CREATE(
+				&buffer, res, 0, 0, nullptr);
+
+			printf("Complete Packet RES_ROOM_CREATE\n");
+
+			int enqueueRet = pSession->_sendBuf.Enqueue(buffer.GetReadPtr(), packetSize);
+			if (enqueueRet != packetSize)
+			{
+				printf("Error! Func %s Line %d\n", __func__, __LINE__);
+				return false;
+			}
+			printf("Complete Enqueue Packet to Self Send Buffer\n");
+		}
+		
+		printf("===================================\n\n");
+		return true;
 	}
 	break;
 
 	case df_REQ_ROOM_ENTER:
 	{
-		RENTER_RESULT ret = Handle_REQ_ROOM_ENTER(user);
-		switch (ret)
+		printf("===================================\n");
+		printf("<Room Enter>\n");
+
+		int roomID;
+		if (!Handle_REQ_ROOM_ENTER(pUser, roomID))
 		{
-		case RENTER_RESULT::OK:
-			break;
-		case RENTER_RESULT::NOT:
-			break;
-		case RENTER_RESULT::MAX:
-			break;
-		case RENTER_RESULT::ETC:
-			break;
+			printf("Error! Func %s Line %d\n", __func__, __LINE__);
+			return false;
 		}
+		printf("Complete Handle REQ_ROOM_ENTER\n");
+
+		Room* pRoom = nullptr;
+		BYTE res = EnterRoom(pUser, roomID, pRoom);
+		printf("Complete EnterRoom\n");
+
+		int packetSize;
+		SerializePacket buffer;
+		if(res != df_RESULT_ROOM_ENTER_OK)
+		{
+			packetSize = CreatePacket_RES_ROOM_ENTER(
+				&buffer, res, 0, 0, nullptr, 0, nullptr, nullptr);
+		}
+		else
+		{
+			int headcount = pRoom->_userArray.size();
+			wchar_t* userNames = new wchar_t[(headcount * dfNICK_MAX_LEN)];
+			memset(userNames, L'\0', headcount* dfNICK_MAX_LEN);
+			int* userNums = new int[headcount];
+	
+			int idx = 0;
+			vector<User*>::iterator i = pRoom->_userArray.begin();
+			for (; i != pRoom->_userArray.end(); i++)
+			{
+				wcscpy_s(&userNames[(idx * dfNICK_MAX_LEN)], 
+					dfNICK_MAX_LEN, (*i)->_name);
+				userNums[idx] = (*i)->_ID;
+				idx++;
+			}
+
+			packetSize = CreatePacket_RES_ROOM_ENTER(&buffer, res,
+				roomID, wcslen(pRoom->_title), pRoom->_title,
+				headcount, userNames, userNums);
+
+			printf("Complete Create Packet RES_ROOM_ENTER\n");
+
+			for (i = pRoom->_userArray.begin(); i != pRoom->_userArray.end(); i++)
+			{
+				int enqueueRet = (*i)->_pSession->_sendBuf.Enqueue(buffer.GetReadPtr(), packetSize);
+				if (enqueueRet != packetSize)
+				{
+					printf("Error! Func %s Line %d\n", __func__, __LINE__);
+					(*i)->SetUserDead();
+				}
+			}
+		}
+
+		printf("Complete Enqueue Packet to Self Send Buffer\n");
+
+		int enqueueRet = pSession->_sendBuf.Enqueue(buffer.GetReadPtr(), packetSize);
+		if (enqueueRet != packetSize)
+		{
+			printf("Error! Func %s Line %d\n", __func__, __LINE__);
+			return false;
+		}	
+		printf("Complete Enqueue Packet to Others Send Buffer\n");
+		printf("===================================\n\n");
+		return true;
 	}
 	break;
 
 	case df_REQ_CHAT:
 	{
-		CHAT_RESULT ret = Handle_REQ_CHAT(user);
-		switch (ret)
+		printf("===================================\n");
+		printf("<Chat>\n");
+
+		short msgLen = 0;
+		wchar_t* msg = nullptr;
+		if(!Handle_REQ_CHAT(pUser, msgLen, msg))
 		{
-		case CHAT_RESULT::OK:
-			break;
-		case CHAT_RESULT::ETC:
-			break;
+			printf("Error! Func %s Line %d\n", __func__, __LINE__);
+			return false;
 		}
+		printf("Complete Handle REQ_CHAT\n");
+		
+		int roomID = pUser->_roomID;
+		unordered_map<int, Room*>::iterator roomIter = _roomIDMap.find(roomID);
+		if (roomIter == _roomIDMap.end())
+		{
+			printf("Error! Func %s Line %d\n", __func__, __LINE__);
+			return false;
+		}
+		Room* pRoom = roomIter->second;
+		vector<User*>::iterator userIter = pRoom->_userArray.begin();
+		
+		SerializePacket buffer;
+		int packetSize = CreatePacket_RES_CHAT(
+			&buffer, pUser->_ID, msgLen * sizeof(wchar_t), msg);
+		printf("Complete Packet RES_CHAT\n");
+
+		for (; userIter != pRoom->_userArray.end(); userIter++)
+		{
+			if ((*userIter) == pUser) continue;
+			int enqueueRet = (*userIter)->_pSession->_sendBuf.Enqueue(buffer.GetReadPtr(), packetSize);
+			if (enqueueRet != packetSize)
+			{
+				printf("Error! Func %s Line %d\n", __func__, __LINE__);
+				(*userIter)->SetUserDead();
+			}
+		}
+		printf("Complete Enqueue Packet to Send Buffer\n");
+		printf("===================================\n\n");
+
+		return true;
 	}
 	break;
 
 	case df_REQ_ROOM_LEAVE:
 	{
-		RLEAVE_RESULT ret = Handle_REQ_ROOM_LEAVE(user);
-		switch (ret)
+		printf("===================================\n");
+		printf("<Room Leave>\n");
+
+		if(!Handle_REQ_ROOM_LEAVE(pUser))
 		{
-		case RLEAVE_RESULT::OK:
-			LeaveRoom(user);
-			break;
-		case RLEAVE_RESULT::ETC:
-			break;
+			printf("Error! Func %s Line %d\n", __func__, __LINE__);
+			return false;
 		}
+		printf("Complete Handle REQ_ROOM_LEAVE\n");
+
+		int roomID = pUser->_roomID;
+		if(!LeaveRoom(pUser))
+		{
+			printf("Error! Func %s Line %d\n", __func__, __LINE__);
+			return false;
+		}
+		printf("Complete LeaveRoom\n");
+
+		SerializePacket buffer;
+		int packetSize = CreatePacket_RES_ROOM_LEAVE(&buffer, pUser->_ID);
+		printf("Complete Packet RES_ROOM_LEAVE\n");
+
+		int enqueueRet = pSession->_sendBuf.Enqueue(buffer.GetReadPtr(), packetSize);
+		if (enqueueRet != packetSize)
+		{
+			printf("Error! Func %s Line %d\n", __func__, __LINE__);
+			return false;
+		}
+		printf("Complete Enqueue Packet to Self Send Buffer\n");
+		
+		// Send To Other Users
+		unordered_map<int, Room*>::iterator roomIter = _roomIDMap.find(roomID);
+		if (roomIter != _roomIDMap.end())
+		{
+			Room* pRoom = roomIter->second;
+			vector<User*>::iterator userIter = pRoom->_userArray.begin();
+			for (; userIter != pRoom->_userArray.end(); userIter++)
+			{
+				int enqueueRet = (*userIter)->_pSession->_sendBuf.Enqueue(buffer.GetReadPtr(), packetSize);
+				if (enqueueRet != packetSize)
+				{
+					printf("Error! Func %s Line %d\n", __func__, __LINE__);
+					(*userIter)->SetUserDead();
+				}
+			}
+		}
+		printf("Complete Enqueue Packet to Others Send Buffer\n");
+		printf("===================================\n\n");
+		return true;
 	}
 	break;
 	}
+
+	printf("Error! Func %s Line %d Case %d\n", __func__, __LINE__, type);
+	return false;
 }
+
 void Server::SendProc(Session* pSession)
 {
 	if (pSession->_sendBuf.GetUseSize() <= 0)
@@ -534,26 +778,42 @@ void Server::EnqueueBroadcast(char* msg, int size, Session* pExpSession)
 	}
 }
 
-void Server::CreateUser(Session* pSession)
+BYTE Server::CreateUser(Session* pSession, User*& pUser, wchar_t* name)
 {
-	User* pUser = new User(_userID, pSession);
-	_userArray.push_back(pUser);
+	if (_allUsers.size() >= dfUSER_MAX_CNT)
+		return df_RESULT_LOGIN_MAX;
+
+	vector<User*>::iterator i = _allUsers.begin();
+	for (; i != _allUsers.end(); i++)
+	{
+		if (wcscmp((*i)->_name, name) == 0)
+			return df_RESULT_LOGIN_DNICK;
+	}
+
+	pUser = new User(_userID, pSession);
+	_allUsers.push_back(pUser);
 	_SessionUserMap.insert(make_pair(pSession, pUser));
 	_userID++;
+
+	return df_RESULT_LOGIN_OK;
 }
 
 void Server::DestroyDeadUser()
 {
-	vector<User*>::iterator i = _userArray.begin();
-	for (; i != _userArray.end();)
+	vector<User*>::iterator i = _allUsers.begin();
+	for (; i != _allUsers.end();)
 	{
 		if (!(*i)->GetUserAlive())
 		{
+			if ((*i)->_roomID != -1)
+			{
+				// TO-DO: erase in room's user array
+			}
 			(*i)->_pSession->SetSessionDead();
 			unordered_map<Session*, User*>::iterator iter = _SessionUserMap.find((*i)->_pSession);
 			_SessionUserMap.erase(iter);
 			User* pUser = *i;
-			i = _userArray.erase(i);
+			i = _allUsers.erase(i);
 			delete(pUser);
 		}
 		else
@@ -563,169 +823,237 @@ void Server::DestroyDeadUser()
 	}
 }
 
-void Server::CreateRoom(wchar_t* title)
+
+BYTE Server::CreateRoom(short& titleLen, wchar_t* title, int& roomID)
 {
-	Room* pRoom = new Room(_roomID, title);
-	_roomMap.insert({ _roomID, pRoom });
+	if(_roomIDMap.size() > dfROOM_MAX_CNT)
+		return df_RESULT_ROOM_CREATE_MAX;
+
+	unordered_map<int, Room*>::iterator i = _roomIDMap.begin();
+	for (; i != _roomIDMap.end(); i++)
+	{
+		Room* pRoomTmp = i->second;
+		if (wcscmp(title, pRoomTmp->_title) == 0)
+		{
+			return df_RESULT_ROOM_CREATE_DNICK;
+		}
+	}
+
+	roomID = _roomID;
+	//wprintf(L"(Debug) Room Title: %s (%d)\n", title, titleLen);
+	Room* pRoom = new Room(roomID, titleLen + 1, title);
+	_roomIDMap.insert({ roomID, pRoom });
 	_roomID++;
 	delete[] title;
+	return df_RESULT_ROOM_CREATE_OK;
 }
 
-void Server::EnterRoom(User* user, int roomID)
+BYTE Server::EnterRoom(User* pUser, int roomID, Room*& pRoom)
 {
-	unordered_map<int, Room*>::iterator iter = _roomMap.find(roomID);
-	Room* pRoom = iter->second;
-	pRoom->_userArray.push_back(user);
-	user->_roomID = roomID;
+	unordered_map<int, Room*>::iterator iter = _roomIDMap.find(roomID);
+	if (iter == _roomIDMap.end())
+		return df_RESULT_ROOM_ENTER_NOT;
+
+	pRoom = iter->second;
+	if (pRoom->_userArray.size() >= dfROOM_MAX_USER)
+		return df_RESULT_ROOM_ENTER_MAX;
+
+	pRoom->_userArray.push_back(pUser);
+	pUser->_roomID = roomID;
+	return df_RESULT_ROOM_ENTER_OK;
 }
 
-void Server::LeaveRoom(User* user)
+bool Server::LeaveRoom(User* pUser)
 {
-	unordered_map<int, Room*>::iterator roomIter = _roomMap.find(_roomID);
+	int roomID = pUser->_roomID;
+	unordered_map<int, Room*>::iterator roomIter = _roomIDMap.find(roomID);
 	Room* pRoom = roomIter->second;
-	vector<User*>::iterator userIter = find(pRoom->_userArray.begin(), pRoom->_userArray.end(), user);
+	vector<User*>::iterator userIter = find(pRoom->_userArray.begin(), pRoom->_userArray.end(), pUser);
 
 	if (userIter == pRoom->_userArray.end())
 	{
 		printf("Error! Func %s Line %d\n", __func__, __LINE__);
-		user->SetUserDead();
-		return;
+		pUser->SetUserDead();
+		return false;
 	}
 
 	pRoom->_userArray.erase(userIter);
-	user->_roomID = -1;
+	pUser->_roomID = -1;
 
+	// Delete Room
 	if (pRoom->_userArray.empty())
-		_roomMap.erase(roomIter);	
+	{
+		_roomIDMap.erase(roomIter);
+		SerializePacket buffer;
+		int packetSize = CreatePacket_RES_ROOM_DELETE(&buffer, roomID);
+		EnqueueBroadcast(buffer.GetReadPtr(), packetSize);
+	}
+
+	return true;
 }
 
-LOGIN_RESULT Server::Handle_REQ_LOGIN(User* user)
+
+bool Server::Handle_REQ_LOGIN(Session* pSession, User* pUser, wchar_t*& name)
 {
-	// TO-DO: Check Invalid User
-	wchar_t nullname[dfNICK_MAX_LEN] = { '/0', };
-	if (wcscmp(user->_name, nullname) != 0)
+	// 유효성 검사 1. 이미 로그인 한 유저
+	if (pUser != nullptr)
 	{
-		printf("Error! Func %s Line %d\n", __func__, __LINE__);
-		user->SetUserDead();
-		return;
+		printf("이미 로그인 한 유저: Func %s Line %d\n", __func__, __LINE__);
+		return false;
 	}
 
 	// Get Data from Packet
 	SerializePacket buffer;
 	int size = sizeof(wchar_t) * dfNICK_MAX_LEN;
-	int dequeueRet = user->_pSession->_recvBuf.Dequeue(buffer.GetWritePtr(), size);
+	int dequeueRet = pSession->_recvBuf.Dequeue(buffer.GetWritePtr(), size);
 	if (dequeueRet != size)
 	{
 		printf("Error! Func %s Line %d\n", __func__, __LINE__);
-		user->SetUserDead();
-		return;
+		return false;
 	}
-
-	buffer.GetData((char*)user->_name, size);
-
-	return LOGIN_RESULT::OK;
+	buffer.MoveWritePos(dequeueRet);
+	name = new wchar_t(dfNICK_MAX_LEN);
+	buffer.GetData((char*)name, size);
+	return true;
 }
 
-RLIST_RESULT Server::Handle_REQ_ROOM_LIST(User* user)
+bool Server::Handle_REQ_ROOM_LIST(User* pUser)
 {
-	// TO-DO: Check Invalid User
-	return RLIST_RESULT::OK;
+	// 유효성 검사 1. 로그인 하지 않은 유저
+	if (pUser == nullptr)
+	{
+		printf("로그인 하지 않은 유저: Func %s Line %d\n", __func__, __LINE__);
+		return false;
+	}
+	return true;
 }
 
-RCREATE_RESULT Server::Handle_REQ_ROOM_CREATE(User* user, wchar_t* title)
+bool Server::Handle_REQ_ROOM_CREATE(User* pUser, short& titleLen, wchar_t*& title)
 {
-	// TO-DO: Check Invalid User
+	// 유효성 검사 1. 로그인 하지 않은 유저
+	if (pUser == nullptr)
+	{
+		printf("로그인 하지 않은 유저: Func %s Line %d\n", __func__, __LINE__);
+		return false;
+	}
 
 	// Get Data Size from Packet
 	SerializePacket buffer;
-	short titleLen = 0;
-
-	int dequeueLenRet = user->_pSession->_recvBuf.Dequeue(buffer.GetWritePtr(), sizeof(titleLen));
+	int dequeueLenRet = pUser->_pSession->_recvBuf.Dequeue(buffer.GetWritePtr(), sizeof(titleLen));
 	if (dequeueLenRet != sizeof(titleLen))
 	{
 		printf("Error! Func %s Line %d\n", __func__, __LINE__);
-		user->SetUserDead();
-		return;
+		return false;
 	}
-
-	buffer.MoveWritePos(sizeof(titleLen));
+	buffer.MoveWritePos(dequeueLenRet);
 	buffer >> titleLen;
 
 	// Get Data from Packet
-	title = new wchar_t[titleLen];
+	titleLen /=  sizeof(wchar_t);
+	title = new wchar_t[(titleLen + 1)];
 	int size = titleLen * sizeof(wchar_t);
-	int dequeueRet = user->_pSession->_recvBuf.Dequeue(buffer.GetWritePtr(), size);
+	int dequeueRet = pUser->_pSession->_recvBuf.Dequeue(buffer.GetWritePtr(), size);
 	if (dequeueRet != size)
 	{
 		printf("Error! Func %s Line %d\n", __func__, __LINE__);
-		user->SetUserDead();
-		return;
+		return false;
 	}
+	buffer.MoveWritePos(dequeueRet);
 
-	buffer.GetData((char*)title, titleLen * sizeof(wchar_t));
-
-	return RCREATE_RESULT::OK;
+	buffer.GetData((char*)title, size);
+	title[titleLen] = L'\0';
+	
+	return true;
 }
 
-RENTER_RESULT Server::Handle_REQ_ROOM_ENTER(User* user)
+bool Server::Handle_REQ_ROOM_ENTER(User* pUser, int& roomID)
 {
-	// TO-DO: Check Invalid User
+	// 유효성 검사 1. 로그인 하지 않은 유저
+	if (pUser == nullptr)
+	{
+		printf("로그인 하지 않은 유저: Func %s Line %d\n", __func__, __LINE__);
+		return false;
+	}
 
 	// Get Data from Packet
 	SerializePacket buffer;
-	int roomID;
-
 	int size = sizeof(roomID);
-	int dequeueRet = user->_pSession->_recvBuf.Dequeue(buffer.GetWritePtr(), size);
+	int dequeueRet = pUser->_pSession->_recvBuf.Dequeue(buffer.GetWritePtr(), size);
 	if (dequeueRet != size)
 	{
 		printf("Error! Func %s Line %d\n", __func__, __LINE__);
-		user->SetUserDead();
-		return;
+		return false;
 	}
-
+	buffer.MoveWritePos(dequeueRet);
 	buffer >> roomID;
 
-	return RENTER_RESULT::OK;
+	// 유효성 검사 2. 이미 방에 속한 유저
+	if (pUser->_roomID == roomID)
+	{
+		printf("이미 방에 속한 유저: Func %s Line %d\n", __func__, __LINE__);
+		return false;
+	}
+
+	return true;
 }
 
-CHAT_RESULT Server::Handle_REQ_CHAT(User* user)
+bool Server::Handle_REQ_CHAT(User* pUser, short& msgLen, wchar_t*& msg)
 {
-	// TO-DO: Check Invalid User
+	// 유효성 검사 1. 로그인 하지 않은 유저
+	if (pUser == nullptr)
+	{
+		printf("로그인 하지 않은 유저: Func %s Line %d\n", __func__, __LINE__);
+		return false;
+	}
+
+	// 유효성 검사 2. 방에 속하지 않은 유저
+	if (pUser->_roomID == -1)
+	{
+		printf("방에 속하지 않은 유저: Func %s Line %d\n", __func__, __LINE__);
+		return false;
+	}
 
 	// Get Data Size from Packet
 	SerializePacket buffer;
-	short msgLen = 0;
-	int dequeueLenRet = user->_pSession->_recvBuf.Dequeue(buffer.GetWritePtr(), sizeof(msgLen));
+	int dequeueLenRet = pUser->_pSession->_recvBuf.Dequeue(buffer.GetWritePtr(), sizeof(msgLen));
 	if (dequeueLenRet != sizeof(msgLen))
 	{
 		printf("Error! Func %s Line %d\n", __func__, __LINE__);
-		user->SetUserDead();
-		return;
+		return false;
 	}
-
+	buffer.MoveWritePos(dequeueLenRet);
 	buffer >> msgLen;
-	buffer.MoveWritePos(sizeof(msgLen));
-
+	
 	// Get Data from Packet
-	wchar_t* msg = new wchar_t[msgLen];
+	msgLen /= sizeof(wchar_t);
+	msg = new wchar_t[msgLen];
 	int size = msgLen * sizeof(wchar_t);
-	int dequeueRet = user->_pSession->_recvBuf.Dequeue(buffer.GetWritePtr(), size);
+	int dequeueRet = pUser->_pSession->_recvBuf.Dequeue(buffer.GetWritePtr(), size);
 	if (dequeueRet != size)
 	{
 		printf("Error! Func %s Line %d\n", __func__, __LINE__);
-		user->SetUserDead();
-		return;
+		return false;
 	}
-
-	buffer.GetData((char*)msg, msgLen * sizeof(wchar_t));
-
-	return CHAT_RESULT::OK;
+	buffer.MoveWritePos(dequeueRet);
+	buffer.GetData((char*)msg, size);
+	return true;
 }
 
-RLEAVE_RESULT Server::Handle_REQ_ROOM_LEAVE(User* user)
+bool Server::Handle_REQ_ROOM_LEAVE(User* pUser)
 {
-	// TO-DO: Check Invalid User
+	// 유효성 검사 1. 로그인 하지 않은 유저
+	if (pUser == nullptr)
+	{
+		printf("로그인 하지 않은 유저: Func %s Line %d\n", __func__, __LINE__);
+		return false;
+	}
+	
+	// 유효성 검사 2. 방에 속하지 않은 유저
+	if (pUser->_roomID == -1)
+	{
+		printf("방에 속하지 않은 유저: Func %s Line %d\n", __func__, __LINE__);
+		return false;
+	}
 
-	return RLEAVE_RESULT::OK;
+	return true;
 }

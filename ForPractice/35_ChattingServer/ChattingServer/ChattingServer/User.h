@@ -3,7 +3,7 @@
 #include <vector>
 #include "Protocol.h"
 #include "Session.h"
-
+#define dfUSER_MAX_CNT 32
 using namespace std;
 
 class User
@@ -27,4 +27,4 @@ public:
 	wchar_t _name[dfNICK_MAX_LEN] = { '/0', };
 };
 
-extern vector<User*> _userArray;
+extern vector<User*> _allUsers;

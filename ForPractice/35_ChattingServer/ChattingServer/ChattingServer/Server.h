@@ -1,7 +1,6 @@
 #pragma once
 #include <vector>
 #include <unordered_map>
-#include <stdio.h>
 using namespace std;
 
 #include "Session.h"
@@ -46,20 +45,22 @@ private:
 
 	// About Content
 private:
-	void CreateUser(Session* pSession);
 	void DestroyDeadUser();
-	void CreateRoom(wchar_t* title);
-	void EnterRoom(User* user, int roomID);
-	void LeaveRoom(User* user);
 
 private:
-	void Handle_RecvPacket(User* user, WORD type);
-	LOGIN_RESULT Handle_REQ_LOGIN(User* user);
-	RLIST_RESULT Handle_REQ_ROOM_LIST(User* user);
-	RCREATE_RESULT Handle_REQ_ROOM_CREATE(User* user, wchar_t* title);
-	RENTER_RESULT Handle_REQ_ROOM_ENTER(User* user);
-	CHAT_RESULT Handle_REQ_CHAT(User* user);
-	RLEAVE_RESULT Handle_REQ_ROOM_LEAVE(User* user);
+	bool Handle_RecvPacket(Session* pSession, User* pUser, WORD type);
+	bool Handle_REQ_LOGIN(Session* pSession, User* pUser, wchar_t*& name);
+	bool Handle_REQ_ROOM_LIST(User* pUser);
+	bool Handle_REQ_ROOM_CREATE(User* pUser, short& titleLen, wchar_t*& title);
+	bool Handle_REQ_ROOM_ENTER(User* pUser, int& roomID);
+	bool Handle_REQ_CHAT(User* pUser, short& msgLen, wchar_t*& msg);
+	bool Handle_REQ_ROOM_LEAVE(User* pUser);
+
+private:
+	BYTE CreateUser(Session* pSession, User*& pUser, wchar_t* name);
+	BYTE CreateRoom(short& titleLen, wchar_t* title, int& roomID);
+	BYTE EnterRoom(User* pUser, int roomID, Room*& pRoom);
+	bool LeaveRoom(User* pUser);
 
 private:
 	int _userID = 0;

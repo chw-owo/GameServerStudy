@@ -31,7 +31,7 @@
 
 struct st_PACKET_HEADER
 {
-	BYTE	byCode;
+	BYTE	byCode = dfPACKET_CODE;
 	BYTE	byCheckSum;
 
 	WORD	wMsgType;
@@ -114,7 +114,7 @@ struct st_PACKET_HEADER
 #define df_RES_ROOM_CREATE	6
 
 #define df_RESULT_ROOM_CREATE_OK		1
-#define df_RESULT_ROOM_CREATE_DNICK	2
+#define df_RESULT_ROOM_CREATE_DNICK		2
 #define df_RESULT_ROOM_CREATE_MAX		3
 #define df_RESULT_ROOM_CREATE_ETC		4
 
@@ -203,46 +203,3 @@ struct st_PACKET_HEADER
 // 4Byte : »ç¿ëÀÚ No
 //------------------------------------------------------------
 #define df_RES_USER_ENTER		14
-
-
-enum LOGIN_RESULT
-{
-	OK,
-	DNICK,
-	MAX,
-	ETC
-};
-
-enum RLIST_RESULT
-{
-	OK,
-	ETC
-};
-
-enum RCREATE_RESULT
-{
-	OK,
-	DNICK,
-	MAX,
-	ETC
-};
-
-enum RENTER_RESULT
-{
-	OK,
-	NOT,
-	MAX,
-	ETC
-};
-
-enum CHAT_RESULT
-{
-	OK,
-	ETC
-};
-
-enum RLEAVE_RESULT
-{
-	OK,
-	ETC
-};

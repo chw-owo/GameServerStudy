@@ -1,2 +1,2 @@
 #include "User.h"
-vector<User*> _userArray;
+vector<User*> _allUsers;
