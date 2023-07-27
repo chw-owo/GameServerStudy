@@ -9,7 +9,11 @@ using namespace std;
 class User
 {
 public:
-	User(int ID, Session* pSession) : _ID(ID), _pSession(pSession) {}
+	User(int ID, Session* pSession, wchar_t* name) 
+		: _ID(ID), _pSession(pSession) 
+	{
+		wcscpy_s(_name, dfNICK_MAX_LEN, name);
+	}
 	~User() {}
 
 public:

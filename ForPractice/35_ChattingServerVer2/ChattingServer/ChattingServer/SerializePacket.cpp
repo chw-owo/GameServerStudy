@@ -28,7 +28,7 @@ int SerializePacket::Resize(int iBufferSize)
 {
     if (iBufferSize > eBUFFER_MAX)
     {
-        printf("Requested Resize Size is too Big!! %d -> %d\n", _iBufferSize, iBufferSize);
+        ::printf("Requested Resize Size is too Big!! %d -> %d\n", _iBufferSize, iBufferSize);
         return -1;
     }
 
@@ -37,7 +37,7 @@ int SerializePacket::Resize(int iBufferSize)
     delete[] _chpBuffer;
 
     _chpBuffer = chpNewBuffer;
-    printf("Resize!! %d -> %d\n", _iBufferSize, iBufferSize);
+    ::printf("Resize!! %d -> %d\n", _iBufferSize, iBufferSize);
     _iBufferSize = iBufferSize;
 
     return _iBufferSize;
@@ -100,7 +100,7 @@ SerializePacket& SerializePacket::operator>>(float& fValue)
 {
     if (_iWritePos - _iReadPos < sizeof(float))
     {
-        printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n",
+        ::printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n",
             _iWritePos - _iReadPos, sizeof(float), __func__, __LINE__);
         return *this;
     }
@@ -116,7 +116,7 @@ SerializePacket& SerializePacket::operator>>(double& dValue)
 {
     if (_iWritePos - _iReadPos < sizeof(double))
     {
-        printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n",
+        ::printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n",
             _iWritePos - _iReadPos, sizeof(double), __func__, __LINE__);
         return *this;
     }
@@ -223,7 +223,7 @@ SerializePacket& SerializePacket::operator>>(BYTE& byValue)
 {
     if (_iWritePos - _iReadPos < sizeof(BYTE))
     {
-        printf("Used Size(%d) < Requested Size(%llu)!\n",
+        ::printf("Used Size(%d) < Requested Size(%llu)!\n",
             _iWritePos - _iReadPos, sizeof(BYTE));
         return *this;
     }
@@ -239,7 +239,7 @@ SerializePacket& SerializePacket::operator>>(char& chValue)
 {
     if (_iWritePos - _iReadPos < sizeof(char))
     {
-        printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n",
+        ::printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n",
             _iWritePos - _iReadPos, sizeof(char), __func__, __LINE__);
         return *this;
     }
@@ -255,7 +255,7 @@ SerializePacket& SerializePacket::operator>>(wchar_t& szValue)
 {
     if (_iWritePos - _iReadPos < sizeof(wchar_t))
     {
-        printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n",
+        ::printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n",
             _iWritePos - _iReadPos, sizeof(wchar_t), __func__, __LINE__);
         return *this;
     }
@@ -271,7 +271,7 @@ SerializePacket& SerializePacket::operator>>(short& shValue)
 {
     if (_iWritePos - _iReadPos < sizeof(short))
     {
-        printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n",
+        ::printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n",
             _iWritePos - _iReadPos, sizeof(short), __func__, __LINE__);
         return *this;
     }
@@ -287,7 +287,7 @@ SerializePacket& SerializePacket::operator>>(WORD& wValue)
 {
     if (_iWritePos - _iReadPos < sizeof(WORD))
     {
-        printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n",
+        ::printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n",
             _iWritePos - _iReadPos, sizeof(WORD), __func__, __LINE__);
         return *this;
     }
@@ -303,7 +303,7 @@ SerializePacket& SerializePacket::operator>>(int& iValue)
 {
     if (_iWritePos - _iReadPos < sizeof(int))
     {
-        printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n",
+        ::printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n",
             _iWritePos - _iReadPos, sizeof(int), __func__, __LINE__);
         return *this;
     }
@@ -319,7 +319,7 @@ SerializePacket& SerializePacket::operator>>(DWORD& dwValue)
 {
     if (_iWritePos - _iReadPos < sizeof(DWORD))
     {
-        printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n",
+        ::printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n",
             _iWritePos - _iReadPos, sizeof(DWORD), __func__, __LINE__);
         return *this;
     }
@@ -335,7 +335,7 @@ SerializePacket& SerializePacket::operator>>(__int64& iValue)
 {
     if (_iWritePos - _iReadPos < sizeof(__int64))
     {
-        printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n",
+        ::printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n",
             _iWritePos - _iReadPos, sizeof(__int64), __func__, __LINE__);
         return *this;
     }
@@ -351,7 +351,7 @@ int SerializePacket::GetData(char* chpDest, int iSize)
 {
     if (_iWritePos - _iReadPos < iSize)
     {
-        printf("Used Size(%d) is small than Requested Size(%d)!\n",
+        ::printf("Used Size(%d) is small than Requested Size(%d)!\n",
             _iWritePos - _iReadPos, iSize);
         return -1;
     }
@@ -366,7 +366,7 @@ int SerializePacket::PeekData(char* chpDest, int iSize)
 {
     if (_iWritePos - _iReadPos < iSize)
     {
-        printf("Used Size(%d) is small than Requested Size(%d)!\n",
+        ::printf("Used Size(%d) is small than Requested Size(%d)!\n",
             _iWritePos - _iReadPos, iSize);
         return -1;
     }
@@ -379,17 +379,17 @@ int SerializePacket::CheckData(int iSize)
 {
     if (_iWritePos - _iReadPos < iSize)
     {
-        printf("Used Size(%d) is small than Requested Size(%d)!\n",
+        ::printf("Used Size(%d) is small than Requested Size(%d)!\n",
             _iWritePos - _iReadPos, iSize);
         return -1;
     }
 
-    printf("SerializePacket: ");
+    ::printf("SerializePacket: ");
     for (int i = 0; i < iSize; i++)
     {
-        printf("%x ", _chpBuffer[_iReadPos + i]);
+        ::printf("%x ", _chpBuffer[_iReadPos + i]);
     }
-    printf("\n");
+    ::printf("\n");
 }
 
 int SerializePacket::PutData(char* chpSrc, int iSrcSize)

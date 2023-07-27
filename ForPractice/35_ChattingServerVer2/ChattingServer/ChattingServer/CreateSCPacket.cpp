@@ -18,7 +18,7 @@ BYTE GetChecksum(WORD type, SerializePacket* payload)
 	sum += (type & 0xff00);
 	
 	int payloadSize = payload->GetDataSize();
-	unsigned char* tmp = new unsigned char(payloadSize);
+	unsigned char* tmp = new unsigned char[payloadSize];
 	payload->PeekData((char*)tmp, payloadSize);
 
 	for (WORD i = 0; i < payloadSize; i++)
@@ -49,7 +49,7 @@ int CreatePacket_RES_LOGIN(SerializePacket* buffer, BYTE result, int userID)
 
 	if (payload.GetDataSize() != size)
 	{
-		printf("Create Payload Error, %d != %d: func %s, line %d - ",
+		::printf("Create Payload Error, %d != %d: func %s, line %d\n",
 			payload.GetDataSize(), size, __func__, __LINE__);
 	}
 
@@ -59,18 +59,9 @@ int CreatePacket_RES_LOGIN(SerializePacket* buffer, BYTE result, int userID)
 	buffer->PutData((char*)&header, dfHEADER_SIZE);
 	buffer->PutData(payload.GetReadPtr(), size);
 
-	/*
-	printf("Complete Header RES_LOGIN (0x%x, %x(%d), %x(%d), %x(%d))\n",
-		header.byCode, header.byCheckSum, header.byCheckSum, header.wMsgType,
-		header.wMsgType, header.wPayloadSize, header.wPayloadSize);
-	
-	printf("(%s)(%d)", __func__, buffer->GetDataSize());
-	buffer->CheckData(buffer->GetDataSize());
-	*/
-
 	if (buffer->GetDataSize() != size + dfHEADER_SIZE)
 	{
-		printf("Create Packet Error, %d != %d: func %s, line %d - ",
+		::printf("Create Packet Error, %d != %d: func %s, line %d\n",
 			buffer->GetDataSize(), size + dfHEADER_SIZE, __func__, __LINE__);
 	}
 	
@@ -80,40 +71,51 @@ int CreatePacket_RES_LOGIN(SerializePacket* buffer, BYTE result, int userID)
 int CreatePacket_RES_ROOM_LIST(SerializePacket* buffer, 
 	int roomCnt, int* roomIDs, short* roomNameLens, wchar_t* roomNames, BYTE* headcounts, wchar_t* userNames)
 {
-	int roomNamesTotalSize = 0;
-	int userNamesTotalSize = 0;
-	for (int i = 0; i < roomCnt; i++)
-	{
-		roomNamesTotalSize += roomNameLens[i] * sizeof(wchar_t);
-		userNamesTotalSize += headcounts[i] * sizeof(wchar_t) * dfNICK_MAX_LEN;
-	}
-
-	int size = sizeof(roomCnt) + 
-		roomCnt * (sizeof(int) + sizeof(short) + sizeof(BYTE)) +
-		roomNamesTotalSize + userNamesTotalSize;
-
+	int size;
 	SerializePacket payload;
-	payload << roomCnt;
 
-	int roomNamesIdx = 0;
-	int userNamesIdx = 0;
-	for (int i = 0; i < roomCnt; i++)
+	if (roomCnt == 0)
 	{
-		payload << roomIDs[i];
-		payload << roomNameLens[i];
-		payload.PutData((char*)(& roomNames[roomNamesIdx]), roomNameLens[i]);
-		roomNamesIdx += roomNameLens[i];
-		payload << headcounts[i];
-		for (int j = 0; j < headcounts[i]; j++)
+		size = sizeof(roomCnt);
+		payload << roomCnt;
+	}
+	else 
+	{
+		int roomNamesTotalSize = 0;
+		int userNamesTotalSize = 0;
+		for (int i = 0; i < roomCnt; i++)
 		{
-			payload.PutData((char*)(& userNames[userNamesIdx]), headcounts[i] * sizeof(wchar_t) * dfNICK_MAX_LEN);
-			userNamesIdx += headcounts[i] * dfNICK_MAX_LEN;
+			roomNamesTotalSize += roomNameLens[i];
+			userNamesTotalSize += headcounts[i];
+		}
+
+		userNamesTotalSize *= (sizeof(wchar_t) * dfNICK_MAX_LEN);
+
+		size = sizeof(roomCnt) +
+			roomCnt * (sizeof(int) + sizeof(short) + sizeof(BYTE)) +
+			roomNamesTotalSize + userNamesTotalSize;
+		
+		payload << roomCnt;
+		int roomNamesIdx = 0;
+		int userNamesIdx = 0;
+		for (int i = 0; i < roomCnt; i++)
+		{
+			payload << roomIDs[i];
+			payload << roomNameLens[i];
+			payload.PutData((char*)(&roomNames[roomNamesIdx]), roomNameLens[i]);
+			roomNamesIdx += roomNameLens[i];
+			payload << headcounts[i];
+			for (int j = 0; j < headcounts[i]; j++)
+			{
+				payload.PutData((char*)(&userNames[userNamesIdx]), sizeof(wchar_t) * dfNICK_MAX_LEN);
+				userNamesIdx += sizeof(wchar_t) * dfNICK_MAX_LEN;
+			}
 		}
 	}
 
 	if (payload.GetDataSize() != size)
 	{
-		printf("Create Payload Error, %d != %d: func %s, line %d - ",
+		::printf("Create Payload Error, %d != %d: func %s, line %d\n",
 			payload.GetDataSize(), size, __func__, __LINE__);
 	}
 
@@ -125,7 +127,7 @@ int CreatePacket_RES_ROOM_LIST(SerializePacket* buffer,
 
 	if (buffer->GetDataSize() != size + dfHEADER_SIZE)
 	{
-		printf("Create Packet Error, %d != %d: func %s, line %d - ",
+		::printf("Create Packet Error, %d != %d: func %s, line %d\n",
 			buffer->GetDataSize(), size + dfHEADER_SIZE, __func__, __LINE__);
 	}
 
@@ -135,6 +137,9 @@ int CreatePacket_RES_ROOM_LIST(SerializePacket* buffer,
 
 int CreatePacket_RES_ROOM_CREATE(SerializePacket* buffer, BYTE result, int roomID, short roomNameLen, wchar_t* roomName)
 {
+	::wprintf(L"(Debug) roomID-%d, roomNameLen-%d, roomName-%s\n", 
+		roomID, roomNameLen, roomName);
+
 	int size;
 	SerializePacket payload;
 	if(result == df_RESULT_ROOM_CREATE_OK)
@@ -155,7 +160,7 @@ int CreatePacket_RES_ROOM_CREATE(SerializePacket* buffer, BYTE result, int roomI
 
 	if (payload.GetDataSize() != size)
 	{
-		printf("Create Payload Error, %d != %d: func %s, line %d - ",
+		::printf("Create Payload Error, %d != %d: func %s, line %d\n",
 			payload.GetDataSize(), size, __func__, __LINE__);
 	}
 
@@ -167,7 +172,7 @@ int CreatePacket_RES_ROOM_CREATE(SerializePacket* buffer, BYTE result, int roomI
 
 	if (buffer->GetDataSize() != size + dfHEADER_SIZE)
 	{
-		printf("Create Packet Error, %d != %d: func %s, line %d - ",
+		::printf("Create Packet Error, %d != %d: func %s, line %d\n",
 			buffer->GetDataSize(), size + dfHEADER_SIZE, __func__, __LINE__);
 	}
 
@@ -205,7 +210,7 @@ int CreatePacket_RES_ROOM_ENTER(SerializePacket* buffer, BYTE result, int roomID
 
 	if (payload.GetDataSize() != size)
 	{
-		printf("Create Payload Error, %d != %d: func %s, line %d - ",
+		::printf("Create Payload Error, %d != %d: func %s, line %d\n",
 			payload.GetDataSize(), size, __func__, __LINE__);
 	}
 
@@ -217,7 +222,7 @@ int CreatePacket_RES_ROOM_ENTER(SerializePacket* buffer, BYTE result, int roomID
 
 	if (buffer->GetDataSize() != size + dfHEADER_SIZE)
 	{
-		printf("Create Packet Error, %d != %d: func %s, line %d - ",
+		::printf("Create Packet Error, %d != %d: func %s, line %d\n",
 			buffer->GetDataSize(), size + dfHEADER_SIZE, __func__, __LINE__);
 	}
 
@@ -237,7 +242,7 @@ int CreatePacket_RES_CHAT(SerializePacket* buffer, int userID, short msgSize, wc
 
 	if (payload.GetDataSize() != size)
 	{
-		printf("Create Payload Error, %d != %d: func %s, line %d - ",
+		::printf("Create Payload Error, %d != %d: func %s, line %d\n",
 			payload.GetDataSize(), size, __func__, __LINE__);
 	}
 
@@ -249,7 +254,7 @@ int CreatePacket_RES_CHAT(SerializePacket* buffer, int userID, short msgSize, wc
 
 	if (buffer->GetDataSize() != size + dfHEADER_SIZE)
 	{
-		printf("Create Packet Error, %d != %d: func %s, line %d - ",
+		::printf("Create Packet Error, %d != %d: func %s, line %d\n",
 			buffer->GetDataSize(), size + dfHEADER_SIZE, __func__, __LINE__);
 	}
 
@@ -265,7 +270,7 @@ int CreatePacket_RES_ROOM_LEAVE(SerializePacket* buffer, int userID)
 
 	if (payload.GetDataSize() != size)
 	{
-		printf("Create Payload Error, %d != %d: func %s, line %d - ",
+		::printf("Create Payload Error, %d != %d: func %s, line %d\n",
 			payload.GetDataSize(), size, __func__, __LINE__);
 	}
 
@@ -277,7 +282,7 @@ int CreatePacket_RES_ROOM_LEAVE(SerializePacket* buffer, int userID)
 
 	if (buffer->GetDataSize() != size + dfHEADER_SIZE)
 	{
-		printf("Create Packet Error, %d != %d: func %s, line %d - ",
+		::printf("Create Packet Error, %d != %d: func %s, line %d\n",
 			buffer->GetDataSize(), size + dfHEADER_SIZE, __func__, __LINE__);
 	}
 
@@ -294,7 +299,7 @@ int CreatePacket_RES_ROOM_DELETE(SerializePacket* buffer, int roomID)
 
 	if (payload.GetDataSize() != size)
 	{
-		printf("Create Payload Error, %d != %d: func %s, line %d - ",
+		::printf("Create Payload Error, %d != %d: func %s, line %d\n",
 			payload.GetDataSize(), size, __func__, __LINE__);
 	}
 
@@ -306,7 +311,7 @@ int CreatePacket_RES_ROOM_DELETE(SerializePacket* buffer, int roomID)
 
 	if (buffer->GetDataSize() != size + dfHEADER_SIZE)
 	{
-		printf("Create Packet Error, %d != %d: func %s, line %d - ",
+		::printf("Create Packet Error, %d != %d: func %s, line %d\n",
 			buffer->GetDataSize(), size + dfHEADER_SIZE, __func__, __LINE__);
 	}
 
@@ -324,7 +329,7 @@ int CreatePacket_RES_USER_ENTER(SerializePacket* buffer, wchar_t* userName, int 
 
 	if (payload.GetDataSize() != size)
 	{
-		printf("Create Payload Error, %d != %d: func %s, line %d - ",
+		::printf("Create Payload Error, %d != %d: func %s, line %d\n",
 			payload.GetDataSize(), size, __func__, __LINE__);
 	}
 
@@ -336,7 +341,7 @@ int CreatePacket_RES_USER_ENTER(SerializePacket* buffer, wchar_t* userName, int 
 
 	if (buffer->GetDataSize() != size + dfHEADER_SIZE)
 	{
-		printf("Create Packet Error, %d != %d: func %s, line %d - ",
+		::printf("Create Packet Error, %d != %d: func %s, line %d\n",
 			buffer->GetDataSize(), size + dfHEADER_SIZE, __func__, __LINE__);
 	}
 

@@ -25,7 +25,7 @@ public:
 
 public:
 	int _ID;
-	wchar_t* _title = nullptr;
+	wchar_t* _title;
 	vector<User*> _userArray;
 };
 
