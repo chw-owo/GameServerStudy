@@ -21,8 +21,8 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{12c2e1a0-b9a2-4623-be9d-eebb1c136fa7}</ProjectGuid>
-    <RootNamespace>FightGameMMOSingleThread</RootNamespace>
+    <ProjectGuid>{9701ac6b-7ec7-45c0-a53a-5c55b4865d98}</ProjectGuid>
+    <RootNamespace>SystemLog</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -127,17 +127,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Main.cpp" />
-    <ClCompile Include="RingBuffer.cpp" />
-    <ClCompile Include="SerializePacket.cpp" />
-    <ClCompile Include="Server.cpp" />
+    <ClCompile Include="main.cpp" />
+    <ClCompile Include="SystemLog.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Main.h" />
-    <ClInclude Include="Protocol.h" />
-    <ClInclude Include="RingBuffer.h" />
-    <ClInclude Include="SerializePacket.h" />
-    <ClInclude Include="Server.h" />
+    <ClInclude Include="SystemLog.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
