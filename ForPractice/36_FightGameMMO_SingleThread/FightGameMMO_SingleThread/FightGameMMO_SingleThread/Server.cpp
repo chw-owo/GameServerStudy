@@ -1,15 +1,7 @@
 #include "Server.h"
 #include "Main.h"
-#include <wchar.h>
 #include <stdio.h>
-
-#define dfNETWORK_IP L"0.0.0.0"
-#define dfDEFAULT_SESSIONS_MAX 1000
-
-// TO-DO: 섹터
-// TO-DO: 프레임
-// TO-DO: 타임 아웃
-// TO-DO: 이동, 공격
+#include <wchar.h>
 
 Server::Server()
 {
@@ -17,7 +9,8 @@ Server::Server()
 	int bindRet;
 	int listenRet;
 	int ioctRet;
-	_allSessions.reserve(dfDEFAULT_SESSIONS_MAX);
+	_allSessions.reserve(dfDEFAULT_SESSIONS_NUM);
+	_allPlayers.reserve(dfDEFAULT_PLAYERS_NUM);
 
 	// Initialize Winsock
 	WSADATA wsa;
@@ -78,12 +71,22 @@ Server::Server()
 	_time.tv_usec = 0;
 
 	::printf("Network Setting Complete!\n");
+
+	for (int y = 0; y < dfSECTOR_CNT_Y; y++)
+	{
+		for (int x = 0; x < dfSECTOR_CNT_X; x++)
+		{
+			_sectors[y][x].InitializeSector(x, y);
+		}
+	}
+	::printf("Content Setting Complete!\n");
+
 }
 
 Server::~Server()
 {
 	vector<Session*>::iterator sessionIter = _allSessions.begin();
-	for (; sessionIter != _allSessions.end(); sessionIter++)
+	for (; sessionIter < _allSessions.end(); sessionIter++)
 	{
 		Session* pSession = *sessionIter;
 		sessionIter = _allSessions.erase(sessionIter);
@@ -101,8 +104,10 @@ Server* Server::GetInstance()
 	return &_server;
 }
 
-void Server::Update()
-{
+void Server::NetworkUpdate()
+{ 
+	DisconnectDeadSession();
+
 	FD_SET rset;
 	FD_SET wset;
 
@@ -132,7 +137,7 @@ void Server::Update()
 	}
 	else
 	{
-		for (; i != _allSessions.end(); i++)
+		for (; i < _allSessions.end(); i++)
 		{
 			FD_SET((*i)->_socket, &rset);
 			if ((*i)->_sendBuf.GetUseSize() > 0)
@@ -157,8 +162,54 @@ void Server::Update()
 			SelectProc(rset, wset, idx);
 		}
 	}
+}
 
-	DisconnectDeadSession();
+void Server::ContentUpdate()
+{
+	if (SkipForFixedFrame()) return;
+
+	vector<Player*>::iterator playerIter = _allPlayers.begin();
+	for (; playerIter < _allPlayers.end(); playerIter++)
+	{
+		Player* pPlayer = (*playerIter);
+
+		if (!pPlayer->GetPlayerAlive())
+		{
+			printf(" - Player->GetPlayerAlive() (ID: %d)\n", pPlayer->_ID);
+			continue;
+		}
+
+		if (pPlayer->_hp <= 0)
+		{
+			pPlayer->SetPlayerDead();
+			printf(" - pPlayer->_hp <= 0 (ID: %d)\n", pPlayer->_ID);
+			continue;
+		}
+
+		if (timeGetTime() - pPlayer->_pSession->_lastRecvTime 
+		> dfNETWORK_PACKET_RECV_TIMEOUT)
+		{
+			pPlayer->SetPlayerDead();
+			printf(" - Time out!!! (ID: %d)\n", pPlayer->_ID);
+			continue;
+		}
+		
+		if (pPlayer->GetPlayerMove())
+		{
+			UpdatePlayerMove(pPlayer);
+			printf(" - Update Move (ID: %d)\n", pPlayer->_ID);
+		}
+	}
+
+	DestroyDeadPlayers();
+}
+
+void Server::Control()
+{
+}
+
+void Server::Monitor()
+{
 }
 
 // About Network ==================================================
@@ -219,14 +270,22 @@ void Server::AcceptProc()
 
 	pSession->SetSessionAlive();
 	pSession->_addr = clientaddr;
+	pSession->_lastRecvTime = timeGetTime();
 	_allSessions.push_back(pSession);
+	printf("%s: Origin Session %p\n", __func__, pSession);
 
 	CreatePlayer(pSession);
+	unordered_map<Session*, Player*>::iterator mapIter = _SessionPlayerMap.find(pSession);
+	Player* pPlayer = mapIter->second;
+	printf("%s: pPlayer->pSession %p\n", __func__, pPlayer->_pSession);
+
+	printf("Player %d: Complete to Accept\n", pPlayer->_ID);
+
 }
 
 void Server::RecvProc(Session* pSession)
 {
-	pSession->_lastRecvTime = GetTickCount64();
+	pSession->_lastRecvTime = timeGetTime();
 
 	int recvRet = recv(pSession->_socket,
 		pSession->_recvBuf.GetWriteBufferPtr(),
@@ -237,20 +296,26 @@ void Server::RecvProc(Session* pSession)
 		int err = WSAGetLastError();
 		if (err == WSAECONNRESET)
 		{
-			pSession->SetSessionDead();
+			unordered_map<Session*, Player*>::iterator mapIter = _SessionPlayerMap.find(pSession);
+			Player* pPlayer = mapIter->second;
+			pPlayer->SetPlayerDead();
 			return;
 		}
 		else if(err != WSAEWOULDBLOCK)
 		{
 			::printf("Error! Func %s Line %d: %d\n", __func__, __LINE__, err);
-			pSession->SetSessionDead();
+			unordered_map<Session*, Player*>::iterator mapIter = _SessionPlayerMap.find(pSession);
+			Player* pPlayer = mapIter->second;
+			pPlayer->SetPlayerDead();
 			return;
 		}
 
 	}
 	else if (recvRet == 0)
 	{
-		pSession->SetSessionDead();
+		unordered_map<Session*, Player*>::iterator mapIter = _SessionPlayerMap.find(pSession);
+		Player* pPlayer = mapIter->second;
+		pPlayer->SetPlayerDead();
 		return;
 	}
 
@@ -262,10 +327,11 @@ void Server::RecvProc(Session* pSession)
 		return;
 	}
 
-	unordered_map<Session*, Player*>::iterator iter = _SessionPlayerMap.find(pSession);
-	Player* pPlayer = iter->second;
-
 	int useSize = pSession->_recvBuf.GetUseSize();
+
+	unordered_map<Session*, Player*>::iterator mapIter = _SessionPlayerMap.find(pSession);
+	Player* pPlayer = mapIter->second;
+	printf("Player %d: Complete to Recv %d bytes\n", pPlayer->_ID, useSize);
 
 	while (useSize > 0)
 	{
@@ -281,11 +347,11 @@ void Server::RecvProc(Session* pSession)
 			return;
 		}
 
-		if ((char)header.byCode != (char)dfPACKET_CODE)
+		if ((char) header.byCode != (char)dfPACKET_CODE)
 		{
 			::printf("Error! Wrong Header Code! %x - Func %s Line %d\n", 
 				header.byCode, __func__, __LINE__);
-			pSession->SetSessionDead();
+			pPlayer->SetPlayerDead();
 			return;
 		}
 
@@ -304,7 +370,7 @@ void Server::RecvProc(Session* pSession)
 		if (!handlePacketRet)
 		{
 			::printf("Error! Func %s Line %d\n", __func__, __LINE__);
-			pSession->SetSessionDead();
+			pPlayer->SetPlayerDead();
 			return;
 		}
 
@@ -327,7 +393,9 @@ void Server::SendProc(Session* pSession)
 		if (err != WSAEWOULDBLOCK)
 		{
 			::printf("Error! Func %s Line %d: %d\n", __func__, __LINE__, err);
-			pSession->SetSessionDead();
+			unordered_map<Session*, Player*>::iterator mapIter = _SessionPlayerMap.find(pSession);
+			Player* pPlayer = mapIter->second;
+			pPlayer->SetPlayerDead();
 			return;
 		}
 	}
@@ -336,16 +404,23 @@ void Server::SendProc(Session* pSession)
 	if (sendRet != moveRet)
 	{
 		::printf("Error! Func %s Line %d\n", __func__, __LINE__);
-		pSession->SetSessionDead();
+		unordered_map<Session*, Player*>::iterator mapIter = _SessionPlayerMap.find(pSession);
+		Player* pPlayer = mapIter->second;
+		pPlayer->SetPlayerDead();
 		return;
 	}
+
+	unordered_map<Session*, Player*>::iterator mapIter = _SessionPlayerMap.find(pSession);
+	Player* pPlayer = mapIter->second;
+	printf("Player %d: Complete to Send %d bytes\n", pPlayer->_ID, sendRet);
+
 }
 
 
 void Server::DisconnectDeadSession()
 {
 	vector<Session*>::iterator i = _allSessions.begin();
-	for (; i != _allSessions.end();)
+	for (; i < _allSessions.end();)
 	{
 		if (!(*i)->GetSessionAlive())
 		{
@@ -362,91 +437,99 @@ void Server::DisconnectDeadSession()
 }
 
 
-void Server::EnqueueUnicast(char* msg, int size, Session* pSession)
+void Server::EnqueueUnicast(char* msg, int size, Player* pPlayer)
 {
-	int enqueueRet = pSession->_sendBuf.Enqueue(msg, size);
+	int enqueueRet = pPlayer->_pSession->_sendBuf.Enqueue(msg, size);
 	if (enqueueRet != size)
 	{
 		::printf("Error! Func %s Line %d\n", __func__, __LINE__);
-		pSession->SetSessionDead();
+		pPlayer->SetPlayerDead();
 	}
 }
 
-void Server::EnqueueBroadcastInSector(char* msg, int size, Session* pExpSession)
+void Server::EnqueueOneSector(char* msg, int size, Sector* sector, Player* pExpPlayer)
 {
-	// TO-DO: Sector 제작 후 수정
-	// TO-DO: 몇천명 단위일 때 어떻게 다음 프레임으로 미룰 것인지
-
 	int enqueueRet;
-
-	if (pExpSession == nullptr)
+	if (pExpPlayer == nullptr)
 	{
-		vector<Session*>::iterator i = _allSessions.begin();
-		for (; i != _allSessions.end(); i++)
+		vector<Player*>::iterator playerIter = sector->_players.begin();
+		for (; playerIter < sector->_players.end(); playerIter++)
 		{
-			if ((*i)->GetSessionAlive())
+			if ((*playerIter)->GetPlayerAlive())
 			{
-				enqueueRet = (*i)->_sendBuf.Enqueue(msg, size);
+				enqueueRet = (*playerIter)->_pSession->_sendBuf.Enqueue(msg, size);
 				if (enqueueRet != size)
 				{
 					::printf("Error! Func %s Line %d\n", __func__, __LINE__);
-					(*i)->SetSessionDead();
+					(*playerIter)->SetPlayerDead();
 				}
 			}
 		}
 	}
 	else
 	{
-		vector<Session*>::iterator i = _allSessions.begin();
-		for (; i != _allSessions.end(); i++)
+		vector<Player*>::iterator playerIter = sector->_players.begin();
+		for (; playerIter < sector->_players.end(); playerIter++)
 		{
-			if ((*i)->GetSessionAlive() && pExpSession->_socket != (*i)->_socket)
+			if ((*playerIter) != pExpPlayer && (*playerIter)->GetPlayerAlive())
 			{
-				enqueueRet = (*i)->_sendBuf.Enqueue(msg, size);
+				enqueueRet = (*playerIter)->_pSession->_sendBuf.Enqueue(msg, size);
 				if (enqueueRet != size)
 				{
 					::printf("Error! Func %s Line %d\n", __func__, __LINE__);
-					(*i)->SetSessionDead();
+					(*playerIter)->SetPlayerDead();
 				}
 			}
 		}
 	}
 }
 
-void Server::EnqueueBroadcast(char* msg, int size, Session* pExpSession)
+void Server::EnqueueAroundSector(char* msg, int size, Sector* centerSector, Player* pExpPlayer)
 {
 	// TO-DO: 몇천명 단위일 때 어떻게 다음 프레임으로 미룰 것인지
 
 	int enqueueRet;
 
-	if (pExpSession == nullptr)
+	if (pExpPlayer == nullptr)
 	{
-		vector<Session*>::iterator i = _allSessions.begin();
-		for (; i != _allSessions.end(); i++)
+		Sector sectors[dfAROUND_SECTOR_NUM];
+		GetAroundSector(centerSector, sectors);
+		
+		for(int i = 0; i < dfAROUND_SECTOR_NUM; i++)
 		{
-			if ((*i)->GetSessionAlive())
+			vector<Player*>::iterator playerIter = sectors[i]._players.begin();
+			for (; playerIter < sectors[i]._players.end(); playerIter++)
 			{
-				enqueueRet = (*i)->_sendBuf.Enqueue(msg, size);
-				if (enqueueRet != size)
+				if ((*playerIter)->GetPlayerAlive())
 				{
-					::printf("Error! Func %s Line %d\n", __func__, __LINE__);
-					(*i)->SetSessionDead();
+					enqueueRet = (*playerIter)->_pSession->_sendBuf.Enqueue(msg, size);
+					if (enqueueRet != size)
+					{
+						::printf("Error! Func %s Line %d\n", __func__, __LINE__);
+						(*playerIter)->SetPlayerDead();
+					}
 				}
 			}
 		}
 	}
 	else
 	{
-		vector<Session*>::iterator i = _allSessions.begin();
-		for (; i != _allSessions.end(); i++)
+		Sector sectors[dfAROUND_SECTOR_NUM];
+		GetAroundSector(centerSector, sectors);
+
+		for (int i = 0; i < dfAROUND_SECTOR_NUM; i++)
 		{
-			if ((*i)->GetSessionAlive() && pExpSession->_socket != (*i)->_socket)
+			vector<Player*>::iterator playerIter = sectors[i]._players.begin();
+			for (; playerIter < sectors[i]._players.end(); playerIter++)
 			{
-				enqueueRet = (*i)->_sendBuf.Enqueue(msg, size);
-				if (enqueueRet != size)
+				if ((*playerIter) != pExpPlayer && (*playerIter)->GetPlayerAlive())
 				{
-					::printf("Error! Func %s Line %d\n", __func__, __LINE__);
-					(*i)->SetSessionDead();
+					enqueueRet = (*playerIter)->_pSession->_sendBuf.Enqueue(msg, size);
+					if (enqueueRet != size)
+					{
+						::printf("Error! Func %s Line %d\n", __func__, __LINE__);
+						(*playerIter)->SetPlayerDead();
+					}
 				}
 			}
 		}
@@ -455,39 +538,586 @@ void Server::EnqueueBroadcast(char* msg, int size, Session* pExpSession)
 
 // About Content ====================================================
 
+bool Server::SkipForFixedFrame()
+{
+	timeBeginPeriod(1);
+	static DWORD oldTick = timeGetTime();
+	if ((timeGetTime() - oldTick) < (1000 / dfFPS))
+		return true;
+	oldTick += (1000 / dfFPS);
+	return false;
+}
+
+bool Server::CheckMovable(short x, short y)
+{
+	if (x < dfRANGE_MOVE_LEFT || x > dfRANGE_MOVE_RIGHT ||
+		y < dfRANGE_MOVE_TOP || y > dfRANGE_MOVE_BOTTOM)
+		return false;
+
+	return true;
+}
+
+void Server::UpdatePlayerMove(Player* pPlayer)
+{
+	switch (pPlayer->_moveDirection)
+	{
+	case dfPACKET_MOVE_DIR_LL:
+		if (CheckMovable(pPlayer->_x - dfSPEED_PLAYER_X, pPlayer->_y))
+		{
+			pPlayer->_x -= dfSPEED_PLAYER_X;
+		}
+
+		if (pPlayer->_x < pPlayer->_pSector->_xPosMin)
+		{
+			Sector inSector[3] = 
+			{
+				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex - 2],
+				_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex - 2],
+				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex - 2]
+			};
+
+			Sector outSector[3] =
+			{
+				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex + 1],
+				_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex + 1],
+				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex + 1]
+			};
+			
+			UpdateSector(pPlayer, inSector, outSector, 3, 3,
+				&_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex - 1]);
+		}
+
+		break;
+
+	case dfPACKET_MOVE_DIR_LU:
+		if (CheckMovable(pPlayer->_x - dfSPEED_PLAYER_X, pPlayer->_y - dfSPEED_PLAYER_Y))
+		{
+			pPlayer->_x -= dfSPEED_PLAYER_X;
+			pPlayer->_y -= dfSPEED_PLAYER_Y;
+		}
+
+		if (pPlayer->_x < pPlayer->_pSector->_xPosMin &&
+			pPlayer->_y < pPlayer->_pSector->_yPosMin)
+		{
+			Sector inSector[5] =
+			{
+				_sectors[pPlayer->_pSector->_yIndex - 2][pPlayer->_pSector->_xIndex],
+				_sectors[pPlayer->_pSector->_yIndex - 2][pPlayer->_pSector->_xIndex - 1],
+				_sectors[pPlayer->_pSector->_yIndex - 2][pPlayer->_pSector->_xIndex - 2],
+				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex - 2],
+				_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex - 2],
+				
+			};
+
+			Sector outSector[5] =
+			{
+				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex],
+				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex - 1],
+				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex + 1],
+				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex + 1],
+				_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex + 1],
+				
+			};
+
+			UpdateSector(pPlayer, inSector, outSector, 5, 5,
+				&_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex - 1]);
+		}
+		else if (pPlayer->_x < pPlayer->_pSector->_xPosMin)
+		{
+			Sector inSector[3] =
+			{
+				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex - 2],
+				_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex - 2],
+				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex - 2]
+			};
+
+			Sector outSector[3] =
+			{
+				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex + 1],
+				_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex + 1],
+				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex + 1]
+			};
+
+			UpdateSector(pPlayer, inSector, outSector, 3, 3,
+				&_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex - 1]);
+		}
+		else if(pPlayer->_y < pPlayer->_pSector->_yPosMin)
+		{
+			Sector inSector[3] =
+			{
+				_sectors[pPlayer->_pSector->_yIndex - 2][pPlayer->_pSector->_xIndex - 1],
+				_sectors[pPlayer->_pSector->_yIndex - 2][pPlayer->_pSector->_xIndex],
+				_sectors[pPlayer->_pSector->_yIndex - 2][pPlayer->_pSector->_xIndex + 1]
+			};
+
+			Sector outSector[3] =
+			{
+				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex - 1],
+				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex],
+				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex + 1]
+			};
+
+			UpdateSector(pPlayer, inSector, outSector, 3, 3,
+				&_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex]);
+		}
+
+		break;
+
+	case dfPACKET_MOVE_DIR_UU:
+		if (CheckMovable(pPlayer->_x, pPlayer->_y - dfSPEED_PLAYER_Y))
+		{
+			pPlayer->_y -= dfSPEED_PLAYER_Y;
+		}
+
+		if (pPlayer->_y < pPlayer->_pSector->_yPosMin)
+		{
+			Sector inSector[3] =
+			{
+				_sectors[pPlayer->_pSector->_yIndex - 2][pPlayer->_pSector->_xIndex - 1],
+				_sectors[pPlayer->_pSector->_yIndex - 2][pPlayer->_pSector->_xIndex],
+				_sectors[pPlayer->_pSector->_yIndex - 2][pPlayer->_pSector->_xIndex + 1]
+			};
+
+			Sector outSector[3] =
+			{
+				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex - 1],
+				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex],
+				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex + 1]
+			};
+
+			UpdateSector(pPlayer, inSector, outSector, 3, 3,
+				&_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex]);
+		}
+
+		break;
+
+	case dfPACKET_MOVE_DIR_RU:
+		if (CheckMovable(pPlayer->_x + dfSPEED_PLAYER_X, pPlayer->_y - dfSPEED_PLAYER_Y))
+		{
+			pPlayer->_x += dfSPEED_PLAYER_X;
+			pPlayer->_y -= dfSPEED_PLAYER_Y;
+		}
+
+		if (pPlayer->_x > pPlayer->_pSector->_xPosMax &&
+			pPlayer->_y < pPlayer->_pSector->_yPosMin)
+		{
+			Sector inSector[5] =
+			{
+				_sectors[pPlayer->_pSector->_yIndex - 2][pPlayer->_pSector->_xIndex],
+				_sectors[pPlayer->_pSector->_yIndex - 2][pPlayer->_pSector->_xIndex + 1],
+				_sectors[pPlayer->_pSector->_yIndex - 2][pPlayer->_pSector->_xIndex + 2],
+				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex + 2],
+				_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex + 2]
+			};
+
+			Sector outSector[5] =
+			{
+				_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex - 1],
+				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex - 1],
+				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex - 1],
+				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex + 1],
+				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex]
+			};
+
+			UpdateSector(pPlayer, inSector, outSector, 5, 5,
+				&_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex + 1]);
+		}
+		else if (pPlayer->_x > pPlayer->_pSector->_xPosMax)
+		{
+			Sector inSector[3] =
+			{
+				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex + 2],
+				_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex + 2],
+				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex + 2]
+			};
+
+			Sector outSector[3] =
+			{
+				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex - 1],
+				_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex - 1],
+				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex - 1]
+			};
+
+			UpdateSector(pPlayer, inSector, outSector, 3, 3,
+				&_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex + 1]);
+		}
+		else if (pPlayer->_y < pPlayer->_pSector->_yPosMin)
+		{
+			Sector inSector[3] =
+			{
+				_sectors[pPlayer->_pSector->_yIndex - 2][pPlayer->_pSector->_xIndex - 1],
+				_sectors[pPlayer->_pSector->_yIndex - 2][pPlayer->_pSector->_xIndex],
+				_sectors[pPlayer->_pSector->_yIndex - 2][pPlayer->_pSector->_xIndex + 1]
+			};
+
+			Sector outSector[3] =
+			{
+				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex - 1],
+				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex],
+				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex + 1]
+			};
+
+			UpdateSector(pPlayer, inSector, outSector, 3, 3,
+				&_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex]);
+		}
+		break;
+
+	case dfPACKET_MOVE_DIR_RR:
+		if (CheckMovable(pPlayer->_x + dfSPEED_PLAYER_X, pPlayer->_y))
+		{
+			pPlayer->_x += dfSPEED_PLAYER_X;
+		}
+
+		if (pPlayer->_x > pPlayer->_pSector->_xPosMax)
+		{
+			Sector inSector[3] =
+			{
+				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex + 2],
+				_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex + 2],
+				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex + 2]
+			};
+
+			Sector outSector[3] =
+			{
+				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex - 1],
+				_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex - 1],
+				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex - 1]
+			};
+
+			UpdateSector(pPlayer, inSector, outSector, 3, 3,
+				&_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex + 1]);
+		}
+		break;
+
+	case dfPACKET_MOVE_DIR_RD:
+		if (CheckMovable(pPlayer->_x + dfSPEED_PLAYER_X, pPlayer->_y + dfSPEED_PLAYER_Y))
+		{
+			pPlayer->_x += dfSPEED_PLAYER_X;
+			pPlayer->_y += dfSPEED_PLAYER_Y;
+		}
+
+		if (pPlayer->_x > pPlayer->_pSector->_xPosMax &&
+			pPlayer->_y > pPlayer->_pSector->_yPosMax)
+		{
+			Sector inSector[5] =
+			{
+				_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex + 2],
+				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex + 2],
+				_sectors[pPlayer->_pSector->_yIndex + 2][pPlayer->_pSector->_xIndex + 2],
+				_sectors[pPlayer->_pSector->_yIndex + 2][pPlayer->_pSector->_xIndex + 1],
+				_sectors[pPlayer->_pSector->_yIndex + 2][pPlayer->_pSector->_xIndex]
+			};
+
+			Sector outSector[5] =
+			{
+				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex],
+				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex + 1],
+				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex - 1],
+				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex - 1],
+				_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex - 1]
+			};
+
+			UpdateSector(pPlayer, inSector, outSector, 5, 5,
+				&_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex + 1]);
+		}
+		else if (pPlayer->_x > pPlayer->_pSector->_xPosMax)
+		{
+			Sector inSector[3] =
+			{
+				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex + 2],
+				_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex + 2],
+				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex + 2]
+			};
+
+			Sector outSector[3] =
+			{
+				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex - 1],
+				_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex - 1],
+				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex - 1]
+			};
+
+			UpdateSector(pPlayer, inSector, outSector, 3, 3,
+				&_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex + 1]);
+		}
+		else if (pPlayer->_y > pPlayer->_pSector->_yPosMax)
+		{
+			Sector inSector[3] =
+			{
+				_sectors[pPlayer->_pSector->_yIndex + 2][pPlayer->_pSector->_xIndex - 1],
+				_sectors[pPlayer->_pSector->_yIndex + 2][pPlayer->_pSector->_xIndex],
+				_sectors[pPlayer->_pSector->_yIndex + 2][pPlayer->_pSector->_xIndex + 1]
+			};
+
+			Sector outSector[3] =
+			{
+				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex - 1],
+				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex],
+				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex + 1]
+			};
+
+			UpdateSector(pPlayer, inSector, outSector, 3, 3,
+				&_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex]);
+		}
+		break;
+
+	case dfPACKET_MOVE_DIR_DD:
+		if (CheckMovable(pPlayer->_x, pPlayer->_y + dfSPEED_PLAYER_Y))
+		{
+			pPlayer->_y += dfSPEED_PLAYER_Y;
+		}
+
+		if (pPlayer->_y > pPlayer->_pSector->_yPosMax)
+		{
+			Sector inSector[3] =
+			{
+				_sectors[pPlayer->_pSector->_yIndex + 2][pPlayer->_pSector->_xIndex - 1],
+				_sectors[pPlayer->_pSector->_yIndex + 2][pPlayer->_pSector->_xIndex],
+				_sectors[pPlayer->_pSector->_yIndex + 2][pPlayer->_pSector->_xIndex + 1]
+			};
+
+			Sector outSector[3] =
+			{
+				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex - 1],
+				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex],
+				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex + 1]
+			};
+
+			UpdateSector(pPlayer, inSector, outSector, 3, 3,
+				&_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex]);
+		}
+		break;
+
+	case dfPACKET_MOVE_DIR_LD:
+		if (CheckMovable(pPlayer->_x - dfSPEED_PLAYER_X, pPlayer->_y + dfSPEED_PLAYER_Y))
+		{
+			pPlayer->_x -= dfSPEED_PLAYER_X;
+			pPlayer->_y += dfSPEED_PLAYER_Y;
+		}
+
+		if (pPlayer->_x < pPlayer->_pSector->_xPosMin ||
+			pPlayer->_y > pPlayer->_pSector->_yPosMax)
+		{
+			Sector inSector[5] =
+			{
+				
+				_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex - 2],
+				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex - 2],
+				_sectors[pPlayer->_pSector->_yIndex + 2][pPlayer->_pSector->_xIndex - 2],
+				_sectors[pPlayer->_pSector->_yIndex + 2][pPlayer->_pSector->_xIndex - 1],
+				_sectors[pPlayer->_pSector->_yIndex + 2][pPlayer->_pSector->_xIndex]
+			};
+
+			Sector outSector[5] =
+			{
+				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex],
+				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex + 1],
+				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex + 1],
+				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex + 1],
+				_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex + 1],
+				
+			};
+
+			UpdateSector(pPlayer, inSector, outSector, 5, 5,
+				&_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex - 1]);
+		}
+		else if (pPlayer->_x < pPlayer->_pSector->_xPosMin)
+		{
+			Sector inSector[3] =
+			{
+				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex - 2],
+				_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex - 2],
+				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex - 2]
+			};
+
+			Sector outSector[3] =
+			{
+				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex + 1],
+				_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex + 1],
+				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex + 1]
+			};
+
+			UpdateSector(pPlayer, inSector, outSector, 3, 3,
+				&_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex - 1]);
+		}
+		else if (pPlayer->_y > pPlayer->_pSector->_yPosMax)
+		{
+			Sector inSector[3] =
+			{
+				_sectors[pPlayer->_pSector->_yIndex + 2][pPlayer->_pSector->_xIndex - 1],
+				_sectors[pPlayer->_pSector->_yIndex + 2][pPlayer->_pSector->_xIndex],
+				_sectors[pPlayer->_pSector->_yIndex + 2][pPlayer->_pSector->_xIndex + 1]
+			};
+
+			Sector outSector[3] =
+			{
+				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex - 1],
+				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex],
+				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex + 1]
+			};
+
+			UpdateSector(pPlayer, inSector, outSector, 3, 3,
+				&_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex]);
+		}
+		break;
+	}
+}
+
+void Server::SetSector(Player* pPlayer)
+{
+	int x = pPlayer->_x / dfSECTOR_SIZE_X;
+	int y = pPlayer->_y / dfSECTOR_SIZE_Y;
+	_sectors[y][x]._players.push_back(pPlayer);
+	pPlayer->_pSector = &_sectors[y][x];
+}
+
+void Server::GetAroundSector(Sector* centerSector, Sector* aroundSector)
+{
+	aroundSector[0] = _sectors[centerSector->_yIndex + 1][centerSector->_xIndex + 1];
+	aroundSector[1] = _sectors[centerSector->_yIndex + 1][centerSector->_xIndex];
+	aroundSector[2] = _sectors[centerSector->_yIndex + 1][centerSector->_xIndex - 1];
+	aroundSector[3] = _sectors[centerSector->_yIndex][centerSector->_xIndex + 1];
+	aroundSector[4] = _sectors[centerSector->_yIndex][centerSector->_xIndex];
+	aroundSector[5] = _sectors[centerSector->_yIndex][centerSector->_xIndex - 1];
+	aroundSector[6] = _sectors[centerSector->_yIndex - 1][centerSector->_xIndex + 1];
+	aroundSector[7] = _sectors[centerSector->_yIndex - 1][centerSector->_xIndex];
+	aroundSector[8] = _sectors[centerSector->_yIndex - 1][centerSector->_xIndex - 1];
+}
+
+void Server::UpdateSector(Player* pPlayer, Sector* inSector, Sector* outSector, 
+	int inSectorNum, int outSectorNum, Sector* newSector)
+{
+	vector<Player*>::iterator iter = pPlayer->_pSector->_players.begin();
+	for (; iter < pPlayer->_pSector->_players.end(); iter++)
+	{
+		if (pPlayer == (*iter))
+		{
+			pPlayer->_pSector->_players.erase(iter);
+			break;
+		}
+	}
+
+	// About My Player ==============================================
+
+	SerializePacket createMeToOther;
+	int createMeToOtherRet = SetSCPacket_CREATE_OTHER_CHAR(&createMeToOther,
+		pPlayer->_ID, pPlayer->_direction, pPlayer->_x, pPlayer->_y, pPlayer->_hp);
+	for (int i = 0; i < inSectorNum; i++)
+		EnqueueOneSector(createMeToOther.GetReadPtr(), createMeToOtherRet, &inSector[i], pPlayer);
+
+	SerializePacket MoveMeToOther;
+	int MoveMeToOtherRet = SetSCPacket_MOVE_START(&MoveMeToOther,
+		pPlayer->_ID, pPlayer->_moveDirection, pPlayer->_x, pPlayer->_y);
+	for (int i = 0; i < inSectorNum; i++)
+		EnqueueOneSector(MoveMeToOther.GetReadPtr(), MoveMeToOtherRet, &inSector[i], pPlayer);
+
+	SerializePacket deleteMeToOther;
+	int deleteMeToOtherRet = SetSCPacket_DELETE_CHAR(&deleteMeToOther, pPlayer->_ID);
+	for (int i = 0; i < outSectorNum; i++)
+		EnqueueOneSector(deleteMeToOther.GetReadPtr(), deleteMeToOtherRet, &outSector[i], pPlayer);
+
+
+	// About Other Player ==============================================
+
+	for (int i = 0; i < inSectorNum; i++)
+	{
+		vector<Player*>::iterator iter = inSector[i]._players.begin();
+		for(; iter < inSector[i]._players.end(); iter++)
+		{
+			SerializePacket createOther;
+			int createOtherRet = SetSCPacket_CREATE_OTHER_CHAR(&createOther,
+				(*iter)->_ID, (*iter)->_direction, (*iter)->_x, (*iter)->_y, (*iter)->_hp);
+			EnqueueUnicast(createOther.GetReadPtr(), createOtherRet, pPlayer);
+
+			SerializePacket MoveOther;
+			int MoveOtherRet = SetSCPacket_MOVE_START(&MoveOther,
+				(*iter)->_ID, (*iter)->_moveDirection, (*iter)->_x, (*iter)->_y);
+			EnqueueUnicast(MoveOther.GetReadPtr(), MoveOtherRet, pPlayer);
+		}
+	}
+
+	for (int i = 0; i < outSectorNum; i++)
+	{
+		vector<Player*>::iterator iter = outSector[i]._players.begin();
+		for (; iter < outSector[i]._players.end(); iter++)
+		{
+			SerializePacket deleteOther;
+			int deleteOtherRet = SetSCPacket_DELETE_CHAR(&deleteOther, (*iter)->_ID);
+			EnqueueUnicast(deleteOther.GetReadPtr(), deleteOtherRet, pPlayer);
+		}
+	}
+
+	newSector->_players.push_back(pPlayer);
+	pPlayer->_pSector = newSector;
+}
+
 void Server::CreatePlayer(Session* pSession)
 {
-	// Code For Create Player
-	Player* pPlayer = new Player(pSession, _assignID++);
+	printf("%s: pSession %p\n", __func__, pSession);
+	Player* pPlayer = new Player(pSession, _playerID++);
+	SetSector(pPlayer);
 	_SessionPlayerMap.insert(make_pair(pSession, pPlayer));
-	
-	SerializePacket* bufferForMyChar;
-	int createMyRet = SetSCPacket_CREATE_MY_CHAR(bufferForMyChar,
-		pPlayer->_ID, pPlayer->_direction, pPlayer->_x, pPlayer->_y, pPlayer->_hp);
-	EnqueueBroadcastInSector(bufferForMyChar->GetReadPtr(), createMyRet, pSession);
+	_allPlayers.push_back(pPlayer);
+	printf("%s: pPlayer->pSession %p\n", __func__, pPlayer->_pSession);
 
-	SerializePacket* bufferForOtherChar;
-	int createOtherRet = SetSCPacket_CREATE_OTHER_CHAR(bufferForOtherChar,
+	SerializePacket createMyBuf;
+	int createMyRet = SetSCPacket_CREATE_MY_CHAR(&createMyBuf,
 		pPlayer->_ID, pPlayer->_direction, pPlayer->_x, pPlayer->_y, pPlayer->_hp);
-	EnqueueBroadcastInSector(bufferForOtherChar->GetReadPtr(), createOtherRet, pSession);
+	EnqueueUnicast(createMyBuf.GetReadPtr(), createMyRet, pPlayer);
 
+	SerializePacket createOtherBuf;
+	int createOtherRet = SetSCPacket_CREATE_OTHER_CHAR(&createOtherBuf,
+		pPlayer->_ID, pPlayer->_direction, pPlayer->_x, pPlayer->_y, pPlayer->_hp);
+	EnqueueAroundSector(createOtherBuf.GetReadPtr(), createOtherRet, pPlayer->_pSector, pPlayer);
 }
 
 void Server::DeletePlayer(Player* pPlayer)
 {
-	SerializePacket* buffer;
-	int deleteRet = SetSCPacket_DELETE_CHAR(buffer, pPlayer->_ID);
-	EnqueueBroadcastInSector(buffer->GetReadPtr(), deleteRet);
+	pPlayer->SetPlayerDead();
 
-	unordered_map<Session*, Player*>::iterator iter = _SessionPlayerMap.find(pPlayer->_pSession);
-	_SessionPlayerMap.erase(iter);
-	pPlayer->_pSession->SetSessionDead();
-	delete pPlayer;
+	SerializePacket buffer;
+	int deleteRet = SetSCPacket_DELETE_CHAR(&buffer, pPlayer->_ID);
+	EnqueueAroundSector(buffer.GetReadPtr(), deleteRet, pPlayer->_pSector);
+}
+
+void Server::DestroyDeadPlayers()
+{
+	vector<Player*>::iterator iter = _allPlayers.begin();
+
+	for (;iter < _allPlayers.end();)
+	{
+		// Destroy Dead Player
+		if (!(*iter)->GetPlayerAlive())
+		{
+			Player* pPlayer = (*iter);
+
+			// Set Session Dead
+			unordered_map<Session*, Player*>::iterator mapIter 
+				= _SessionPlayerMap.find(pPlayer->_pSession);
+			_SessionPlayerMap.erase(mapIter);
+			
+			// Remove from Sector
+			vector<Player*>::iterator vectorIter = pPlayer->_pSector->_players.begin();
+			for (; vectorIter < pPlayer->_pSector->_players.end(); vectorIter++)
+			{
+				if ((*vectorIter) == pPlayer)
+				{
+					pPlayer->_pSector->_players.erase(vectorIter);
+					break;
+				}
+			}
+
+			iter = _allPlayers.erase(iter);
+		}
+		else
+		{
+			iter++;
+		}
+	}
 }
 
 // About Packet ====================================================
 
-bool Server::HandleCSPackets(Player* pPlayer, WORD type)
+bool Server::HandleCSPackets(Player* pPlayer, BYTE type)
 {
 	switch (type)
 	{
@@ -520,23 +1150,31 @@ bool Server::HandleCSPackets(Player* pPlayer, WORD type)
 	return false;
 }
 
+// TO-DO: 움직임이 뭔가 이상함!
 bool Server::HandleCSPacket_MOVE_START(Player* pPlayer)
 {
 	BYTE moveDirection;
 	short x;
 	short y;
-
-	// Get Data from CSPacket
 	bool getRet = GetCSPacket_MOVE_START(&(pPlayer->_pSession->_recvBuf), moveDirection, x, y);
 	if(!getRet) return false;
 
-	// Set Data on SCPacket
-	SerializePacket* buffer;
-	int setRet = SetSCPacket_MOVE_START(buffer, pPlayer->_ID, moveDirection, x, y);
+	if (abs(pPlayer->_x - x) > dfERROR_RANGE || abs(pPlayer->_y - y) > dfERROR_RANGE)
+	{
+		SerializePacket buffer;
+		int setRet = SetSCPacket_SYNC(&buffer, pPlayer->_ID, pPlayer->_x, pPlayer->_y);
+		EnqueueUnicast(buffer.GetReadPtr(), setRet, pPlayer);
+		x = pPlayer->_x;
+		y = pPlayer->_y;
+	}
 
-	// Enqueue SCPacket
-	EnqueueBroadcastInSector(buffer->GetReadPtr(), setRet, pPlayer->_pSession);
+	SetPlayerMoveStart(pPlayer, moveDirection, x, y);
 
+	SerializePacket buffer;
+	int setRet = SetSCPacket_MOVE_START(&buffer, pPlayer->_ID, pPlayer->_moveDirection, pPlayer->_x, pPlayer->_y);
+	EnqueueAroundSector(buffer.GetReadPtr(), setRet, pPlayer->_pSector, pPlayer);
+
+	printf(" - Complete %s\n", __func__);
 	return true;
 }
 
@@ -546,17 +1184,25 @@ bool Server::HandleCSPacket_MOVE_STOP(Player* pPlayer)
 	short x;
 	short y;
 
-	// Get Data from CSPacket
 	bool getRet = GetCSPacket_MOVE_STOP(&(pPlayer->_pSession->_recvBuf), direction, x, y);
 	if (!getRet) return false;
 
-	// Set Data on SCPacket
-	SerializePacket* buffer;
-	int setRet = SetSCPacket_MOVE_STOP(buffer, pPlayer->_ID, direction, x, y);
+	if (abs(pPlayer->_x - x) > dfERROR_RANGE || abs(pPlayer->_y - y) > dfERROR_RANGE)
+	{
+		SerializePacket buffer;
+		int setRet = SetSCPacket_SYNC(&buffer, pPlayer->_ID, pPlayer->_x, pPlayer->_y);
+		EnqueueUnicast(buffer.GetReadPtr(), setRet, pPlayer);
+		x = pPlayer->_x;
+		y = pPlayer->_y;
+	}
 
-	// Enqueue SCPacket
-	EnqueueBroadcastInSector(buffer->GetReadPtr(), setRet, pPlayer->_pSession);
+	SetPlayerMoveStop(pPlayer, direction, x, y);
 
+	SerializePacket buffer;
+	int setRet = SetSCPacket_MOVE_STOP(&buffer, pPlayer->_ID, pPlayer->_direction, pPlayer->_x, pPlayer->_y);
+	EnqueueAroundSector(buffer.GetReadPtr(), setRet, pPlayer->_pSector, pPlayer);
+
+	printf(" - Complete %s\n", __func__);
 	return true;
 }
 
@@ -566,30 +1212,36 @@ bool Server::HandleCSPacket_ATTACK1(Player* pPlayer)
 	short x;
 	short y;
 
-	// Get Data from CSPacket
 	bool getRet = GetCSPacket_ATTACK1(&(pPlayer->_pSession->_recvBuf), direction, x, y);
 	if (!getRet) return false;
 
-	// Set Data on SCPacket
-	SerializePacket* attackBuffer;
-	int attackSetRet = SetSCPacket_ATTACK1(attackBuffer, pPlayer->_ID, direction, x, y);
-
-	// Enqueue SCPacket (Attack)
-	EnqueueBroadcastInSector(attackBuffer->GetReadPtr(), attackSetRet);
-
-	if (1)
+	if (abs(pPlayer->_x - x) > dfERROR_RANGE || abs(pPlayer->_y - y) > dfERROR_RANGE)
 	{
-		Player* damagedPlayer = nullptr; // TO-DO
-
-		SerializePacket* damageBuffer;
-		int damageSetRet = SetSCPacket_DAMAGE(
-			damageBuffer, pPlayer->_ID, damagedPlayer->_ID, damagedPlayer->_hp);
-
-		// Enqueue SCPacket (Damage)
-		EnqueueUnicast(damageBuffer->GetReadPtr(), damageSetRet, damagedPlayer->_pSession);
+		SerializePacket buffer;
+		int setRet = SetSCPacket_SYNC(&buffer, pPlayer->_ID, pPlayer->_x, pPlayer->_y);
+		EnqueueUnicast(buffer.GetReadPtr(), setRet, pPlayer);
+		x = pPlayer->_x;
+		y = pPlayer->_y;
 	}
 
-	return false;
+	Player* damagedPlayer = nullptr;
+	SetPlayerAttack1(pPlayer, damagedPlayer, direction, x, y);
+
+	SerializePacket attackBuffer;
+	int attackSetRet = SetSCPacket_ATTACK1(&attackBuffer, 
+		pPlayer->_ID, pPlayer->_direction, pPlayer->_x, pPlayer->_y);
+	EnqueueAroundSector(attackBuffer.GetReadPtr(), attackSetRet, pPlayer->_pSector);
+
+	if (damagedPlayer != nullptr)
+	{
+		SerializePacket damageBuffer;
+		int damageSetRet = SetSCPacket_DAMAGE(
+			&damageBuffer, pPlayer->_ID, damagedPlayer->_ID, damagedPlayer->_hp);
+		EnqueueAroundSector(damageBuffer.GetReadPtr(), damageSetRet, damagedPlayer->_pSector);
+	}
+
+	printf(" - Complete %s\n", __func__);
+	return true;
 }
 
 bool Server::HandleCSPacket_ATTACK2(Player* pPlayer)
@@ -598,31 +1250,36 @@ bool Server::HandleCSPacket_ATTACK2(Player* pPlayer)
 	short x;
 	short y;
 
-	// Get Data from CSPacket
 	bool getRet = GetCSPacket_ATTACK2(&(pPlayer->_pSession->_recvBuf), direction, x, y);
 	if (!getRet) return false;
 
-	// Set Data on SCPacket
-	SerializePacket* attackBuffer;
-	int attackSetRet = SetSCPacket_ATTACK2(attackBuffer, pPlayer->_ID, direction, x, y);
-
-	// Enqueue SCPacket (Attack)
-	EnqueueBroadcastInSector(attackBuffer->GetReadPtr(), attackSetRet);
-
-	if (1)
+	if (abs(pPlayer->_x - x) > dfERROR_RANGE || abs(pPlayer->_y - y) > dfERROR_RANGE)
 	{
-		Player* damagedPlayer = nullptr; // TO-DO
-
-		SerializePacket* damageBuffer;
-		int damageSetRet = SetSCPacket_DAMAGE(
-			damageBuffer, pPlayer->_ID, damagedPlayer->_ID, damagedPlayer->_hp);
-
-		// Enqueue SCPacket (Damage)
-		EnqueueUnicast(damageBuffer->GetReadPtr(), damageSetRet, damagedPlayer->_pSession);
+		SerializePacket buffer;
+		int setRet = SetSCPacket_SYNC(&buffer, pPlayer->_ID, pPlayer->_x, pPlayer->_y);
+		EnqueueUnicast(buffer.GetReadPtr(), setRet, pPlayer);
+		x = pPlayer->_x;
+		y = pPlayer->_y;
 	}
 
+	Player* damagedPlayer = nullptr;
+	SetPlayerAttack2(pPlayer, damagedPlayer, direction, x, y);
 
-	return false;
+	SerializePacket attackBuffer;
+	int attackSetRet = SetSCPacket_ATTACK2(&attackBuffer, 
+		pPlayer->_ID, pPlayer->_direction, pPlayer->_x, pPlayer->_y);
+	EnqueueAroundSector(attackBuffer.GetReadPtr(), attackSetRet, pPlayer->_pSector);
+
+	if (damagedPlayer != nullptr)
+	{
+		SerializePacket damageBuffer;
+		int damageSetRet = SetSCPacket_DAMAGE(
+			&damageBuffer, pPlayer->_ID, damagedPlayer->_ID, damagedPlayer->_hp);
+		EnqueueAroundSector(damageBuffer.GetReadPtr(), damageSetRet, damagedPlayer->_pSector);
+	}
+	
+	printf(" - Complete %s\n", __func__);
+	return true;
 }
 
 bool Server::HandleCSPacket_ATTACK3(Player* pPlayer)
@@ -631,47 +1288,50 @@ bool Server::HandleCSPacket_ATTACK3(Player* pPlayer)
 	short x;
 	short y;
 
-	// Get Data from CSPacket
 	bool getRet = GetCSPacket_ATTACK3(&(pPlayer->_pSession->_recvBuf), direction, x, y);
 	if (!getRet) return false;
 
-	// Set Data on SCPacket
-	SerializePacket* attackBuffer;
-	int attackSetRet = SetSCPacket_ATTACK3(attackBuffer, pPlayer->_ID, direction, x, y);
-
-	// Enqueue SCPacket (Attack)
-	EnqueueBroadcastInSector(attackBuffer->GetReadPtr(), attackSetRet);
-
-	if (1)
+	if (abs(pPlayer->_x - x) > dfERROR_RANGE || abs(pPlayer->_y - y) > dfERROR_RANGE)
 	{
-		Player* damagedPlayer = nullptr; // TO-DO
-
-		SerializePacket* damageBuffer;
-		int damageSetRet = SetSCPacket_DAMAGE(
-			damageBuffer, pPlayer->_ID, damagedPlayer->_ID, damagedPlayer->_hp);
-
-		// Enqueue SCPacket (Damage)
-		EnqueueUnicast(damageBuffer->GetReadPtr(), damageSetRet, damagedPlayer->_pSession);
+		SerializePacket buffer;
+		int setRet = SetSCPacket_SYNC(&buffer, pPlayer->_ID, pPlayer->_x, pPlayer->_y);
+		EnqueueUnicast(buffer.GetReadPtr(), setRet, pPlayer);
+		x = pPlayer->_x;
+		y = pPlayer->_y;
 	}
 
-	return false;
+	Player* damagedPlayer = nullptr;
+	SetPlayerAttack3(pPlayer, damagedPlayer, direction, x, y);
+
+	SerializePacket attackBuffer;
+	int attackSetRet = SetSCPacket_ATTACK3(&attackBuffer, 
+		pPlayer->_ID, pPlayer->_direction, pPlayer->_x, pPlayer->_y);
+	EnqueueAroundSector(attackBuffer.GetReadPtr(), attackSetRet, pPlayer->_pSector);
+
+	if (damagedPlayer != nullptr)
+	{
+		SerializePacket damageBuffer;
+		int damageSetRet = SetSCPacket_DAMAGE(
+			&damageBuffer, pPlayer->_ID, damagedPlayer->_ID, damagedPlayer->_hp);
+		EnqueueAroundSector(damageBuffer.GetReadPtr(), damageSetRet, damagedPlayer->_pSector);
+	}
+	
+	printf(" - Complete %s\n", __func__);
+	return true;
 }
 
 bool Server::HandleCSPacket_ECHO(Player* pPlayer)
 {
 	int time;
-
-	// Get Data from CSPacket
 	bool getRet = GetCSPacket_ECHO(&(pPlayer->_pSession->_recvBuf), time);
 	if (!getRet) return false;
 
-	// Set Data on SCPacket
-	SerializePacket* buffer;
-	int setRet = SetSCPacket_ECHO(buffer, time);
+	SerializePacket buffer;
+	int setRet = SetSCPacket_ECHO(&buffer, time);
+	EnqueueUnicast(buffer.GetReadPtr(), setRet, pPlayer);
 
-	// Enqueue SCPacket
-	EnqueueUnicast(buffer->GetReadPtr(), setRet, pPlayer->_pSession);
-	return false;
+	printf(" - Complete %s\n", __func__);
+	return true;
 }
 
 bool Server::GetCSPacket_MOVE_START(RingBuffer* recvBuffer, BYTE& moveDirection, short& x, short& y)
@@ -690,6 +1350,9 @@ bool Server::GetCSPacket_MOVE_START(RingBuffer* recvBuffer, BYTE& moveDirection,
 	buffer >> moveDirection;
 	buffer >> x;
 	buffer >> y;
+
+	printf(" - Complete %s\n", __func__);
+	return true;
 }
 
 bool Server::GetCSPacket_MOVE_STOP(RingBuffer* recvBuffer, BYTE& direction, short& x, short& y)
@@ -708,6 +1371,9 @@ bool Server::GetCSPacket_MOVE_STOP(RingBuffer* recvBuffer, BYTE& direction, shor
 	buffer >> direction;
 	buffer >> x;
 	buffer >> y;
+
+	printf(" - Complete %s\n", __func__);
+	return true;
 }
 
 bool Server::GetCSPacket_ATTACK1(RingBuffer* recvBuffer, BYTE& direction, short& x, short& y)
@@ -726,6 +1392,9 @@ bool Server::GetCSPacket_ATTACK1(RingBuffer* recvBuffer, BYTE& direction, short&
 	buffer >> direction;
 	buffer >> x;
 	buffer >> y;
+
+	printf(" - Complete %s\n", __func__);
+	return true;
 }
 
 bool Server::GetCSPacket_ATTACK2(RingBuffer* recvBuffer, BYTE& direction, short& x, short& y)
@@ -744,6 +1413,9 @@ bool Server::GetCSPacket_ATTACK2(RingBuffer* recvBuffer, BYTE& direction, short&
 	buffer >> direction;
 	buffer >> x;
 	buffer >> y;
+
+	printf(" - Complete %s\n", __func__);
+	return true;
 }
 
 bool Server::GetCSPacket_ATTACK3(RingBuffer* recvBuffer, BYTE& direction, short& x, short& y)
@@ -762,6 +1434,9 @@ bool Server::GetCSPacket_ATTACK3(RingBuffer* recvBuffer, BYTE& direction, short&
 	buffer >> direction;
 	buffer >> x;
 	buffer >> y;
+
+	printf(" - Complete %s\n", __func__);
+	return true;
 }
 
 bool Server::GetCSPacket_ECHO(RingBuffer* recvBuffer, int& time)
@@ -778,6 +1453,192 @@ bool Server::GetCSPacket_ECHO(RingBuffer* recvBuffer, int& time)
 	buffer.MoveWritePos(dequeueRet);
 
 	buffer >> time;
+
+	printf(" - Complete %s\n", __func__);
+	return true;
+}
+
+void Server::SetPlayerMoveStart(Player* pPlayer, BYTE& moveDirection, short& x, short& y)
+{
+	pPlayer->_x = x;
+	pPlayer->_y = y;
+	pPlayer->_move = true;
+	pPlayer->_moveDirection = moveDirection;
+
+	switch (moveDirection)
+	{
+	case  dfPACKET_MOVE_DIR_LL:
+	case  dfPACKET_MOVE_DIR_LU:
+	case  dfPACKET_MOVE_DIR_LD:
+		pPlayer->_direction = dfPACKET_MOVE_DIR_LL;
+		break;
+
+	case  dfPACKET_MOVE_DIR_RU:
+	case  dfPACKET_MOVE_DIR_RR:
+	case  dfPACKET_MOVE_DIR_RD:
+		pPlayer->_direction = dfPACKET_MOVE_DIR_RR;
+		break;
+	}
+	printf(" - Complete %s\n", __func__);
+}
+
+void Server::SetPlayerMoveStop(Player* pPlayer, BYTE& direction, short& x, short& y)
+{
+	pPlayer->_x = x;
+	pPlayer->_y = y;
+	pPlayer->_move = false;
+	pPlayer->_direction = direction;
+	printf(" - Complete %s\n", __func__);
+}
+
+void Server::SetPlayerAttack1(Player* pPlayer, Player*& pDamagedPlayer, BYTE& direction, short& x, short& y)
+{
+	pPlayer->_x = x;
+	pPlayer->_y = y;
+	pPlayer->_direction = direction;
+
+	Sector sectors[9];
+	GetAroundSector(pPlayer->_pSector, sectors);
+
+	if (direction == dfPACKET_MOVE_DIR_LL)
+	{
+		for (int i = 0; i < 9; i++)
+		{
+			vector<Player*>::iterator iter = sectors[i]._players.begin();
+			for (; iter < sectors[i]._players.end(); iter)
+			{
+				int dist = pPlayer->_x - (*iter)->_x;
+				if (dist >= 0 && dist <= dfATTACK1_RANGE_X &&
+					abs((*iter)->_y - pPlayer->_y) <= dfATTACK1_RANGE_Y)
+				{
+					pDamagedPlayer = (*iter);
+					pDamagedPlayer->_hp -= dfATTACK1_DAMAGE;
+					printf(" - Complete %s\n", __func__);
+					return;
+				}
+			}
+		}
+	}
+	else if (direction == dfPACKET_MOVE_DIR_RR)
+	{
+		for (int i = 0; i < 9; i++)
+		{
+			vector<Player*>::iterator iter = sectors[i]._players.begin();
+			for (; iter < sectors[i]._players.end(); iter)
+			{
+				int dist = (*iter)->_x - pPlayer->_x;
+				if (dist >= 0 && dist <= dfATTACK1_RANGE_X &&
+					abs((*iter)->_y - pPlayer->_y) <= dfATTACK1_RANGE_Y)
+				{
+					pDamagedPlayer = (*iter);
+					pDamagedPlayer->_hp -= dfATTACK1_DAMAGE;
+					printf(" - Complete %s\n", __func__);
+					return;
+				}
+			}
+		}
+	}
+	printf(" - Complete %s\n", __func__);
+}
+
+void Server::SetPlayerAttack2(Player* pPlayer, Player*& pDamagedPlayer, BYTE& direction, short& x, short& y)
+{
+	pPlayer->_x = x;
+	pPlayer->_y = y;
+	pPlayer->_direction = direction;
+
+	Sector sectors[9];
+	GetAroundSector(pPlayer->_pSector, sectors);
+
+	if (direction == dfPACKET_MOVE_DIR_LL)
+	{
+		for (int i = 0; i < 9; i++)
+		{
+			vector<Player*>::iterator iter = sectors[i]._players.begin();
+			for (; iter < sectors[i]._players.end(); iter)
+			{
+				int dist = pPlayer->_x - (*iter)->_x;
+				if (dist >= 0 && dist <= dfATTACK2_RANGE_X &&
+					abs((*iter)->_y - pPlayer->_y) <= dfATTACK2_RANGE_Y)
+				{
+					pDamagedPlayer = (*iter);
+					pDamagedPlayer->_hp -= dfATTACK2_DAMAGE;
+					printf(" - Complete %s\n", __func__);
+					return;
+				}
+			}
+		}
+	}
+	else if (direction == dfPACKET_MOVE_DIR_RR)
+	{
+		for (int i = 0; i < 9; i++)
+		{
+			vector<Player*>::iterator iter = sectors[i]._players.begin();
+			for (; iter < sectors[i]._players.end(); iter)
+			{
+				int dist = (*iter)->_x - pPlayer->_x;
+				if (dist >= 0 && dist <= dfATTACK2_RANGE_X &&
+					abs((*iter)->_y - pPlayer->_y) <= dfATTACK2_RANGE_Y)
+				{
+					pDamagedPlayer = (*iter);
+					pDamagedPlayer->_hp -= dfATTACK2_DAMAGE;
+					printf(" - Complete %s\n", __func__);
+					return;
+				}
+			}
+		}
+	}
+	printf(" - Complete %s\n", __func__);
+}
+
+void Server::SetPlayerAttack3(Player* pPlayer, Player*& pDamagedPlayer, BYTE& direction, short& x, short& y)
+{
+	pPlayer->_x = x;
+	pPlayer->_y = y;
+	pPlayer->_direction = direction;
+
+	Sector sectors[9];
+	GetAroundSector(pPlayer->_pSector, sectors);
+
+	if (direction == dfPACKET_MOVE_DIR_LL)
+	{
+		for (int i = 0; i < 9; i++)
+		{
+			vector<Player*>::iterator iter = sectors[i]._players.begin();
+			for (; iter < sectors[i]._players.end(); iter)
+			{
+				int dist = pPlayer->_x - (*iter)->_x;
+				if (dist >= 0 && dist <= dfATTACK3_RANGE_X &&
+					abs((*iter)->_y - pPlayer->_y) <= dfATTACK3_RANGE_Y)
+				{
+					pDamagedPlayer = (*iter);
+					pDamagedPlayer->_hp -= dfATTACK3_DAMAGE;
+					printf(" - Complete %s\n", __func__);
+					return;
+				}
+			}
+		}
+	}
+	else if (direction == dfPACKET_MOVE_DIR_RR)
+	{
+		for (int i = 0; i < 9; i++)
+		{
+			vector<Player*>::iterator iter = sectors[i]._players.begin();
+			for (; iter < sectors[i]._players.end(); iter)
+			{
+				int dist = (*iter)->_x - pPlayer->_x;
+				if (dist >= 0 && dist <= dfATTACK3_RANGE_X &&
+					abs((*iter)->_y - pPlayer->_y) <= dfATTACK3_RANGE_Y)
+				{
+					pDamagedPlayer = (*iter);
+					pDamagedPlayer->_hp -= dfATTACK3_DAMAGE;
+					printf(" - Complete %s\n", __func__);
+					return;
+				}
+			}
+		}
+	}
+	printf(" - Complete %s\n", __func__);
 }
 
 void Server::SetSCPacket_HEADER(SerializePacket* buffer, BYTE size, BYTE type)
@@ -804,6 +1665,7 @@ int Server::SetSCPacket_CREATE_MY_CHAR(SerializePacket* buffer, int ID, BYTE dir
 			buffer->GetDataSize(), dfHEADER_SIZE + size, __func__, __LINE__);
 	}
 
+	printf(" - Complete %s\n", __func__);
 	return buffer->GetDataSize();
 }
 
@@ -824,6 +1686,7 @@ int Server::SetSCPacket_CREATE_OTHER_CHAR(SerializePacket* buffer, int ID, BYTE 
 			buffer->GetDataSize(), dfHEADER_SIZE + size, __func__, __LINE__);
 	}
 
+	printf(" - Complete %s\n", __func__);
 	return buffer->GetDataSize();
 }
 
@@ -840,6 +1703,7 @@ int Server::SetSCPacket_DELETE_CHAR(SerializePacket* buffer, int ID)
 			buffer->GetDataSize(), dfHEADER_SIZE + size, __func__, __LINE__);
 	}
 
+	printf(" - Complete %s\n", __func__);
 	return buffer->GetDataSize();
 }
 
@@ -859,6 +1723,7 @@ int Server::SetSCPacket_MOVE_START(SerializePacket* buffer, int ID, BYTE moveDir
 			buffer->GetDataSize(), dfHEADER_SIZE + size, __func__, __LINE__);
 	}
 
+	printf(" - Complete %s\n", __func__);
 	return buffer->GetDataSize();
 }
 
@@ -878,6 +1743,7 @@ int Server::SetSCPacket_MOVE_STOP(SerializePacket* buffer, int ID, BYTE directio
 			buffer->GetDataSize(), dfHEADER_SIZE + size, __func__, __LINE__);
 	}
 
+	printf(" - Complete %s\n", __func__);
 	return buffer->GetDataSize();
 }
 
@@ -897,6 +1763,7 @@ int Server::SetSCPacket_ATTACK1(SerializePacket* buffer, int ID, BYTE direction,
 			buffer->GetDataSize(), dfHEADER_SIZE + size, __func__, __LINE__);
 	}
 
+	printf(" - Complete %s\n", __func__);
 	return buffer->GetDataSize();
 }
 
@@ -916,6 +1783,7 @@ int Server::SetSCPacket_ATTACK2(SerializePacket* buffer, int ID, BYTE direction,
 			buffer->GetDataSize(), dfHEADER_SIZE + size, __func__, __LINE__);
 	}
 
+	printf(" - Complete %s\n", __func__);
 	return buffer->GetDataSize();
 }
 
@@ -935,6 +1803,7 @@ int Server::SetSCPacket_ATTACK3(SerializePacket* buffer, int ID, BYTE direction,
 			buffer->GetDataSize(), dfHEADER_SIZE + size, __func__, __LINE__);
 	}
 
+	printf(" - Complete %s\n", __func__);
 	return buffer->GetDataSize();
 }
 
@@ -953,6 +1822,7 @@ int Server::SetSCPacket_DAMAGE(SerializePacket* buffer, int attackID, int damage
 			buffer->GetDataSize(), dfHEADER_SIZE + size, __func__, __LINE__);
 	}
 
+	printf(" - Complete %s\n", __func__);
 	return buffer->GetDataSize();
 }
 
@@ -971,6 +1841,7 @@ int Server::SetSCPacket_SYNC(SerializePacket* buffer, int ID, short x, short y)
 			buffer->GetDataSize(), dfHEADER_SIZE + size, __func__, __LINE__);
 	}
 
+	printf(" - Complete %s\n", __func__);
 	return buffer->GetDataSize();
 }
 
@@ -987,6 +1858,28 @@ int Server::SetSCPacket_ECHO(SerializePacket* buffer, int time)
 			buffer->GetDataSize(), dfHEADER_SIZE + size, __func__, __LINE__);
 	}
 
+	printf(" - Complete %s\n", __func__);
 	return buffer->GetDataSize();
 }
 
+void Server::Sector::InitializeSector(short xIndex, short yIndex)
+{
+	_xIndex = xIndex;
+	_yIndex = yIndex;
+	_xPosMin = (xIndex - 1) * dfSECTOR_SIZE_X ;
+	_yPosMin = (yIndex - 1) * dfSECTOR_SIZE_Y;
+	_xPosMax = (xIndex * dfSECTOR_SIZE_X) - 1;
+	_yPosMax = (yIndex * dfSECTOR_SIZE_Y) - 1;
+
+	if (_xIndex == 0 || _xIndex == dfSECTOR_CNT_X ||
+		_yIndex == 0 || _yIndex == dfSECTOR_CNT_Y)
+		return;
+
+	_players.reserve(dfDEFAULT_PLAYERS_PER_SECTOR);
+}
+
+void Server::Player::SetPlayerDead()
+{
+	_alive = false;
+	_pSession->SetSessionDead();
+}

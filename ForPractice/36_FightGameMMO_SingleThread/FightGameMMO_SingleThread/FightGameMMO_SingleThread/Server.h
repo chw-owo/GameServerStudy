@@ -16,8 +16,13 @@ private:
 	~Server();
 
 public:
-	void Update();
 	static Server* GetInstance();
+
+public:
+	void NetworkUpdate();
+	void ContentUpdate();
+	void Control();
+	void Monitor();
 
 private:
 	static Server _server;
@@ -36,9 +41,9 @@ private:
 
 	private:
 		bool _alive = false;
-		int _ID;
 
 	public:
+		int _ID;
 		SOCKET _socket;
 		SOCKADDR_IN _addr;
 		RingBuffer _recvBuf;
@@ -53,79 +58,99 @@ private:
 	void SendProc(Session* pSession);
 
 private:
-	void EnqueueUnicast(char* msg, int size, Session* pSession);
-	void EnqueueBroadcast(char* msg, int size, Session* pExpSession = nullptr);
-	void EnqueueBroadcastInSector(char* msg, int size, Session* pExpSession = nullptr);
-
-private:
 	void DisconnectDeadSession();
 
 private:
 	int _sessionID = 0;
-	SOCKET _listensock;
+	SOCKET _listensock = INVALID_SOCKET;
 	Session* _sessionArray[FD_SETSIZE];
 	timeval _time;
 	vector<Session*> _allSessions;
 
 // About Content ====================================================
 private:
+	class Player;
+	class Sector
+	{
+	public:
+		void InitializeSector(short xIndex, short yIndex);
+
+	public:
+		short _xIndex;
+		short _yIndex;
+		vector<Player*> _players;
+
+	public:
+		short _xPosMin;
+		short _yPosMin;
+		short _xPosMax;
+		short _yPosMax;
+	};
+
+private:
 	class Player
 	{
 	public:
 		Player(Session* pSession, int ID)
-			: _pSession(pSession), _alive(false), _ID(ID), _direction(dfPACKET_MOVE_DIR_LL),
-			_moveDirection(dfPACKET_MOVE_DIR_LL), _hp(dfMAX_HP)
+			: _pSession(pSession), _sessionID(pSession->_ID), 
+			_ID(ID), _alive(true), _hp(dfMAX_HP), _move(false), _pSector(nullptr),
+			_direction(dfPACKET_MOVE_DIR_LL), _moveDirection(dfPACKET_MOVE_DIR_LL)
 		{
 			srand(ID);
-			_x = rand() % dfRANGE_MOVE_RIGHT;
-			_y = rand() % dfRANGE_MOVE_BOTTOM;
+			_x = 50; // rand() % dfRANGE_MOVE_RIGHT;
+			_y = 50; // rand() % dfRANGE_MOVE_BOTTOM;
 		}
 
 	public:
+		void SetPlayerDead();
 		void SetPlayerAlive() { _alive = true; }
-		void SetPlayerDead() { _alive = false; }
 		bool GetPlayerAlive() { return _alive; }
+		bool GetPlayerMove() { return _move; }
 
 	public:
 		Session* _pSession;
+		int _sessionID;
 
 	public:
-		bool _alive;
 		int _ID;
+		bool _alive;
+		bool _move;
+		BYTE _hp;
+		Sector* _pSector;
+
+		short _x;
+		short _y;
 		BYTE _direction;
 		BYTE _moveDirection;
-		unsigned short _x;
-		unsigned short _y;
-		BYTE _hp;
-
 	};
 
-#define dfDEFAULT_PLAYERS_PER_SECTOR 100
+private:
+	int _playerID = 0;
+	vector<Player*> _allPlayers;
+	Sector _sectors[dfSECTOR_CNT_Y][dfSECTOR_CNT_X];
+	unordered_map<Session*, Player*> _SessionPlayerMap;
 
-	class Sector
-	{
-	public:
-		Sector()
-		{
-			_playerArray.reserve(dfDEFAULT_PLAYERS_PER_SECTOR);
-		}
+private:
+	bool SkipForFixedFrame();
+	bool CheckMovable(short x, short y);
+	void UpdatePlayerMove(Player* pPlayer);
 
-	public:
-		vector<Player*> _playerArray;
-	};
-
+private:
+	void SetSector(Player* pPlayer);
+	void GetAroundSector(Sector* centerSector, Sector* aroundSector);
+	void UpdateSector(Player* pPlayer, Sector* inSector, Sector* outSector, 
+		int inSectorNum, int outSectorNum, Sector* newSector);
+	
 private:
 	void CreatePlayer(Session* pSession);
 	void DeletePlayer(Player* pPlayer);
-
-private:
-	int _assignID = 0;
-	unordered_map<Session*, Player*> _SessionPlayerMap;
+	void DestroyDeadPlayers();
+	
 
 // About Packet ====================================================
 private:
 	// Handle CS Packet
-	bool HandleCSPackets(Player* pPlayer, WORD type);
+	bool HandleCSPackets(Player* pPlayer, BYTE type);
 	bool HandleCSPacket_MOVE_START(Player* pPlayer);
 	bool HandleCSPacket_MOVE_STOP(Player* pPlayer);
 	bool HandleCSPacket_ATTACK1(Player* pPlayer);
@@ -141,6 +166,13 @@ private:
 	bool GetCSPacket_ATTACK3(RingBuffer* recvBuffer, BYTE& direction, short& x, short& y);
 	bool GetCSPacket_ECHO(RingBuffer* recvBuffer, int& time);
 
+	// Set Game Data from Packet Data
+	void SetPlayerMoveStart(Player* pPlayer, BYTE& moveDirection, short& x, short& y);
+	void SetPlayerMoveStop(Player* pPlayer, BYTE& direction, short& x, short& y);
+	void SetPlayerAttack1(Player* pPlayer, Player*& pDamagedPlayer, BYTE& direction, short& x, short& y);
+	void SetPlayerAttack2(Player* pPlayer, Player*& pDamagedPlayer, BYTE& direction, short& x, short& y);
+	void SetPlayerAttack3(Player* pPlayer, Player*& pDamagedPlayer, BYTE& direction, short& x, short& y);
+	
 	// Set Data on SC Packet
 	void SetSCPacket_HEADER(SerializePacket* buffer, BYTE size, BYTE type);
 	int SetSCPacket_CREATE_MY_CHAR(SerializePacket* buffer, int ID, BYTE direction, short x, short y, BYTE hp);
@@ -154,5 +186,11 @@ private:
 	int SetSCPacket_DAMAGE(SerializePacket* buffer, int attackID, int damageID, BYTE damageHP);
 	int SetSCPacket_SYNC(SerializePacket* buffer, int ID, short x, short y);
 	int SetSCPacket_ECHO(SerializePacket* buffer, int time);
+
+	// Enqueue Data
+	void EnqueueUnicast(char* msg, int size, Player* pPlayer);
+	void EnqueueOneSector(char* msg, int size, Sector* sector, Player* pExpPlayer = nullptr);
+	void EnqueueAroundSector(char* msg, int size, Sector* centerSector, Player* pExpPlayer = nullptr);
+
 };
 

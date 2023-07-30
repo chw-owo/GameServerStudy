@@ -2,7 +2,17 @@
 #ifndef __PROTOCOL__
 #define __PROTOCOL__
 
+#ifndef _WINSOCKAPI_
+#define _WINSOCKAPI_
+#endif
+
+#include <Windows.h>
+
+#define dfFPS 25
+#define dfNETWORK_IP L"0.0.0.0"
 #define dfNETWORK_PORT 20000
+#define dfDEFAULT_SESSIONS_NUM	1000
+#define dfDEFAULT_PLAYERS_NUM	1000
 
 struct st_PACKET_HEADER
 {
@@ -11,7 +21,7 @@ struct st_PACKET_HEADER
 	BYTE	byType;			// 패킷타입.
 };
 
-#define dfHEADER_SIZE sizeof(st_PACKET_HEADER)
+#define dfHEADER_SIZE		sizeof(st_PACKET_HEADER)
 #define dfPACKET_CODE		0x89
 
 #define	dfPACKET_SC_CREATE_MY_CHARACTER			0
@@ -84,9 +94,6 @@ struct st_PACKET_HEADER
 #define dfPACKET_MOVE_DIR_RD					5
 #define dfPACKET_MOVE_DIR_DD					6
 #define dfPACKET_MOVE_DIR_LD					7
-
-
-
 
 #define	dfPACKET_SC_MOVE_START					11
 //---------------------------------------------------------------
@@ -318,5 +325,16 @@ struct st_PACKET_HEADER
 // 이동 오류체크 범위
 //-----------------------------------------------------------------
 #define dfERROR_RANGE		50
+
+//-----------------------------------------------------------------
+// 섹터 설정값
+//-----------------------------------------------------------------
+
+#define dfSECTOR_SIZE_X					32
+#define dfSECTOR_SIZE_Y					32
+#define dfSECTOR_CNT_X					(dfRANGE_MOVE_RIGHT / dfSECTOR_SIZE_X) + 2
+#define dfSECTOR_CNT_Y					(dfRANGE_MOVE_BOTTOM / dfSECTOR_SIZE_Y) + 2
+#define dfAROUND_SECTOR_NUM				9
+#define dfDEFAULT_PLAYERS_PER_SECTOR	64
 
 #endif
