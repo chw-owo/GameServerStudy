@@ -35,14 +35,7 @@ private:
 		Session(int ID) { _ID = ID; }
 
 	public:
-		void SetSessionAlive() { _alive = true; }
-		void SetSessionDead() { _alive = false; }
-		bool GetSessionAlive() { return _alive; }
-
-	private:
 		bool _alive = false;
-
-	public:
 		int _ID;
 		SOCKET _socket;
 		SOCKADDR_IN _addr;
@@ -58,6 +51,13 @@ private:
 	void SendProc(Session* pSession);
 
 private:
+	class Sector;
+	void EnqueueUnicast(char* msg, int size, Session* pSession);
+	void EnqueueOneSector(char* msg, int size, Sector* sector, Session* pExpSession = nullptr);
+	void EnqueueAroundSector(char* msg, int size, Sector* centerSector, Session* pExpSession = nullptr);
+
+private:
+	void SetSessionDead(Session* pSession);
 	void DisconnectDeadSession();
 
 private:
@@ -92,7 +92,7 @@ private:
 	{
 	public:
 		Player(Session* pSession, int ID)
-			: _pSession(pSession), _sessionID(pSession->_ID), 
+			: _pSession(pSession), _sessionID(pSession->_ID), _connected(true),
 			_ID(ID), _alive(true), _hp(dfMAX_HP), _move(false), _pSector(nullptr),
 			_direction(dfPACKET_MOVE_DIR_LL), _moveDirection(dfPACKET_MOVE_DIR_LL)
 		{
@@ -102,14 +102,9 @@ private:
 		}
 
 	public:
-		void SetPlayerDead();
-		void SetPlayerAlive() { _alive = true; }
-		bool GetPlayerAlive() { return _alive; }
-		bool GetPlayerMove() { return _move; }
-
-	public:
 		Session* _pSession;
 		int _sessionID;
+		bool _connected;
 
 	public:
 		int _ID;
@@ -128,7 +123,7 @@ private:
 	int _playerID = 0;
 	vector<Player*> _allPlayers;
 	Sector _sectors[dfSECTOR_CNT_Y][dfSECTOR_CNT_X];
-	unordered_map<Session*, Player*> _SessionPlayerMap;
+	unordered_map<int, Player*> _SessionIDPlayerMap;
 
 private:
 	bool SkipForFixedFrame();
@@ -143,9 +138,8 @@ private:
 	
 private:
 	void CreatePlayer(Session* pSession);
-	void DeletePlayer(Player* pPlayer);
+	void SetPlayerDead(Player* pPlayer);
 	void DestroyDeadPlayers();
-	
 
 // About Packet ====================================================
 private:
@@ -187,10 +181,6 @@ private:
 	int SetSCPacket_SYNC(SerializePacket* buffer, int ID, short x, short y);
 	int SetSCPacket_ECHO(SerializePacket* buffer, int time);
 
-	// Enqueue Data
-	void EnqueueUnicast(char* msg, int size, Player* pPlayer);
-	void EnqueueOneSector(char* msg, int size, Sector* sector, Player* pExpPlayer = nullptr);
-	void EnqueueAroundSector(char* msg, int size, Sector* centerSector, Player* pExpPlayer = nullptr);
 
 };
 

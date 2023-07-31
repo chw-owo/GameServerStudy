@@ -316,9 +316,9 @@ struct st_PACKET_HEADER
 //-----------------------------------------------------------------
 // 캐릭터 이동 속도 
 //-----------------------------------------------------------------
-#define dfSPEED_PLAYER_X	6   // 6 50fps, 3 25fps
-#define dfSPEED_PLAYER_Y	4	// 4 50fps, 2 25fps
-#define dfFPS 25
+#define dfSPEED_PLAYER_X	3   // 6 25fps, 3 50fps
+#define dfSPEED_PLAYER_Y	2	// 4 25fps, 2 50fps
+#define dfFPS 50
 
 //-----------------------------------------------------------------
 // 이동 오류체크 범위
