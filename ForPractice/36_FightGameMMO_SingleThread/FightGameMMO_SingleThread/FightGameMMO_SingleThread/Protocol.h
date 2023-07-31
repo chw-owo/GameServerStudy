@@ -8,7 +8,6 @@
 
 #include <Windows.h>
 
-#define dfFPS 25
 #define dfNETWORK_IP L"0.0.0.0"
 #define dfNETWORK_PORT 20000
 #define dfDEFAULT_SESSIONS_NUM	1000
@@ -315,11 +314,11 @@ struct st_PACKET_HEADER
 #define dfMAX_HP				100
 
 //-----------------------------------------------------------------
-// 캐릭터 이동 속도   // 25fps 기준 이동속도
+// 캐릭터 이동 속도 
 //-----------------------------------------------------------------
-#define dfSPEED_PLAYER_X	6	// 3   50fps
-#define dfSPEED_PLAYER_Y	4	// 2   50fps
-
+#define dfSPEED_PLAYER_X	6   // 6 50fps, 3 25fps
+#define dfSPEED_PLAYER_Y	4	// 4 50fps, 2 25fps
+#define dfFPS 25
 
 //-----------------------------------------------------------------
 // 이동 오류체크 범위
@@ -330,8 +329,8 @@ struct st_PACKET_HEADER
 // 섹터 설정값
 //-----------------------------------------------------------------
 
-#define dfSECTOR_SIZE_X					32
-#define dfSECTOR_SIZE_Y					32
+#define dfSECTOR_SIZE_X					128
+#define dfSECTOR_SIZE_Y					128
 #define dfSECTOR_CNT_X					(dfRANGE_MOVE_RIGHT / dfSECTOR_SIZE_X) + 2
 #define dfSECTOR_CNT_Y					(dfRANGE_MOVE_BOTTOM / dfSECTOR_SIZE_Y) + 2
 #define dfAROUND_SECTOR_NUM				9

@@ -79,6 +79,7 @@ int RingBuffer::Enqueue(char* chpData, int iSize)
     if (iSize <= directEnqueueSize)
     {
         memcpy_s(&_buffer[(_writePos + 1) % _bufferSize], iSize, chpData, iSize);
+
         /*
         ::printf("RingBuffer Input: ");
         for (int i = 0; i < iSize; i++)

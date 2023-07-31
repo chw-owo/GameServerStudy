@@ -97,8 +97,8 @@ private:
 			_direction(dfPACKET_MOVE_DIR_LL), _moveDirection(dfPACKET_MOVE_DIR_LL)
 		{
 			srand(ID);
-			_x = 50; // rand() % dfRANGE_MOVE_RIGHT;
-			_y = 50; // rand() % dfRANGE_MOVE_BOTTOM;
+			_x = dfRANGE_MOVE_RIGHT - 10; // rand() % dfRANGE_MOVE_RIGHT;
+			_y = dfRANGE_MOVE_BOTTOM - 10; // rand() % dfRANGE_MOVE_BOTTOM;
 		}
 
 	public:
