@@ -110,7 +110,7 @@ private:
 		int _ID;
 		bool _alive;
 		bool _move;
-		BYTE _hp;
+		signed char _hp;
 		Sector* _pSector;
 
 		short _x;
