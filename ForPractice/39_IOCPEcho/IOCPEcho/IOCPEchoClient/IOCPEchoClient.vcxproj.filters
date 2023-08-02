@@ -6,14 +6,14 @@
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
     <Filter Include="Main">
-      <UniqueIdentifier>{118d2f8a-14e4-462d-a70c-cd2b58f7a3ab}</UniqueIdentifier>
+      <UniqueIdentifier>{d7091951-b12e-43ed-9302-6097993f9c85}</UniqueIdentifier>
     </Filter>
     <Filter Include="NetworkUtils">
-      <UniqueIdentifier>{aab37369-764f-43c1-bc57-39d8b930a2bf}</UniqueIdentifier>
+      <UniqueIdentifier>{c7e076b6-4255-4cc3-beae-b082aa17c0fa}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ServerMain.cpp">
+    <ClCompile Include="ClientMain.cpp">
       <Filter>Main</Filter>
     </ClCompile>
     <ClCompile Include="RingBuffer.cpp">

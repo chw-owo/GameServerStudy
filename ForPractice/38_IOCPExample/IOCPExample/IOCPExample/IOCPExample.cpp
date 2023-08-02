@@ -6,6 +6,7 @@
 #define dfSERVER_PORT 9000
 #define dfBUFSIZE 512
 #define dfADDRESS_BUFSIZE 33
+
 struct Session
 {
 	OVERLAPPED overlapped;
@@ -125,11 +126,11 @@ int main()
 			}
 			continue;
 		}
-
-		// Terminate Winsock
-		WSACleanup();
-		return 0;
 	}
+
+	// Terminate Winsock
+	WSACleanup();
+	return 0;
 }
 
 DWORD WINAPI WorkerThread(LPVOID arg)

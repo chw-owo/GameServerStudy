@@ -21,10 +21,9 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{500048de-22f5-4733-947d-98f5866a17b3}</ProjectGuid>
-    <RootNamespace>IOCPEcho</RootNamespace>
+    <ProjectGuid>{a1874c89-edb4-4841-81d9-1dc8a18ccec5}</ProjectGuid>
+    <RootNamespace>IOCPEchoClient</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
-    <ProjectName>IOCPEchoServer</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -128,8 +127,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="ClientMain.cpp" />
     <ClCompile Include="RingBuffer.cpp" />
-    <ClCompile Include="ServerMain.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="RingBuffer.h" />
