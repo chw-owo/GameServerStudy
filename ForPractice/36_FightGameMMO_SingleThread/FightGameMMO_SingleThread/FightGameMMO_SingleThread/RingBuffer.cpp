@@ -3,12 +3,12 @@
 
 RingBuffer::RingBuffer(void) : _bufferSize(DEFAULT_BUF_SIZE), _freeSize(DEFAULT_BUF_SIZE - 1)
 {
-    _buffer = new char[_bufferSize]();
+    _buffer = new char[_bufferSize];
 }
 
 RingBuffer::RingBuffer(int bufferSize) : _bufferSize(bufferSize), _freeSize(bufferSize - 1)
 {
-    _buffer = new char[_bufferSize]();
+    _buffer = new char[_bufferSize];
 }
 
 RingBuffer::~RingBuffer(void)
@@ -201,17 +201,17 @@ bool RingBuffer::Resize(int iSize)
         return false;
     }
 
-    char* newBuffer = new char[iSize]();
+    char* newBuffer = new char[iSize];
 
     if (_writePos > _readPos)
     {
-        memcpy_s(newBuffer, iSize, &_buffer[(_readPos + 1) % _bufferSize], _useSize);
+        memcpy_s(newBuffer, iSize, &_buffer[_readPos % _bufferSize], _useSize + 1);
     }
     else if (_writePos < _readPos)
     {
-        int size1 = _bufferSize - _readPos - 1;
+        int size1 = _bufferSize - _readPos;
         int size2 = _writePos + 1;
-        memcpy_s(newBuffer, iSize, &_buffer[(_readPos + 1) % _bufferSize], size1);
+        memcpy_s(newBuffer, iSize, &_buffer[_readPos % _bufferSize], size1);
         memcpy_s(&newBuffer[size1], iSize - size1, _buffer, size2);
     }
 

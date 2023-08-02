@@ -1,6 +1,6 @@
 #include "RingBuffer.h"
 #include <iostream>
-#define RINGBUFFER_DEBUG
+//#define RINGBUFFER_DEBUG
 //#define ENQ_DEQ_DEBUG
 
 RingBuffer::RingBuffer(void) : _bufferSize(DEFAULT_BUF_SIZE), _freeSize(DEFAULT_BUF_SIZE - 1)

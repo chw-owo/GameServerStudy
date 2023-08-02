@@ -3,6 +3,12 @@
 #include <stdio.h>
 #include <wchar.h>
 
+// TO-DO
+// 1. 모니터링, 로그 기능 추가 
+// 2. Enqueue Broadcast 지연 처리
+// 3. 동접 4500까지는 Sync Msg 0인데
+// 그걸 넘어가면 확 느려짐... 6000까지 되도록 수정
+
 Server::Server()
 {
 	int err;
@@ -85,11 +91,12 @@ Server::Server()
 
 Server::~Server()
 {
-	vector<Session*>::iterator sessionIter = _allSessions.begin();
-	for (; sessionIter < _allSessions.end(); sessionIter++)
+	
+	vector<Session*>::iterator iter = _allSessions.begin();
+	for (; iter < _allSessions.end();)
 	{
-		Session* pSession = *sessionIter;
-		sessionIter = _allSessions.erase(sessionIter);
+		Session* pSession = *iter;
+		iter = _allSessions.erase(iter);
 		closesocket(pSession->_socket);
 		delete(pSession);
 	}
@@ -115,8 +122,8 @@ void Server::NetworkUpdate()
 	FD_SET(_listensock, &rset);
 	memset(_sessionArray, 0, sizeof(_sessionArray));
 
-	vector<Session*>::iterator i = _allSessions.begin();
-	if (i == _allSessions.end())
+	vector<Session*>::iterator iter = _allSessions.begin();
+	if (iter == _allSessions.end())
 	{
 		// Select Socket Set
 		int selectRet = select(0, &rset, NULL, NULL, &_time);
@@ -135,12 +142,12 @@ void Server::NetworkUpdate()
 	}
 	else
 	{
-		for (; i < _allSessions.end(); i++)
+		for (; iter < _allSessions.end(); iter++)
 		{
-			FD_SET((*i)->_socket, &rset);
-			if ((*i)->_sendBuf.GetUseSize() > 0)
-				FD_SET((*i)->_socket, &wset);
-			_sessionArray[idx] = (*i);
+			FD_SET((*iter)->_socket, &rset);
+			if ((*iter)->_sendBuf.GetUseSize() > 0)
+				FD_SET((*iter)->_socket, &wset);
+			_sessionArray[idx] = (*iter);
 			idx++;
 
 			if (idx == FD_SETSIZE)
@@ -161,13 +168,14 @@ void Server::NetworkUpdate()
 		}
 	}
 
+	SetAcceptedSession();
 	DisconnectDeadSession();
 }
 
 void Server::ContentUpdate()
 {
 	if (SkipForFixedFrame()) return;
-
+	
 	vector<Player*>::iterator playerIter = _allPlayers.begin();
 	for (; playerIter < _allPlayers.end(); playerIter++)
 	{
@@ -234,8 +242,6 @@ void Server::SelectProc(FD_SET rset, FD_SET wset, int max)
 
 void Server::AcceptProc()
 {
-	
-
 	SOCKADDR_IN clientaddr;
 	int addrlen = sizeof(clientaddr);
 	Session* pSession = new Session(_sessionID++);
@@ -259,14 +265,11 @@ void Server::AcceptProc()
 	pSession->_alive = true;
 	pSession->_addr = clientaddr;
 	pSession->_lastRecvTime = timeGetTime();
-	_allSessions.push_back(pSession);
-	CreatePlayer(pSession);
+	_acceptedSessions.push_back(pSession);
 }
 
 void Server::RecvProc(Session* pSession)
 {
-	
-
 	pSession->_lastRecvTime = timeGetTime();
 
 	int recvRet = recv(pSession->_socket,
@@ -306,13 +309,14 @@ void Server::RecvProc(Session* pSession)
 	int useSize = pSession->_recvBuf.GetUseSize();
 
 	unordered_map<int, Player*>::iterator mapIter = _SessionIDPlayerMap.find(pSession->_ID);
+
 	if (mapIter == _SessionIDPlayerMap.end())
 	{
 		::printf("Error! Func %s Line %d\n", __func__, __LINE__);
 		g_bShutdown = true;
 		return;
 	}
-	
+
 	Player* pPlayer = mapIter->second;
 
 	while (useSize > 0)
@@ -362,8 +366,6 @@ void Server::RecvProc(Session* pSession)
 
 void Server::SendProc(Session* pSession)
 {
-	
-
 	if (pSession->_sendBuf.GetUseSize() <= 0)
 		return;
 
@@ -374,9 +376,13 @@ void Server::SendProc(Session* pSession)
 	if (sendRet == SOCKET_ERROR)
 	{
 		int err = WSAGetLastError();
+		
 		if (err != WSAEWOULDBLOCK)
 		{
-			::printf("Error! Func %s Line %d: %d\n", __func__, __LINE__, err);
+			if (err != WSAECONNRESET)
+			{
+				::printf("Error! Func %s Line %d: %d\n", __func__, __LINE__, err);
+			}
 			SetSessionDead(pSession);
 			return;
 		}
@@ -392,6 +398,18 @@ void Server::SendProc(Session* pSession)
 }
 
 
+void Server::SetAcceptedSession()
+{
+	vector<Session*>::iterator iter =  _acceptedSessions.begin();
+	for (; iter < _acceptedSessions.end(); iter++)
+	{
+		Session* pSession = (*iter);
+		_allSessions.push_back(pSession);
+		CreatePlayer(pSession);
+	}
+	_acceptedSessions.clear();
+}
+
 void Server::SetSessionDead(Session* pSession)
 {
 	pSession->_alive = false;
@@ -402,20 +420,19 @@ void Server::SetSessionDead(Session* pSession)
 		g_bShutdown = true;
 		return;
 	}
+
 	Player* pPlayer = iter->second;
 	pPlayer->_connected = false;
 }
 
 void Server::DisconnectDeadSession()
 {
-	vector<Session*>::iterator i = _allSessions.begin();
-	for (; i < _allSessions.end();)
+	vector<Session*>::iterator iter = _allSessions.begin();
+	for (; iter < _allSessions.end();)
 	{
-		if (!(*i)->_alive)
+		if (!(*iter)->_alive)
 		{
-			
-			Session* pSession = *i;
-			i = _allSessions.erase(i);
+			Session* pSession = *iter;
 			closesocket(pSession->_socket);
 
 			unordered_map<int, Player*>::iterator mapIter
@@ -427,13 +444,14 @@ void Server::DisconnectDeadSession()
 				g_bShutdown = true;
 				return;
 			}
-			_SessionIDPlayerMap.erase(mapIter);
 
+			_SessionIDPlayerMap.erase(mapIter);
 			delete(pSession);
+			iter = _allSessions.erase(iter);
 		}
 		else
 		{
-			i++;
+			iter++;
 		}
 	}
 }
@@ -441,8 +459,6 @@ void Server::DisconnectDeadSession()
 
 void Server::EnqueueUnicast(char* msg, int size, Session* pSession)
 {
-	
-
 	int enqueueRet = pSession->_sendBuf.Enqueue(msg, size);
 	if (enqueueRet != size)
 	{
@@ -453,11 +469,10 @@ void Server::EnqueueUnicast(char* msg, int size, Session* pSession)
 
 void Server::EnqueueOneSector(char* msg, int size, Sector* sector, Session* pExpSession)
 {
-	
-
 	int enqueueRet;
 	if (pExpSession == nullptr)
 	{
+		
 		vector<Player*>::iterator playerIter = sector->_players.begin();
 		for (; playerIter < sector->_players.end(); playerIter++)
 		{
@@ -474,6 +489,7 @@ void Server::EnqueueOneSector(char* msg, int size, Sector* sector, Session* pExp
 	}
 	else
 	{
+		
 		vector<Player*>::iterator playerIter = sector->_players.begin();
 		for (; playerIter < sector->_players.end(); playerIter++)
 		{
@@ -492,11 +508,7 @@ void Server::EnqueueOneSector(char* msg, int size, Sector* sector, Session* pExp
 
 void Server::EnqueueAroundSector(char* msg, int size, Sector* centerSector, Session* pExpSession)
 {
-	// TO-DO: 몇천명 단위일 때 어떻게 다음 프레임으로 미룰 것인지
-	
-
 	int enqueueRet;
-
 	if (pExpSession == nullptr)
 	{
 		Sector sectors[dfAROUND_SECTOR_NUM];
@@ -504,6 +516,7 @@ void Server::EnqueueAroundSector(char* msg, int size, Sector* centerSector, Sess
 
 		for(int i = 0; i < dfAROUND_SECTOR_NUM; i++)
 		{
+			
 			vector<Player*>::iterator playerIter = sectors[i]._players.begin();
 			for (; playerIter < sectors[i]._players.end(); playerIter++)
 			{
@@ -524,6 +537,7 @@ void Server::EnqueueAroundSector(char* msg, int size, Sector* centerSector, Sess
 		Sector sectors[dfAROUND_SECTOR_NUM];
 		GetAroundSector(centerSector, sectors);
 
+		
 		vector<Player*>::iterator playerIter = sectors[0]._players.begin();
 		for (; playerIter < sectors[0]._players.end(); playerIter++)
 		{
@@ -538,6 +552,7 @@ void Server::EnqueueAroundSector(char* msg, int size, Sector* centerSector, Sess
 			}
 		}
 
+		
 		for (int i = 1; i < dfAROUND_SECTOR_NUM; i++)
 		{
 			vector<Player*>::iterator playerIter = sectors[i]._players.begin();
@@ -580,13 +595,6 @@ bool Server::CheckMovable(short x, short y)
 
 void Server::UpdatePlayerMove(Player* pPlayer)
 {
-	
-	// printf("\n<Player %d>\n", pPlayer->_ID);
-	// printf("Pos: (%d, %d)\n", pPlayer->_x, pPlayer->_y);
-	// printf("Sector: (%d, %d)\n", pPlayer->_pSector->_xIndex, pPlayer->_pSector->_yIndex);
-	// printf("MoveDir: %d\n", pPlayer->_moveDirection);
-	// printf("Dir: %d\n", pPlayer->_direction);
-	
 	switch (pPlayer->_moveDirection)
 	{
 	case dfPACKET_MOVE_DIR_LL:
@@ -993,8 +1001,6 @@ void Server::UpdatePlayerMove(Player* pPlayer)
 
 void Server::SetSector(Player* pPlayer)
 {
-	
-
 	int x = pPlayer->_x / dfSECTOR_SIZE_X + 1;
 	int y = pPlayer->_y / dfSECTOR_SIZE_Y + 1;
 	_sectors[y][x]._players.push_back(pPlayer);
@@ -1004,8 +1010,6 @@ void Server::SetSector(Player* pPlayer)
 
 void Server::GetAroundSector(Sector* centerSector, Sector* aroundSector)
 {
-	
-
 	aroundSector[0] = _sectors[centerSector->_yIndex][centerSector->_xIndex];
 	aroundSector[1] = _sectors[centerSector->_yIndex + 1][centerSector->_xIndex + 1];
 	aroundSector[2] = _sectors[centerSector->_yIndex + 1][centerSector->_xIndex];
@@ -1056,8 +1060,9 @@ void Server::UpdateSector(Player* pPlayer, Sector* inSector, Sector* outSector,
 
 	// About Other Player ==============================================
 
+	
 	for (int i = 0; i < inSectorNum; i++)
-	{
+	{	
 		vector<Player*>::iterator iter = inSector[i]._players.begin();
 		for(; iter < inSector[i]._players.end(); iter++)
 		{
@@ -1076,6 +1081,7 @@ void Server::UpdateSector(Player* pPlayer, Sector* inSector, Sector* outSector,
 		}
 	}
 
+	
 	for (int i = 0; i < outSectorNum; i++)
 	{
 		vector<Player*>::iterator iter = outSector[i]._players.begin();
@@ -1093,8 +1099,6 @@ void Server::UpdateSector(Player* pPlayer, Sector* inSector, Sector* outSector,
 
 void Server::CreatePlayer(Session* pSession)
 {
-	
-
 	Player* pPlayer = new Player(pSession, _playerID++);
 	SetSector(pPlayer);
 	_SessionIDPlayerMap.insert(make_pair(pSession->_ID, pPlayer));
@@ -1110,10 +1114,10 @@ void Server::CreatePlayer(Session* pSession)
 		pPlayer->_ID, pPlayer->_direction, pPlayer->_x, pPlayer->_y, pPlayer->_hp);
 	EnqueueAroundSector(createMeToOther.GetReadPtr(), 
 		createMeToOtherRet, pPlayer->_pSector, pPlayer->_pSession);
-
+	
 	Sector sectors[9];
 	GetAroundSector(pPlayer->_pSector, sectors);
-
+	
 	vector<Player*>::iterator iter = sectors[0]._players.begin();
 	for (; iter < sectors[0]._players.end(); iter++)
 	{
@@ -1126,9 +1130,10 @@ void Server::CreatePlayer(Session* pSession)
 		}
 	}
 
+	
 	for (int i = 1; i < 9; i++)
 	{
-		vector<Player*>::iterator iter = sectors[i]._players.begin();
+		iter = sectors[i]._players.begin();
 		for (; iter < sectors[i]._players.end(); iter++)
 		{
 			SerializePacket createOther;
@@ -1142,11 +1147,11 @@ void Server::CreatePlayer(Session* pSession)
 void Server::SetPlayerDead(Player* pPlayer)
 {
 	pPlayer->_alive = false;
-	
 }
 
 void Server::DestroyDeadPlayers()
 {
+	
 	vector<Player*>::iterator iter = _allPlayers.begin();
 
 	for (;iter < _allPlayers.end();)
@@ -1161,6 +1166,7 @@ void Server::DestroyDeadPlayers()
 			EnqueueAroundSector(buffer.GetReadPtr(), deleteRet, pPlayer->_pSector);
 
 			// Remove from Sector
+			
 			vector<Player*>::iterator vectorIter = pPlayer->_pSector->_players.begin();
 			for (; vectorIter < pPlayer->_pSector->_players.end(); vectorIter++)
 			{
@@ -1181,6 +1187,7 @@ void Server::DestroyDeadPlayers()
 			Player* pPlayer = (*iter);
 
 			// Remove from Sector
+			
 			vector<Player*>::iterator vectorIter = pPlayer->_pSector->_players.begin();
 			for (; vectorIter < pPlayer->_pSector->_players.end(); vectorIter++)
 			{
@@ -1190,6 +1197,8 @@ void Server::DestroyDeadPlayers()
 					break;
 				}
 			}
+
+			
 
 			SerializePacket buffer;
 			int deleteRet = SetSCPacket_DELETE_CHAR(&buffer, pPlayer->_ID);
@@ -1209,8 +1218,6 @@ void Server::DestroyDeadPlayers()
 
 bool Server::HandleCSPackets(Player* pPlayer, BYTE type)
 {
-	
-
 	switch (type)
 	{
 	case dfPACKET_CS_MOVE_START:
@@ -1244,6 +1251,7 @@ bool Server::HandleCSPackets(Player* pPlayer, BYTE type)
 
 bool Server::HandleCSPacket_MOVE_START(Player* pPlayer)
 {
+	
 	BYTE moveDirection;
 	short x;
 	short y;
@@ -1271,6 +1279,7 @@ bool Server::HandleCSPacket_MOVE_START(Player* pPlayer)
 
 bool Server::HandleCSPacket_MOVE_STOP(Player* pPlayer)
 {
+	
 	BYTE direction;
 	short x;
 	short y;
@@ -1299,6 +1308,7 @@ bool Server::HandleCSPacket_MOVE_STOP(Player* pPlayer)
 
 bool Server::HandleCSPacket_ATTACK1(Player* pPlayer)
 {
+	
 	BYTE direction;
 	short x;
 	short y;
@@ -1331,12 +1341,12 @@ bool Server::HandleCSPacket_ATTACK1(Player* pPlayer)
 		EnqueueAroundSector(damageBuffer.GetReadPtr(), damageSetRet, damagedPlayer->_pSector);
 	}
 
-	
 	return true;
 }
 
 bool Server::HandleCSPacket_ATTACK2(Player* pPlayer)
 {
+	
 	BYTE direction;
 	short x;
 	short y;
@@ -1376,6 +1386,7 @@ bool Server::HandleCSPacket_ATTACK2(Player* pPlayer)
 
 bool Server::HandleCSPacket_ATTACK3(Player* pPlayer)
 {
+	
 	BYTE direction;
 	short x;
 	short y;
@@ -1594,6 +1605,7 @@ void Server::SetPlayerAttack1(Player* pPlayer, Player*& pDamagedPlayer, BYTE& di
 
 	if (direction == dfPACKET_MOVE_DIR_LL)
 	{
+		
 		vector<Player*>::iterator iter = sectors[0]._players.begin();
 		for (; iter < sectors[0]._players.end(); iter++)
 		{
@@ -1616,6 +1628,7 @@ void Server::SetPlayerAttack1(Player* pPlayer, Player*& pDamagedPlayer, BYTE& di
 			}
 		}
 
+		
 		for (int i = 1; i < 9; i++)
 		{
 			iter = sectors[i]._players.begin();
@@ -1641,6 +1654,7 @@ void Server::SetPlayerAttack1(Player* pPlayer, Player*& pDamagedPlayer, BYTE& di
 	}
 	else if (direction == dfPACKET_MOVE_DIR_RR)
 	{
+		
 		vector<Player*>::iterator iter = sectors[0]._players.begin();
 		for (; iter < sectors[0]._players.end(); iter++)
 		{
@@ -1663,9 +1677,9 @@ void Server::SetPlayerAttack1(Player* pPlayer, Player*& pDamagedPlayer, BYTE& di
 			}
 		}
 
+		
 		for (int i = 1; i < 9; i++)
 		{
-
 			iter = sectors[i]._players.begin();
 			for (; iter < sectors[i]._players.end(); iter++)
 			{
@@ -1701,6 +1715,7 @@ void Server::SetPlayerAttack2(Player* pPlayer, Player*& pDamagedPlayer, BYTE& di
 
 	if (direction == dfPACKET_MOVE_DIR_LL)
 	{
+		
 		vector<Player*>::iterator iter = sectors[0]._players.begin();
 		for (; iter < sectors[0]._players.end(); iter++)
 		{
@@ -1723,6 +1738,7 @@ void Server::SetPlayerAttack2(Player* pPlayer, Player*& pDamagedPlayer, BYTE& di
 			}
 		}
 
+		
 		for (int i = 1; i < 9; i++)
 		{
 			iter = sectors[i]._players.begin();
@@ -1747,6 +1763,7 @@ void Server::SetPlayerAttack2(Player* pPlayer, Player*& pDamagedPlayer, BYTE& di
 	}
 	else if (direction == dfPACKET_MOVE_DIR_RR)
 	{
+		
 		vector<Player*>::iterator iter = sectors[0]._players.begin();
 		for (; iter < sectors[0]._players.end(); iter++)
 		{
@@ -1769,6 +1786,7 @@ void Server::SetPlayerAttack2(Player* pPlayer, Player*& pDamagedPlayer, BYTE& di
 			}
 		}
 
+		
 		for (int i = 1; i < 9; i++)
 		{
 			iter = sectors[i]._players.begin();
@@ -1805,6 +1823,7 @@ void Server::SetPlayerAttack3(Player* pPlayer, Player*& pDamagedPlayer, BYTE& di
 
 	if (direction == dfPACKET_MOVE_DIR_LL)
 	{
+		
 		vector<Player*>::iterator iter = sectors[0]._players.begin();
 		for (; iter < sectors[0]._players.end(); iter++)
 		{
@@ -1826,7 +1845,7 @@ void Server::SetPlayerAttack3(Player* pPlayer, Player*& pDamagedPlayer, BYTE& di
 				}
 			}
 		}
-
+		
 		for (int i = 1; i < 9; i++)
 		{
 			iter = sectors[i]._players.begin();
@@ -1851,6 +1870,7 @@ void Server::SetPlayerAttack3(Player* pPlayer, Player*& pDamagedPlayer, BYTE& di
 	}
 	else if (direction == dfPACKET_MOVE_DIR_RR)
 	{
+		
 		vector<Player*>::iterator iter = sectors[0]._players.begin();
 		for (; iter < sectors[0]._players.end(); iter++)
 		{
@@ -1872,7 +1892,7 @@ void Server::SetPlayerAttack3(Player* pPlayer, Player*& pDamagedPlayer, BYTE& di
 				}
 			}
 		}
-
+		
 		for (int i = 1; i < 9; i++)
 		{
 			iter = sectors[i]._players.begin();
@@ -2124,8 +2144,8 @@ void Server::Sector::InitializeSector(short xIndex, short yIndex)
 	_yIndex = yIndex;
 	_xPosMin = (xIndex - 1) * dfSECTOR_SIZE_X ;
 	_yPosMin = (yIndex - 1) * dfSECTOR_SIZE_Y;
-	_xPosMax = (xIndex * dfSECTOR_SIZE_X) - 1;
-	_yPosMax = (yIndex * dfSECTOR_SIZE_Y) - 1;
+	_xPosMax = xIndex * dfSECTOR_SIZE_X;
+	_yPosMax = yIndex * dfSECTOR_SIZE_Y;
 
 	if (_xIndex == 0 || _xIndex == (dfSECTOR_CNT_X - 1)||
 		_yIndex == 0 || _yIndex == (dfSECTOR_CNT_Y - 1))

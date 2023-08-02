@@ -57,6 +57,7 @@ private:
 	void EnqueueAroundSector(char* msg, int size, Sector* centerSector, Session* pExpSession = nullptr);
 
 private:
+	void SetAcceptedSession();
 	void SetSessionDead(Session* pSession);
 	void DisconnectDeadSession();
 
@@ -66,6 +67,7 @@ private:
 	Session* _sessionArray[FD_SETSIZE];
 	timeval _time;
 	vector<Session*> _allSessions;
+	vector<Session*> _acceptedSessions;
 
 // About Content ====================================================
 private:
@@ -97,8 +99,8 @@ private:
 			_direction(dfPACKET_MOVE_DIR_LL), _moveDirection(dfPACKET_MOVE_DIR_LL)
 		{
 			srand(ID);
-			_x = dfRANGE_MOVE_RIGHT - 10; // rand() % dfRANGE_MOVE_RIGHT;
-			_y = dfRANGE_MOVE_BOTTOM - 10; // rand() % dfRANGE_MOVE_BOTTOM;
+			_x = rand() % dfRANGE_MOVE_RIGHT;
+			_y = rand() % dfRANGE_MOVE_BOTTOM;
 		}
 
 	public:
