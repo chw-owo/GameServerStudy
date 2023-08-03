@@ -129,10 +129,15 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="RingBuffer.cpp" />
-    <ClCompile Include="ServerMain.cpp" />
+    <ClCompile Include="SerializePacket.cpp" />
+    <ClCompile Include="Server.cpp" />
+    <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Main.h" />
     <ClInclude Include="RingBuffer.h" />
+    <ClInclude Include="SerializePacket.h" />
+    <ClInclude Include="Server.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

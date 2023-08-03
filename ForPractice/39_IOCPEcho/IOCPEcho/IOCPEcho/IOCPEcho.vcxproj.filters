@@ -11,18 +11,36 @@
     <Filter Include="NetworkUtils">
       <UniqueIdentifier>{aab37369-764f-43c1-bc57-39d8b930a2bf}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Server">
+      <UniqueIdentifier>{11e67b32-0718-493c-8b9b-f1af7320c346}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="ServerMain.cpp">
+    <ClCompile Include="Main.cpp">
       <Filter>Main</Filter>
     </ClCompile>
     <ClCompile Include="RingBuffer.cpp">
       <Filter>NetworkUtils</Filter>
     </ClCompile>
+    <ClCompile Include="SerializePacket.cpp">
+      <Filter>NetworkUtils</Filter>
+    </ClCompile>
+    <ClCompile Include="Server.cpp">
+      <Filter>Server</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="RingBuffer.h">
       <Filter>NetworkUtils</Filter>
+    </ClInclude>
+    <ClInclude Include="SerializePacket.h">
+      <Filter>NetworkUtils</Filter>
+    </ClInclude>
+    <ClInclude Include="Server.h">
+      <Filter>Server</Filter>
+    </ClInclude>
+    <ClInclude Include="Main.h">
+      <Filter>Main</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

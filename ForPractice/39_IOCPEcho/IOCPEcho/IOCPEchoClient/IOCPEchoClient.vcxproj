@@ -24,6 +24,7 @@
     <ProjectGuid>{a1874c89-edb4-4841-81d9-1dc8a18ccec5}</ProjectGuid>
     <RootNamespace>IOCPEchoClient</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>EchoClient</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -128,10 +129,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="ClientMain.cpp" />
-    <ClCompile Include="RingBuffer.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="RingBuffer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

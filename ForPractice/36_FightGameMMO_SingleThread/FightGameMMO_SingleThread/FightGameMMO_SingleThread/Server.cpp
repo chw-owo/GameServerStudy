@@ -90,8 +90,7 @@ Server::Server()
 }
 
 Server::~Server()
-{
-	
+{	
 	vector<Session*>::iterator iter = _allSessions.begin();
 	for (; iter < _allSessions.end();)
 	{
@@ -1475,7 +1474,6 @@ bool Server::GetCSPacket_MOVE_STOP(RingBuffer* recvBuffer, BYTE& direction, shor
 	buffer >> x;
 	buffer >> y;
 
-	
 	return true;
 }
 
