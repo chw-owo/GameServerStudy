@@ -14,7 +14,7 @@
     <Filter Include="Protocol">
       <UniqueIdentifier>{ddbc5985-00f1-4f9d-b65f-b4b84188e896}</UniqueIdentifier>
     </Filter>
-    <Filter Include="NetworkUtils">
+    <Filter Include="Utils">
       <UniqueIdentifier>{4a8ec52b-ccf5-4418-b435-2dd4a2ec3894}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -26,10 +26,13 @@
       <Filter>Server</Filter>
     </ClCompile>
     <ClCompile Include="RingBuffer.cpp">
-      <Filter>NetworkUtils</Filter>
+      <Filter>Utils</Filter>
     </ClCompile>
     <ClCompile Include="SerializePacket.cpp">
-      <Filter>NetworkUtils</Filter>
+      <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="Profiler.cpp">
+      <Filter>Utils</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -43,10 +46,16 @@
       <Filter>Protocol</Filter>
     </ClInclude>
     <ClInclude Include="RingBuffer.h">
-      <Filter>NetworkUtils</Filter>
+      <Filter>Utils</Filter>
     </ClInclude>
     <ClInclude Include="SerializePacket.h">
-      <Filter>NetworkUtils</Filter>
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="ObjectPool.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Profiler.h">
+      <Filter>Utils</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

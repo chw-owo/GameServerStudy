@@ -1,16 +1,10 @@
 #pragma once
-#include <Windows.h>
+#include <windows.h>
+#define dfDATA_LEN 256
+#define dfTITLE_LEN 256
+#define dfHEXDATA_LEN 32
 
 #define SYSTEM_LOG
-
-#ifdef SYSTEM_LOG
-#define SYSLOG_DIRECTORY(DirName) SystemLog::GetInstance->SetSysLogDir(DirName)
-#define SYSLOG_LEVEL(LogLevel) SystemLog::GetInstance->SetSysLogLevel(LogLevel)
-#define LOG(Input) SystemLog::GetInstance->Log(Input)
-#else
-#define SYSLOG_DIRECTORY(DirName)
-#define SYSLOG_LEVEL(LogLevel)
-#endif
 
 class SystemLog
 {
@@ -20,9 +14,6 @@ private:
 public:	
 	static SystemLog* GetInstance();
 
-private:
-	static SystemLog _systemLog;
-
 public:
 	enum LOG_LEVEL
 	{
@@ -31,12 +22,30 @@ public:
 		SYSTEM_LEVEL
 	};
 
-	void SetSysLogDir(WCHAR* szDir);
-	void SetSysLogLevel(LOG_LEVEL LogLevel);
-	void Log(WCHAR* szType, LOG_LEVEL LogLevel, WCHAR* szStringFormat, ...);
-	void LogHex(WCHAR* szType, LOG_LEVEL LogLevel, WCHAR* szLog, BYTE* pByte, int iByteLen);
-
 private:
-	WCHAR* _Dir;
+	static SystemLog _systemLog;
+
+public:
+	void SetSysLogDir(const wchar_t* szDir);
+	void SetSysLogLevel(LOG_LEVEL LogLevel);
+	void Log(const wchar_t* szType, LOG_LEVEL LogLevel, const wchar_t* szStringFormat, ...);
+	void LogHex(const wchar_t* szType, LOG_LEVEL LogLevel, const wchar_t* szLog, BYTE* pByte, int iByteLen);
+	
+private:
+	WCHAR* _Dir = nullptr;
 	LOG_LEVEL _LogLevel;
 };
+
+extern SystemLog* g_pSystemLog;
+
+#ifdef SYSTEM_LOG
+#define SYSLOG_DIRECTORY(DirName)						g_pSystemLog->SetSysLogDir(DirName)
+#define SYSLOG_LEVEL(LogLevel)							g_pSystemLog->SetSysLogLevel(LogLevel)
+#define LOG(LogType, LogLevel, Format, ...)				g_pSystemLog->Log(LogType, LogLevel, Format, ##__VA_ARGS__)
+#define LOGHEX(LogType, LogLevel, Log, Byte, ByteLen)	g_pSystemLog->LogHex(LogType, LogLevel, Log, Byte, ByteLen)
+#else
+#define SYSLOG_DIRECTORY(DirName)
+#define SYSLOG_LEVEL(LogLevel)
+#define LOG(LogType, LogLevel, String, Input)
+#define LOGHEX(LogType, LogLevel, Log, Byte, ByteLen) 
+#endif

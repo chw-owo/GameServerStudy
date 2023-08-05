@@ -128,16 +128,20 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="ContentManager.cpp" />
     <ClCompile Include="RingBuffer.cpp" />
     <ClCompile Include="SerializePacket.cpp" />
-    <ClCompile Include="Server.cpp" />
+    <ClCompile Include="NerworkManager.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="Session.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="ContentManager.h" />
     <ClInclude Include="Main.h" />
+    <ClInclude Include="NetworkManager.h" />
     <ClInclude Include="RingBuffer.h" />
     <ClInclude Include="SerializePacket.h" />
-    <ClInclude Include="Server.h" />
+    <ClInclude Include="Session.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

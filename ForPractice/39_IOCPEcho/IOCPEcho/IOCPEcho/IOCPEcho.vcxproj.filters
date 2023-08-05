@@ -8,11 +8,14 @@
     <Filter Include="Main">
       <UniqueIdentifier>{118d2f8a-14e4-462d-a70c-cd2b58f7a3ab}</UniqueIdentifier>
     </Filter>
-    <Filter Include="NetworkUtils">
-      <UniqueIdentifier>{aab37369-764f-43c1-bc57-39d8b930a2bf}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Server">
+    <Filter Include="Network">
       <UniqueIdentifier>{11e67b32-0718-493c-8b9b-f1af7320c346}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Content">
+      <UniqueIdentifier>{b1fd646d-8c2e-4f12-ad45-e512fa038b79}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Network\NetworkUtils">
+      <UniqueIdentifier>{aab37369-764f-43c1-bc57-39d8b930a2bf}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -20,27 +23,39 @@
       <Filter>Main</Filter>
     </ClCompile>
     <ClCompile Include="RingBuffer.cpp">
-      <Filter>NetworkUtils</Filter>
+      <Filter>Network\NetworkUtils</Filter>
     </ClCompile>
     <ClCompile Include="SerializePacket.cpp">
-      <Filter>NetworkUtils</Filter>
+      <Filter>Network\NetworkUtils</Filter>
     </ClCompile>
-    <ClCompile Include="Server.cpp">
-      <Filter>Server</Filter>
+    <ClCompile Include="NerworkManager.cpp">
+      <Filter>Network</Filter>
+    </ClCompile>
+    <ClCompile Include="ContentManager.cpp">
+      <Filter>Content</Filter>
+    </ClCompile>
+    <ClCompile Include="Session.cpp">
+      <Filter>Network</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="RingBuffer.h">
-      <Filter>NetworkUtils</Filter>
+      <Filter>Network\NetworkUtils</Filter>
     </ClInclude>
     <ClInclude Include="SerializePacket.h">
-      <Filter>NetworkUtils</Filter>
-    </ClInclude>
-    <ClInclude Include="Server.h">
-      <Filter>Server</Filter>
+      <Filter>Network\NetworkUtils</Filter>
     </ClInclude>
     <ClInclude Include="Main.h">
       <Filter>Main</Filter>
+    </ClInclude>
+    <ClInclude Include="NetworkManager.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="ContentManager.h">
+      <Filter>Content</Filter>
+    </ClInclude>
+    <ClInclude Include="Session.h">
+      <Filter>Network</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

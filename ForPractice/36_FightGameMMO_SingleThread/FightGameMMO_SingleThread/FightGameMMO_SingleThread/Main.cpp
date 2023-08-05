@@ -10,8 +10,8 @@ int wmain(int argc, wchar_t* argv[])
 	{
 		server->NetworkUpdate();
 		server->ContentUpdate();
+		server->Monitor();
 		// server->Control();
-		// server->Monitor();
 	}
 
 	timeEndPeriod(1);

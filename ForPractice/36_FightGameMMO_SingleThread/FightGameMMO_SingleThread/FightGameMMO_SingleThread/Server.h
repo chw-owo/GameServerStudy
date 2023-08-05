@@ -1,7 +1,9 @@
 #pragma once
-#include "Protocol.h"
-#include "RingBuffer.h"
 #include "SerializePacket.h"
+#include "RingBuffer.h"
+#include "ObjectPool.h"
+#include "Profiler.h"
+#include "Protocol.h"
 
 #pragma comment(lib, "ws2_32")
 #include <ws2tcpip.h>
@@ -21,11 +23,33 @@ public:
 public:
 	void NetworkUpdate();
 	void ContentUpdate();
-	void Control();
-	void Monitor();
+	inline void Monitor()
+	{
+		if (timeGetTime() - _oldTick > 1000)
+		{
+			printf("[%s %s]\n", __DATE__, __TIME__);
+
+			//printf("Session Count: %llu\n", _allSessions.size());
+			//printf("Player Count: %llu\n", _allPlayers.size());
+
+			PRO_PRINT_CONSOLE();
+			PRO_RESET();
+
+			_oldTick += 1000;
+		}
+	}
+
+	inline void Control()
+	{
+
+	}
 
 private:
 	static Server _server;
+
+// About Monitor ==================================================
+private:
+	DWORD _oldTick;
 
 // About Network ==================================================
 private:
@@ -33,6 +57,7 @@ private:
 	{
 	public:
 		Session(int ID) { _ID = ID; }
+		Session() { printf("Error! Session() is called\n"); }
 
 	public:
 		bool _alive = false;
@@ -62,12 +87,13 @@ private:
 	void DisconnectDeadSession();
 
 private:
+	timeval _time;
 	int _sessionID = 0;
 	SOCKET _listensock = INVALID_SOCKET;
 	Session* _sessionArray[FD_SETSIZE];
-	timeval _time;
 	vector<Session*> _allSessions;
 	vector<Session*> _acceptedSessions;
+	CObjectPool<Session>* _pSessionPool;
 
 // About Content ====================================================
 private:
@@ -75,7 +101,7 @@ private:
 	class Sector
 	{
 	public:
-		void InitializeSector(short xIndex, short yIndex);
+		inline void InitializeSector(short xIndex, short yIndex);
 
 	public:
 		short _xIndex;
@@ -98,10 +124,11 @@ private:
 			_ID(ID), _alive(true), _hp(dfMAX_HP), _move(false), _pSector(nullptr),
 			_direction(dfPACKET_MOVE_DIR_LL), _moveDirection(dfPACKET_MOVE_DIR_LL)
 		{
-			srand(ID);
 			_x = rand() % dfRANGE_MOVE_RIGHT;
 			_y = rand() % dfRANGE_MOVE_BOTTOM;
 		}
+
+		Player() { printf("Error! Player() is called\n"); }
 
 	public:
 		Session* _pSession;
@@ -124,65 +151,66 @@ private:
 private:
 	int _playerID = 0;
 	vector<Player*> _allPlayers;
-	Sector _sectors[dfSECTOR_CNT_Y][dfSECTOR_CNT_X];
 	unordered_map<int, Player*> _SessionIDPlayerMap;
-
-private:
-	bool SkipForFixedFrame();
-	bool CheckMovable(short x, short y);
-	void UpdatePlayerMove(Player* pPlayer);
-
-private:
-	void SetSector(Player* pPlayer);
-	void GetAroundSector(Sector* centerSector, Sector* aroundSector);
-	void UpdateSector(Player* pPlayer, Sector* inSector, Sector* outSector, 
-		int inSectorNum, int outSectorNum, Sector* newSector);
+	CObjectPool<Player>* _pPlayerPool;
+	Sector _sectors[dfSECTOR_CNT_Y][dfSECTOR_CNT_X];
 	
 private:
 	void CreatePlayer(Session* pSession);
-	void SetPlayerDead(Player* pPlayer);
 	void DestroyDeadPlayers();
+	inline void SetPlayerDead(Player* pPlayer);
+
+private:
+	void UpdatePlayerMove(Player* pPlayer);
+	inline bool SkipForFixedFrame();
+	inline bool CheckMovable(short x, short y);
+
+private:
+	void UpdateSector(Player* pPlayer, Sector* inSector, Sector* outSector, 
+		int inSectorNum, int outSectorNum, Sector* newSector);
+	inline void SetSector(Player* pPlayer);
+	inline void GetAroundSector(Sector* centerSector, Sector* aroundSector);
+	
 
 // About Packet ====================================================
 private:
 	// Handle CS Packet
-	bool HandleCSPackets(Player* pPlayer, BYTE type);
-	bool HandleCSPacket_MOVE_START(Player* pPlayer);
-	bool HandleCSPacket_MOVE_STOP(Player* pPlayer);
-	bool HandleCSPacket_ATTACK1(Player* pPlayer);
-	bool HandleCSPacket_ATTACK2(Player* pPlayer);
-	bool HandleCSPacket_ATTACK3(Player* pPlayer);
-	bool HandleCSPacket_ECHO(Player* pPlayer);
+	inline bool HandleCSPackets(Player* pPlayer, BYTE type);
+	inline bool HandleCSPacket_MOVE_START(Player* pPlayer);
+	inline bool HandleCSPacket_MOVE_STOP(Player* pPlayer);
+	inline bool HandleCSPacket_ATTACK1(Player* pPlayer);
+	inline bool HandleCSPacket_ATTACK2(Player* pPlayer);
+	inline bool HandleCSPacket_ATTACK3(Player* pPlayer);
+	inline bool HandleCSPacket_ECHO(Player* pPlayer);
 
 	// Get Data from CS Packet
-	bool GetCSPacket_MOVE_START(RingBuffer* recvBuffer, BYTE& moveDirection, short& x, short& y);
-	bool GetCSPacket_MOVE_STOP(RingBuffer* recvBuffer, BYTE& direction, short& x, short& y);
-	bool GetCSPacket_ATTACK1(RingBuffer* recvBuffer, BYTE& direction, short& x, short& y);
-	bool GetCSPacket_ATTACK2(RingBuffer* recvBuffer, BYTE& direction, short& x, short& y);
-	bool GetCSPacket_ATTACK3(RingBuffer* recvBuffer, BYTE& direction, short& x, short& y);
-	bool GetCSPacket_ECHO(RingBuffer* recvBuffer, int& time);
+	inline bool GetCSPacket_MOVE_START(RingBuffer* recvBuffer, BYTE& moveDirection, short& x, short& y);
+	inline bool GetCSPacket_MOVE_STOP(RingBuffer* recvBuffer, BYTE& direction, short& x, short& y);
+	inline bool GetCSPacket_ATTACK1(RingBuffer* recvBuffer, BYTE& direction, short& x, short& y);
+	inline bool GetCSPacket_ATTACK2(RingBuffer* recvBuffer, BYTE& direction, short& x, short& y);
+	inline bool GetCSPacket_ATTACK3(RingBuffer* recvBuffer, BYTE& direction, short& x, short& y);
+	inline bool GetCSPacket_ECHO(RingBuffer* recvBuffer, int& time);
 
 	// Set Game Data from Packet Data
-	void SetPlayerMoveStart(Player* pPlayer, BYTE& moveDirection, short& x, short& y);
-	void SetPlayerMoveStop(Player* pPlayer, BYTE& direction, short& x, short& y);
-	void SetPlayerAttack1(Player* pPlayer, Player*& pDamagedPlayer, BYTE& direction, short& x, short& y);
-	void SetPlayerAttack2(Player* pPlayer, Player*& pDamagedPlayer, BYTE& direction, short& x, short& y);
-	void SetPlayerAttack3(Player* pPlayer, Player*& pDamagedPlayer, BYTE& direction, short& x, short& y);
+	inline void SetPlayerMoveStart(Player* pPlayer, BYTE& moveDirection, short& x, short& y);
+	inline void SetPlayerMoveStop(Player* pPlayer, BYTE& direction, short& x, short& y);
+	inline void SetPlayerAttack1(Player* pPlayer, Player*& pDamagedPlayer, BYTE& direction, short& x, short& y);
+	inline void SetPlayerAttack2(Player* pPlayer, Player*& pDamagedPlayer, BYTE& direction, short& x, short& y);
+	inline void SetPlayerAttack3(Player* pPlayer, Player*& pDamagedPlayer, BYTE& direction, short& x, short& y);
 	
 	// Set Data on SC Packet
-	void SetSCPacket_HEADER(SerializePacket* buffer, BYTE size, BYTE type);
-	int SetSCPacket_CREATE_MY_CHAR(SerializePacket* buffer, int ID, BYTE direction, short x, short y, BYTE hp);
-	int SetSCPacket_CREATE_OTHER_CHAR(SerializePacket* buffer, int ID, BYTE direction, short x, short y, BYTE hp);
-	int SetSCPacket_DELETE_CHAR(SerializePacket* buffer, int ID);
-	int SetSCPacket_MOVE_START(SerializePacket* buffer, int ID, BYTE moveDirection, short x, short y);
-	int SetSCPacket_MOVE_STOP(SerializePacket* buffer, int ID, BYTE direction, short x, short y);
-	int SetSCPacket_ATTACK1(SerializePacket* buffer, int ID, BYTE direction, short x, short y);
-	int SetSCPacket_ATTACK2(SerializePacket* buffer, int ID, BYTE direction, short x, short y);
-	int SetSCPacket_ATTACK3(SerializePacket* buffer, int ID, BYTE direction, short x, short y);
-	int SetSCPacket_DAMAGE(SerializePacket* buffer, int attackID, int damageID, BYTE damageHP);
-	int SetSCPacket_SYNC(SerializePacket* buffer, int ID, short x, short y);
-	int SetSCPacket_ECHO(SerializePacket* buffer, int time);
-
+	inline void SetSCPacket_HEADER(SerializePacket* buffer, BYTE size, BYTE type);
+	inline int SetSCPacket_CREATE_MY_CHAR(SerializePacket* buffer, int ID, BYTE direction, short x, short y, BYTE hp);
+	inline int SetSCPacket_CREATE_OTHER_CHAR(SerializePacket* buffer, int ID, BYTE direction, short x, short y, BYTE hp);
+	inline int SetSCPacket_DELETE_CHAR(SerializePacket* buffer, int ID);
+	inline int SetSCPacket_MOVE_START(SerializePacket* buffer, int ID, BYTE moveDirection, short x, short y);
+	inline int SetSCPacket_MOVE_STOP(SerializePacket* buffer, int ID, BYTE direction, short x, short y);
+	inline int SetSCPacket_ATTACK1(SerializePacket* buffer, int ID, BYTE direction, short x, short y);
+	inline int SetSCPacket_ATTACK2(SerializePacket* buffer, int ID, BYTE direction, short x, short y);
+	inline int SetSCPacket_ATTACK3(SerializePacket* buffer, int ID, BYTE direction, short x, short y);
+	inline int SetSCPacket_DAMAGE(SerializePacket* buffer, int attackID, int damageID, BYTE damageHP);
+	inline int SetSCPacket_SYNC(SerializePacket* buffer, int ID, short x, short y);
+	inline int SetSCPacket_ECHO(SerializePacket* buffer, int time);
 
 };
 

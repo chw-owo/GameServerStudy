@@ -1,0 +1,51 @@
+#pragma once
+#pragma comment(lib, "ws2_32")
+#include <ws2tcpip.h>
+#include <unordered_map>
+#include "RingBuffer.h"
+using namespace std;
+
+enum class NET_TYPE
+{
+	SEND = 0,
+	RECV
+};
+
+struct NetworkOverlapped
+{
+	OVERLAPPED _ovl;
+	NET_TYPE _type;
+};
+
+class Session
+{
+public:
+	Session(__int64 ID, SOCKET sock, SOCKADDR_IN addr)
+		: _ID(ID), _sock(sock), _addr(addr), _IOCount(0), _sendFlag(0)
+	{
+		_recvOvl._type = NET_TYPE::RECV;
+		_sendOvl._type = NET_TYPE::SEND;
+		ZeroMemory(&_recvOvl._ovl, sizeof(_recvOvl._ovl));
+		ZeroMemory(&_sendOvl._ovl, sizeof(_sendOvl._ovl));
+		InitializeSRWLock(&_lock);
+	}
+
+public:
+
+	__int64 _ID;
+	SOCKET _sock;
+	SOCKADDR_IN _addr;
+
+	RingBuffer _recvBuf;
+	RingBuffer _sendBuf;
+	NetworkOverlapped _recvOvl;
+	NetworkOverlapped _sendOvl;
+
+	// For Synchronization
+	SRWLOCK _lock;
+	volatile long _IOCount;
+	volatile long _sendFlag;
+};
+
+extern unordered_map<int, Session*> g_SessionMap;
+extern SRWLOCK g_SessionMapLock;

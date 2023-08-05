@@ -1,5 +1,4 @@
 #include "RingBuffer.h"
-#include <iostream>
 
 RingBuffer::RingBuffer(void) : _bufferSize(DEFAULT_BUF_SIZE), _freeSize(DEFAULT_BUF_SIZE - 1)
 {
@@ -15,54 +14,6 @@ RingBuffer::~RingBuffer(void)
 {
     delete[] _buffer;
 }
-
-int RingBuffer::GetBufferSize(void)
-{
-    return _bufferSize;
-}
-
-int RingBuffer::GetUseSize(void)
-{
-    return _useSize;
-}
-
-int RingBuffer::GetFreeSize(void)
-{
-    return _freeSize;
-}
-
-int RingBuffer::DirectEnqueueSize(void)
-{
-    int directEnqueueSize;
-
-    if (_writePos >= _readPos)
-    {
-        directEnqueueSize = _bufferSize - _writePos - 1;
-    }
-    else
-    {
-        directEnqueueSize = _readPos - _writePos - 1;
-    }
-
-    return directEnqueueSize;
-}
-
-int RingBuffer::DirectDequeueSize(void)
-{
-    int directDequeueSize;
-
-    if (_writePos >= _readPos)
-    {
-        directDequeueSize = _writePos - _readPos;
-    }
-    else
-    {
-        directDequeueSize = _bufferSize - _readPos - 1;
-    }
-
-    return directDequeueSize;
-}
-
 
 int RingBuffer::Enqueue(char* chpData, int iSize)
 {
@@ -194,6 +145,8 @@ bool RingBuffer::Resize(int iSize)
         return false;
     }
 
+    printf("Resize: %d\n", iSize);
+
     if (iSize < _useSize)
     {
         ::printf("Error! Func %s Line %d (used size - %d, req size - %d)\n",
@@ -257,27 +210,4 @@ int RingBuffer::MoveWritePos(int iSize)
     _freeSize -= iSize;
 
     return iSize;
-}
-
-char* RingBuffer::GetReadBufferPtr(void)
-{
-    return &_buffer[_readPos + 1];
-}
-
-char* RingBuffer::GetWriteBufferPtr(void)
-{
-    return &_buffer[_writePos + 1];
-}
-
-void RingBuffer::GetBufferDataForDebug()
-{
-    ::printf("\n");
-    ::printf("Buffer Size: %d\n", _bufferSize);
-    ::printf("Read: %d\n", _readPos);
-    ::printf("Write: %d\n", _writePos);
-    ::printf("Real Use Size: %d\n", _useSize);
-    ::printf("Real Free Size: %d\n", _freeSize);
-    ::printf("Direct Dequeue Size: %d\n", DirectDequeueSize());
-    ::printf("Direct Enqueue Size: %d\n", DirectEnqueueSize());
-    ::printf("\n");
 }

@@ -4,10 +4,10 @@
 #include <wchar.h>
 
 // TO-DO
-// 1. 모니터링, 로그 기능 추가 
-// 2. Enqueue Broadcast 지연 처리
-// 3. 동접 4500까지는 Sync Msg 0인데
-// 그걸 넘어가면 확 느려짐... 6000까지 되도록 수정
+// 1. 동접 5500까지 안정적... 6000 목표로 수정하기
+// 2. 로그 추가 
+// 3. Enqueue Broadcast 지연 처리 추가
+
 
 Server::Server()
 {
@@ -15,8 +15,15 @@ Server::Server()
 	int bindRet;
 	int listenRet;
 	int ioctRet;
+
+	srand(0);
+
 	_allSessions.reserve(dfDEFAULT_SESSIONS_NUM);
 	_allPlayers.reserve(dfDEFAULT_PLAYERS_NUM);
+	_acceptedSessions.reserve(dfDEFAULT_ACCEPTRED_SESSIONS_NUM);
+
+	_pPlayerPool = new CObjectPool<Player>(dfDEFAULT_PLAYERS_NUM, true);
+	_pSessionPool = new CObjectPool<Session>(dfDEFAULT_SESSIONS_NUM, true);
 
 	// Initialize Winsock
 	WSADATA wsa;
@@ -85,23 +92,31 @@ Server::Server()
 			_sectors[y][x].InitializeSector(x, y);
 		}
 	}
+
+	timeBeginPeriod(1);
+	_oldTick = timeGetTime();
 	::printf("Content Setting Complete!\n");
 
 }
 
 Server::~Server()
 {	
+	timeEndPeriod(1);
+
 	vector<Session*>::iterator iter = _allSessions.begin();
 	for (; iter < _allSessions.end();)
 	{
 		Session* pSession = *iter;
 		iter = _allSessions.erase(iter);
 		closesocket(pSession->_socket);
-		delete(pSession);
+		_pSessionPool->Free(pSession);
 	}
 
 	closesocket(_listensock);
 	WSACleanup();
+
+	delete _pPlayerPool;
+	delete _pSessionPool;
 }
 
 Server* Server::GetInstance()
@@ -112,6 +127,8 @@ Server* Server::GetInstance()
 
 void Server::NetworkUpdate()
 { 
+	PRO_BEGIN(L"Network");
+
 	FD_SET rset;
 	FD_SET wset;
 
@@ -169,12 +186,16 @@ void Server::NetworkUpdate()
 
 	SetAcceptedSession();
 	DisconnectDeadSession();
+
+	PRO_END(L"Network");
 }
 
 void Server::ContentUpdate()
 {
 	if (SkipForFixedFrame()) return;
-	
+
+	PRO_BEGIN(L"Content");
+
 	vector<Player*>::iterator playerIter = _allPlayers.begin();
 	for (; playerIter < _allPlayers.end(); playerIter++)
 	{
@@ -195,14 +216,8 @@ void Server::ContentUpdate()
 	}
 
 	DestroyDeadPlayers();
-}
 
-void Server::Control()
-{
-}
-
-void Server::Monitor()
-{
+	PRO_END(L"Content");
 }
 
 // About Network ==================================================
@@ -213,7 +228,9 @@ void Server::SelectProc(FD_SET rset, FD_SET wset, int max)
 	timeval time;
 	time.tv_sec = 0;
 	time.tv_usec = 0;
+	//PRO_BEGIN(L"Select");
 	int selectRet = select(0, &rset, &wset, NULL, &_time);
+	//PRO_END(L"Select");
 	if (selectRet == SOCKET_ERROR)
 	{
 		int err = WSAGetLastError();
@@ -221,6 +238,7 @@ void Server::SelectProc(FD_SET rset, FD_SET wset, int max)
 		g_bShutdown = true;
 		return;
 	}
+
 
 	// Handle Selected Socket
 	else if (selectRet > 0)
@@ -241,14 +259,18 @@ void Server::SelectProc(FD_SET rset, FD_SET wset, int max)
 
 void Server::AcceptProc()
 {
+	//PRO_BEGIN(L"Accept");
+
 	SOCKADDR_IN clientaddr;
 	int addrlen = sizeof(clientaddr);
-	Session* pSession = new Session(_sessionID++);
+	//Session* pSession = new Session(_sessionID++);
+	Session* pSession = _pSessionPool->Alloc(_sessionID++);
 
 	if (pSession == nullptr)
 	{
 		::printf("Error! Func %s Line %d: fail new\n", __func__, __LINE__);
 		g_bShutdown = true;
+		//PRO_END(L"Accept");
 		return;
 	}
 
@@ -258,6 +280,7 @@ void Server::AcceptProc()
 		int err = WSAGetLastError();
 		::printf("Error! Func %s Line %d: %d\n", __func__, __LINE__, err);
 		g_bShutdown = true;
+		//PRO_END(L"Accept");
 		return;
 	}
 
@@ -265,10 +288,13 @@ void Server::AcceptProc()
 	pSession->_addr = clientaddr;
 	pSession->_lastRecvTime = timeGetTime();
 	_acceptedSessions.push_back(pSession);
+
+	//PRO_END(L"Accept");
 }
 
 void Server::RecvProc(Session* pSession)
 {
+	//PRO_BEGIN(L"Recv (Network)");
 	pSession->_lastRecvTime = timeGetTime();
 
 	int recvRet = recv(pSession->_socket,
@@ -281,12 +307,14 @@ void Server::RecvProc(Session* pSession)
 		if (err == WSAECONNRESET)
 		{
 			SetSessionDead(pSession);
+			//PRO_END(L"Recv (Network)");
 			return;
 		}
 		else if(err != WSAEWOULDBLOCK)
 		{
 			::printf("Error! Func %s Line %d: %d\n", __func__, __LINE__, err);
 			SetSessionDead(pSession);
+			//PRO_END(L"Recv (Network)");
 			return;
 		}
 
@@ -294,6 +322,7 @@ void Server::RecvProc(Session* pSession)
 	else if (recvRet == 0)
 	{
 		SetSessionDead(pSession);
+		//PRO_END(L"Recv (Network)");
 		return;
 	}
 
@@ -302,6 +331,7 @@ void Server::RecvProc(Session* pSession)
 	{
 		::printf("Error! Func %s Line %d\n", __func__, __LINE__);
 		g_bShutdown = true;
+		//PRO_END(L"Recv (Network)");
 		return;
 	}
 
@@ -313,10 +343,13 @@ void Server::RecvProc(Session* pSession)
 	{
 		::printf("Error! Func %s Line %d\n", __func__, __LINE__);
 		g_bShutdown = true;
+		//PRO_END(L"Recv (Network)");
 		return;
 	}
 
 	Player* pPlayer = mapIter->second;
+
+	//PRO_END(L"Recv (Network)");
 
 	while (useSize > 0)
 	{
@@ -351,13 +384,16 @@ void Server::RecvProc(Session* pSession)
 			return;
 		}
 
+		//PRO_BEGIN(L"Recv (Content)");
 		bool handlePacketRet = HandleCSPackets(pPlayer, header.byType);
+		//PRO_END(L"Recv (Content)");
 		if (!handlePacketRet)
 		{
 			::printf("Error! Func %s Line %d\n", __func__, __LINE__);
 			SetSessionDead(pSession);
 			return;
 		}
+		
 
 		useSize = pSession->_recvBuf.GetUseSize();
 	}
@@ -368,6 +404,7 @@ void Server::SendProc(Session* pSession)
 	if (pSession->_sendBuf.GetUseSize() <= 0)
 		return;
 
+	//PRO_BEGIN(L"Send");
 	int sendRet = send(pSession->_socket,
 		pSession->_sendBuf.GetReadBufferPtr(),
 		pSession->_sendBuf.DirectDequeueSize(), 0);
@@ -383,6 +420,7 @@ void Server::SendProc(Session* pSession)
 				::printf("Error! Func %s Line %d: %d\n", __func__, __LINE__, err);
 			}
 			SetSessionDead(pSession);
+			//PRO_END(L"Send");
 			return;
 		}
 	}
@@ -392,8 +430,11 @@ void Server::SendProc(Session* pSession)
 	{
 		::printf("Error! Func %s Line %d\n", __func__, __LINE__);
 		SetSessionDead(pSession);
+		//PRO_END(L"Send");
 		return;
 	}
+
+	//PRO_END(L"Send");
 }
 
 
@@ -445,7 +486,7 @@ void Server::DisconnectDeadSession()
 			}
 
 			_SessionIDPlayerMap.erase(mapIter);
-			delete(pSession);
+			_pSessionPool->Free(pSession);
 			iter = _allSessions.erase(iter);
 		}
 		else
@@ -575,7 +616,6 @@ void Server::EnqueueAroundSector(char* msg, int size, Sector* centerSector, Sess
 
 bool Server::SkipForFixedFrame()
 {
-	timeBeginPeriod(1);
 	static DWORD oldTick = timeGetTime();
 	if ((timeGetTime() - oldTick) < (1000 / dfFPS))
 		return true;
@@ -594,6 +634,8 @@ bool Server::CheckMovable(short x, short y)
 
 void Server::UpdatePlayerMove(Player* pPlayer)
 {
+	//PRO_BEGIN(L"Update Player Move");
+
 	switch (pPlayer->_moveDirection)
 	{
 	case dfPACKET_MOVE_DIR_LL:
@@ -996,6 +1038,8 @@ void Server::UpdatePlayerMove(Player* pPlayer)
 		}
 		break;
 	}
+
+	//PRO_END(L"Update Player Move");
 }
 
 void Server::SetSector(Player* pPlayer)
@@ -1004,7 +1048,6 @@ void Server::SetSector(Player* pPlayer)
 	int y = pPlayer->_y / dfSECTOR_SIZE_Y + 1;
 	_sectors[y][x]._players.push_back(pPlayer);
 	pPlayer->_pSector = &_sectors[y][x];
-
 }
 
 void Server::GetAroundSector(Sector* centerSector, Sector* aroundSector)
@@ -1023,7 +1066,7 @@ void Server::GetAroundSector(Sector* centerSector, Sector* aroundSector)
 void Server::UpdateSector(Player* pPlayer, Sector* inSector, Sector* outSector, 
 	int inSectorNum, int outSectorNum, Sector* newSector)
 {
-	
+	//PRO_BEGIN(L"Update Sector");
 	vector<Player*>::iterator iter = pPlayer->_pSector->_players.begin();
 	for (; iter < pPlayer->_pSector->_players.end(); iter++)
 	{
@@ -1094,11 +1137,13 @@ void Server::UpdateSector(Player* pPlayer, Sector* inSector, Sector* outSector,
 
 	newSector->_players.push_back(pPlayer);
 	pPlayer->_pSector = newSector;
+
+	//PRO_END(L"Update Sector");
 }
 
 void Server::CreatePlayer(Session* pSession)
 {
-	Player* pPlayer = new Player(pSession, _playerID++);
+	Player* pPlayer = _pPlayerPool->Alloc(pSession, _playerID++);
 	SetSector(pPlayer);
 	_SessionIDPlayerMap.insert(make_pair(pSession->_ID, pPlayer));
 	_allPlayers.push_back(pPlayer);
@@ -1150,7 +1195,6 @@ void Server::SetPlayerDead(Player* pPlayer)
 
 void Server::DestroyDeadPlayers()
 {
-	
 	vector<Player*>::iterator iter = _allPlayers.begin();
 
 	for (;iter < _allPlayers.end();)
@@ -1178,7 +1222,7 @@ void Server::DestroyDeadPlayers()
 
 			iter = _allPlayers.erase(iter);
 			pPlayer->_pSession->_alive = false;
-			delete pPlayer;
+			_pPlayerPool->Free(pPlayer);
 		}
 		// Destroy Disconnected Player
 		else if (!(*iter)->_connected)
@@ -1197,14 +1241,12 @@ void Server::DestroyDeadPlayers()
 				}
 			}
 
-			
-
 			SerializePacket buffer;
 			int deleteRet = SetSCPacket_DELETE_CHAR(&buffer, pPlayer->_ID);
 			EnqueueAroundSector(buffer.GetReadPtr(), deleteRet, pPlayer->_pSector);
 			
 			iter = _allPlayers.erase(iter);
-			delete pPlayer;
+			_pPlayerPool->Free(pPlayer);
 		}
 		else
 		{
@@ -1250,12 +1292,16 @@ bool Server::HandleCSPackets(Player* pPlayer, BYTE type)
 
 bool Server::HandleCSPacket_MOVE_START(Player* pPlayer)
 {
-	
+	//PRO_BEGIN(L"Handle Move Start Packet");
 	BYTE moveDirection;
 	short x;
 	short y;
 	bool getRet = GetCSPacket_MOVE_START(&(pPlayer->_pSession->_recvBuf), moveDirection, x, y);
-	if(!getRet) return false;
+	if(!getRet) 
+	{
+		//PRO_END(L"Handle Move Start Packet");
+		return false;
+	}
 
 	if (abs(pPlayer->_x - x) > dfERROR_RANGE || abs(pPlayer->_y - y) > dfERROR_RANGE)
 	{
@@ -1272,19 +1318,23 @@ bool Server::HandleCSPacket_MOVE_START(Player* pPlayer)
 	int setRet = SetSCPacket_MOVE_START(&buffer, pPlayer->_ID, pPlayer->_moveDirection, pPlayer->_x, pPlayer->_y);
 	EnqueueAroundSector(buffer.GetReadPtr(), setRet, pPlayer->_pSector, pPlayer->_pSession);
 
-	
+	//PRO_END(L"Handle Move Start Packet");
 	return true;
 }
 
 bool Server::HandleCSPacket_MOVE_STOP(Player* pPlayer)
 {
-	
+	//PRO_BEGIN(L"Handle Move Stop Packet");
 	BYTE direction;
 	short x;
 	short y;
 
 	bool getRet = GetCSPacket_MOVE_STOP(&(pPlayer->_pSession->_recvBuf), direction, x, y);
-	if (!getRet) return false;
+	if (!getRet) 
+	{
+		//PRO_END(L"Handle Move Stop Packet");
+		return false;
+	}
 
 	if (abs(pPlayer->_x - x) > dfERROR_RANGE || abs(pPlayer->_y - y) > dfERROR_RANGE)
 	{
@@ -1301,19 +1351,23 @@ bool Server::HandleCSPacket_MOVE_STOP(Player* pPlayer)
 	int setRet = SetSCPacket_MOVE_STOP(&buffer, pPlayer->_ID, pPlayer->_direction, pPlayer->_x, pPlayer->_y);
 	EnqueueAroundSector(buffer.GetReadPtr(), setRet, pPlayer->_pSector, pPlayer->_pSession);
 
-	
+	//PRO_END(L"Handle Move Stop Packet");
 	return true;
 }
 
 bool Server::HandleCSPacket_ATTACK1(Player* pPlayer)
 {
-	
+	//PRO_BEGIN(L"Handle Move Attack1 Packet");
 	BYTE direction;
 	short x;
 	short y;
 
 	bool getRet = GetCSPacket_ATTACK1(&(pPlayer->_pSession->_recvBuf), direction, x, y);
-	if (!getRet) return false;
+	if (!getRet) 
+	{
+		//PRO_END(L"Handle Move Attack1 Packet");
+		return false;
+	}
 
 	if (abs(pPlayer->_x - x) > dfERROR_RANGE || abs(pPlayer->_y - y) > dfERROR_RANGE)
 	{
@@ -1340,18 +1394,23 @@ bool Server::HandleCSPacket_ATTACK1(Player* pPlayer)
 		EnqueueAroundSector(damageBuffer.GetReadPtr(), damageSetRet, damagedPlayer->_pSector);
 	}
 
+	//PRO_END(L"Handle Move Attack1 Packet");
 	return true;
 }
 
 bool Server::HandleCSPacket_ATTACK2(Player* pPlayer)
 {
-	
+	//PRO_BEGIN(L"Handle Move Attack2 Packet");
 	BYTE direction;
 	short x;
 	short y;
 
 	bool getRet = GetCSPacket_ATTACK2(&(pPlayer->_pSession->_recvBuf), direction, x, y);
-	if (!getRet) return false;
+	if (!getRet) 
+	{
+		//PRO_END(L"Handle Move Attack2 Packet");
+		return false;
+	}
 
 	if (abs(pPlayer->_x - x) > dfERROR_RANGE || abs(pPlayer->_y - y) > dfERROR_RANGE)
 	{
@@ -1379,19 +1438,23 @@ bool Server::HandleCSPacket_ATTACK2(Player* pPlayer)
 		EnqueueAroundSector(damageBuffer.GetReadPtr(), damageSetRet, damagedPlayer->_pSector);
 	}
 
-	
+	//PRO_END(L"Handle Move Attack2 Packet");
 	return true;
 }
 
 bool Server::HandleCSPacket_ATTACK3(Player* pPlayer)
 {
-	
+	//PRO_BEGIN(L"Handle Move Attack3 Packet");
 	BYTE direction;
 	short x;
 	short y;
 
 	bool getRet = GetCSPacket_ATTACK3(&(pPlayer->_pSession->_recvBuf), direction, x, y);
-	if (!getRet) return false;
+	if (!getRet) 
+	{
+		//PRO_END(L"Handle Move Attack3 Packet");
+		return false;
+	}
 
 	if (abs(pPlayer->_x - x) > dfERROR_RANGE || abs(pPlayer->_y - y) > dfERROR_RANGE)
 	{
@@ -1418,7 +1481,7 @@ bool Server::HandleCSPacket_ATTACK3(Player* pPlayer)
 		EnqueueAroundSector(damageBuffer.GetReadPtr(), damageSetRet, damagedPlayer->_pSector);
 	}
 	
-	
+	//PRO_END(L"Handle Move Attack3 Packet");
 	return true;
 }
 
@@ -1432,7 +1495,6 @@ bool Server::HandleCSPacket_ECHO(Player* pPlayer)
 	int setRet = SetSCPacket_ECHO(&buffer, time);
 	EnqueueUnicast(buffer.GetReadPtr(), setRet, pPlayer->_pSession);
 
-	
 	return true;
 }
 
@@ -1588,8 +1650,7 @@ void Server::SetPlayerMoveStop(Player* pPlayer, BYTE& direction, short& x, short
 	pPlayer->_x = x;
 	pPlayer->_y = y;
 	pPlayer->_move = false;
-	pPlayer->_direction = direction;
-	
+	pPlayer->_direction = direction;	
 }
 
 void Server::SetPlayerAttack1(Player* pPlayer, Player*& pDamagedPlayer, BYTE& direction, short& x, short& y)
