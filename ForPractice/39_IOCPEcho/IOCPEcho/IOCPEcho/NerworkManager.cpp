@@ -370,10 +370,8 @@ void NetworkManager::ReleaseSession(Session* pSession)
 	{
 		::printf("Error! %s(%d)\n", __func__, __LINE__);
 		g_bShutdown = true;
-
 		return;
 	}
-
 	g_SessionMap.erase(iter);
 
 	AcquireSRWLockExclusive(&pSession->_lock);

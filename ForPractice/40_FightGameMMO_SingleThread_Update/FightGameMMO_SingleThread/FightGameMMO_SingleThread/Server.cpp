@@ -101,7 +101,6 @@ Server::Server()
 		}
 	}
 
-	timeBeginPeriod(1);
 	_oldTick = timeGetTime();
 	::printf("Content Setting Complete!\n");
 
@@ -109,21 +108,17 @@ Server::Server()
 
 Server::~Server()
 {	
-	timeEndPeriod(1);
-
 	unordered_map<int, Session*>::iterator sessionIter = _SessionIDMap.begin();
 	for (; sessionIter != _SessionIDMap.end(); sessionIter++)
 	{
-		Session* pSession = sessionIter->second;
-		closesocket(pSession->_socket);
-		_pSessionPool->Free(pSession);
+		closesocket(sessionIter->second->_socket);
+		_pSessionPool->Free(sessionIter->second);
 	}
 
 	unordered_map<int, Player*>::iterator playerIter = _SessionIDPlayerMap.begin();
 	for (; playerIter != _SessionIDPlayerMap.end(); playerIter++)
 	{
-		Player* pPlayer = playerIter->second;
-		_pPlayerPool->Free(pPlayer);
+		_pPlayerPool->Free(playerIter->second);
 	}
 
 	closesocket(_listensock);
@@ -150,25 +145,17 @@ void Server::NetworkUpdate()
 	FD_ZERO(&rset);
 	FD_ZERO(&wset);
 	FD_SET(_listensock, &rset);
-	memset(_sessionArray, 0, sizeof(_sessionArray));
 
-	unordered_map<int, Session*>::iterator iter = _SessionIDMap.begin();
-	if (iter != _SessionIDMap.end())
+	unordered_map<int, Session*>::iterator sessionIter = _SessionIDMap.begin();
+	if (sessionIter != _SessionIDMap.end())
 	{
-		for (; iter != _SessionIDMap.end(); iter++)
+		for (; sessionIter != _SessionIDMap.end(); sessionIter++)
 		{
-			Session* pSession = iter->second;
-			if (timeGetTime() - pSession->_lastRecvTime > dfNETWORK_PACKET_RECV_TIMEOUT)
-			{
-				_timeoutCnt++;
-				SetSessionDead(pSession);
-				continue;
-			}
+			FD_SET(sessionIter->second->_socket, &rset);
+			if (sessionIter->second->_sendBuf.GetUseSize() > 0)
+				FD_SET(sessionIter->second->_socket, &wset);
 
-			FD_SET(pSession->_socket, &rset);
-			if (pSession->_sendBuf.GetUseSize() > 0)
-				FD_SET(pSession->_socket, &wset);
-			_sessionArray[idx] = pSession;
+			_sessionArray[idx] = sessionIter->second;
 			idx++;
 
 			if (idx == FD_SETSIZE)
@@ -179,7 +166,6 @@ void Server::NetworkUpdate()
 				FD_ZERO(&rset);
 				FD_ZERO(&wset);
 				FD_SET(_listensock, &rset);
-				memset(_sessionArray, 0, sizeof(_sessionArray));
 			}
 		}
 
@@ -229,6 +215,13 @@ void Server::ContentUpdate()
 	unordered_map<int, Player*>::iterator playerIter = _SessionIDPlayerMap.begin();
 	for (; playerIter != _SessionIDPlayerMap.end(); playerIter++)
 	{
+		if (timeGetTime() - playerIter->second->_pSession->_lastRecvTime > dfNETWORK_PACKET_RECV_TIMEOUT)
+		{
+			_timeoutCnt++;
+			SetSessionDead(playerIter->second->_pSession);
+			continue;
+		}
+
 		if (playerIter->second->_move)
 		{
 			PRO_BEGIN(L"Content: Update Move");
@@ -276,9 +269,6 @@ void Server::SelectProc(FD_SET rset, FD_SET wset, int max)
 
 void Server::AcceptProc()
 {
-	SOCKADDR_IN clientaddr;
-	int addrlen = sizeof(clientaddr);
-	//Session* pSession = new Session(_sessionID++);
 	Session* pSession = _pSessionPool->Alloc(_sessionID++);
 
 	if (pSession == nullptr)
@@ -287,12 +277,12 @@ void Server::AcceptProc()
 		LOG(L"ERROR", SystemLog::ERROR_LEVEL,
 			L"%s[%d]: new Error, %d\n",
 			_T(__FUNCTION__), __LINE__);
-		g_bShutdown = true;
-		
+		g_bShutdown = true;	
 		return;
 	}
 
-	pSession->_socket = accept(_listensock, (SOCKADDR*)&clientaddr, &addrlen);
+	int addrlen = sizeof(pSession->_addr);
+	pSession->_socket = accept(_listensock, (SOCKADDR*)&pSession->_addr, &addrlen);
 	if (pSession->_socket == INVALID_SOCKET)
 	{
 		int err = WSAGetLastError();
@@ -301,11 +291,9 @@ void Server::AcceptProc()
 			L"%s[%d]: accept Error, %d\n",
 			_T(__FUNCTION__), __LINE__, err);
 		g_bShutdown = true;
-		
 		return;
 	}
 
-	pSession->_addr = clientaddr;
 	pSession->_lastRecvTime = timeGetTime();
 	_acceptedSessions.push_back(pSession);
 }
@@ -361,8 +349,6 @@ void Server::RecvProc(Session* pSession)
 		return;
 	}
 
-	int useSize = pSession->_recvBuf.GetUseSize();
-
 	unordered_map<int, Player*>::iterator mapIter = _SessionIDPlayerMap.find(pSession->_ID);
 	if (mapIter == _SessionIDPlayerMap.end())
 	{
@@ -375,6 +361,7 @@ void Server::RecvProc(Session* pSession)
 
 	Player* pPlayer = mapIter->second;
 
+	int useSize = pSession->_recvBuf.GetUseSize();
 	while (useSize > 0)
 	{
 		if (useSize <= dfHEADER_SIZE)
