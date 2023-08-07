@@ -4,10 +4,12 @@
 #include "ObjectPool.h"
 #include "Profiler.h"
 #include "Protocol.h"
+#include "SystemLog.h"
 
 #pragma comment(lib, "ws2_32")
 #include <ws2tcpip.h>
 #include <vector>
+#include <wchar.h>
 #include <unordered_map>
 using namespace std;
 
@@ -23,33 +25,66 @@ public:
 public:
 	void NetworkUpdate();
 	void ContentUpdate();
+
+private:
+	static Server _server;
+
+// Monitor and Control ==================================================
+private:
+	DWORD _oldTick;
+
+	int _syncCnt = 0;
+	int _acceptCnt = 0;
+	int _disconnectCnt = 0;
+	int _deadCnt = 0;
+	int _timeoutCnt = 0;
+	int _ConnResetCnt = 0;
+
+#define checkPointsMax 11
+	int _checkPointsIdx = 0;
+	int _checkPoints[checkPointsMax]
+		= { 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 5500, 6000 };
+
+public:
+#define dfPRO_TITLE_LEN 64
 	inline void Monitor()
 	{
 		if (timeGetTime() - _oldTick > 1000)
 		{
-			printf("[%s %s]\n", __DATE__, __TIME__);
-
-			//printf("Session Count: %llu\n", _allSessions.size());
-			//printf("Player Count: %llu\n", _allPlayers.size());
+			printf("[%s %s]\n\n", __DATE__, __TIME__);
+			printf("Connected Session: %llu\n", _SessionIDMap.size());
+			printf("Sync/1sec: %d\n", _syncCnt);
+			printf("Accept/1sec: %d\n", _acceptCnt);
+			printf("Disconnect/1sec: %d\n", _disconnectCnt);
+			printf(" - Dead: %d\n", _deadCnt);
+			printf(" - Timeout: %d\n", _timeoutCnt);
+			printf(" - ConnReset(10054): %d\n", _ConnResetCnt); 
 
 			PRO_PRINT_CONSOLE();
+
+			if (_checkPointsIdx < checkPointsMax &&
+				_checkPoints[_checkPointsIdx] < _SessionIDMap.size())
+			{
+				WCHAR titleBuf[32] = { L"\0", };
+				wsprintf(titleBuf, L"ProfileBasic/%d.txt", _checkPoints[_checkPointsIdx]);
+				PRO_FILE_OUT(titleBuf);
+				_checkPointsIdx++;
+			}
+
 			PRO_RESET();
+
+			_syncCnt = 0;
+			_acceptCnt = 0;
+			_disconnectCnt = 0;
+			_deadCnt = 0;
+			_timeoutCnt = 0;
+			_ConnResetCnt = 0;
 
 			_oldTick += 1000;
 		}
 	}
 
-	inline void Control()
-	{
-
-	}
-
-private:
-	static Server _server;
-
-// About Monitor ==================================================
-private:
-	DWORD _oldTick;
+	inline void Control() {}
 
 // About Network ==================================================
 private:
@@ -57,10 +92,15 @@ private:
 	{
 	public:
 		Session(int ID) { _ID = ID; }
-		Session() { printf("Error! Session() is called\n"); }
+		Session() 
+		{ 
+			printf("Error! Session() is called\n"); 
+			LOG(L"ERROR", SystemLog::ERROR_LEVEL,
+				L"%s[%d]: Session() is called\n", _T(__FUNCTION__), __LINE__);
+		}
 
 	public:
-		bool _alive = false;
+		bool _alive = true;
 		int _ID;
 		SOCKET _socket;
 		SOCKADDR_IN _addr;
@@ -91,10 +131,12 @@ private:
 	int _sessionID = 0;
 	SOCKET _listensock = INVALID_SOCKET;
 	Session* _sessionArray[FD_SETSIZE];
-	vector<Session*> _allSessions;
-	vector<Session*> _acceptedSessions;
-	CObjectPool<Session>* _pSessionPool;
 
+	CObjectPool<Session>* _pSessionPool;
+	unordered_map<int, Session*> _SessionIDMap;
+	vector<Session*> _acceptedSessions;
+	vector<int> _disconnectedSessionIDs;
+	
 // About Content ====================================================
 private:
 	class Player;
@@ -120,26 +162,25 @@ private:
 	{
 	public:
 		Player(Session* pSession, int ID)
-			: _pSession(pSession), _sessionID(pSession->_ID), _connected(true),
-			_ID(ID), _alive(true), _hp(dfMAX_HP), _move(false), _pSector(nullptr),
-			_direction(dfPACKET_MOVE_DIR_LL), _moveDirection(dfPACKET_MOVE_DIR_LL)
+			: _pSession(pSession), _pSector(nullptr), _ID(ID), _hp(dfMAX_HP), 
+			_move(false), _direction(dfPACKET_MOVE_DIR_LL), _moveDirection(dfPACKET_MOVE_DIR_LL)
 		{
 			_x = rand() % dfRANGE_MOVE_RIGHT;
 			_y = rand() % dfRANGE_MOVE_BOTTOM;
 		}
 
-		Player() { printf("Error! Player() is called\n"); }
-
-	public:
-		Session* _pSession;
-		int _sessionID;
-		bool _connected;
+		Player() 
+		{ 
+			printf("Error! Player() is called\n"); 
+			LOG(L"ERROR", SystemLog::ERROR_LEVEL,
+				L"%s[%d]: Session() is called\n", _T(__FUNCTION__), __LINE__);
+		}
 
 	public:
 		int _ID;
-		bool _alive;
 		bool _move;
 		signed char _hp;
+		Session* _pSession;
 		Sector* _pSector;
 
 		short _x;
@@ -150,15 +191,12 @@ private:
 
 private:
 	int _playerID = 0;
-	vector<Player*> _allPlayers;
-	unordered_map<int, Player*> _SessionIDPlayerMap;
 	CObjectPool<Player>* _pPlayerPool;
+	unordered_map<int, Player*> _SessionIDPlayerMap;
 	Sector _sectors[dfSECTOR_CNT_Y][dfSECTOR_CNT_X];
-	
+
 private:
 	void CreatePlayer(Session* pSession);
-	void DestroyDeadPlayers();
-	inline void SetPlayerDead(Player* pPlayer);
 
 private:
 	void UpdatePlayerMove(Player* pPlayer);

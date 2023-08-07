@@ -28,6 +28,9 @@ int SerializePacket::Resize(int iBufferSize)
     if (iBufferSize > eBUFFER_MAX)
     {
         ::printf("Requested Resize Size is too Big!! %d -> %d\n", _iBufferSize, iBufferSize);
+        LOG(L"ERROR", SystemLog::ERROR_LEVEL,
+            L"%s[%d]: buffer size %d, req size: %d\n", 
+            _T(__FUNCTION__), __LINE__, _iBufferSize, iBufferSize);
         return -1;
     }
 
@@ -36,7 +39,6 @@ int SerializePacket::Resize(int iBufferSize)
     delete[] _chpBuffer;
 
     _chpBuffer = chpNewBuffer;
-    ::printf("Resize!! %d -> %d\n", _iBufferSize, iBufferSize);
     _iBufferSize = iBufferSize;
 
     return _iBufferSize;

@@ -3,6 +3,8 @@
 #define  __OBJECT_POOL__
 #include <new.h>
 #include <stdlib.h>
+#include <tchar.h>
+#include "SystemLog.h"
 
 //#define __OBJECT_POOL_DEBUG__
 
@@ -52,7 +54,7 @@ UseCount와 Capacity를 계산하여 필요할 때 출력할 수 있도록 한다.
 
 #ifdef __OBJECT_POOL_DEBUG__
 #include <stdio.h>
-unsigned char gObjectPoolID = 0;
+extern unsigned char gObjectPoolID;
 #endif
 
 
@@ -160,6 +162,7 @@ CObjectPool<DATA>::~CObjectPool()
 	if (_iUseCount != 0)
 	{
 		printf("There is Unfree Data!!\n");
+		LOG(L"ERROR", SystemLog::ERROR_LEVEL, L"%s[%d]: There is Unfree Data\n", _T(__FUNCTION__), __LINE__);
 	}
 
 #endif
@@ -292,8 +295,11 @@ bool CObjectPool<DATA>::Free(DATA* pData)
 
 		if (pNode->head != code || pNode->tail != code)
 		{
-			printf("Error!code % o, head % o, tail % o\n",
+			printf("Error! code %o, head %o, tail %o\n",
 				code, pNode->head, pNode->tail);
+			LOG(L"ERROR", SystemLog::ERROR_LEVEL, 
+				L"%s[%d]: code %o, head %o, tail %o\n", 
+				_T(__FUNCTION__), __LINE__, code, pNode->head, pNode->tail);
 		}
 
 		pData->~DATA();
@@ -328,7 +334,9 @@ bool CObjectPool<DATA>::Free(DATA* pData)
 		{
 			printf("Error! code %o, head %o, tail %o\n",
 				code, pNode->head, pNode->tail);
-
+			LOG(L"ERROR", SystemLog::ERROR_LEVEL,
+				L"%s[%d]: code %o, head %o, tail %o\n",
+				_T(__FUNCTION__), __LINE__, code, pNode->head, pNode->tail);
 			return false;
 		}
 

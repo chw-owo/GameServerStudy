@@ -11,11 +11,11 @@
     <Filter Include="Server">
       <UniqueIdentifier>{76a41945-ad61-4a60-9f5c-d7ad14748e04}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Protocol">
-      <UniqueIdentifier>{ddbc5985-00f1-4f9d-b65f-b4b84188e896}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Utils">
       <UniqueIdentifier>{4a8ec52b-ccf5-4418-b435-2dd4a2ec3894}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Etc">
+      <UniqueIdentifier>{f108be00-be7f-41de-9f7e-587ebf3ff3cd}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -32,6 +32,12 @@
       <Filter>Utils</Filter>
     </ClCompile>
     <ClCompile Include="Profiler.cpp">
+      <Filter>Etc</Filter>
+    </ClCompile>
+    <ClCompile Include="SystemLog.cpp">
+      <Filter>Etc</Filter>
+    </ClCompile>
+    <ClCompile Include="ObjectPool.cpp">
       <Filter>Utils</Filter>
     </ClCompile>
   </ItemGroup>
@@ -41,9 +47,6 @@
     </ClInclude>
     <ClInclude Include="Server.h">
       <Filter>Server</Filter>
-    </ClInclude>
-    <ClInclude Include="Protocol.h">
-      <Filter>Protocol</Filter>
     </ClInclude>
     <ClInclude Include="RingBuffer.h">
       <Filter>Utils</Filter>
@@ -55,7 +58,13 @@
       <Filter>Utils</Filter>
     </ClInclude>
     <ClInclude Include="Profiler.h">
-      <Filter>Utils</Filter>
+      <Filter>Etc</Filter>
+    </ClInclude>
+    <ClInclude Include="SystemLog.h">
+      <Filter>Etc</Filter>
+    </ClInclude>
+    <ClInclude Include="Protocol.h">
+      <Filter>Main</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

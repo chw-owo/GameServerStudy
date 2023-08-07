@@ -1,8 +1,8 @@
 #pragma once
 #include <iostream>
 
-#define DEFAULT_BUF_SIZE (16384 + 1) 
-#define MAX_BUF_SIZE (32768 + 1) 
+#define DEFAULT_BUF_SIZE (32768 + 1) 
+#define MAX_BUF_SIZE (65536 + 1)
 
 /*====================================================================
 

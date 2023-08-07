@@ -1,4 +1,6 @@
 #include "RingBuffer.h"
+#include "SystemLog.h"
+#include <tchar.h>
 
 RingBuffer::RingBuffer(void) : _bufferSize(DEFAULT_BUF_SIZE), _freeSize(DEFAULT_BUF_SIZE - 1)
 {
@@ -22,6 +24,7 @@ int RingBuffer::Enqueue(char* chpData, int iSize)
         if (!Resize(_bufferSize + (int)(iSize * 1.5f)))
         {
             ::printf("Error! Func %s Line %d\n", __func__, __LINE__);
+            LOG(L"ERROR", SystemLog::ERROR_LEVEL, L"%s[%d]", _T(__FUNCTION__), __LINE__);
             return -1;
         }
     }
@@ -78,6 +81,9 @@ int RingBuffer::Dequeue(char* chpData, int iSize)
     {
         ::printf("Error! Func %s Line %d (used size - %d, req size - %d)\n",
             __func__, __LINE__, _useSize, iSize);
+        LOG(L"ERROR", SystemLog::ERROR_LEVEL, 
+            L"%s[%d]: used size %d, req size %d\n", 
+            _T(__FUNCTION__), __LINE__, _useSize, iSize);
         return -1;
     }
 
@@ -107,6 +113,9 @@ int RingBuffer::Peek(char* chpDest, int iSize)
     {
         ::printf("Error! Func %s Line %d (used size - %d, req size - %d)\n",
             __func__, __LINE__, _useSize, iSize);
+        LOG(L"ERROR", SystemLog::ERROR_LEVEL,
+            L"%s[%d]: used size %d, req size %d\n",
+            _T(__FUNCTION__), __LINE__, _useSize, iSize);
         return -1;
     }
 
@@ -142,15 +151,23 @@ bool RingBuffer::Resize(int iSize)
     {
         ::printf("Error! Func %s Line %d (max size - %d, req size - %d)\n",
             __func__, __LINE__, MAX_BUF_SIZE, iSize);
+        LOG(L"ERROR", SystemLog::ERROR_LEVEL,
+            L"%s[%d]: used size %d, req size %d\n",
+            _T(__FUNCTION__), __LINE__, _useSize, iSize);
         return false;
     }
 
-    printf("Resize: %d\n", iSize);
+    //printf("Resize: %d\n", iSize);
 
     if (iSize < _useSize)
     {
         ::printf("Error! Func %s Line %d (used size - %d, req size - %d)\n",
             __func__, __LINE__, _useSize, iSize);
+
+        LOG(L"ERROR", SystemLog::ERROR_LEVEL,
+            L"%s[%d]: used size %d, req size %d\n",
+            _T(__FUNCTION__), __LINE__, _useSize, iSize);
+
         return false;
     }
 
@@ -184,6 +201,11 @@ int RingBuffer::MoveReadPos(int iSize)
     {
         ::printf("Error! Func %s Line %d (used size - %d, req size - %d)\n",
             __func__, __LINE__, _useSize, iSize);
+
+        LOG(L"ERROR", SystemLog::ERROR_LEVEL,
+            L"%s[%d]: used size %d, req size %d\n",
+            _T(__FUNCTION__), __LINE__, _useSize, iSize);
+
         return -1;
     }
 
@@ -201,6 +223,10 @@ int RingBuffer::MoveWritePos(int iSize)
         if (!Resize(_bufferSize + (int)(iSize * 1.5f)))
         {
             ::printf("Error! Func %s Line %d\n", __func__, __LINE__);
+
+            LOG(L"ERROR", SystemLog::ERROR_LEVEL,
+                L"%s[%d]\n", _T(__FUNCTION__), __LINE__);
+
             return -1;
         }
     }

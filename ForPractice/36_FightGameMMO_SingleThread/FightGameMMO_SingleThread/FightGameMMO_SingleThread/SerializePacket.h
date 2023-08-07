@@ -6,8 +6,10 @@
 #define _WINSOCKAPI_
 #endif
 
+#include <tchar.h>
 #include <stdio.h>
 #include <windows.h>
+#include "SystemLog.h"
 
 class SerializePacket
 {
@@ -74,6 +76,11 @@ public:
 		{
 			::printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n",
 				_iWritePos - _iReadPos, sizeof(float), __func__, __LINE__);
+
+			LOG(L"ERROR", SystemLog::ERROR_LEVEL,
+				L"%s[%d]: used size %d < req size: %d\n",
+				_T(__FUNCTION__), __LINE__, _iWritePos - _iReadPos, sizeof(float));
+
 			return *this;
 		}
 
@@ -90,6 +97,10 @@ public:
 		{
 			::printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n",
 				_iWritePos - _iReadPos, sizeof(double), __func__, __LINE__);
+
+			LOG(L"ERROR", SystemLog::ERROR_LEVEL,
+				L"%s[%d]: used size %d < req size: %d\n",
+				_T(__FUNCTION__), __LINE__, _iWritePos - _iReadPos, sizeof(double));
 			return *this;
 		}
 
@@ -198,6 +209,10 @@ public:
 		{
 			::printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n",
 				_iWritePos - _iReadPos, sizeof(char), __func__, __LINE__);
+
+			LOG(L"ERROR", SystemLog::ERROR_LEVEL,
+				L"%s[%d]: used size %d < req size: %d\n",
+				_T(__FUNCTION__), __LINE__, _iWritePos - _iReadPos, sizeof(char));
 			return *this;
 		}
 
@@ -214,6 +229,10 @@ public:
 		{
 			::printf("Used Size(%d) < Requested Size(%llu)!\n",
 				_iWritePos - _iReadPos, sizeof(BYTE));
+
+			LOG(L"ERROR", SystemLog::ERROR_LEVEL,
+				L"%s[%d]: used size %d < req size: %d\n",
+				_T(__FUNCTION__), __LINE__, _iWritePos - _iReadPos, sizeof(BYTE));
 			return *this;
 		}
 
@@ -230,6 +249,11 @@ public:
 		{
 			::printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n",
 				_iWritePos - _iReadPos, sizeof(wchar_t), __func__, __LINE__);
+
+			LOG(L"ERROR", SystemLog::ERROR_LEVEL,
+				L"%s[%d]: used size %d < req size: %d\n",
+				_T(__FUNCTION__), __LINE__, _iWritePos - _iReadPos, sizeof(wchar_t));
+
 			return *this;
 		}
 
@@ -246,6 +270,10 @@ public:
 		{
 			::printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n",
 				_iWritePos - _iReadPos, sizeof(short), __func__, __LINE__);
+
+			LOG(L"ERROR", SystemLog::ERROR_LEVEL,
+				L"%s[%d]: used size %d < req size: %d\n",
+				_T(__FUNCTION__), __LINE__, _iWritePos - _iReadPos, sizeof(short));
 			return *this;
 		}
 
@@ -262,6 +290,10 @@ public:
 		{
 			::printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n",
 				_iWritePos - _iReadPos, sizeof(WORD), __func__, __LINE__);
+
+			LOG(L"ERROR", SystemLog::ERROR_LEVEL,
+				L"%s[%d]: used size %d < req size: %d\n",
+				_T(__FUNCTION__), __LINE__, _iWritePos - _iReadPos, sizeof(WORD));
 			return *this;
 		}
 
@@ -278,6 +310,10 @@ public:
 		{
 			::printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n",
 				_iWritePos - _iReadPos, sizeof(int), __func__, __LINE__);
+
+			LOG(L"ERROR", SystemLog::ERROR_LEVEL,
+				L"%s[%d]: used size %d < req size: %d\n",
+				_T(__FUNCTION__), __LINE__, _iWritePos - _iReadPos, sizeof(int));
 			return *this;
 		}
 
@@ -294,6 +330,11 @@ public:
 		{
 			::printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n",
 				_iWritePos - _iReadPos, sizeof(DWORD), __func__, __LINE__);
+
+			LOG(L"ERROR", SystemLog::ERROR_LEVEL,
+				L"%s[%d]: used size %d < req size: %d\n",
+				_T(__FUNCTION__), __LINE__, _iWritePos - _iReadPos, sizeof(DWORD));
+
 			return *this;
 		}
 
@@ -310,6 +351,11 @@ public:
 		{
 			::printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n",
 				_iWritePos - _iReadPos, sizeof(__int64), __func__, __LINE__);
+
+			LOG(L"ERROR", SystemLog::ERROR_LEVEL,
+				L"%s[%d]: used size %d < req size: %d\n",
+				_T(__FUNCTION__), __LINE__, _iWritePos - _iReadPos, sizeof(__int64));
+
 			return *this;
 		}
 
@@ -326,6 +372,11 @@ public:
 		{
 			::printf("Used Size(%d) is small than Requested Size(%d)!\n",
 				_iWritePos - _iReadPos, iSize);
+
+			LOG(L"ERROR", SystemLog::ERROR_LEVEL,
+				L"%s[%d]: used size %d < req size: %d\n",
+				_T(__FUNCTION__), __LINE__, _iWritePos - _iReadPos, iSize);
+
 			return -1;
 		}
 
@@ -341,6 +392,11 @@ public:
 		{
 			::printf("Used Size(%d) is small than Requested Size(%d)!\n",
 				_iWritePos - _iReadPos, iSize);
+
+			LOG(L"ERROR", SystemLog::ERROR_LEVEL,
+				L"%s[%d]: used size %d < req size: %d\n",
+				_T(__FUNCTION__), __LINE__, _iWritePos - _iReadPos, iSize);
+
 			return -1;
 		}
 
@@ -354,15 +410,13 @@ public:
 		{
 			::printf("Used Size(%d) is small than Requested Size(%d)!\n",
 				_iWritePos - _iReadPos, iSize);
+
+			LOG(L"ERROR", SystemLog::ERROR_LEVEL,
+				L"%s[%d]: used size %d < req size: %d\n",
+				_T(__FUNCTION__), __LINE__, _iWritePos - _iReadPos, iSize);
+
 			return -1;
 		}
-
-		::printf("SerializePacket: ");
-		for (int i = 0; i < iSize; i++)
-		{
-			::printf("%x ", _chpBuffer[_iReadPos + i]);
-		}
-		::printf("\n");
 	}
 
 	inline int	PutData(char* chpSrc, int iSrcSize)

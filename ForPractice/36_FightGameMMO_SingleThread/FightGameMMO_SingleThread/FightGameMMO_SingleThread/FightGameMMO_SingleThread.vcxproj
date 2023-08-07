@@ -134,10 +134,12 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="ObjectPool.cpp" />
     <ClCompile Include="Profiler.cpp" />
     <ClCompile Include="RingBuffer.cpp" />
     <ClCompile Include="SerializePacket.cpp" />
     <ClCompile Include="Server.cpp" />
+    <ClCompile Include="SystemLog.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Main.h" />
@@ -147,6 +149,7 @@
     <ClInclude Include="RingBuffer.h" />
     <ClInclude Include="SerializePacket.h" />
     <ClInclude Include="Server.h" />
+    <ClInclude Include="SystemLog.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

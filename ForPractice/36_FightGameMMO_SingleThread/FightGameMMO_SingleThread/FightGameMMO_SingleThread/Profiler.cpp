@@ -142,23 +142,24 @@ void ProfileEnd(const WCHAR* szName)
 void PrintDataOnConsole()
 {
 	printf(
-		"\n-----------------------------\n"
-		"| Name | Average | Call/s |\n"
-		"-----------------------------\n");
+		"\n----------------------------------------------\n"
+		"| Name | Average | Call/s | Total |\n"
+		"----------------------------------------------\n");
 
 	int idx = 0;
 	while (PROFILE_RESULT[idx].lFlag != 0)
 	{
 		_PROFILE_RESULT& pf = PROFILE_RESULT[idx];
 		printf(
-			"| %ls | %.4lfms | %lld |\n",
+			"| %ls | %.4lfms | %lld | %.2lfms |\n",
 			pf.szName,
 			(pf.dTotalTime / pf.iCall) * NS_PER_SEC * NS_TO_MS,
-			pf.iCall);
+			pf.iCall,
+			(pf.dTotalTime / pf.iCall) * NS_PER_SEC * NS_TO_MS * pf.iCall);
 		idx++;
 	}
 
-	printf("-----------------------------\n");
+	printf("----------------------------------------------\n");
 
 	/*
 	int idx = 0;
@@ -181,11 +182,16 @@ void PrintDataOnConsole()
 
 void ProfileDataOutText(const WCHAR* szFileName)
 {
+	/*
 	char data[OUTPUT_SIZE] =
-		"\n=====================================\n"
-		"| Name | Average | Min | Max | Call |\n"
-		"=====================================\n";
-
+		"\n=================================================\n"
+		"| Name | Average | Min | Max | Call | Total |\n"
+		"=================================================\n";
+	*/
+	char data[OUTPUT_SIZE] =
+		"\n----------------------------------------------\n"
+		"| Name | Average | Call/s | Total |\n"
+		"----------------------------------------------\n";
 	int idx = 0;
 	char buffer[BUFFER_SIZE];
 	while (PROFILE_RESULT[idx].lFlag != 0)
@@ -193,18 +199,31 @@ void ProfileDataOutText(const WCHAR* szFileName)
 		_PROFILE_RESULT& pf = PROFILE_RESULT[idx];
 		memset(buffer, '\0', BUFFER_SIZE);
 		sprintf_s(buffer, BUFFER_SIZE,
-			"| %ls | %.4lfレs | %.4lfレs | %.4lfレs | %lld |\n",
+			"| %ls | %.4lfms | %lld | %.2lfms |\n",
+			pf.szName,
+			(pf.dTotalTime / pf.iCall) * NS_PER_SEC * NS_TO_MS,
+			pf.iCall,
+			(pf.dTotalTime / pf.iCall) * NS_PER_SEC * NS_TO_MS * pf.iCall);
+		
+		/*
+		_PROFILE_RESULT& pf = PROFILE_RESULT[idx];
+		memset(buffer, '\0', BUFFER_SIZE);
+		sprintf_s(buffer, BUFFER_SIZE,
+			"| %ls | %.4lfレs | %.4lfレs | %.4lfレs | %lld | %.2lfレs |\n",
 			pf.szName,
 			(pf.dTotalTime / pf.iCall) * NS_PER_SEC,
 			pf.dMin[0] * NS_PER_SEC,
 			pf.dMax[0] * NS_PER_SEC,
-			pf.iCall);
+			pf.iCall,
+			(pf.dTotalTime / pf.iCall) * NS_PER_SEC * pf.iCall);
+		*/
+
 		strcat_s(data, OUTPUT_SIZE, buffer);
 		idx++;
 	}
 
 	strcat_s(data, OUTPUT_SIZE,
-		"=====================================\n\n");
+		"----------------------------------------------\n\n");
 
 	FILE* file;
 	errno_t ret;
@@ -214,7 +233,7 @@ void ProfileDataOutText(const WCHAR* szFileName)
 	fwrite(data, strlen(data), 1, file);
 	fclose(file);
 
-	printf("Profile Data Out Success!\n");
+	//printf("Profile Data Out Success!\n");
 }
 
 void ProfileReset(void)

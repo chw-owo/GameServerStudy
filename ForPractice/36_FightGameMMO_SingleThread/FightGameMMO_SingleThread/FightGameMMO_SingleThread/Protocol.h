@@ -14,7 +14,8 @@
 #define dfDEFAULT_SESSIONS_NUM				8192
 #define dfDEFAULT_PLAYERS_NUM				8192
 #define dfDEFAULT_PLAYERS_PER_SECTOR		1024
-#define dfDEFAULT_ACCEPTRED_SESSIONS_NUM	512
+#define dfDEFAULT_ACCEPTED_SESSIONS_NUM		128
+#define dfDEFAULT_DISCONNECT_SESSIONS_NUM	512
 
 struct st_PACKET_HEADER
 {
@@ -309,7 +310,7 @@ struct st_PACKET_HEADER
 
 
 //---------------------------------------------------------------
-// 공격 데미지.
+// 공격 데미지. 1 2 3
 //---------------------------------------------------------------
 #define dfATTACK1_DAMAGE		1
 #define dfATTACK2_DAMAGE		2
@@ -332,8 +333,8 @@ struct st_PACKET_HEADER
 // 섹터 설정값
 //-----------------------------------------------------------------
 
-#define dfSECTOR_SIZE_X					128
-#define dfSECTOR_SIZE_Y					128
+#define dfSECTOR_SIZE_X					256
+#define dfSECTOR_SIZE_Y					256
 #define dfSECTOR_CNT_X					(dfRANGE_MOVE_RIGHT / dfSECTOR_SIZE_X) + 2
 #define dfSECTOR_CNT_Y					(dfRANGE_MOVE_BOTTOM / dfSECTOR_SIZE_Y) + 2
 #define dfAROUND_SECTOR_NUM				9
