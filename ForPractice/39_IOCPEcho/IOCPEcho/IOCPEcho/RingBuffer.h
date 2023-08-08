@@ -33,6 +33,7 @@ public:
 
     int MoveReadPos(int iSize);
     int MoveWritePos(int iSize);
+    char* GetBufferFrontPtr(void);
     char* GetReadBufferPtr(void);
     char* GetWriteBufferPtr(void);
 

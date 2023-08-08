@@ -31,13 +31,14 @@ public:
 	}
 
 public:
-
 	__int64 _ID;
 	SOCKET _sock;
 	SOCKADDR_IN _addr;
 
 	RingBuffer _recvBuf;
 	RingBuffer _sendBuf;
+	WSABUF _wsaRecvbuf[2];
+	WSABUF _wsaSendbuf[2];
 	NetworkOverlapped _recvOvl;
 	NetworkOverlapped _sendOvl;
 
@@ -45,6 +46,10 @@ public:
 	SRWLOCK _lock;
 	volatile long _IOCount;
 	volatile long _sendFlag;
+
+	// For Debug
+	volatile long _recvCnt = 0;
+	volatile long _sendCnt = 0;
 };
 
 extern unordered_map<int, Session*> g_SessionMap;

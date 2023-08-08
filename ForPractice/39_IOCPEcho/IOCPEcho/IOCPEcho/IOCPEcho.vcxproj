@@ -128,17 +128,18 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="ContentManager.cpp" />
+    <ClCompile Include="Server.cpp" />
     <ClCompile Include="RingBuffer.cpp" />
     <ClCompile Include="SerializePacket.cpp" />
-    <ClCompile Include="NerworkManager.cpp" />
+    <ClCompile Include="NetLib.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="Session.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="ContentManager.h" />
+    <ClInclude Include="Server.h" />
     <ClInclude Include="Main.h" />
-    <ClInclude Include="NetworkManager.h" />
+    <ClInclude Include="NetLib.h" />
+    <ClInclude Include="Protocol.h" />
     <ClInclude Include="RingBuffer.h" />
     <ClInclude Include="SerializePacket.h" />
     <ClInclude Include="Session.h" />

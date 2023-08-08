@@ -4,13 +4,12 @@
 #include <stdio.h>
 
 #define dfSERVER_IP "127.0.0.1"
-#define dfSERVER_PORT 9000
-#define dfBUFSIZE 64
+#define dfSERVER_PORT 6000
+#define dfBUFSIZE 10
 
 SOCKET g_Socket;
 void AutoTest();
 void ManualTest();
-int recvn(SOCKET sock, char* buf, int len, int flags);
 
 int main()
 {
@@ -32,6 +31,7 @@ int main()
     serveraddr.sin_family = AF_INET;
     inet_pton(AF_INET, dfSERVER_IP, &serveraddr.sin_addr.s_addr);
     serveraddr.sin_port = htons(dfSERVER_PORT);
+
     int connectRet = connect(g_Socket, (SOCKADDR*)&serveraddr, sizeof(serveraddr));
     if (connectRet == SOCKET_ERROR)
     {
@@ -48,15 +48,27 @@ int main()
     return 0;
 }
 
+#define dfPACKET_LEN 10
+#define dfPAYLOAD_LEN 8
+
+#pragma pack(1)
+struct Packet
+{
+    short len;
+    __int64 data;
+};
+#pragma pack(pop)
+
 void AutoTest()
 {
-    int len;
-    char buf[dfBUFSIZE + 1]
-        = "1234567890 abcdefghijklmnop 1234567890 abcdefghijklmnop 1234567\0";
-
+    int data = 0;
+    Packet sendPacket;
+    sendPacket.len = dfPAYLOAD_LEN;
+    
     while (1)
     {
-        int sendRet = send(g_Socket, buf, strlen(buf), 0);
+        sendPacket.data = data++;
+        int sendRet = send(g_Socket, (char*)&sendPacket, dfPACKET_LEN, 0);
         if (sendRet == SOCKET_ERROR)
         {
             int err = WSAGetLastError();
@@ -65,7 +77,8 @@ void AutoTest()
         }
         printf("Success to Send %dbytes!\n", sendRet);
 
-        int recvRet = recvn(g_Socket, buf, sendRet, 0);
+        Packet recvPacket;
+        int recvRet = recv(g_Socket, (char*)&recvPacket, dfPACKET_LEN, 0);
         if (recvRet == SOCKET_ERROR)
         {
             int err = WSAGetLastError();
@@ -77,10 +90,8 @@ void AutoTest()
             break;
         }
 
-        printf("Success to Recv %dbytes!\n", recvRet);
-        printf(" - %s\n", buf);
-
-        Sleep(1000);
+        printf("Success to Recv %d bytes!\n", recvRet);
+        printf(" - %llu\n", recvPacket.data);
     }
 }
 
@@ -109,7 +120,7 @@ void ManualTest()
         }
         printf("Success to Send %dbytes!\n", sendRet);
 
-        int recvRet = recvn(g_Socket, buf, sendRet, 0);
+        int recvRet = recv(g_Socket, buf, sendRet, 0);
         if (recvRet == SOCKET_ERROR)
         {
             int err = WSAGetLastError();
@@ -125,30 +136,4 @@ void ManualTest()
         printf("Success to Recv %dbytes!\n", recvRet);
         printf(" - %s\n", buf);
     }
-}
-
-int recvn(SOCKET sock, char* buf, int len, int flags)
-{
-    int recvd;
-    char* ptr = buf;
-    int left = len;
-
-    while (left > 0)
-    {
-        recvd = recv(sock, ptr, left, flags);
-        if (recvd == SOCKET_ERROR)
-        {
-            int err = WSAGetLastError();
-            printf("Error! %s(%d): %d\n", __func__, __LINE__, err);
-            break;
-        }
-        else if (recvd == 0)
-        {
-            break;
-        }
-        left -= recvd;
-        ptr += recvd;
-    }
-
-    return (len - left);
 }

@@ -11,10 +11,10 @@
     <Filter Include="Network">
       <UniqueIdentifier>{11e67b32-0718-493c-8b9b-f1af7320c346}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Content">
+    <Filter Include="Server">
       <UniqueIdentifier>{b1fd646d-8c2e-4f12-ad45-e512fa038b79}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Network\NetworkUtils">
+    <Filter Include="Network\NetUtils">
       <UniqueIdentifier>{aab37369-764f-43c1-bc57-39d8b930a2bf}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
@@ -23,16 +23,16 @@
       <Filter>Main</Filter>
     </ClCompile>
     <ClCompile Include="RingBuffer.cpp">
-      <Filter>Network\NetworkUtils</Filter>
+      <Filter>Network\NetUtils</Filter>
     </ClCompile>
     <ClCompile Include="SerializePacket.cpp">
-      <Filter>Network\NetworkUtils</Filter>
+      <Filter>Network\NetUtils</Filter>
     </ClCompile>
-    <ClCompile Include="NerworkManager.cpp">
+    <ClCompile Include="NetLib.cpp">
       <Filter>Network</Filter>
     </ClCompile>
-    <ClCompile Include="ContentManager.cpp">
-      <Filter>Content</Filter>
+    <ClCompile Include="Server.cpp">
+      <Filter>Server</Filter>
     </ClCompile>
     <ClCompile Include="Session.cpp">
       <Filter>Network</Filter>
@@ -40,21 +40,24 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="RingBuffer.h">
-      <Filter>Network\NetworkUtils</Filter>
+      <Filter>Network\NetUtils</Filter>
     </ClInclude>
     <ClInclude Include="SerializePacket.h">
-      <Filter>Network\NetworkUtils</Filter>
+      <Filter>Network\NetUtils</Filter>
     </ClInclude>
     <ClInclude Include="Main.h">
       <Filter>Main</Filter>
     </ClInclude>
-    <ClInclude Include="NetworkManager.h">
+    <ClInclude Include="NetLib.h">
       <Filter>Network</Filter>
     </ClInclude>
-    <ClInclude Include="ContentManager.h">
-      <Filter>Content</Filter>
+    <ClInclude Include="Server.h">
+      <Filter>Server</Filter>
     </ClInclude>
     <ClInclude Include="Session.h">
+      <Filter>Network</Filter>
+    </ClInclude>
+    <ClInclude Include="Protocol.h">
       <Filter>Network</Filter>
     </ClInclude>
   </ItemGroup>

@@ -75,6 +75,7 @@ int RingBuffer::Enqueue(char* chpData, int iSize)
         }
     }
 
+    ////::printf("%s\n", __func__);
     int directEnqueueSize = DirectEnqueueSize();
     if (iSize <= directEnqueueSize)
     {
@@ -123,16 +124,18 @@ int RingBuffer::Enqueue(char* chpData, int iSize)
 
 int RingBuffer::Dequeue(char* chpData, int iSize)
 {
-    if (iSize > _useSize)
+    if (iSize > _useSize || iSize < 0)
     {
         ::printf("Error! Func %s Line %d (used size - %d, req size - %d)\n",
             __func__, __LINE__, _useSize, iSize);
         return -1;
     }
 
+    //::printf("%s\n", __func__);
     int directDequeueSize = DirectDequeueSize();
     if (iSize <= directDequeueSize)
     {
+        // TO-DO
         memcpy_s(chpData, iSize, &_buffer[(_readPos + 1) % _bufferSize], iSize);
     }
     else
@@ -159,6 +162,7 @@ int RingBuffer::Peek(char* chpDest, int iSize)
         return -1;
     }
 
+    //::printf("%s\n", __func__);
     int directDequeueSize = DirectDequeueSize();
     if (iSize <= directDequeueSize)
     {
@@ -202,6 +206,7 @@ bool RingBuffer::Resize(int iSize)
     }
 
     char* newBuffer = new char[iSize];
+    //::printf("%s\n", __func__);
 
     if (_writePos > _readPos)
     {
@@ -234,6 +239,7 @@ int RingBuffer::MoveReadPos(int iSize)
         return -1;
     }
 
+    
     _readPos = (_readPos + iSize) % _bufferSize;
     _useSize -= iSize;
     _freeSize += iSize;
@@ -257,6 +263,11 @@ int RingBuffer::MoveWritePos(int iSize)
     _freeSize -= iSize;
 
     return iSize;
+}
+
+char* RingBuffer::GetBufferFrontPtr(void)
+{
+    return &_buffer[0];
 }
 
 char* RingBuffer::GetReadBufferPtr(void)

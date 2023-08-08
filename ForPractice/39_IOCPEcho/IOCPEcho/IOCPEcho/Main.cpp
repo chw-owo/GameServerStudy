@@ -4,13 +4,12 @@ bool g_bShutdown = false;
 
 int wmain(int argc, wchar_t* argv[])
 {
-	NetworkManager* networkManager = NetworkManager::GetInstance();
-	ContentManager* contentManager = ContentManager::GetInstance();
+	NetLib* netlib = NetLib::GetInstance();
 
 	while (!g_bShutdown)
 	{
 		Sleep(1000);
-		if (GetAsyncKeyState(VK_RETURN))
+		if (GetAsyncKeyState(VK_ESCAPE))
 		{
 			g_bShutdown = true;
 		}

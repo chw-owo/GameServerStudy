@@ -1,4 +1,4 @@
 #pragma once
-#include "NetworkManager.h"
-#include "ContentManager.h"
+#include "NetLib.h"
+//#include "Server.h"
 extern bool g_bShutdown;
