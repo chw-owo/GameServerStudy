@@ -46,10 +46,6 @@ public:
 	SRWLOCK _lock;
 	volatile long _IOCount;
 	volatile long _sendFlag;
-
-	// For Debug
-	volatile long _recvCnt = 0;
-	volatile long _sendCnt = 0;
 };
 
 extern unordered_map<int, Session*> g_SessionMap;

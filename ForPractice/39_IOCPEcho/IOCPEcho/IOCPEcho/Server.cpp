@@ -19,7 +19,7 @@ void Server::onMessage(__int64 sessionID, SerializePacket* packet)
 	__int64 echo;
 	*packet >> echo;
 
-	::printf("%llu: %llu\n", sessionID, echo);
+	//::printf("%llu\n", echo);
 
 	SerializePacket sendPacket;
 	sendPacket << echo;

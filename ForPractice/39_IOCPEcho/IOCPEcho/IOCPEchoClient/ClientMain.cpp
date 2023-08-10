@@ -1,5 +1,6 @@
 ﻿#pragma comment(lib, "ws2_32")
 #include <ws2tcpip.h>
+#include <process.h>
 #include <stdlib.h>
 #include <stdio.h>
 
@@ -8,8 +9,11 @@
 #define dfBUFSIZE 10
 
 SOCKET g_Socket;
-void AutoTest();
-void ManualTest();
+bool g_Shutdown;
+
+void PingPongTest();
+unsigned int WINAPI SendThread(void* arg);
+unsigned int WINAPI RecvThread(void* arg);
 
 int main()
 {
@@ -40,8 +44,23 @@ int main()
         return 0;
     }
 
-    AutoTest();
-    //ManualTest();
+    /*
+    HANDLE threads[2];
+
+    threads[0] = (HANDLE)_beginthreadex(NULL, 0, SendThread, 0, 0, nullptr);
+    threads[1] = (HANDLE)_beginthreadex(NULL, 0, RecvThread, 0, 0, nullptr);
+
+    while(!g_Shutdown)
+    {
+        if (GetAsyncKeyState(VK_BACK))
+            g_Shutdown = true;
+    }
+
+    WaitForMultipleObjects(2, threads, true, INFINITE);
+    ::printf("\nAll Thread Terminate!\n");
+    */
+
+    PingPongTest();
 
     closesocket(g_Socket);
     WSACleanup();
@@ -59,13 +78,13 @@ struct Packet
 };
 #pragma pack(pop)
 
-void AutoTest()
+void PingPongTest()
 {
     int data = 0;
     Packet sendPacket;
     sendPacket.len = dfPAYLOAD_LEN;
-    
-    while (1)
+
+    while (!g_Shutdown)
     {
         sendPacket.data = data++;
         int sendRet = send(g_Socket, (char*)&sendPacket, dfPACKET_LEN, 0);
@@ -95,23 +114,16 @@ void AutoTest()
     }
 }
 
-void ManualTest()
+unsigned int WINAPI SendThread(void* arg)
 {
-    int len;
-    char buf[dfBUFSIZE + 1];
+    int data = 0;
+    Packet sendPacket;
+    sendPacket.len = dfPAYLOAD_LEN;
 
-    while (1)
+    while (!g_Shutdown)
     {
-        // Setting Data to Send
-        printf("\n[보낼 데이터] ");
-        if (fgets(buf, dfBUFSIZE + 1, stdin) == NULL)
-            break;
-
-        len = strlen(buf);
-        if (buf[len - 1] == '\n') buf[len - 1] = '\0';
-        if (strlen(buf) == 0) break;
-
-        int sendRet = send(g_Socket, buf, strlen(buf), 0);
+        sendPacket.data = data++;
+        int sendRet = send(g_Socket, (char*)&sendPacket, dfPACKET_LEN, 0);
         if (sendRet == SOCKET_ERROR)
         {
             int err = WSAGetLastError();
@@ -120,7 +132,18 @@ void ManualTest()
         }
         printf("Success to Send %dbytes!\n", sendRet);
 
-        int recvRet = recv(g_Socket, buf, sendRet, 0);
+        //Sleep(1000);
+    }
+
+    return 0;
+}
+
+unsigned int WINAPI RecvThread(void* arg)
+{
+    while (!g_Shutdown)
+    {
+        Packet recvPacket;
+        int recvRet = recv(g_Socket, (char*)&recvPacket, dfPACKET_LEN, 0);
         if (recvRet == SOCKET_ERROR)
         {
             int err = WSAGetLastError();
@@ -132,8 +155,10 @@ void ManualTest()
             break;
         }
 
-        buf[recvRet] = '\0';
-        printf("Success to Recv %dbytes!\n", recvRet);
-        printf(" - %s\n", buf);
+        printf("Success to Recv %d bytes!\n", recvRet);
+        printf(" - %llu\n", recvPacket.data);
     }
+
+    return 0;
 }
+

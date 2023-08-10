@@ -70,8 +70,9 @@ NetLib::NetLib()
 
 	for (int i = 0; i < _networkThreadCnt; i++)
 	{
+		unsigned int id;
 		_networkThreads[i] = (HANDLE)_beginthreadex(
-			NULL, 0, NetworkThread, _hNetworkCP, 0, nullptr);
+			NULL, 0, NetworkThread, _hNetworkCP, 0, &id);
 
 		if (_networkThreads[i] == NULL)
 		{
@@ -79,6 +80,8 @@ NetLib::NetLib()
 			g_bShutdown = true;
 			return;
 		}
+
+		ThreadIDMap.insert(make_pair(id, i));
 	}
 
 	/*
@@ -130,15 +133,8 @@ NetLib::~NetLib()
 		PostQueuedCompletionStatus(_hNetworkCP, 0, 0, 0);
 	}
 
-	/*
-	for (int i = 0; i < _echoThreadCnt; i++)
-	{
-		PostQueuedCompletionStatus(_hEchoCP, 0, 0, 0);
-	}
-	*/
 
 	WaitForMultipleObjects(_networkThreadCnt, _networkThreads, true, INFINITE);
-	//WaitForMultipleObjects(_echoThreadCnt, _echoThreads, true, INFINITE);
 	WaitForSingleObject(_acceptThread, INFINITE);
 
 	::printf("\nAll Thread Terminate!\n");
@@ -192,7 +188,7 @@ unsigned int WINAPI NetLib::AcceptThread(void* arg)
 		// Connect Session to IOCP and Post Recv
 		CreateIoCompletionPort((HANDLE)pSession->_sock,
 			pNetLib->_hNetworkCP, (ULONG_PTR)pSession, 0);
-		pNetLib->RecvPost(pSession);
+		pNetLib->RecvPost(pSession, GetCurrentThreadId());
 	}
 
 	::printf("Accept Thread Terminate (ID: %d)\n", GetCurrentThreadId());
@@ -201,8 +197,12 @@ unsigned int WINAPI NetLib::AcceptThread(void* arg)
 
 unsigned int WINAPI NetLib::NetworkThread(void* arg)
 {
+	
 	HANDLE hNetworkCP = (HANDLE)arg;
 	NetLib* pNetLib = NetLib::GetInstance();
+	unordered_map<unsigned int, int>:: iterator iter 
+		= pNetLib->ThreadIDMap.find(GetCurrentThreadId());
+	int threadID = iter->second;
 
 	while (1)
 	{
@@ -232,21 +232,21 @@ unsigned int WINAPI NetLib::NetworkThread(void* arg)
 		// Recv
 		else if (pNetOvl->_type == NET_TYPE::RECV)
 		{	
-			pNetLib->HandleRecvCP(pSession->_ID, cbTransferred);
+			pNetLib->HandleRecvCP(pSession->_ID, cbTransferred, threadID);
 		}
 
 		// Send 
 		else if (pNetOvl->_type == NET_TYPE::SEND)
 		{
-			InterlockedDecrement(&pSession->_sendFlag);
-			pNetLib->HandleSendCP(pSession->_ID, cbTransferred);
+			pNetLib->HandleSendCP(pSession->_ID, cbTransferred, threadID);
+		}
+		else
+		{
+			printf("Wrong Type: %d\n", pNetOvl->_type);
 		}
 
 		if (InterlockedDecrement(&pSession->_IOCount) == 0)
 		{
-			//::printf("type: %d / transf: %d / recvCnt: %d / sendCnt: %d\n",
-			//	pNetOvl->_type, cbTransferred, pSession->_recvCnt, pSession->_sendCnt);
-
 			pNetLib->ReleaseSession(pSession);
 		}
 	}
@@ -255,44 +255,9 @@ unsigned int WINAPI NetLib::NetworkThread(void* arg)
 	return 0;
 }
 
-/*
-//PostQueuedCompletionStatus(_hEchoCP, recvBytes, pSession->_ID, 0);
-unsigned int __stdcall NetLib::EchoThread(void* arg)
-{
-	HANDLE hEchoCP = (HANDLE)arg;
-	NetLib* pNetLib = NetLib::GetInstance();
-
-	while (1)
-	{
-		int recvBytes;
-		__int64 sessionID;
-		OVERLAPPED* pOvl = nullptr;
-
-		int GQCSRet = GetQueuedCompletionStatus(hEchoCP, 
-			(LPDWORD)&recvBytes, (PULONG_PTR)&sessionID, (LPOVERLAPPED*)&pOvl, INFINITE);
-
-		if (g_bShutdown)
-		{
-			break;
-		}
-
-		// Handle Echo
-	}
-
-	::printf("Echo Thread Terminate (ID: %d)\n", GetCurrentThreadId());
-	return 0;
-}
-*/
-
-
 // pSession으로 바로 받아도 되지만 동기화 연습 겸 ID 전달 -> map에서 탐색하는 구조로
-void NetLib::HandleRecvCP(__int64 sessionID, int recvBytes)
-{
-	// TO-DO: recv-send 순으로 진행되면 잘 되는데
-	// recv-recv 순으로 완료 통지가 오면 
-	// 뒤에 recv 한 메시지에 대해서는 send가 안된다!!!!!
-	
-	::printf("%llu: Success to recv %d bytes ", sessionID, recvBytes);
+void NetLib::HandleRecvCP(__int64 sessionID, int recvBytes, int threadID)
+{	
 	AcquireSRWLockShared(&g_SessionMapLock);
 
 	unordered_map<int, Session*>::iterator iter = g_SessionMap.find(sessionID);
@@ -307,8 +272,6 @@ void NetLib::HandleRecvCP(__int64 sessionID, int recvBytes)
 
 	AcquireSRWLockExclusive(&pSession->_lock);
 	ReleaseSRWLockShared(&g_SessionMapLock);
-
-	::printf("(%d)\n", pSession->_recvCnt);
 
 	int moveReadRet = pSession->_recvBuf.MoveWritePos(recvBytes);
 	if (moveReadRet != recvBytes)
@@ -318,17 +281,15 @@ void NetLib::HandleRecvCP(__int64 sessionID, int recvBytes)
 		return;
 	}
 
-	RecvDataToMsg(pSession); 
-	SendPost(pSession);
-	RecvPost(pSession);
+	RecvDataToMsg(pSession); // ~ Enqueue Echo Msg To Send Buffer
+	SendPost(pSession, threadID);	
+	RecvPost(pSession, threadID);
 
 	ReleaseSRWLockExclusive(&pSession->_lock);
 }
 
-void NetLib::HandleSendCP(__int64 sessionID, int sendBytes)
+void NetLib::HandleSendCP(__int64 sessionID, int sendBytes, int threadID)
 {
-	::printf("%llu: Success to send %d bytes ", sessionID, sendBytes);
-
 	AcquireSRWLockShared(&g_SessionMapLock);
 
 	unordered_map<int, Session*>::iterator iter = g_SessionMap.find(sessionID);
@@ -344,10 +305,21 @@ void NetLib::HandleSendCP(__int64 sessionID, int sendBytes)
 	AcquireSRWLockExclusive(&pSession->_lock);
 	ReleaseSRWLockShared(&g_SessionMapLock);
 
-	::printf("(%d)\n", pSession->_sendCnt);
-
+	int moveReadRet = pSession->_sendBuf.MoveReadPos(sendBytes);
+	if (moveReadRet != sendBytes)
+	{
+		::printf("Error! Func %s Line %d\n", __func__, __LINE__);
+		g_bShutdown = true;
+		return;
+	}
+	
+	if (InterlockedDecrement(&pSession->_sendFlag) != 0)
+	{
+		InterlockedExchange(&pSession->_sendFlag, 0);
+		SendPost(pSession, threadID);
+	}
+	
 	ReleaseSRWLockExclusive(&pSession->_lock);
-
 }
 
 void NetLib::ReleaseSession(Session* pSession)
@@ -375,7 +347,7 @@ void NetLib::ReleaseSession(Session* pSession)
 }
 
 
-void NetLib::RecvPost(Session* pSession)
+void NetLib::RecvPost(Session* pSession, int threadID)
 {
 	DWORD flags = 0;
 	DWORD recvBytes = 0;
@@ -385,12 +357,10 @@ void NetLib::RecvPost(Session* pSession)
 	pSession->_wsaRecvbuf[0].len = pSession->_recvBuf.DirectEnqueueSize();
 	pSession->_wsaRecvbuf[1].buf = pSession->_recvBuf.GetBufferFrontPtr();
 	pSession->_wsaRecvbuf[1].len = freeSize - pSession->_wsaRecvbuf[0].len;
-	//printf("%d, %d\n", pSession->_wsaRecvbuf[0].len, pSession->_wsaRecvbuf[1].len);
 
 	ZeroMemory(&pSession->_recvOvl._ovl, sizeof(pSession->_recvOvl._ovl));
-
 	InterlockedIncrement(&pSession->_IOCount);
-	InterlockedIncrement(&pSession->_recvCnt);
+	
 	int recvRet = WSARecv(pSession->_sock, pSession->_wsaRecvbuf,
 		2, &recvBytes, &flags, (LPOVERLAPPED)&pSession->_recvOvl, NULL);
 
@@ -408,10 +378,12 @@ void NetLib::RecvPost(Session* pSession)
 	}
 }
 
-void NetLib::SendPost(Session* pSession)
+void NetLib::SendPost(Session* pSession, int threadID)
 {
-	if (pSession->_sendFlag != 0)
+	if (InterlockedIncrement(&pSession->_sendFlag) != 1)
+	{
 		return;
+	}
 
 	DWORD sendBytes;
 
@@ -420,13 +392,9 @@ void NetLib::SendPost(Session* pSession)
 	pSession->_wsaSendbuf[0].len = pSession->_sendBuf.DirectDequeueSize();
 	pSession->_wsaSendbuf[1].buf = pSession->_sendBuf.GetBufferFrontPtr();
 	pSession->_wsaSendbuf[1].len = useSize - pSession->_wsaSendbuf[0].len;
-	//printf("%d, %d\n", pSession->_wsaSendbuf[0].len, pSession->_wsaSendbuf[1].len);
 
 	ZeroMemory(&pSession->_sendOvl._ovl, sizeof(pSession->_sendOvl._ovl));
-
 	InterlockedIncrement(&pSession->_IOCount);
-	InterlockedIncrement(&pSession->_sendCnt);
-	InterlockedIncrement(&pSession->_sendFlag);
 
 	int sendRet = WSASend(pSession->_sock, pSession->_wsaSendbuf,
 		2, &sendBytes, 0, (LPOVERLAPPED)&pSession->_sendOvl, NULL);
@@ -442,14 +410,6 @@ void NetLib::SendPost(Session* pSession)
 			}
 			return;
 		}
-	}
-
-	int moveReadRet = pSession->_sendBuf.MoveReadPos(useSize);
-	if (moveReadRet != useSize)
-	{
-		::printf("Error! Func %s Line %d\n", __func__, __LINE__);
-		g_bShutdown = true;
-		return;
 	}
 }
 
@@ -513,7 +473,7 @@ void NetLib::MsgToSendData(__int64 sessionID, SerializePacket* packet)
 
 	ReleaseSRWLockShared(&g_SessionMapLock);
 
-	// This func is called in HandleRecvCP,
+	// This func is called,
 	// So should not lock the session
 
 	int payloadSize = packet->GetPayloadSize();
