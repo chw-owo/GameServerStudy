@@ -1,0 +1,12 @@
+BasicArray
+동접 4300, fps 50 기준 (ms)
+
+Network 1000000
+- Send 900000
+- Handle Packet 12000
+- Accept 2000, Disconnect 2000, Recv 1000
+
+Content 20000
+- Update Secotr 10000
+
+Send를 줄일 수가 있나..? Send Buffer Enqueue를 안해도 되는 상황에도 하고 있진 않나 봐야겠다. 

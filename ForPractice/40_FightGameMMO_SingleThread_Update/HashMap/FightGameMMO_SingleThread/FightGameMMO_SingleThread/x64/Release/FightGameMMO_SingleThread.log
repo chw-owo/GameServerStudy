@@ -1,0 +1,35 @@
+﻿  Main.cpp
+  ObjectPool.cpp
+  Profiler.cpp
+  RingBuffer.cpp
+  SerializePacket.cpp
+  Server.cpp
+C:\Users\Dell\Desktop\GameServer\ForPractice\40_FightGameMMO_SingleThread_Update\HashMap\FightGameMMO_SingleThread\FightGameMMO_SingleThread\Server.cpp(2008,12): warning C4477: 'printf' : 서식 문자열 '%d'에 'int' 형식의 인수가 필요하지만 variadic 인수 2의 형식이 'size_t'입니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\40_FightGameMMO_SingleThread_Update\HashMap\FightGameMMO_SingleThread\FightGameMMO_SingleThread\Server.cpp(2008,12): message : 서식 문자열에서 '%zd'을(를) 사용하는 것이 좋습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\40_FightGameMMO_SingleThread_Update\HashMap\FightGameMMO_SingleThread\FightGameMMO_SingleThread\Server.cpp(2033,12): warning C4477: 'printf' : 서식 문자열 '%d'에 'int' 형식의 인수가 필요하지만 variadic 인수 2의 형식이 'size_t'입니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\40_FightGameMMO_SingleThread_Update\HashMap\FightGameMMO_SingleThread\FightGameMMO_SingleThread\Server.cpp(2033,12): message : 서식 문자열에서 '%zd'을(를) 사용하는 것이 좋습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\40_FightGameMMO_SingleThread_Update\HashMap\FightGameMMO_SingleThread\FightGameMMO_SingleThread\Server.cpp(2054,12): warning C4477: 'printf' : 서식 문자열 '%d'에 'int' 형식의 인수가 필요하지만 variadic 인수 2의 형식이 'size_t'입니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\40_FightGameMMO_SingleThread_Update\HashMap\FightGameMMO_SingleThread\FightGameMMO_SingleThread\Server.cpp(2054,12): message : 서식 문자열에서 '%zd'을(를) 사용하는 것이 좋습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\40_FightGameMMO_SingleThread_Update\HashMap\FightGameMMO_SingleThread\FightGameMMO_SingleThread\Server.cpp(2078,12): warning C4477: 'printf' : 서식 문자열 '%d'에 'int' 형식의 인수가 필요하지만 variadic 인수 2의 형식이 'size_t'입니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\40_FightGameMMO_SingleThread_Update\HashMap\FightGameMMO_SingleThread\FightGameMMO_SingleThread\Server.cpp(2078,12): message : 서식 문자열에서 '%zd'을(를) 사용하는 것이 좋습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\40_FightGameMMO_SingleThread_Update\HashMap\FightGameMMO_SingleThread\FightGameMMO_SingleThread\Server.cpp(2102,12): warning C4477: 'printf' : 서식 문자열 '%d'에 'int' 형식의 인수가 필요하지만 variadic 인수 2의 형식이 'size_t'입니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\40_FightGameMMO_SingleThread_Update\HashMap\FightGameMMO_SingleThread\FightGameMMO_SingleThread\Server.cpp(2102,12): message : 서식 문자열에서 '%zd'을(를) 사용하는 것이 좋습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\40_FightGameMMO_SingleThread_Update\HashMap\FightGameMMO_SingleThread\FightGameMMO_SingleThread\Server.cpp(2126,12): warning C4477: 'printf' : 서식 문자열 '%d'에 'int' 형식의 인수가 필요하지만 variadic 인수 2의 형식이 'size_t'입니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\40_FightGameMMO_SingleThread_Update\HashMap\FightGameMMO_SingleThread\FightGameMMO_SingleThread\Server.cpp(2126,12): message : 서식 문자열에서 '%zd'을(를) 사용하는 것이 좋습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\40_FightGameMMO_SingleThread_Update\HashMap\FightGameMMO_SingleThread\FightGameMMO_SingleThread\Server.cpp(2150,12): warning C4477: 'printf' : 서식 문자열 '%d'에 'int' 형식의 인수가 필요하지만 variadic 인수 2의 형식이 'size_t'입니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\40_FightGameMMO_SingleThread_Update\HashMap\FightGameMMO_SingleThread\FightGameMMO_SingleThread\Server.cpp(2150,12): message : 서식 문자열에서 '%zd'을(를) 사용하는 것이 좋습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\40_FightGameMMO_SingleThread_Update\HashMap\FightGameMMO_SingleThread\FightGameMMO_SingleThread\Server.cpp(2174,12): warning C4477: 'printf' : 서식 문자열 '%d'에 'int' 형식의 인수가 필요하지만 variadic 인수 2의 형식이 'size_t'입니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\40_FightGameMMO_SingleThread_Update\HashMap\FightGameMMO_SingleThread\FightGameMMO_SingleThread\Server.cpp(2174,12): message : 서식 문자열에서 '%zd'을(를) 사용하는 것이 좋습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\40_FightGameMMO_SingleThread_Update\HashMap\FightGameMMO_SingleThread\FightGameMMO_SingleThread\Server.cpp(2197,12): warning C4477: 'printf' : 서식 문자열 '%d'에 'int' 형식의 인수가 필요하지만 variadic 인수 2의 형식이 'size_t'입니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\40_FightGameMMO_SingleThread_Update\HashMap\FightGameMMO_SingleThread\FightGameMMO_SingleThread\Server.cpp(2197,12): message : 서식 문자열에서 '%zd'을(를) 사용하는 것이 좋습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\40_FightGameMMO_SingleThread_Update\HashMap\FightGameMMO_SingleThread\FightGameMMO_SingleThread\Server.cpp(2220,12): warning C4477: 'printf' : 서식 문자열 '%d'에 'int' 형식의 인수가 필요하지만 variadic 인수 2의 형식이 'size_t'입니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\40_FightGameMMO_SingleThread_Update\HashMap\FightGameMMO_SingleThread\FightGameMMO_SingleThread\Server.cpp(2220,12): message : 서식 문자열에서 '%zd'을(를) 사용하는 것이 좋습니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\40_FightGameMMO_SingleThread_Update\HashMap\FightGameMMO_SingleThread\FightGameMMO_SingleThread\Server.cpp(2241,12): warning C4477: 'printf' : 서식 문자열 '%d'에 'int' 형식의 인수가 필요하지만 variadic 인수 2의 형식이 'size_t'입니다.
+C:\Users\Dell\Desktop\GameServer\ForPractice\40_FightGameMMO_SingleThread_Update\HashMap\FightGameMMO_SingleThread\FightGameMMO_SingleThread\Server.cpp(2241,12): message : 서식 문자열에서 '%zd'을(를) 사용하는 것이 좋습니다.
+  SystemLog.cpp
+C:\Users\Dell\Desktop\GameServer\ForPractice\40_FightGameMMO_SingleThread_Update\HashMap\FightGameMMO_SingleThread\FightGameMMO_SingleThread\SystemLog.cpp(25,28): warning C4267: '초기화 중': 'size_t'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  코드를 생성하고 있습니다.
+  Previous IPDB not found, fall back to full compilation.
+  All 681 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  코드를 생성했습니다.
+  FightGameMMO_SingleThread.vcxproj -> C:\Users\Dell\Desktop\GameServer\ForPractice\40_FightGameMMO_SingleThread_Update\HashMap\FightGameMMO_SingleThread\x64\Release\FightGameMMO_SingleThread.exe

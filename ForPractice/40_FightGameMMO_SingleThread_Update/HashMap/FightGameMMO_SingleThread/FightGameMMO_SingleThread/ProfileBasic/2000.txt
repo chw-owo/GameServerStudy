@@ -1,0 +1,20 @@
+
+----------------------------------------------
+| Name | Average | Call/s | Total |
+----------------------------------------------
+| Network | 841.1942ms | 1164 | 979150.10ms |
+| Delayed Accept | 1.6597ms | 1164 | 1931.90ms |
+| Delayed Disconnect | 0.0990ms | 1164 | 115.20ms |
+| Network: Recv | 1.7172ms | 355 | 609.60ms |
+| Network: Handle Echo | 1.4040ms | 25 | 35.10ms |
+| Network: Handle Move Start | 7.4125ms | 120 | 889.50ms |
+| Network: Send | 15.6315ms | 17307 | 270535.00ms |
+| Network: Handle Move Stop | 7.2868ms | 151 | 1100.30ms |
+| Network: Handle Attack2 | 7.0550ms | 40 | 282.20ms |
+| Network: Handle Attack3 | 8.3509ms | 53 | 442.60ms |
+| Content | 296.5060ms | 50 | 14825.30ms |
+| Content: Update Move | 0.2801ms | 25344 | 7098.90ms |
+| Content: Update Sector | 8.6309ms | 346 | 2986.30ms |
+| Network: Handle Attack1 | 9.0745ms | 55 | 499.10ms |
+----------------------------------------------
+
