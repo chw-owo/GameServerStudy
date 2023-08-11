@@ -281,7 +281,7 @@ void NetLib::HandleRecvCP(__int64 sessionID, int recvBytes, int threadID)
 		return;
 	}
 
-	RecvDataToMsg(pSession); // ~ Enqueue Echo Msg To Send Buffer
+	RecvDataToMsg(pSession); // include onMessage, SendMsg, MsgToSendData
 	SendPost(pSession, threadID);	
 	RecvPost(pSession, threadID);
 
