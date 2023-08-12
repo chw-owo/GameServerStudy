@@ -3,6 +3,8 @@
 #include <process.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <queue>
+using namespace std;
 
 #define dfSERVER_IP "127.0.0.1"
 #define dfSERVER_PORT 6000
@@ -10,6 +12,8 @@
 
 SOCKET g_Socket;
 bool g_Shutdown;
+int g_SendCnt;
+int g_RecvCnt;
 
 void PingPongTest();
 unsigned int WINAPI SendThread(void* arg);
@@ -44,7 +48,6 @@ int main()
         return 0;
     }
 
-    /*
     HANDLE threads[2];
 
     threads[0] = (HANDLE)_beginthreadex(NULL, 0, SendThread, 0, 0, nullptr);
@@ -58,12 +61,14 @@ int main()
 
     WaitForMultipleObjects(2, threads, true, INFINITE);
     ::printf("\nAll Thread Terminate!\n");
-    */
+    ::printf("RecvCnt: %d, SendCnt: %d\n", g_RecvCnt, g_SendCnt);
 
-    PingPongTest();
+
+    //PingPongTest();
 
     closesocket(g_Socket);
     WSACleanup();
+    Sleep(INFINITE);
     return 0;
 }
 
@@ -114,6 +119,7 @@ void PingPongTest()
     }
 }
 
+queue<__int64> dataQ;
 unsigned int WINAPI SendThread(void* arg)
 {
     int data = 0;
@@ -122,6 +128,7 @@ unsigned int WINAPI SendThread(void* arg)
 
     while (!g_Shutdown)
     {
+        g_SendCnt++;
         sendPacket.data = data++;
         int sendRet = send(g_Socket, (char*)&sendPacket, dfPACKET_LEN, 0);
         if (sendRet == SOCKET_ERROR)
@@ -130,18 +137,29 @@ unsigned int WINAPI SendThread(void* arg)
             printf("Error! %s(%d): %d\n", __func__, __LINE__, err);
             break;
         }
-        printf("Success to Send %dbytes!\n", sendRet);
+        //printf("Success to Send %llu\n", sendPacket.data);
 
-        //Sleep(1000);
+        //dataQ.push(sendPacket.data);
+
+        /*
+        if (g_RecvCnt + 200 < g_SendCnt)
+        {
+            g_Shutdown = true;
+            break;
+        }
+        */
     }
 
+    printf("Send Thread Terminate\n");
     return 0;
 }
 
 unsigned int WINAPI RecvThread(void* arg)
 {
+    int data = 0;
     while (!g_Shutdown)
     {
+        g_RecvCnt++;
         Packet recvPacket;
         int recvRet = recv(g_Socket, (char*)&recvPacket, dfPACKET_LEN, 0);
         if (recvRet == SOCKET_ERROR)
@@ -152,13 +170,25 @@ unsigned int WINAPI RecvThread(void* arg)
         }
         else if (recvRet == 0)
         {
+            printf("Recv Return 0\n");
             break;
         }
 
-        printf("Success to Recv %d bytes!\n", recvRet);
-        printf(" - %llu\n", recvPacket.data);
+        if (data == recvPacket.data)
+        {
+            data++;
+            printf("Success to Recv %llu\n" , recvPacket.data);
+        }
+        else
+        {
+            printf("Lost Data! expected: %llu, recv: %llu\n", 
+                data, recvPacket.data);
+            g_Shutdown = true;
+            break;
+        }
     }
 
+    printf("Recv Thread Terminate\n");
     return 0;
 }
 

@@ -17,10 +17,10 @@ private:
 
 public:
 	void onAccept(__int64 sessionID);
-	void onMessage(__int64 sessionID, SerializePacket* packet);
+	void onMessage(__int64 sessionID, SerializePacket* packet, int threadID);
 	void onRelease(__int64 sessionID);
 
 public:
-	void SendMsg(__int64 sessionID, SerializePacket* packet);
+	void SendMsg(__int64 sessionID, SerializePacket* packet, int threadID);
 };
 

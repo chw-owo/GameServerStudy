@@ -27,7 +27,12 @@ public:
 		_sendOvl._type = NET_TYPE::SEND;
 		ZeroMemory(&_recvOvl._ovl, sizeof(_recvOvl._ovl));
 		ZeroMemory(&_sendOvl._ovl, sizeof(_sendOvl._ovl));
-		InitializeSRWLock(&_lock);
+		InitializeCriticalSection(&_cs);
+	}
+
+	~Session()
+	{
+		DeleteCriticalSection(&_cs);
 	}
 
 public:
@@ -43,7 +48,7 @@ public:
 	NetworkOverlapped _sendOvl;
 
 	// For Synchronization
-	SRWLOCK _lock;
+	CRITICAL_SECTION _cs;
 	volatile long _IOCount;
 	volatile long _sendFlag;
 };

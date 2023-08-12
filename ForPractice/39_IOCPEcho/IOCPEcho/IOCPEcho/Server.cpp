@@ -14,7 +14,7 @@ void Server::onAccept(__int64 sessionID)
 {
 }
 
-void Server::onMessage(__int64 sessionID, SerializePacket* packet)
+void Server::onMessage(__int64 sessionID, SerializePacket* packet, int threadID)
 {
 	__int64 echo;
 	*packet >> echo;
@@ -23,12 +23,12 @@ void Server::onMessage(__int64 sessionID, SerializePacket* packet)
 
 	SerializePacket sendPacket;
 	sendPacket << echo;
-	SendMsg(sessionID, &sendPacket);
+	SendMsg(sessionID, &sendPacket, threadID);
 }
 
-void Server::SendMsg(__int64 sessionID, SerializePacket* packet)
+void Server::SendMsg(__int64 sessionID, SerializePacket* packet, int threadID)
 {
-	NetLib::GetInstance()->MsgToSendData(sessionID, packet);
+	NetLib::GetInstance()->MsgToSendData(sessionID, packet, threadID);
 }
 
 void Server::onRelease(__int64 sessionID)

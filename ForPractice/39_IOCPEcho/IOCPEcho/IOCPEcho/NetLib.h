@@ -27,25 +27,28 @@ private:
 private:
 	
 	HANDLE _hNetworkCP;
-	int _networkThreadCnt;
+	HANDLE _hReleaseCP;
 	HANDLE* _networkThreads;
+	HANDLE _releaseThread;
 	HANDLE _acceptThread;
+	int _networkThreadCnt;
+
 	unordered_map<unsigned int, int> ThreadIDMap;
 
 private:
 	static unsigned int WINAPI AcceptThread(void* arg);
 	static unsigned int WINAPI NetworkThread(void* arg);
+	static unsigned int WINAPI ReleaseThread(void* arg);
 
 private:
 	void HandleRecvCP(__int64 sessionID, int recvBytes, int threadID);
 	void HandleSendCP(__int64 sessionID, int sendBytes, int threadID);
 
 private:
-	void RecvPost(Session* pSession, int threadID);
-	void SendPost(Session* pSession, int threadID);
-	void RecvDataToMsg(Session* pSession);
-	void ReleaseSession(Session* pSession);
+	void RecvPost(__int64 sessionID, int threadID);
+	void SendPost(__int64 sessionID, int threadID);
+	void RecvDataToMsg(__int64 sessionID, int threadID);
 
 public:
-	void MsgToSendData(__int64 sessionID, SerializePacket* packet);
+	void MsgToSendData(__int64 sessionID, SerializePacket* packet, int threadID);
 };
