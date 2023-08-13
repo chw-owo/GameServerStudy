@@ -3,10 +3,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-/* TO-DO
-ㅎㅎ 돌고 돌아 send 0 byte 문제로~
-*/
-
 NetLib::NetLib()
 {
 	// Initialize Winsock
@@ -235,7 +231,7 @@ unsigned int WINAPI NetLib::NetworkThread(void* arg)
 		// Recv
 		else if (pNetOvl->_type == NET_TYPE::RECV)
 		{	
-			//::printf("%llu: Complete Recv %d bytes (thread: %d)\n", pSession->_ID, cbTransferred, threadID);
+			//::printf("%d: Complete Recv %d bytes\n", threadID, cbTransferred);
 			pNetLib->HandleRecvCP(pSession->_ID, cbTransferred, threadID);
 		}
 
@@ -366,8 +362,6 @@ void NetLib::HandleSendCP(__int64 sessionID, int sendBytes, int threadID)
 
 	if (InterlockedDecrement(&pSession->_sendFlag) != 0)
 	{
-		//::printf("%d: Call SendPost in %s (sendFlag: %d)\n", 
-		//	threadID, __func__, pSession->_sendFlag);
 		SendPost(pSession->_ID, threadID);
 	}
 }
@@ -554,9 +548,6 @@ void NetLib::MsgToSendData(__int64 sessionID, SerializePacket* packet, int threa
 	EnterCriticalSection(&pSession->_cs);
 	ReleaseSRWLockShared(&g_SessionMapLock);
 
-	// This func is called,
-	// So should not lock the session
-
 	int payloadSize = packet->GetPayloadSize();
 	stHeader header;
 	header._shLen = payloadSize;
@@ -583,15 +574,11 @@ void NetLib::MsgToSendData(__int64 sessionID, SerializePacket* packet, int threa
 
 	if (InterlockedIncrement(&pSession->_sendFlag) == 1)
 	{
-		//::printf("%d: Call SendPost in %s (sendFlag: %d)\n",
-		//	threadID, __func__, pSession->_sendFlag);
-
 		LeaveCriticalSection(&pSession->_cs);
 		SendPost(pSession->_ID, threadID);
 	}
 	else
 	{
-		//::printf("%d: Wait For SendPost (sendFlag: %d)\n", threadID, pSession->_sendFlag);
 		LeaveCriticalSection(&pSession->_cs);
 	}
 
