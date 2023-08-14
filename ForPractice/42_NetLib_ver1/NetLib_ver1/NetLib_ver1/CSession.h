@@ -52,6 +52,3 @@ public:
 	volatile long _IOCount;
 	volatile long _sendFlag;
 };
-
-extern unordered_map<__int64, CSession*> g_SessionMap;
-extern SRWLOCK g_SessionMapLock;

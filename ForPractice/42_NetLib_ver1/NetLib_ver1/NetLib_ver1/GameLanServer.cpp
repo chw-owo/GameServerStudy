@@ -7,7 +7,7 @@ GameLanServer::GameLanServer()
 	GetSystemInfo(&si);
 	int cpuCnt = (int)si.dwNumberOfProcessors;
 
-	if (!NetworkStart(dfSERVER_IP, dfLANSERVER_PORT, cpuCnt, false, 100))
+	if (!NetworkStart(dfSERVER_IP, dfLANSERVER_PORT, cpuCnt, false, 50))
 		g_bShutdown = true;
 }
 

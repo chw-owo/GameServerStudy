@@ -33,13 +33,14 @@ protected:
 	int GetAcceptTPS() { return _acceptTPS; }
 	int GetRecvMsgTPS() { return _recvMsgTPS; }
 	int GetSendMsgTPS() { return _sendMsgTPS; }
-	int GetSessionCount() { return _sessionCnt; }
+	long GetSessionCount() { return _sessionCnt; }
 
 // Called in Network Library
 private:
 	static unsigned int WINAPI AcceptThread(void* arg);
 	static unsigned int WINAPI NetworkThread(void* arg);
 	static unsigned int WINAPI ReleaseThread(void* arg);
+	static unsigned int WINAPI MonitorThread(void* arg);
 
 private:
 	void HandleRecvCP(__int64 sessionID, int recvBytes);
@@ -55,16 +56,24 @@ private:
 	int _sessionMax;
 
 private:
-	SOCKET _listenSock;
 	bool _alive = false;
+	volatile long _sessionCnt = 0;
+	SOCKET _listenSock;
+	unordered_map<__int64, CSession*> _SessionMap;
+	SRWLOCK _SessionMapLock;
+
+private:
 	int _acceptTPS = 0;
 	int _recvMsgTPS = 0;
 	int _sendMsgTPS = 0;
-	int _sessionCnt = 0;
+	int _acceptCnt = 0;
+	int _recvMsgCnt = 0;
+	int _sendMsgCnt = 0;
 
 private:
 	HANDLE _acceptThread;
 	HANDLE _releaseThread;
+	HANDLE _monitorThread;
 	HANDLE* _networkThreads;
 	HANDLE _hReleaseCP;
 	HANDLE _hNetworkCP;

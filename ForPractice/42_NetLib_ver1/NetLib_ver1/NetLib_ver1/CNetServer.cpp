@@ -70,7 +70,7 @@ bool CNetServer::NetworkStart(const wchar_t* IP, short port,
 
 	_alive = true;
 	CNetServer* pNetServer = this;
-	InitializeSRWLock(&g_SessionMapLock);
+	InitializeSRWLock(&_SessionMapLock);
 
 	// Create Accept Thread
 	_acceptThread = (HANDLE)_beginthreadex(NULL, 0, AcceptThread, pNetServer, 0, nullptr);
@@ -168,16 +168,17 @@ void CNetServer::NetworkStop()
 	// Release All Session
 	closesocket(socktmp);
 	closesocket(_listenSock);
-	unordered_map<__int64, CSession*>::iterator iter = g_SessionMap.begin();
-	for (; iter != g_SessionMap.end();)
+	unordered_map<__int64, CSession*>::iterator iter = _SessionMap.begin();
+	for (; iter != _SessionMap.end();)
 	{
 		CSession* pSession = iter->second;
 		closesocket(pSession->_sock);
 		__int64 ID = pSession->_ID;
 		delete(pSession);
 		::printf("Disconnect Client(ID: % llu)\n", ID);
-		iter = g_SessionMap.erase(iter);
+		iter = _SessionMap.erase(iter);
 	}
+	_sessionCnt = 0;
 	WSACleanup();
 
 	CloseHandle(_acceptThread);
@@ -195,20 +196,20 @@ bool CNetServer::Disconnect(__int64 sessionID)
 {
 	// TO-DO:
 	// 잘 동작하는지 테스트 필요
-	AcquireSRWLockShared(&g_SessionMapLock);
+	AcquireSRWLockShared(&_SessionMapLock);
 
-	unordered_map<__int64, CSession*>::iterator iter = g_SessionMap.find(sessionID);
-	if (iter == g_SessionMap.end())
+	unordered_map<__int64, CSession*>::iterator iter = _SessionMap.find(sessionID);
+	if (iter == _SessionMap.end())
 	{
 		::printf("Error! %s(%d)\n", __func__, __LINE__);
 		g_bShutdown = true;
-		ReleaseSRWLockShared(&g_SessionMapLock);
+		ReleaseSRWLockShared(&_SessionMapLock);
 		return false;
 	}
 
 	CSession* pSession = iter->second;
 	EnterCriticalSection(&pSession->_cs);
-	ReleaseSRWLockShared(&g_SessionMapLock);
+	ReleaseSRWLockShared(&_SessionMapLock);
 
 	PostQueuedCompletionStatus(_hNetworkCP, 0, (ULONG_PTR)pSession, 0);
 	PostQueuedCompletionStatus(_hNetworkCP, 0, (ULONG_PTR)pSession, 0);
@@ -219,20 +220,20 @@ bool CNetServer::Disconnect(__int64 sessionID)
 
 bool CNetServer::SendPacket(__int64 sessionID, CPacket* packet)
 {
-	AcquireSRWLockShared(&g_SessionMapLock);
+	AcquireSRWLockShared(&_SessionMapLock);
 
-	unordered_map<__int64, CSession*>::iterator iter = g_SessionMap.find(sessionID);
-	if (iter == g_SessionMap.end())
+	unordered_map<__int64, CSession*>::iterator iter = _SessionMap.find(sessionID);
+	if (iter == _SessionMap.end())
 	{
 		::printf("Error! %s(%d)\n", __func__, __LINE__);
 		g_bShutdown = true;
-		ReleaseSRWLockShared(&g_SessionMapLock);
+		ReleaseSRWLockShared(&_SessionMapLock);
 		return false;
 	}
 
 	CSession* pSession = iter->second;
 	EnterCriticalSection(&pSession->_cs);
-	ReleaseSRWLockShared(&g_SessionMapLock);
+	ReleaseSRWLockShared(&_SessionMapLock);
 
 	int payloadSize = packet->GetPayloadSize();
 	stNetHeader header;
@@ -288,6 +289,12 @@ unsigned int __stdcall CNetServer::AcceptThread(void* arg)
 		if (!pNetServer->_alive) break;
 		if (!pNetServer->OnConnectRequest()) continue;
 
+		if (pNetServer->_sessionCnt >= pNetServer->_sessionMax)
+		{
+			closesocket(client_sock);
+			continue;
+		}
+
 		// Create Session
 		CSession* pSession = new CSession(sessionID++, client_sock, clientaddr);
 		if (pSession == nullptr)
@@ -297,11 +304,13 @@ unsigned int __stdcall CNetServer::AcceptThread(void* arg)
 			break;
 		}
 
-		AcquireSRWLockExclusive(&g_SessionMapLock);
-		g_SessionMap.insert(make_pair(pSession->_ID, pSession));
-		ReleaseSRWLockExclusive(&g_SessionMapLock);
+		AcquireSRWLockExclusive(&pNetServer->_SessionMapLock);
+		pNetServer->_SessionMap.insert(make_pair(pSession->_ID, pSession));
+		ReleaseSRWLockExclusive(&pNetServer->_SessionMapLock);
 
 		::printf("Accept New Session (ID: %llu)\n", pSession->_ID);
+		InterlockedIncrement(&pNetServer->_sessionCnt);
+		pNetServer->_acceptCnt++;
 		pNetServer->OnAcceptClient();
 
 		// Connect Session to IOCP and Post Recv
@@ -350,6 +359,7 @@ unsigned int __stdcall CNetServer::NetworkThread(void* arg)
 		else if (pNetOvl->_type == NET_TYPE::RECV)
 		{
 			//::printf("%d: Complete Recv %d bytes\n", threadID, cbTransferred);
+			pNetServer->_recvMsgCnt++;
 			pNetServer->HandleRecvCP(pSession->_ID, cbTransferred);
 		}
 
@@ -357,6 +367,7 @@ unsigned int __stdcall CNetServer::NetworkThread(void* arg)
 		else if (pNetOvl->_type == NET_TYPE::SEND)
 		{
 			//::printf("%d: Complete Send %d bytes\n", threadID, cbTransferred);
+			pNetServer->_sendMsgCnt++;
 			pNetServer->HandleSendCP(pSession->_ID, cbTransferred);
 		}
 
@@ -388,17 +399,18 @@ unsigned int __stdcall CNetServer::ReleaseThread(void* arg)
 		if (g_bShutdown) break;
 		if (!pNetServer->_alive) break;
 
-		AcquireSRWLockExclusive(&g_SessionMapLock);
-		unordered_map<__int64, CSession*>::iterator iter = g_SessionMap.find(pSession->_ID);
-		if (iter == g_SessionMap.end())
+		AcquireSRWLockExclusive(&pNetServer->_SessionMapLock);
+		unordered_map<__int64, CSession*>::iterator iter 
+			= pNetServer->_SessionMap.find(pSession->_ID);
+		if (iter == pNetServer->_SessionMap.end())
 		{
 			::printf("Error! %s(%d)\n", __func__, __LINE__);
 			g_bShutdown = true;
-			ReleaseSRWLockExclusive(&g_SessionMapLock);
+			ReleaseSRWLockExclusive(&pNetServer->_SessionMapLock);
 			return 0;
 		}
-		g_SessionMap.erase(iter);
-		ReleaseSRWLockExclusive(&g_SessionMapLock);
+		pNetServer->_SessionMap.erase(iter);
+		ReleaseSRWLockExclusive(&pNetServer->_SessionMapLock);
 
 		EnterCriticalSection(&pSession->_cs);
 		LeaveCriticalSection(&pSession->_cs);
@@ -408,27 +420,50 @@ unsigned int __stdcall CNetServer::ReleaseThread(void* arg)
 		delete(pSession);
 
 		::printf("Disconnect Client (ID: %llu)\n", ID);
+		InterlockedDecrement(&pNetServer->_sessionCnt);
 		pNetServer->OnReleaseClient(ID);
 	}
 	::printf("Release Thread Terminate (thread: %d)\n", threadID);
 	return 0;
 }
 
+unsigned int __stdcall CNetServer::MonitorThread(void* arg)
+{
+	CNetServer* pNetServer = (CNetServer*)arg;
+	int threadID = GetCurrentThreadId();
+
+	for (;;)
+	{
+		Sleep(1000);
+		if (!pNetServer->_alive) break;
+
+		pNetServer->_acceptTPS = pNetServer->_acceptCnt;
+		pNetServer->_recvMsgTPS = pNetServer->_recvMsgCnt;
+		pNetServer->_sendMsgTPS = pNetServer->_sendMsgCnt;
+		pNetServer->_acceptCnt = 0;
+		pNetServer->_recvMsgCnt = 0;
+		pNetServer->_sendMsgCnt = 0;
+	}
+
+	::printf("Monitor Thread Terminate (thread: %d)\n", threadID);
+	return 0;
+}
+
 void CNetServer::HandleRecvCP(__int64 sessionID, int recvBytes)
 {
-	AcquireSRWLockShared(&g_SessionMapLock);
-	unordered_map<__int64, CSession*>::iterator iter = g_SessionMap.find(sessionID);
-	if (iter == g_SessionMap.end())
+	AcquireSRWLockShared(&_SessionMapLock);
+	unordered_map<__int64, CSession*>::iterator iter = _SessionMap.find(sessionID);
+	if (iter == _SessionMap.end())
 	{
 		::printf("Error! %s(%d)\n", __func__, __LINE__);
 		g_bShutdown = true;
-		ReleaseSRWLockShared(&g_SessionMapLock);
+		ReleaseSRWLockShared(&_SessionMapLock);
 		return;
 	}
 
 	CSession* pSession = iter->second;
 	EnterCriticalSection(&pSession->_cs);
-	ReleaseSRWLockShared(&g_SessionMapLock);
+	ReleaseSRWLockShared(&_SessionMapLock);
 
 	int moveReadRet = pSession->_recvBuf.MoveWritePos(recvBytes);
 	if (moveReadRet != recvBytes)
@@ -490,20 +525,20 @@ void CNetServer::HandleRecvCP(__int64 sessionID, int recvBytes)
 
 void CNetServer::HandleSendCP(__int64 sessionID, int sendBytes)
 {
-	AcquireSRWLockShared(&g_SessionMapLock);
+	AcquireSRWLockShared(&_SessionMapLock);
 
-	unordered_map<__int64, CSession*>::iterator iter = g_SessionMap.find(sessionID);
-	if (iter == g_SessionMap.end())
+	unordered_map<__int64, CSession*>::iterator iter = _SessionMap.find(sessionID);
+	if (iter == _SessionMap.end())
 	{
 		::printf("Error! %s(%d)\n", __func__, __LINE__);
 		g_bShutdown = true;
-		ReleaseSRWLockShared(&g_SessionMapLock);
+		ReleaseSRWLockShared(&_SessionMapLock);
 		return;
 	}
 
 	CSession* pSession = iter->second;
 	EnterCriticalSection(&pSession->_cs);
-	ReleaseSRWLockShared(&g_SessionMapLock);
+	ReleaseSRWLockShared(&_SessionMapLock);
 
 	int moveReadRet = pSession->_sendBuf.MoveReadPos(sendBytes);
 	if (moveReadRet != sendBytes)
