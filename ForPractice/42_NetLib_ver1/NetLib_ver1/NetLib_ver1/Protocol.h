@@ -1,10 +1,17 @@
 #pragma once
 
 #define dfSERVER_IP L"127.0.0.1"
-#define dfSERVER_PORT 6000
+#define dfLANSERVER_PORT 6000
+#define dfNETSERVER_PORT 3000
 
-#define dfHEADER_LEN 2
-struct stHeader
+#define dfLAN_HEADER_LEN 2
+struct stLanHeader
+{
+	short _shLen;
+};
+
+#define dfNET_HEADER_LEN 2
+struct stNetHeader
 {
 	short _shLen;
 };

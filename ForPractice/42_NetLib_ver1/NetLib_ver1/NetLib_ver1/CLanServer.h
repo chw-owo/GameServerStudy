@@ -12,8 +12,8 @@ class CLanServer
 {
 // Called in Content
 protected:
-	bool NetworkStart();
-
+	bool NetworkStart(const wchar_t* IP, short port, 
+		int numOfWorkerThreads, bool nagle, int sessionMax);
 public:
 	void NetworkStop();
 
@@ -48,8 +48,15 @@ private:
 	void SendPost(CSession* pSession);
 
 private:
-	bool _alive = false;
+	wchar_t _IP[10]; 
+	short _port;
+	int _numOfWorkerThreads; 
+	bool _nagle; 
+	int _sessionMax;
+
+private:
 	SOCKET _listenSock;
+	bool _alive = false;
 	int _acceptTPS = 0;
 	int _recvMsgTPS = 0;
 	int _sendMsgTPS = 0;
@@ -57,11 +64,10 @@ private:
 
 private:
 	HANDLE _acceptThread;
-	HANDLE _hReleaseCP;
 	HANDLE _releaseThread;
-	HANDLE _hNetworkCP;
 	HANDLE* _networkThreads;
-	int _networkThreadCnt;
+	HANDLE _hReleaseCP;
+	HANDLE _hNetworkCP;
 
 };
 

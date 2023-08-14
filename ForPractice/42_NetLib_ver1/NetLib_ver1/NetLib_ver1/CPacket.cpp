@@ -1,17 +1,17 @@
 #include "CPacket.h"
 #include <stdio.h>
 
-CPacket::CPacket()
-    : _iBufferSize(eBUFFER_DEFAULT), _iPayloadSize(0), _iHeaderSize(dfHEADER_LEN),
-    _iPayloadReadPos(dfHEADER_LEN), _iPayloadWritePos(dfHEADER_LEN),
+CPacket::CPacket(int headerLen)
+    : _iBufferSize(eBUFFER_DEFAULT), _iPayloadSize(0), _iHeaderSize(headerLen),
+    _iPayloadReadPos(headerLen), _iPayloadWritePos(headerLen),
     _iHeaderReadPos(0), _iHeaderWritePos(0)
 {
     _chpBuffer = new char[_iBufferSize];
 }
 
-CPacket::CPacket(int iBufferSize)
-    : _iBufferSize(iBufferSize), _iPayloadSize(0), _iHeaderSize(dfHEADER_LEN),
-    _iPayloadReadPos(dfHEADER_LEN), _iPayloadWritePos(dfHEADER_LEN),
+CPacket::CPacket(int headerLen, int iBufferSize)
+    : _iBufferSize(iBufferSize), _iPayloadSize(0), _iHeaderSize(headerLen),
+    _iPayloadReadPos(headerLen), _iPayloadWritePos(headerLen),
     _iHeaderReadPos(0), _iHeaderWritePos(0)
 {
     _chpBuffer = new char[_iBufferSize];
@@ -24,8 +24,8 @@ CPacket::~CPacket()
 
 void CPacket::Clear(void)
 {
-    _iPayloadReadPos = dfHEADER_LEN;
-    _iPayloadWritePos = dfHEADER_LEN;
+    _iPayloadReadPos = _iHeaderSize;
+    _iPayloadWritePos = _iHeaderSize;
     _iHeaderReadPos = 0;
     _iHeaderWritePos = 0;
 }
@@ -60,7 +60,7 @@ int CPacket::MoveHeaderWritePos(int iSize)
 
     _iHeaderWritePos += iSize;
 
-    if (_iHeaderWritePos > dfHEADER_LEN)
+    if (_iHeaderWritePos > _iHeaderSize)
     {
         ::printf("Error! Func %s Line %d (write pos - %d, req size - %d)\n",
             __func__, __LINE__, _iHeaderWritePos, iSize);
@@ -81,7 +81,7 @@ int CPacket::MoveHeaderReadPos(int iSize)
 
     _iHeaderReadPos += iSize;
 
-    if (_iHeaderReadPos > dfHEADER_LEN)
+    if (_iHeaderReadPos > _iHeaderSize)
     {
         ::printf("Error! Func %s Line %d (read pos - %d, req size - %d)\n",
             __func__, __LINE__, _iHeaderReadPos, iSize);
@@ -138,7 +138,6 @@ CPacket& CPacket::operator=(CPacket& clSrCPacket)
     *this = clSrCPacket;
     return *this;
 }
-
 
 CPacket& CPacket::operator<<(float fValue)
 {
@@ -460,17 +459,17 @@ int CPacket::PutPayloadData(char* chpSrc, int iSrcSize)
 
 int CPacket::GetHeaderData(char* chpDest, int iSize)
 {
-    if (dfHEADER_LEN < iSize)
+    if (_iHeaderSize < iSize)
     {
         ::printf("Header(%d) is small than Requested Size(%d)! (read: %d)\n",
-            dfHEADER_LEN, iSize, _iHeaderReadPos);
+            _iHeaderSize, iSize, _iHeaderReadPos);
         return -1;
     }
 
     if (_iHeaderWritePos - _iHeaderReadPos < iSize)
     {
         ::printf("Header(%d) is small than Requested Size(%d)! (read: %d)\n",
-            dfHEADER_LEN, iSize, _iHeaderReadPos);
+            _iHeaderSize, iSize, _iHeaderReadPos);
         return -1;
     }
 
@@ -482,10 +481,10 @@ int CPacket::GetHeaderData(char* chpDest, int iSize)
 
 int CPacket::PeekHeaderData(char* chpDest, int iSize)
 {
-    if (dfHEADER_LEN < iSize)
+    if (_iHeaderSize < iSize)
     {
         ::printf("Header(%d) is small than Requested Size(%d)! (read: %d)\n",
-            dfHEADER_LEN, iSize, _iHeaderReadPos);
+            _iHeaderSize, iSize, _iHeaderReadPos);
         return -1;
     }
 
@@ -502,21 +501,21 @@ int CPacket::PeekHeaderData(char* chpDest, int iSize)
 
 int CPacket::PutHeaderData(char* chpSrc, int iSrcSize)
 {
-    if (dfHEADER_LEN < _iHeaderWritePos + iSrcSize)
+    if (_iHeaderSize < _iHeaderWritePos + iSrcSize)
     {
         ::printf("Header(%d) is small than Requested Size(%d)! (write: %d)\n",
-            dfHEADER_LEN, iSrcSize, _iHeaderWritePos);
+            _iHeaderSize, iSrcSize, _iHeaderWritePos);
         return -1;
     }
 
-    if (_iHeaderWritePos == dfHEADER_LEN)
+    if (_iHeaderWritePos == _iHeaderSize)
     {
         ::printf("Header is already filled!\n");
         return -1;
     }
 
     memcpy_s(&_chpBuffer[_iHeaderWritePos],
-        dfHEADER_LEN, chpSrc, iSrcSize);
+        _iHeaderSize, chpSrc, iSrcSize);
 
     _iHeaderWritePos += iSrcSize;
 

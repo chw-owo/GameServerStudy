@@ -1,17 +1,17 @@
 #pragma once
 #include "CLanServer.h"
 
-class GameServer : public CLanServer
+class GameLanServer : public CLanServer
 {
 private:
-	GameServer();
-	~GameServer();
+	GameLanServer();
+	~GameLanServer();
 
 public:
-	static GameServer* GetInstance();
+	static GameLanServer* GetInstance();
 
 private:
-	static GameServer _gameServer;
+	static GameLanServer _GameLanServer;
 
 private:
 	bool OnConnectRequest();

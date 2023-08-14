@@ -37,7 +37,7 @@
     <ClCompile Include="CPacket.cpp">
       <Filter>NetLib\Utils</Filter>
     </ClCompile>
-    <ClCompile Include="GameServer.cpp">
+    <ClCompile Include="GameLanServer.cpp">
       <Filter>GameServer</Filter>
     </ClCompile>
     <ClCompile Include="CSession.cpp">
@@ -55,6 +55,9 @@
     <ClCompile Include="CNetServer.cpp">
       <Filter>NetLib\Server</Filter>
     </ClCompile>
+    <ClCompile Include="GameNetServer.cpp">
+      <Filter>GameServer</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CRingBuffer.h">
@@ -66,7 +69,7 @@
     <ClInclude Include="Main.h">
       <Filter>Main</Filter>
     </ClInclude>
-    <ClInclude Include="GameServer.h">
+    <ClInclude Include="GameLanServer.h">
       <Filter>GameServer</Filter>
     </ClInclude>
     <ClInclude Include="Protocol.h">
@@ -86,6 +89,9 @@
     </ClInclude>
     <ClInclude Include="CLanServer.h">
       <Filter>NetLib\Server</Filter>
+    </ClInclude>
+    <ClInclude Include="GameNetServer.h">
+      <Filter>GameServer</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -17,7 +17,6 @@ struct NetworkOverlapped
 	NET_TYPE _type;
 };
 
-
 class CSession
 {
 public:
@@ -54,5 +53,5 @@ public:
 	volatile long _sendFlag;
 };
 
-extern unordered_map<int, CSession*> g_SessionMap;
+extern unordered_map<__int64, CSession*> g_SessionMap;
 extern SRWLOCK g_SessionMapLock;

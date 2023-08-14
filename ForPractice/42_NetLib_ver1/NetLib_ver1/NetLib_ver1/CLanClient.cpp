@@ -1,13 +1,5 @@
 #include "CLanClient.h"
 
-CLanClient::CLanClient()
-{
-}
-
-CLanClient::~CLanClient()
-{
-}
-
 bool CLanClient::Connect()
 {
 	return false;

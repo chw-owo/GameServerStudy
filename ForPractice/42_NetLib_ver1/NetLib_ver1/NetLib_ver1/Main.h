@@ -1,3 +1,3 @@
 #pragma once
-#include "GameServer.h"
+#include "GameLanServer.h"
 extern bool g_bShutdown;

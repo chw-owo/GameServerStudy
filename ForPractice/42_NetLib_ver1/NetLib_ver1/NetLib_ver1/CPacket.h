@@ -20,8 +20,8 @@ public:
 		eBUFFER_MAX = 4096
 	};
 
-	CPacket();
-	CPacket(int iBufferSize);
+	CPacket(int headerLen);
+	CPacket(int headerLen, int iBufferSize);
 	virtual	~CPacket();
 
 	void Clear(void);

@@ -137,7 +137,8 @@
     <ClCompile Include="CLanServer.cpp" />
     <ClCompile Include="CNetClient.cpp" />
     <ClCompile Include="CNetServer.cpp" />
-    <ClCompile Include="GameServer.cpp" />
+    <ClCompile Include="GameLanServer.cpp" />
+    <ClCompile Include="GameNetServer.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="CRingBuffer.cpp" />
     <ClCompile Include="CPacket.cpp" />
@@ -148,7 +149,8 @@
     <ClInclude Include="CLanServer.h" />
     <ClInclude Include="CNetClient.h" />
     <ClInclude Include="CNetServer.h" />
-    <ClInclude Include="GameServer.h" />
+    <ClInclude Include="GameLanServer.h" />
+    <ClInclude Include="GameNetServer.h" />
     <ClInclude Include="Main.h" />
     <ClInclude Include="Protocol.h" />
     <ClInclude Include="CRingBuffer.h" />
