@@ -365,29 +365,26 @@ unsigned int __stdcall CLanServer::NetworkThread(void* arg)
 				}
 			}
 		}
-
-		// Recv
 		else if (pNetOvl->_type == NET_TYPE::RECV)
 		{
-			//::printf("%d: Complete Recv %d bytes\n", threadID, cbTransferred);
+			//::printf("%llu: Complete Recv %d bytes (%d)\n", pSession->_ID, cbTransferred, threadID);
 			pLanServer->_recvMsgCnt++;
 			pLanServer->HandleRecvCP(pSession->_ID, cbTransferred);
 		}
-
-		// Send 
 		else if (pNetOvl->_type == NET_TYPE::SEND)
 		{
-			//::printf("%d: Complete Send %d bytes\n", threadID, cbTransferred);
+			//::printf("%llu: Complete Send %d bytes (%d)\n", pSession->_ID, cbTransferred, threadID);
 			pLanServer->_sendMsgCnt++;
 			pLanServer->HandleSendCP(pSession->_ID, cbTransferred);
 		}
 
+		EnterCriticalSection(&pSession->_cs);
 		if (InterlockedDecrement(&pSession->_IOCount) == 0)
 		{
-			// TO-DO... 누락되는 세션들이 있음
 			PostQueuedCompletionStatus(
 				pLanServer->_hReleaseCP, 0, (ULONG_PTR)pSession, 0);
 		}
+		LeaveCriticalSection(&pSession->_cs);
 	}
 
 	::printf("Worker Thread Terminate (thread: %d)\n", threadID);
@@ -431,7 +428,7 @@ unsigned int __stdcall CLanServer::ReleaseThread(void* arg)
 		__int64 ID = pSession->_ID;
 		delete(pSession);
 
-		::printf("Disconnect Client (ID: %llu)\n", ID);
+		::printf("%llu: Disconnect Client\n", ID);
 		InterlockedDecrement(&pLanServer->_sessionCnt);
 		pLanServer->OnReleaseClient(ID);
 	}
@@ -585,7 +582,7 @@ void CLanServer::RecvPost(CSession* pSession)
 	int recvRet = WSARecv(pSession->_sock, pSession->_wsaRecvbuf,
 		2, &recvBytes, &flags, (LPOVERLAPPED)&pSession->_recvOvl, NULL);
 
-	//::printf("%d: Request Recv\n", GetCurrentThreadId());
+	//::printf("%llu: Request Recv (%d)\n", pSession->_ID, GetCurrentThreadId());
 
 	if (recvRet == SOCKET_ERROR)
 	{
@@ -619,7 +616,7 @@ void CLanServer::SendPost(CSession* pSession)
 	int sendRet = WSASend(pSession->_sock, pSession->_wsaSendbuf,
 		2, &sendBytes, 0, (LPOVERLAPPED)&pSession->_sendOvl, NULL);
 
-	//::printf("%d: Request Send %d bytes\n", GetCurrentThreadId(), useSize);
+	//::printf("%llu: Request Send %d bytes (%d)\n", pSession->_ID , useSize, GetCurrentThreadId());
 
 	if (sendRet == SOCKET_ERROR)
 	{

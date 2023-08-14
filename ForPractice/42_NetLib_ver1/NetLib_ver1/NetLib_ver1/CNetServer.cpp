@@ -371,11 +371,13 @@ unsigned int __stdcall CNetServer::NetworkThread(void* arg)
 			pNetServer->HandleSendCP(pSession->_ID, cbTransferred);
 		}
 
+		EnterCriticalSection(&pSession->_cs);
 		if (InterlockedDecrement(&pSession->_IOCount) == 0)
 		{
 			PostQueuedCompletionStatus(
 				pNetServer->_hReleaseCP, 0, (ULONG_PTR)pSession, 0);
 		}
+		LeaveCriticalSection(&pSession->_cs);
 	}
 
 	::printf("Worker Thread Terminate (thread: %d)\n", threadID);
