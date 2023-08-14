@@ -1,22 +1,91 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="소스 파일">
-      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cc;cxx;c++;cppm;ixx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
-    </Filter>
-    <Filter Include="헤더 파일">
-      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hh;hpp;hxx;h++;hm;inl;inc;ipp;xsd</Extensions>
-    </Filter>
     <Filter Include="리소스 파일">
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="NetLib">
+      <UniqueIdentifier>{4b2cdeb0-2c19-4a5c-b5e9-276902218f00}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Main">
+      <UniqueIdentifier>{aa79bedc-b7b8-4f14-bf6b-226e3bf84d33}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GameServer">
+      <UniqueIdentifier>{e01c4b7b-c18c-4fd4-90e7-fb600fa552e6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Utils">
+      <UniqueIdentifier>{0e87b212-754c-4346-9271-0f2d0348eaa5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Commons">
+      <UniqueIdentifier>{662faf7e-a835-4d4b-9621-c4850b4575c8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Client">
+      <UniqueIdentifier>{f13127a7-cc5e-4980-96c6-1a8697f52c2d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Server">
+      <UniqueIdentifier>{7375ce33-fc08-47ac-8dc4-737d1e49aab4}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="NetLib_ver1.cpp">
-      <Filter>소스 파일</Filter>
+    <ClCompile Include="Main.cpp">
+      <Filter>Main</Filter>
     </ClCompile>
+    <ClCompile Include="CRingBuffer.cpp">
+      <Filter>NetLib\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="CPacket.cpp">
+      <Filter>NetLib\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="GameServer.cpp">
+      <Filter>GameServer</Filter>
+    </ClCompile>
+    <ClCompile Include="CSession.cpp">
+      <Filter>NetLib\Commons</Filter>
+    </ClCompile>
+    <ClCompile Include="CLanClient.cpp">
+      <Filter>NetLib\Client</Filter>
+    </ClCompile>
+    <ClCompile Include="CNetClient.cpp">
+      <Filter>NetLib\Client</Filter>
+    </ClCompile>
+    <ClCompile Include="CLanServer.cpp">
+      <Filter>NetLib\Server</Filter>
+    </ClCompile>
+    <ClCompile Include="CNetServer.cpp">
+      <Filter>NetLib\Server</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="CRingBuffer.h">
+      <Filter>NetLib\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="CPacket.h">
+      <Filter>NetLib\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Main.h">
+      <Filter>Main</Filter>
+    </ClInclude>
+    <ClInclude Include="GameServer.h">
+      <Filter>GameServer</Filter>
+    </ClInclude>
+    <ClInclude Include="Protocol.h">
+      <Filter>NetLib\Commons</Filter>
+    </ClInclude>
+    <ClInclude Include="CSession.h">
+      <Filter>NetLib\Commons</Filter>
+    </ClInclude>
+    <ClInclude Include="CLanClient.h">
+      <Filter>NetLib\Client</Filter>
+    </ClInclude>
+    <ClInclude Include="CNetClient.h">
+      <Filter>NetLib\Client</Filter>
+    </ClInclude>
+    <ClInclude Include="CNetServer.h">
+      <Filter>NetLib\Server</Filter>
+    </ClInclude>
+    <ClInclude Include="CLanServer.h">
+      <Filter>NetLib\Server</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -76,6 +76,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -90,6 +91,8 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <Optimization>Disabled</Optimization>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -104,6 +107,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -118,6 +122,8 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <Optimization>Disabled</Optimization>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -127,7 +133,27 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="NetLib_ver1.cpp" />
+    <ClCompile Include="CLanClient.cpp" />
+    <ClCompile Include="CLanServer.cpp" />
+    <ClCompile Include="CNetClient.cpp" />
+    <ClCompile Include="CNetServer.cpp" />
+    <ClCompile Include="GameServer.cpp" />
+    <ClCompile Include="Main.cpp" />
+    <ClCompile Include="CRingBuffer.cpp" />
+    <ClCompile Include="CPacket.cpp" />
+    <ClCompile Include="CSession.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="CLanClient.h" />
+    <ClInclude Include="CLanServer.h" />
+    <ClInclude Include="CNetClient.h" />
+    <ClInclude Include="CNetServer.h" />
+    <ClInclude Include="GameServer.h" />
+    <ClInclude Include="Main.h" />
+    <ClInclude Include="Protocol.h" />
+    <ClInclude Include="CRingBuffer.h" />
+    <ClInclude Include="CPacket.h" />
+    <ClInclude Include="CSession.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
