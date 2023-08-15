@@ -12,14 +12,15 @@ Server::Server()
 	srand(0);
 	CreateDirectory(L"ProfileBasic", NULL);
 	
-	_pPlayerPool = new CObjectPool<Player>(dfPLAYER_MAX, true);
 	_pSessionPool = new CObjectPool<Session>(dfSESSION_MAX, true);
-	memset(_SessionMap, 0, dfSESSION_MAX * sizeof(Session*));
-	memset(_PlayerMap, 0, dfSESSION_MAX * sizeof(Session*));
+	_pPlayerPool = new CObjectPool<Player>(dfSESSION_MAX, true);
 
-	_acceptedSessions.reserve(dfDEFAULT_ACCEPTED_SESSIONS_NUM);
-	_disconnectedSessionIDs.reserve(dfDEFAULT_DISCONNECT_SESSIONS_NUM);
+	memset(_SessionMap, 0, dfSESSION_MAX * sizeof(Session*));
+	memset(_PlayerMap, 0, dfSESSION_MAX * sizeof(Player*));
+
+	_disconnectedSessionIDs.reserve(dfDEFAULT_DISCONNECT_NUM);
 	_emptySessionID.reserve(dfSESSION_MAX);
+
 	for (int i = dfSESSION_MAX - 1; i >= 0; i--)
 	{
 		_emptySessionID.push_back(i);
@@ -109,6 +110,8 @@ Server::Server()
 		}
 	}
 
+	SetSectorsAroundInfo();
+
 	_oldTick = timeGetTime();
 	::printf("Content Setting Complete!\n");
 
@@ -118,15 +121,14 @@ Server::~Server()
 {	
 	for (int i = 0; i < dfSESSION_MAX; i++)
 	{
-		if (_SessionMap[i] == nullptr) continue;
-		closesocket(_SessionMap[i]->_socket);
-		_pSessionPool->Free(_SessionMap[i]);
-	}
+		if (_SessionMap[i] != nullptr)
+		{
+			closesocket(_SessionMap[i]->_socket);
+			_pSessionPool->Free(_SessionMap[i]);
+		}
 
-	for (int i = 0; i < dfPLAYER_MAX; i++)
-	{
-		if (_PlayerMap[i] == nullptr) continue;
-		_pPlayerPool->Free(_PlayerMap[i]);
+		if (_PlayerMap[i] != nullptr)
+			_pPlayerPool->Free(_PlayerMap[i]);
 	}
 
 	closesocket(_listensock);
@@ -146,80 +148,44 @@ void Server::NetworkUpdate()
 { 
 	PRO_BEGIN(L"Network");
 
-	FD_SET rset;
-	FD_SET wset;
+	int rStopIdx = 0;
+	int wStopIdx = 0;
+	int rStartIdx = 0;
+	int wStartIdx = 0;
 
-	FD_ZERO(&rset);
-	FD_ZERO(&wset);
-	FD_SET(_listensock, &rset);
-	int rIdx = 0;
-	int wIdx = 0;
-
-	_connected = dfSESSION_MAX - _emptySessionID.size();
-
-	if (_connected > 0)
+	for (int i = 0; i < dfSESSION_MAX; i++)
 	{
-		for (int i = 0; i < dfSESSION_MAX; i++)
-		{
-			if (_SessionMap[i] == nullptr) continue;
+		if (_SessionMap[i] == nullptr) continue;
 
-			FD_SET(_SessionMap[i]->_socket, &rset);
-			_rSessionArray[rIdx] = _SessionMap[i];
-			rIdx++;
-
-			// TO-DO _SessionMap 얘를 애초에 Session Max 만큼 잡아서
-			// Idx 바탕으로 순회를 쭉 하면 메모리는 낭비되지만 Send를 줄일 수 있겠다
-			
-			if (_SessionMap[i]->_sendBuf.GetUseSize() > 0)
-			{
-				FD_SET(_SessionMap[i]->_socket, &wset);
-				_rSessionArray[wIdx] = _SessionMap[i];
-				wIdx++;
-			}
-
-			if (rIdx == FD_SETSIZE && wIdx == FD_SETSIZE)
-			{
-				SelectProc(rset, wset, FD_SETSIZE, FD_SETSIZE);
-
-				rIdx = 0;
-				wIdx = 0;
-				FD_ZERO(&rset);
-				FD_ZERO(&wset);
-				FD_SET(_listensock, &rset);
-			}
-		}
-
-		if (rIdx > 1 || wIdx > 1)
-		{
-			SelectProc(rset, wset, rIdx, wIdx);
-		}
+		_rSessions[rStopIdx++] = _SessionMap[i];
+		if (_SessionMap[i]->_sendBuf.GetUseSize() > 0)
+			_wSessions[wStopIdx++] = _SessionMap[i];
 	}
-	else
+
+	while ((rStopIdx - rStartIdx) >= (FD_SETSIZE - 1) || 
+		(wStopIdx - wStartIdx) >= FD_SETSIZE)
 	{
-		// Select Socket Set
-		int selectRet = select(0, &rset, NULL, NULL, &_time);
-		if (selectRet == SOCKET_ERROR)
+		if ((wStopIdx - wStartIdx) < FD_SETSIZE)
 		{
-			int err = WSAGetLastError();
-			::printf("Error! Func %s Line %d: %d\n", __func__, __LINE__, err);
-			LOG(L"ERROR", SystemLog::ERROR_LEVEL,
-				L"%s[%d]: select Error, %d\n",
-				_T(__FUNCTION__), __LINE__, err);
-			g_bShutdown = true;
-			return;
+			SelectProc(rStartIdx, (FD_SETSIZE - 1), 0, 0);
+			rStartIdx += (FD_SETSIZE - 1);
 		}
-
-		if (selectRet > 0 && FD_ISSET(_listensock, &rset))
+		else if ((rStopIdx - rStartIdx) < (FD_SETSIZE - 1))
 		{
-			AcceptProc();
+			SelectProc(0, 0, wStartIdx, FD_SETSIZE);
+			wStartIdx += FD_SETSIZE;
 		}
+		else
+		{
+			SelectProc(rStartIdx, (FD_SETSIZE - 1), wStartIdx, FD_SETSIZE);
+			rStartIdx += (FD_SETSIZE - 1);
+			wStartIdx += FD_SETSIZE;
+		}	
 	}
+	
+	SelectProc(rStartIdx, rStopIdx - rStartIdx, wStartIdx, wStopIdx - wStartIdx);
 
 	PRO_END(L"Network");
-
-	PRO_BEGIN(L"Delayed Accept");
-	SetAcceptedSession();
-	PRO_END(L"Delayed Accept");
 
 	PRO_BEGIN(L"Delayed Disconnect");
 	DisconnectDeadSession();
@@ -232,7 +198,7 @@ void Server::ContentUpdate()
 
 	PRO_BEGIN(L"Content");
 	
-	for (int i = 0; i < dfPLAYER_MAX; i++)
+	for (int i = 0; i < dfSESSION_MAX; i++)
 	{
 		if (_PlayerMap[i] == nullptr) continue;
 
@@ -255,8 +221,20 @@ void Server::ContentUpdate()
 
 // About Network ==================================================
 
-void Server::SelectProc(FD_SET rset, FD_SET wset, int rIdx, int wIdx)
+void Server::SelectProc(int rStartIdx, int rCount, int wStartIdx, int wCount)
 {
+	FD_SET rset;
+	FD_SET wset;
+	FD_ZERO(&rset);
+	FD_ZERO(&wset);
+	FD_SET(_listensock, &rset);
+
+	for (int i = 0; i < wCount; i++)
+		FD_SET(_wSessions[wStartIdx + i]->_socket, &wset);
+
+	for (int i = 0; i < rCount; i++)
+		FD_SET(_rSessions[rStartIdx + i]->_socket, &rset);
+
 	// Select Socket Set
 	int selectRet = select(0, &rset, &wset, NULL, &_time);
 	if (selectRet == SOCKET_ERROR)
@@ -276,16 +254,16 @@ void Server::SelectProc(FD_SET rset, FD_SET wset, int rIdx, int wIdx)
 		if (FD_ISSET(_listensock, &rset))
 			AcceptProc();
 
-		for (int i = 0; i < wIdx; i++)
+		for (int i = 0; i < wCount; i++)
 		{
-			if (FD_ISSET(_wSessionArray[i]->_socket, &wset))
-				SendProc(_wSessionArray[i]);
+			if (FD_ISSET(_wSessions[wStartIdx + i]->_socket, &wset))
+				SendProc(_wSessions[wStartIdx + i]);
 		}
 
-		for (int i = 0; i < rIdx; i++)
+		for (int i = 0; i < rCount; i++)
 		{
-			if (FD_ISSET(_rSessionArray[i]->_socket, &rset))
-				RecvProc(_rSessionArray[i]);
+			if (FD_ISSET(_rSessions[rStartIdx + i]->_socket, &rset))
+				RecvProc(_rSessions[rStartIdx + i]);
 		}
 
 	}
@@ -327,7 +305,10 @@ void Server::AcceptProc()
 	}
 
 	pSession->_lastRecvTime = timeGetTime();
-	_acceptedSessions.push_back(pSession);
+	_SessionMap[pSession->_ID] = pSession;
+	CreatePlayer(pSession);
+
+	_acceptCnt++;
 }
 
 void Server::RecvProc(Session* pSession)
@@ -496,18 +477,6 @@ void Server::SendProc(Session* pSession)
 	}
 }
 
-void Server::SetAcceptedSession()
-{
-	vector<Session*>::iterator sessionIter =  _acceptedSessions.begin();
-	for (; sessionIter < _acceptedSessions.end(); sessionIter++)
-	{
-		_SessionMap[(*sessionIter)->_ID] = (*sessionIter);
-		CreatePlayer((*sessionIter));
-		_acceptCnt++;
-	}
-	_acceptedSessions.clear();
-}
-
 void Server::SetSessionDead(Session* pSession)
 {
 	if(pSession->_alive)
@@ -525,21 +494,16 @@ void Server::DisconnectDeadSession()
 	{
 		int ID = *iter;
 
-		Player* pPlayer = _PlayerMap[(*iter)];
+		Player* pPlayer = _PlayerMap[ID];
 		if (pPlayer == nullptr)
 		{
-			::printf("Error! Func %s Line %d (ID: %d)\n",
-				__func__, __LINE__, (*iter));
+			::printf("Error! Func %s Line %d (ID: %d)\n", __func__, __LINE__, ID);
 			LOG(L"ERROR", SystemLog::ERROR_LEVEL,
 				L"%s[%d]: Session ID Find Error\n", _T(__FUNCTION__), __LINE__);
 			g_bShutdown = true;
 			return;
 		}
-		_PlayerMap[(*iter)] = nullptr;
-
-		SerializePacket buffer;
-		int deleteRet = SetSCPacket_DELETE_CHAR(&buffer, pPlayer->_ID);
-		EnqueueAroundSector(buffer.GetReadPtr(), deleteRet, pPlayer->_pSector);
+		_PlayerMap[ID] = nullptr;
 
 		// Remove from Sector
 		vector<Player*>::iterator vectorIter = pPlayer->_pSector->_players.begin();
@@ -551,24 +515,26 @@ void Server::DisconnectDeadSession()
 				break;
 			}
 		}
-		_pPlayerPool->Free(pPlayer);
 
-		Session* pSession = _SessionMap[(*iter)];	
+		SerializePacket buffer;
+		int deleteRet = SetSCPacket_DELETE_CHAR(&buffer, pPlayer->_ID);
+		EnqueueAroundSector(buffer.GetReadPtr(), deleteRet, pPlayer->_pSector);
+		_pPlayerPool->Free(pPlayer);
+		
+		Session* pSession = _SessionMap[ID];
 		if (pSession == nullptr)
 		{
-			::printf("Error! Func %s Line %d (ID: %d)\n", 
-				__func__, __LINE__, (*iter));
+			::printf("Error! Func %s Line %d (ID: %d)\n", __func__, __LINE__, ID);
 			LOG(L"ERROR", SystemLog::ERROR_LEVEL,
 				L"%s[%d]: Session ID Find Error\n", _T(__FUNCTION__), __LINE__);
 			g_bShutdown = true;
 			return;
 		}
-		
-		closesocket(pSession->_socket);
-		_SessionMap[(*iter)] = nullptr;
-		_pSessionPool->Free(pSession);
-		_emptySessionID.push_back((*iter));
+		_SessionMap[ID] = nullptr;
 
+		closesocket(pSession->_socket);	
+		_pSessionPool->Free(pSession);
+		_emptySessionID.push_back(ID);
 		_disconnectCnt++;
 	}
 
@@ -626,7 +592,6 @@ void Server::EnqueueOneSector(char* msg, int size, Sector* sector, Session* pExp
 	}
 	else
 	{
-		
 		vector<Player*>::iterator playerIter = sector->_players.begin();
 		for (; playerIter < sector->_players.end(); playerIter++)
 		{
@@ -659,13 +624,11 @@ void Server::EnqueueAroundSector(char* msg, int size, Sector* centerSector, Sess
 	int enqueueRet;
 	if (pExpSession == nullptr)
 	{
-		Sector sectors[dfAROUND_SECTOR_NUM];
-		GetAroundSector(centerSector, sectors);
-
 		for(int i = 0; i < dfAROUND_SECTOR_NUM; i++)
 		{
-			vector<Player*>::iterator playerIter = sectors[i]._players.begin();
-			for (; playerIter < sectors[i]._players.end(); playerIter++)
+			vector<Player*>::iterator playerIter 
+				= centerSector->_around[i]->_players.begin();
+			for (; playerIter < centerSector->_around[i]->_players.end(); playerIter++)
 			{
 				if ((*playerIter) == nullptr)
 				{
@@ -688,14 +651,13 @@ void Server::EnqueueAroundSector(char* msg, int size, Sector* centerSector, Sess
 		}
 	}
 	else
-	{
-		Sector sectors[dfAROUND_SECTOR_NUM];
-		GetAroundSector(centerSector, sectors);
-
-		vector<Player*>::iterator playerIter = sectors[0]._players.begin();
-		for (; playerIter < sectors[0]._players.end(); playerIter++)
+	{		
+		for (int i = 0; i < 8; i++)
 		{
-			if ((*playerIter)->_pSession != pExpSession)
+			vector<Player*>::iterator playerIter 
+				= centerSector->_around[i]->_players.begin();
+
+			for (; playerIter < centerSector->_around[i]->_players.end(); playerIter++)
 			{
 				if ((*playerIter) == nullptr)
 				{
@@ -717,11 +679,11 @@ void Server::EnqueueAroundSector(char* msg, int size, Sector* centerSector, Sess
 			}
 		}
 
-		
-		for (int i = 1; i < dfAROUND_SECTOR_NUM; i++)
+		vector<Player*>::iterator playerIter 
+			= centerSector->_around[8]->_players.begin();
+		for (; playerIter < centerSector->_around[8]->_players.end(); playerIter++)
 		{
-			vector<Player*>::iterator playerIter = sectors[i]._players.begin();
-			for (; playerIter < sectors[i]._players.end(); playerIter++)
+			if ((*playerIter)->_pSession != pExpSession)
 			{
 				if ((*playerIter) == nullptr)
 				{
@@ -772,33 +734,15 @@ void Server::UpdatePlayerMove(Player* pPlayer)
 	case dfPACKET_MOVE_DIR_LL:
 
 		if (CheckMovable(pPlayer->_x - dfSPEED_PLAYER_X, pPlayer->_y))
-		{
 			pPlayer->_x -= dfSPEED_PLAYER_X;
-		}
 
 		if (pPlayer->_x < pPlayer->_pSector->_xPosMin)
-		{
-			Sector inSector[3] = 
-			{
-				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex - 2],
-				_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex - 2],
-				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex - 2]
-			};
-
-			Sector outSector[3] =
-			{
-				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex + 1],
-				_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex + 1],
-				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex + 1]
-			};
-			
-			UpdateSector(pPlayer, inSector, outSector, 3, 3,
-				&_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex - 1]);
-		}
+			UpdateSector(pPlayer, dfPACKET_MOVE_DIR_LL);
 
 		break;
 
 	case dfPACKET_MOVE_DIR_LU:
+		
 		if (CheckMovable(pPlayer->_x - dfSPEED_PLAYER_X, pPlayer->_y - dfSPEED_PLAYER_Y))
 		{
 			pPlayer->_x -= dfSPEED_PLAYER_X;
@@ -806,101 +750,29 @@ void Server::UpdatePlayerMove(Player* pPlayer)
 		}
 
 		if (pPlayer->_x < pPlayer->_pSector->_xPosMin &&
-			pPlayer->_y < pPlayer->_pSector->_yPosMin)
-		{
-			Sector inSector[5] =
-			{
-				_sectors[pPlayer->_pSector->_yIndex - 2][pPlayer->_pSector->_xIndex],
-				_sectors[pPlayer->_pSector->_yIndex - 2][pPlayer->_pSector->_xIndex - 1],
-				_sectors[pPlayer->_pSector->_yIndex - 2][pPlayer->_pSector->_xIndex - 2],
-				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex - 2],
-				_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex - 2],
-				
-			};
+				pPlayer->_y < pPlayer->_pSector->_yPosMin)
+			UpdateSector(pPlayer, dfPACKET_MOVE_DIR_LU);
 
-			Sector outSector[5] =
-			{
-				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex],
-				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex - 1],
-				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex + 1],
-				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex + 1],
-				_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex + 1],
-				
-			};
-
-			UpdateSector(pPlayer, inSector, outSector, 5, 5,
-				&_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex - 1]);
-		}
 		else if (pPlayer->_x < pPlayer->_pSector->_xPosMin)
-		{
-			Sector inSector[3] =
-			{
-				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex - 2],
-				_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex - 2],
-				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex - 2]
-			};
-
-			Sector outSector[3] =
-			{
-				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex + 1],
-				_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex + 1],
-				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex + 1]
-			};
-
-			UpdateSector(pPlayer, inSector, outSector, 3, 3,
-				&_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex - 1]);
-		}
+			UpdateSector(pPlayer, dfPACKET_MOVE_DIR_LL);
+		
 		else if(pPlayer->_y < pPlayer->_pSector->_yPosMin)
-		{
-			Sector inSector[3] =
-			{
-				_sectors[pPlayer->_pSector->_yIndex - 2][pPlayer->_pSector->_xIndex - 1],
-				_sectors[pPlayer->_pSector->_yIndex - 2][pPlayer->_pSector->_xIndex],
-				_sectors[pPlayer->_pSector->_yIndex - 2][pPlayer->_pSector->_xIndex + 1]
-			};
-
-			Sector outSector[3] =
-			{
-				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex - 1],
-				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex],
-				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex + 1]
-			};
-
-			UpdateSector(pPlayer, inSector, outSector, 3, 3,
-				&_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex]);
-		}
+			UpdateSector(pPlayer, dfPACKET_MOVE_DIR_UU);
 
 		break;
 
 	case dfPACKET_MOVE_DIR_UU:
+		
 		if (CheckMovable(pPlayer->_x, pPlayer->_y - dfSPEED_PLAYER_Y))
-		{
 			pPlayer->_y -= dfSPEED_PLAYER_Y;
-		}
 
 		if (pPlayer->_y < pPlayer->_pSector->_yPosMin)
-		{
-			Sector inSector[3] =
-			{
-				_sectors[pPlayer->_pSector->_yIndex - 2][pPlayer->_pSector->_xIndex - 1],
-				_sectors[pPlayer->_pSector->_yIndex - 2][pPlayer->_pSector->_xIndex],
-				_sectors[pPlayer->_pSector->_yIndex - 2][pPlayer->_pSector->_xIndex + 1]
-			};
-
-			Sector outSector[3] =
-			{
-				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex - 1],
-				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex],
-				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex + 1]
-			};
-
-			UpdateSector(pPlayer, inSector, outSector, 3, 3,
-				&_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex]);
-		}
+			UpdateSector(pPlayer, dfPACKET_MOVE_DIR_UU);
 
 		break;
 
 	case dfPACKET_MOVE_DIR_RU:
+		
 		if (CheckMovable(pPlayer->_x + dfSPEED_PLAYER_X, pPlayer->_y - dfSPEED_PLAYER_Y))
 		{
 			pPlayer->_x += dfSPEED_PLAYER_X;
@@ -908,97 +780,29 @@ void Server::UpdatePlayerMove(Player* pPlayer)
 		}
 
 		if (pPlayer->_x > pPlayer->_pSector->_xPosMax &&
-			pPlayer->_y < pPlayer->_pSector->_yPosMin)
-		{
-			Sector inSector[5] =
-			{
-				_sectors[pPlayer->_pSector->_yIndex - 2][pPlayer->_pSector->_xIndex],
-				_sectors[pPlayer->_pSector->_yIndex - 2][pPlayer->_pSector->_xIndex + 1],
-				_sectors[pPlayer->_pSector->_yIndex - 2][pPlayer->_pSector->_xIndex + 2],
-				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex + 2],
-				_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex + 2]
-			};
+				pPlayer->_y < pPlayer->_pSector->_yPosMin)
+			UpdateSector(pPlayer, dfPACKET_MOVE_DIR_RU);
 
-			Sector outSector[5] =
-			{
-				_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex - 1],
-				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex - 1],
-				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex - 1],
-				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex + 1],
-				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex]
-			};
-
-			UpdateSector(pPlayer, inSector, outSector, 5, 5,
-				&_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex + 1]);
-		}
 		else if (pPlayer->_x > pPlayer->_pSector->_xPosMax)
-		{
-			Sector inSector[3] =
-			{
-				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex + 2],
-				_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex + 2],
-				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex + 2]
-			};
+			UpdateSector(pPlayer, dfPACKET_MOVE_DIR_RR);
 
-			Sector outSector[3] =
-			{
-				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex - 1],
-				_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex - 1],
-				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex - 1]
-			};
-
-			UpdateSector(pPlayer, inSector, outSector, 3, 3,
-				&_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex + 1]);
-		}
 		else if (pPlayer->_y < pPlayer->_pSector->_yPosMin)
-		{
-			Sector inSector[3] =
-			{
-				_sectors[pPlayer->_pSector->_yIndex - 2][pPlayer->_pSector->_xIndex - 1],
-				_sectors[pPlayer->_pSector->_yIndex - 2][pPlayer->_pSector->_xIndex],
-				_sectors[pPlayer->_pSector->_yIndex - 2][pPlayer->_pSector->_xIndex + 1]
-			};
+			UpdateSector(pPlayer, dfPACKET_MOVE_DIR_UU);
 
-			Sector outSector[3] =
-			{
-				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex - 1],
-				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex],
-				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex + 1]
-			};
-
-			UpdateSector(pPlayer, inSector, outSector, 3, 3,
-				&_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex]);
-		}
 		break;
 
 	case dfPACKET_MOVE_DIR_RR:
+
 		if (CheckMovable(pPlayer->_x + dfSPEED_PLAYER_X, pPlayer->_y))
-		{
 			pPlayer->_x += dfSPEED_PLAYER_X;
-		}
 
 		if (pPlayer->_x > pPlayer->_pSector->_xPosMax)
-		{
-			Sector inSector[3] =
-			{
-				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex + 2],
-				_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex + 2],
-				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex + 2]
-			};
+			UpdateSector(pPlayer, dfPACKET_MOVE_DIR_RR);
 
-			Sector outSector[3] =
-			{
-				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex - 1],
-				_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex - 1],
-				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex - 1]
-			};
-
-			UpdateSector(pPlayer, inSector, outSector, 3, 3,
-				&_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex + 1]);
-		}
 		break;
 
 	case dfPACKET_MOVE_DIR_RD:
+		
 		if (CheckMovable(pPlayer->_x + dfSPEED_PLAYER_X, pPlayer->_y + dfSPEED_PLAYER_Y))
 		{
 			pPlayer->_x += dfSPEED_PLAYER_X;
@@ -1006,97 +810,29 @@ void Server::UpdatePlayerMove(Player* pPlayer)
 		}
 
 		if (pPlayer->_x > pPlayer->_pSector->_xPosMax &&
-			pPlayer->_y > pPlayer->_pSector->_yPosMax)
-		{
-			Sector inSector[5] =
-			{
-				_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex + 2],
-				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex + 2],
-				_sectors[pPlayer->_pSector->_yIndex + 2][pPlayer->_pSector->_xIndex + 2],
-				_sectors[pPlayer->_pSector->_yIndex + 2][pPlayer->_pSector->_xIndex + 1],
-				_sectors[pPlayer->_pSector->_yIndex + 2][pPlayer->_pSector->_xIndex]
-			};
+				pPlayer->_y > pPlayer->_pSector->_yPosMax)
+			UpdateSector(pPlayer, dfPACKET_MOVE_DIR_RD);
 
-			Sector outSector[5] =
-			{
-				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex],
-				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex + 1],
-				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex - 1],
-				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex - 1],
-				_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex - 1]
-			};
-
-			UpdateSector(pPlayer, inSector, outSector, 5, 5,
-				&_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex + 1]);
-		}
 		else if (pPlayer->_x > pPlayer->_pSector->_xPosMax)
-		{
-			Sector inSector[3] =
-			{
-				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex + 2],
-				_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex + 2],
-				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex + 2]
-			};
-
-			Sector outSector[3] =
-			{
-				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex - 1],
-				_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex - 1],
-				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex - 1]
-			};
-
-			UpdateSector(pPlayer, inSector, outSector, 3, 3,
-				&_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex + 1]);
-		}
+			UpdateSector(pPlayer, dfPACKET_MOVE_DIR_RR);
+		
 		else if (pPlayer->_y > pPlayer->_pSector->_yPosMax)
-		{
-			Sector inSector[3] =
-			{
-				_sectors[pPlayer->_pSector->_yIndex + 2][pPlayer->_pSector->_xIndex - 1],
-				_sectors[pPlayer->_pSector->_yIndex + 2][pPlayer->_pSector->_xIndex],
-				_sectors[pPlayer->_pSector->_yIndex + 2][pPlayer->_pSector->_xIndex + 1]
-			};
+			UpdateSector(pPlayer, dfPACKET_MOVE_DIR_DD);
 
-			Sector outSector[3] =
-			{
-				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex - 1],
-				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex],
-				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex + 1]
-			};
-
-			UpdateSector(pPlayer, inSector, outSector, 3, 3,
-				&_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex]);
-		}
 		break;
 
 	case dfPACKET_MOVE_DIR_DD:
+		
 		if (CheckMovable(pPlayer->_x, pPlayer->_y + dfSPEED_PLAYER_Y))
-		{
 			pPlayer->_y += dfSPEED_PLAYER_Y;
-		}
 
 		if (pPlayer->_y > pPlayer->_pSector->_yPosMax)
-		{
-			Sector inSector[3] =
-			{
-				_sectors[pPlayer->_pSector->_yIndex + 2][pPlayer->_pSector->_xIndex - 1],
-				_sectors[pPlayer->_pSector->_yIndex + 2][pPlayer->_pSector->_xIndex],
-				_sectors[pPlayer->_pSector->_yIndex + 2][pPlayer->_pSector->_xIndex + 1]
-			};
-
-			Sector outSector[3] =
-			{
-				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex - 1],
-				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex],
-				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex + 1]
-			};
-
-			UpdateSector(pPlayer, inSector, outSector, 3, 3,
-				&_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex]);
-		}
+			UpdateSector(pPlayer, dfPACKET_MOVE_DIR_DD);
+		
 		break;
 
 	case dfPACKET_MOVE_DIR_LD:
+		
 		if (CheckMovable(pPlayer->_x - dfSPEED_PLAYER_X, pPlayer->_y + dfSPEED_PLAYER_Y))
 		{
 			pPlayer->_x -= dfSPEED_PLAYER_X;
@@ -1104,97 +840,28 @@ void Server::UpdatePlayerMove(Player* pPlayer)
 		}
 
 		if (pPlayer->_x < pPlayer->_pSector->_xPosMin &&
-			pPlayer->_y > pPlayer->_pSector->_yPosMax)
-		{
-			Sector inSector[5] =
-			{
-				
-				_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex - 2],
-				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex - 2],
-				_sectors[pPlayer->_pSector->_yIndex + 2][pPlayer->_pSector->_xIndex - 2],
-				_sectors[pPlayer->_pSector->_yIndex + 2][pPlayer->_pSector->_xIndex - 1],
-				_sectors[pPlayer->_pSector->_yIndex + 2][pPlayer->_pSector->_xIndex]
-			};
+				pPlayer->_y > pPlayer->_pSector->_yPosMax)
+			UpdateSector(pPlayer, dfPACKET_MOVE_DIR_LD);
 
-			Sector outSector[5] =
-			{
-				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex],
-				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex + 1],
-				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex + 1],
-				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex + 1],
-				_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex + 1],
-				
-			};
-
-			UpdateSector(pPlayer, inSector, outSector, 5, 5,
-				&_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex - 1]);
-		}
 		else if (pPlayer->_x < pPlayer->_pSector->_xPosMin)
-		{
-			Sector inSector[3] =
-			{
-				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex - 2],
-				_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex - 2],
-				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex - 2]
-			};
+			UpdateSector(pPlayer, dfPACKET_MOVE_DIR_LL);
 
-			Sector outSector[3] =
-			{
-				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex + 1],
-				_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex + 1],
-				_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex + 1]
-			};
-
-			UpdateSector(pPlayer, inSector, outSector, 3, 3,
-				&_sectors[pPlayer->_pSector->_yIndex][pPlayer->_pSector->_xIndex - 1]);
-		}
 		else if (pPlayer->_y > pPlayer->_pSector->_yPosMax)
-		{
-			Sector inSector[3] =
-			{
-				_sectors[pPlayer->_pSector->_yIndex + 2][pPlayer->_pSector->_xIndex - 1],
-				_sectors[pPlayer->_pSector->_yIndex + 2][pPlayer->_pSector->_xIndex],
-				_sectors[pPlayer->_pSector->_yIndex + 2][pPlayer->_pSector->_xIndex + 1]
-			};
+			UpdateSector(pPlayer, dfPACKET_MOVE_DIR_DD);
 
-			Sector outSector[3] =
-			{
-				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex - 1],
-				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex],
-				_sectors[pPlayer->_pSector->_yIndex - 1][pPlayer->_pSector->_xIndex + 1]
-			};
-
-			UpdateSector(pPlayer, inSector, outSector, 3, 3,
-				&_sectors[pPlayer->_pSector->_yIndex + 1][pPlayer->_pSector->_xIndex]);
-		}
 		break;
 	}
-
 }
 
 void Server::SetSector(Player* pPlayer)
 {
-	int x = pPlayer->_x / dfSECTOR_SIZE_X + 1;
-	int y = pPlayer->_y / dfSECTOR_SIZE_Y + 1;
+	int x = (pPlayer->_x / dfSECTOR_SIZE_X) + 2;
+	int y = (pPlayer->_y / dfSECTOR_SIZE_Y) + 2;
 	_sectors[y][x]._players.push_back(pPlayer);
 	pPlayer->_pSector = &_sectors[y][x];
 }
 
-void Server::GetAroundSector(Sector* centerSector, Sector* aroundSector)
-{
-	aroundSector[0] = _sectors[centerSector->_yIndex][centerSector->_xIndex];
-	aroundSector[1] = _sectors[centerSector->_yIndex + 1][centerSector->_xIndex + 1];
-	aroundSector[2] = _sectors[centerSector->_yIndex + 1][centerSector->_xIndex];
-	aroundSector[3] = _sectors[centerSector->_yIndex + 1][centerSector->_xIndex - 1];
-	aroundSector[4] = _sectors[centerSector->_yIndex][centerSector->_xIndex + 1];
-	aroundSector[5] = _sectors[centerSector->_yIndex][centerSector->_xIndex - 1];
-	aroundSector[6] = _sectors[centerSector->_yIndex - 1][centerSector->_xIndex + 1];
-	aroundSector[7] = _sectors[centerSector->_yIndex - 1][centerSector->_xIndex];
-	aroundSector[8] = _sectors[centerSector->_yIndex - 1][centerSector->_xIndex - 1];
-}
-
-void Server::UpdateSector(Player* pPlayer, Sector* inSector, Sector* outSector, 
-	int inSectorNum, int outSectorNum, Sector* newSector)
+void Server::UpdateSector(Player* pPlayer, short direction)
 {
 	PRO_BEGIN(L"Content: Update Sector");
 
@@ -1208,34 +875,38 @@ void Server::UpdateSector(Player* pPlayer, Sector* inSector, Sector* outSector,
 		}
 	}
 
-	// About My Player ==============================================
+	// Get Around Sector Data =======================================
+	
+	int sectorCnt = _sectorCnt[direction];
+	Sector** inSector = pPlayer->_pSector->_new[direction];
+	Sector** outSector = pPlayer->_pSector->_old[direction];
+	Sector* newSector = pPlayer->_pSector->_around[direction];
+
+	// Send Data About My Player ==============================================
 
 	SerializePacket createMeToOther;
 	int createMeToOtherRet = SetSCPacket_CREATE_OTHER_CHAR(&createMeToOther,
 		pPlayer->_ID, pPlayer->_direction, pPlayer->_x, pPlayer->_y, pPlayer->_hp);
-	for (int i = 0; i < inSectorNum; i++)
-		EnqueueOneSector(createMeToOther.GetReadPtr(), 
-			createMeToOtherRet, &inSector[i], pPlayer->_pSession);
+	for (int i = 0; i < sectorCnt; i++)
+		EnqueueOneSector(createMeToOther.GetReadPtr(), createMeToOtherRet, inSector[i]);
 
 	SerializePacket MoveMeToOther;
 	int MoveMeToOtherRet = SetSCPacket_MOVE_START(&MoveMeToOther,
 		pPlayer->_ID, pPlayer->_moveDirection, pPlayer->_x, pPlayer->_y);
-	for (int i = 0; i < inSectorNum; i++)
-		EnqueueOneSector(MoveMeToOther.GetReadPtr(), 
-			MoveMeToOtherRet, &inSector[i], pPlayer->_pSession);
+	for (int i = 0; i < sectorCnt; i++)
+		EnqueueOneSector(MoveMeToOther.GetReadPtr(), MoveMeToOtherRet, inSector[i]);
 
 	SerializePacket deleteMeToOther;
 	int deleteMeToOtherRet = SetSCPacket_DELETE_CHAR(&deleteMeToOther, pPlayer->_ID);
-	for (int i = 0; i < outSectorNum; i++)
-		EnqueueOneSector(deleteMeToOther.GetReadPtr(), 
-			deleteMeToOtherRet, &outSector[i], pPlayer->_pSession);
+	for (int i = 0; i < sectorCnt; i++)
+		EnqueueOneSector(deleteMeToOther.GetReadPtr(), deleteMeToOtherRet, outSector[i]);
 
-	// About Other Player ==============================================
+	// Send Data About Other Player ==============================================
 	
-	for (int i = 0; i < inSectorNum; i++)
+	for (int i = 0; i < sectorCnt; i++)
 	{	
-		vector<Player*>::iterator iter = inSector[i]._players.begin();
-		for(; iter < inSector[i]._players.end(); iter++)
+		vector<Player*>::iterator iter = inSector[i]->_players.begin();
+		for(; iter < inSector[i]->_players.end(); iter++)
 		{
 			SerializePacket createOther;
 			int createOtherRet = SetSCPacket_CREATE_OTHER_CHAR(&createOther,
@@ -1252,11 +923,10 @@ void Server::UpdateSector(Player* pPlayer, Sector* inSector, Sector* outSector,
 		}
 	}
 
-	
-	for (int i = 0; i < outSectorNum; i++)
+	for (int i = 0; i < sectorCnt; i++)
 	{
-		vector<Player*>::iterator iter = outSector[i]._players.begin();
-		for (; iter < outSector[i]._players.end(); iter++)
+		vector<Player*>::iterator iter = outSector[i]->_players.begin();
+		for (; iter < outSector[i]->_players.end(); iter++)
 		{
 			SerializePacket deleteOther;
 			int deleteOtherRet = SetSCPacket_DELETE_CHAR(&deleteOther, (*iter)->_ID);
@@ -1264,8 +934,8 @@ void Server::UpdateSector(Player* pPlayer, Sector* inSector, Sector* outSector,
 		}
 	}
 
-	newSector->_players.push_back(pPlayer);
 	pPlayer->_pSector = newSector;
+	newSector->_players.push_back(pPlayer);
 
 	PRO_END(L"Content: Update Sector");
 }
@@ -1273,9 +943,9 @@ void Server::UpdateSector(Player* pPlayer, Sector* inSector, Sector* outSector,
 void Server::CreatePlayer(Session* pSession)
 {
 	Player* pPlayer = _pPlayerPool->Alloc(pSession, _playerID++);
-	SetSector(pPlayer);
 	_PlayerMap[pSession->_ID] = pPlayer;
-
+	SetSector(pPlayer);
+	
 	SerializePacket createMe;
 	int createMeRet = SetSCPacket_CREATE_MY_CHAR(&createMe,
 		pPlayer->_ID, pPlayer->_direction, pPlayer->_x, pPlayer->_y, pPlayer->_hp);
@@ -1287,13 +957,11 @@ void Server::CreatePlayer(Session* pSession)
 	EnqueueAroundSector(createMeToOther.GetReadPtr(), 
 		createMeToOtherRet, pPlayer->_pSector, pPlayer->_pSession);
 	
-	Sector sectors[9];
-	GetAroundSector(pPlayer->_pSector, sectors);
-	
-	vector<Player*>::iterator iter = sectors[0]._players.begin();
-	for (; iter < sectors[0]._players.end(); iter++)
+	for (int i = 0; i < 8; i++)
 	{
-		if((*iter) != pPlayer)
+		vector<Player*>::iterator iter 
+			= pPlayer->_pSector->_around[i]->_players.begin();
+		for (; iter < pPlayer->_pSector->_around[i]->_players.end(); iter++)
 		{
 			SerializePacket createOther;
 			int createOtherRet = SetSCPacket_CREATE_OTHER_CHAR(&createOther,
@@ -1301,11 +969,12 @@ void Server::CreatePlayer(Session* pSession)
 			EnqueueUnicast(createOther.GetReadPtr(), createOtherRet, pPlayer->_pSession);
 		}
 	}
-	
-	for (int i = 1; i < 9; i++)
+
+	vector<Player*>::iterator iter
+		= pPlayer->_pSector->_around[8]->_players.begin();
+	for (; iter < pPlayer->_pSector->_around[8]->_players.end(); iter++)
 	{
-		iter = sectors[i]._players.begin();
-		for (; iter < sectors[i]._players.end(); iter++)
+		if ((*iter) != pPlayer)
 		{
 			SerializePacket createOther;
 			int createOtherRet = SetSCPacket_CREATE_OTHER_CHAR(&createOther,
@@ -1323,43 +992,37 @@ bool Server::HandleCSPackets(Player* pPlayer, BYTE type)
 	{
 	case dfPACKET_CS_MOVE_START:
 	{
-		return HandleCSPacket_MOVE_START(pPlayer);
-		
+		return HandleCSPacket_MOVE_START(pPlayer);		
 	}
 		break;
 
 	case dfPACKET_CS_MOVE_STOP:
 	{
-		return HandleCSPacket_MOVE_STOP(pPlayer);
-		
+		return HandleCSPacket_MOVE_STOP(pPlayer);	
 	}
 		break;
 
 	case dfPACKET_CS_ATTACK1:
 	{
-		return HandleCSPacket_ATTACK1(pPlayer);
-		
+		return HandleCSPacket_ATTACK1(pPlayer);	
 	}
 		break;
 
 	case dfPACKET_CS_ATTACK2:
 	{
-		return HandleCSPacket_ATTACK2(pPlayer);
-		
+		return HandleCSPacket_ATTACK2(pPlayer);	
 	}
 		break;
 
 	case dfPACKET_CS_ATTACK3:
 	{
-		return HandleCSPacket_ATTACK3(pPlayer);
-		
+		return HandleCSPacket_ATTACK3(pPlayer);	
 	}
 		break;
 	
 	case dfPACKET_CS_ECHO:
 	{
-		return HandleCSPacket_ECHO(pPlayer);
-		
+		return HandleCSPacket_ECHO(pPlayer);	
 	}
 		break;
 	}
@@ -1736,16 +1399,14 @@ void Server::SetPlayerAttack1(Player* pPlayer, Player*& pDamagedPlayer, BYTE& di
 	pPlayer->_y = y;
 	pPlayer->_direction = direction;
 
-	Sector sectors[9];
-	GetAroundSector(pPlayer->_pSector, sectors);
-
 	if (direction == dfPACKET_MOVE_DIR_LL)
 	{
-		
-		vector<Player*>::iterator iter = sectors[0]._players.begin();
-		for (; iter < sectors[0]._players.end(); iter++)
+		vector<Player*>::iterator iter 
+			= pPlayer->_pSector->_around[8]->_players.begin();
+
+		for (; iter < pPlayer->_pSector->_around[8]->_players.end(); iter++)
 		{
-			if((*iter) != pPlayer)
+			if ((*iter) != pPlayer)
 			{
 				int dist = pPlayer->_x - (*iter)->_x;
 				if (dist >= 0 && dist <= dfATTACK1_RANGE_X &&
@@ -1753,22 +1414,25 @@ void Server::SetPlayerAttack1(Player* pPlayer, Player*& pDamagedPlayer, BYTE& di
 				{
 					pDamagedPlayer = (*iter);
 					pDamagedPlayer->_hp -= dfATTACK1_DAMAGE;
-					
+
 					if (pDamagedPlayer->_hp <= 0)
 					{
 						_deadCnt++;
 						SetSessionDead(pDamagedPlayer->_pSession);
+						
 					}
+
 					return;
 				}
 			}
 		}
 
-		
-		for (int i = 1; i < 9; i++)
+		for (int i = 0; i < 8; i++)
 		{
-			iter = sectors[i]._players.begin();
-			for (; iter < sectors[i]._players.end(); iter++)
+			vector<Player*>::iterator iter
+				= pPlayer->_pSector->_around[i]->_players.begin();
+
+			for (; iter < pPlayer->_pSector->_around[i]->_players.end(); iter++)
 			{
 				int dist = pPlayer->_x - (*iter)->_x;
 				if (dist >= 0 && dist <= dfATTACK1_RANGE_X &&
@@ -1781,6 +1445,7 @@ void Server::SetPlayerAttack1(Player* pPlayer, Player*& pDamagedPlayer, BYTE& di
 					{
 						_deadCnt++;
 						SetSessionDead(pDamagedPlayer->_pSession);
+						
 					}
 
 					return;
@@ -1790,9 +1455,9 @@ void Server::SetPlayerAttack1(Player* pPlayer, Player*& pDamagedPlayer, BYTE& di
 	}
 	else if (direction == dfPACKET_MOVE_DIR_RR)
 	{
-		
-		vector<Player*>::iterator iter = sectors[0]._players.begin();
-		for (; iter < sectors[0]._players.end(); iter++)
+		vector<Player*>::iterator iter 
+			= pPlayer->_pSector->_around[8]->_players.begin();
+		for (; iter < pPlayer->_pSector->_around[8]->_players.end(); iter++)
 		{
 			if((*iter) != pPlayer)
 			{
@@ -1807,6 +1472,7 @@ void Server::SetPlayerAttack1(Player* pPlayer, Player*& pDamagedPlayer, BYTE& di
 					{
 						_deadCnt++;
 						SetSessionDead(pDamagedPlayer->_pSession);
+						
 					}
 					return;
 				}
@@ -1814,10 +1480,11 @@ void Server::SetPlayerAttack1(Player* pPlayer, Player*& pDamagedPlayer, BYTE& di
 		}
 
 		
-		for (int i = 1; i < 9; i++)
+		for (int i = 0; i < 8; i++)
 		{
-			iter = sectors[i]._players.begin();
-			for (; iter < sectors[i]._players.end(); iter++)
+			vector<Player*>::iterator iter
+				= pPlayer->_pSector->_around[i]->_players.begin();
+			for (; iter < pPlayer->_pSector->_around[i]->_players.end(); iter++)
 			{
 				int dist = (*iter)->_x - pPlayer->_x;
 				if (dist >= 0 && dist <= dfATTACK1_RANGE_X &&
@@ -1830,6 +1497,7 @@ void Server::SetPlayerAttack1(Player* pPlayer, Player*& pDamagedPlayer, BYTE& di
 					{
 						_deadCnt++;
 						SetSessionDead(pDamagedPlayer->_pSession);
+						
 					}
 					return;
 				}
@@ -1846,14 +1514,12 @@ void Server::SetPlayerAttack2(Player* pPlayer, Player*& pDamagedPlayer, BYTE& di
 	pPlayer->_y = y;
 	pPlayer->_direction = direction;
 
-	Sector sectors[9];
-	GetAroundSector(pPlayer->_pSector, sectors);
-
 	if (direction == dfPACKET_MOVE_DIR_LL)
-	{
-		
-		vector<Player*>::iterator iter = sectors[0]._players.begin();
-		for (; iter < sectors[0]._players.end(); iter++)
+	{	
+		vector<Player*>::iterator iter 
+			= pPlayer->_pSector->_around[8]->_players.begin();
+
+		for (; iter < pPlayer->_pSector->_around[8]->_players.end(); iter++)
 		{
 			if((*iter) != pPlayer)
 			{
@@ -1868,6 +1534,7 @@ void Server::SetPlayerAttack2(Player* pPlayer, Player*& pDamagedPlayer, BYTE& di
 					{
 						_deadCnt++;
 						SetSessionDead(pDamagedPlayer->_pSession);
+						
 					}
 					return;
 				}
@@ -1875,10 +1542,11 @@ void Server::SetPlayerAttack2(Player* pPlayer, Player*& pDamagedPlayer, BYTE& di
 		}
 
 		
-		for (int i = 1; i < 9; i++)
+		for (int i = 0; i < 8; i++)
 		{
-			iter = sectors[i]._players.begin();
-			for (; iter < sectors[i]._players.end(); iter++)
+			vector<Player*>::iterator iter
+				= pPlayer->_pSector->_around[i]->_players.begin();
+			for (; iter < pPlayer->_pSector->_around[i]->_players.end(); iter++)
 			{
 				int dist = pPlayer->_x - (*iter)->_x;
 				if (dist >= 0 && dist <= dfATTACK2_RANGE_X &&
@@ -1891,6 +1559,7 @@ void Server::SetPlayerAttack2(Player* pPlayer, Player*& pDamagedPlayer, BYTE& di
 					{
 						_deadCnt++;
 						SetSessionDead(pDamagedPlayer->_pSession);
+						
 					}
 					return;
 				}
@@ -1900,8 +1569,10 @@ void Server::SetPlayerAttack2(Player* pPlayer, Player*& pDamagedPlayer, BYTE& di
 	else if (direction == dfPACKET_MOVE_DIR_RR)
 	{
 		
-		vector<Player*>::iterator iter = sectors[0]._players.begin();
-		for (; iter < sectors[0]._players.end(); iter++)
+		vector<Player*>::iterator iter 
+			= pPlayer->_pSector->_around[8]->_players.begin();
+
+		for (; iter < pPlayer->_pSector->_around[8]->_players.end(); iter++)
 		{
 			if((*iter) != pPlayer)
 			{
@@ -1923,10 +1594,11 @@ void Server::SetPlayerAttack2(Player* pPlayer, Player*& pDamagedPlayer, BYTE& di
 		}
 
 		
-		for (int i = 1; i < 9; i++)
+		for (int i = 0; i < 8; i++)
 		{
-			iter = sectors[i]._players.begin();
-			for (; iter < sectors[i]._players.end(); iter++)
+			vector<Player*>::iterator iter
+				= pPlayer->_pSector->_around[i]->_players.begin();
+			for (; iter < pPlayer->_pSector->_around[i]->_players.end(); iter++)
 			{
 				int dist = (*iter)->_x - pPlayer->_x;
 				if (dist >= 0 && dist <= dfATTACK2_RANGE_X &&
@@ -1939,6 +1611,7 @@ void Server::SetPlayerAttack2(Player* pPlayer, Player*& pDamagedPlayer, BYTE& di
 					{
 						_deadCnt++;
 						SetSessionDead(pDamagedPlayer->_pSession);
+						
 					}
 					return;
 				}
@@ -1954,14 +1627,11 @@ void Server::SetPlayerAttack3(Player* pPlayer, Player*& pDamagedPlayer, BYTE& di
 	pPlayer->_y = y;
 	pPlayer->_direction = direction;
 
-	Sector sectors[9];
-	GetAroundSector(pPlayer->_pSector, sectors);
-
 	if (direction == dfPACKET_MOVE_DIR_LL)
 	{
-		
-		vector<Player*>::iterator iter = sectors[0]._players.begin();
-		for (; iter < sectors[0]._players.end(); iter++)
+		vector<Player*>::iterator iter 
+			= pPlayer->_pSector->_around[8]->_players.begin();
+		for (; iter < pPlayer->_pSector->_around[8]->_players.end(); iter++)
 		{
 			if((*iter) != pPlayer)
 			{
@@ -1976,16 +1646,18 @@ void Server::SetPlayerAttack3(Player* pPlayer, Player*& pDamagedPlayer, BYTE& di
 					{
 						_deadCnt++;
 						SetSessionDead(pDamagedPlayer->_pSession);
+						
 					}
 					return;
 				}
 			}
 		}
 		
-		for (int i = 1; i < 9; i++)
+		for (int i = 0; i < 8; i++)
 		{
-			iter = sectors[i]._players.begin();
-			for (; iter < sectors[i]._players.end(); iter++)
+			vector<Player*>::iterator iter 
+				= pPlayer->_pSector->_around[i]->_players.begin();
+			for (; iter < pPlayer->_pSector->_around[i]->_players.end(); iter++)
 			{
 				int dist = pPlayer->_x - (*iter)->_x;
 				if (dist >= 0 && dist <= dfATTACK3_RANGE_X &&
@@ -1998,6 +1670,7 @@ void Server::SetPlayerAttack3(Player* pPlayer, Player*& pDamagedPlayer, BYTE& di
 					{
 						_deadCnt++;
 						SetSessionDead(pDamagedPlayer->_pSession);
+						
 					}
 					return;
 				}
@@ -2006,9 +1679,9 @@ void Server::SetPlayerAttack3(Player* pPlayer, Player*& pDamagedPlayer, BYTE& di
 	}
 	else if (direction == dfPACKET_MOVE_DIR_RR)
 	{
-		
-		vector<Player*>::iterator iter = sectors[0]._players.begin();
-		for (; iter < sectors[0]._players.end(); iter++)
+		vector<Player*>::iterator iter 
+			= pPlayer->_pSector->_around[8]->_players.begin();
+		for (; iter < pPlayer->_pSector->_around[8]->_players.end(); iter++)
 		{
 			if((*iter)!= pPlayer)
 			{
@@ -2023,16 +1696,18 @@ void Server::SetPlayerAttack3(Player* pPlayer, Player*& pDamagedPlayer, BYTE& di
 					{
 						_deadCnt++;
 						SetSessionDead(pDamagedPlayer->_pSession);
+						
 					}
 					return;
 				}
 			}
 		}
 		
-		for (int i = 1; i < 9; i++)
+		for (int i = 0; i < 8; i++)
 		{
-			iter = sectors[i]._players.begin();
-			for (; iter < sectors[i]._players.end(); iter++)
+			vector<Player*>::iterator iter 
+				= pPlayer->_pSector->_around[i]->_players.begin();
+			for (; iter < pPlayer->_pSector->_around[i]->_players.end(); iter++)
 			{
 				int dist = (*iter)->_x - pPlayer->_x;
 				if (dist >= 0 && dist <= dfATTACK3_RANGE_X &&
@@ -2322,15 +1997,131 @@ void Server::Sector::InitializeSector(short xIndex, short yIndex)
 {
 	_xIndex = xIndex;
 	_yIndex = yIndex;
-	_xPosMin = (xIndex - 1) * dfSECTOR_SIZE_X ;
-	_yPosMin = (yIndex - 1) * dfSECTOR_SIZE_Y;
-	_xPosMax = xIndex * dfSECTOR_SIZE_X;
-	_yPosMax = yIndex * dfSECTOR_SIZE_Y;
 
-	if (_xIndex == 0 || _xIndex == (dfSECTOR_CNT_X - 1)||
-		_yIndex == 0 || _yIndex == (dfSECTOR_CNT_Y - 1))
+	if (_xIndex < 2 || _xIndex >= (dfSECTOR_CNT_X - 2) ||
+		_yIndex < 2 || _yIndex >= (dfSECTOR_CNT_Y - 2))
 		return;
 
+	_xPosMin = (xIndex - 2) * dfSECTOR_SIZE_X ;
+	_yPosMin = (yIndex - 2) * dfSECTOR_SIZE_Y;
+	_xPosMax = (xIndex - 1) * dfSECTOR_SIZE_X;
+	_yPosMax = (yIndex - 1) * dfSECTOR_SIZE_Y;
 	_players.reserve(dfDEFAULT_PLAYERS_PER_SECTOR);
 }
 
+void Server::SetSectorsAroundInfo()
+{
+	for (int y = 2; y < dfSECTOR_CNT_Y - 2; y++)
+	{
+		for (int x = 2; x < dfSECTOR_CNT_X - 2; x++)
+		{
+			Sector* pSector = &_sectors[y][x];
+
+			pSector->_around[dfPACKET_MOVE_DIR_LL] = &_sectors[y][x - 1];
+			pSector->_around[dfPACKET_MOVE_DIR_LU] = &_sectors[y - 1][x - 1];
+			pSector->_around[dfPACKET_MOVE_DIR_UU] = &_sectors[y - 1][x];
+			pSector->_around[dfPACKET_MOVE_DIR_RU] = &_sectors[y - 1][x + 1];
+			pSector->_around[dfPACKET_MOVE_DIR_RR] = &_sectors[y][x + 1];
+			pSector->_around[dfPACKET_MOVE_DIR_RD] = &_sectors[y + 1][x + 1];
+			pSector->_around[dfPACKET_MOVE_DIR_DD] = &_sectors[y + 1][x];
+			pSector->_around[dfPACKET_MOVE_DIR_LD] = &_sectors[y + 1][x - 1];
+			pSector->_around[8] = &_sectors[y][x];
+			
+			// dfPACKET_MOVE_DIR_LL
+
+			pSector->_llNew[0] = &_sectors[y - 1][x - 2];
+			pSector->_llNew[1] = &_sectors[y][x - 2];
+			pSector->_llNew[2] = &_sectors[y + 1][x - 2];
+
+			pSector->_llOld[0] = &_sectors[y - 1][x + 1];
+			pSector->_llOld[1] = &_sectors[y][x + 1];
+			pSector->_llOld[2] = &_sectors[y + 1][x + 1];
+
+			// dfPACKET_MOVE_DIR_LU
+
+			pSector->_luNew[0] = &_sectors[y - 2][x];
+			pSector->_luNew[1] = &_sectors[y - 2][x - 1];
+			pSector->_luNew[2] = &_sectors[y - 2][x - 2];
+			pSector->_luNew[3] = &_sectors[y - 1][x - 2];
+			pSector->_luNew[4] = &_sectors[y][x - 2];
+
+			pSector->_luOld[0] = &_sectors[y + 1][x];
+			pSector->_luOld[1] = &_sectors[y + 1][x - 1];
+			pSector->_luOld[2] = &_sectors[y + 1][x + 1];
+			pSector->_luOld[3] = &_sectors[y - 1][x + 1];
+			pSector->_luOld[4] = &_sectors[y][x + 1];
+
+			// dfPACKET_MOVE_DIR_UU
+
+			pSector->_uuNew[0] = &_sectors[y - 2][x - 1];
+			pSector->_uuNew[1] = &_sectors[y - 2][x];
+			pSector->_uuNew[2] = &_sectors[y - 2][x + 1];
+
+			pSector->_uuOld[0] = &_sectors[y + 1][x - 1];
+			pSector->_uuOld[1] = &_sectors[y + 1][x];
+			pSector->_uuOld[2] = &_sectors[y + 1][x + 1];
+
+			// dfPACKET_MOVE_DIR_RU
+
+			pSector->_ruNew[0] = &_sectors[y - 2][x];
+			pSector->_ruNew[1] = &_sectors[y - 2][x + 1];
+			pSector->_ruNew[2] = &_sectors[y - 2][x + 2];
+			pSector->_ruNew[3] = &_sectors[y - 1][x + 2];
+			pSector->_ruNew[4] = &_sectors[y][x + 2];
+
+			pSector->_ruOld[0] = &_sectors[y][x - 1];
+			pSector->_ruOld[1] = &_sectors[y - 1][x - 1];
+			pSector->_ruOld[2] = &_sectors[y + 1][x - 1];
+			pSector->_ruOld[3] = &_sectors[y + 1][x + 1];
+			pSector->_ruOld[4] = &_sectors[y + 1][x];
+
+			// dfPACKET_MOVE_DIR_RR
+
+			pSector->_rrNew[0] = &_sectors[y - 1][x + 2];
+			pSector->_rrNew[1] = &_sectors[y][x + 2];
+			pSector->_rrNew[2] = &_sectors[y + 1][x + 2];
+
+			pSector->_rrOld[0] = &_sectors[y - 1][x - 1];
+			pSector->_rrOld[1] = &_sectors[y][x - 1];
+			pSector->_rrOld[2] = &_sectors[y + 1][x - 1];
+
+			// dfPACKET_MOVE_DIR_RD
+
+			pSector->_rdNew[0] = &_sectors[y + 2][x];
+			pSector->_rdNew[1] = &_sectors[y + 2][x + 1];
+			pSector->_rdNew[2] = &_sectors[y + 2][x + 2];
+			pSector->_rdNew[3] = &_sectors[y + 1][x + 2];
+			pSector->_rdNew[4] = &_sectors[y][x + 2];
+
+			pSector->_rdOld[0] = &_sectors[y - 1][x];
+			pSector->_rdOld[1] = &_sectors[y - 1][x + 1];
+			pSector->_rdOld[2] = &_sectors[y - 1][x - 1];
+			pSector->_rdOld[3] = &_sectors[y + 1][x - 1];
+			pSector->_rdOld[4] = &_sectors[y][x - 1];
+
+			// dfPACKET_MOVE_DIR_DD
+
+			pSector->_ddNew[0] = &_sectors[y + 2][x - 1];
+			pSector->_ddNew[1] = &_sectors[y + 2][x];
+			pSector->_ddNew[2] = &_sectors[y + 2][x + 1];
+
+			pSector->_ddOld[0] = &_sectors[y - 1][x - 1];
+			pSector->_ddOld[1] = &_sectors[y - 1][x];
+			pSector->_ddOld[2] = &_sectors[y - 1][x + 1];
+
+			// dfPACKET_MOVE_DIR_LD
+
+			pSector->_ldNew[0] = &_sectors[y + 2][x];
+			pSector->_ldNew[1] = &_sectors[y + 2][x - 1];
+			pSector->_ldNew[2] = &_sectors[y + 2][x - 2];
+			pSector->_ldNew[3] = &_sectors[y + 1][x - 2];
+			pSector->_ldNew[4] = &_sectors[y][x - 2];
+
+			pSector->_ldOld[0] = &_sectors[y][x + 1];
+			pSector->_ldOld[1] = &_sectors[y + 1][x + 1];
+			pSector->_ldOld[2] = &_sectors[y - 1][x + 1];
+			pSector->_ldOld[3] = &_sectors[y - 1][x - 1];
+			pSector->_ldOld[4] = &_sectors[y - 1][x];
+		}
+	}
+}

@@ -209,9 +209,7 @@ void Server::NetworkUpdate()
 
 	PRO_END(L"Network");
 
-	PRO_BEGIN(L"Delayed Accept");
 	SetAcceptedSession();
-	PRO_END(L"Delayed Accept");
 
 	PRO_BEGIN(L"Delayed Disconnect");
 	DisconnectDeadSession();

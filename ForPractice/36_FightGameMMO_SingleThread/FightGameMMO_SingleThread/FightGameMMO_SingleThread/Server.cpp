@@ -211,9 +211,7 @@ void Server::NetworkUpdate()
 
 	PRO_END(L"Network");
 
-	PRO_BEGIN(L"Delayed Accept");
 	SetAcceptedSession();
-	PRO_END(L"Delayed Accept");
 
 	PRO_BEGIN(L"Delayed Disconnect");
 	DisconnectDeadSession();
@@ -231,9 +229,7 @@ void Server::ContentUpdate()
 	{
 		if (playerIter->second->_move)
 		{
-			PRO_BEGIN(L"Content: Update Move");
 			UpdatePlayerMove(playerIter->second);
-			PRO_END(L"Content: Update Move");
 		}
 	}
 
@@ -415,6 +411,7 @@ void Server::RecvProc(Session* pSession)
 			return;
 		}
 		
+		PRO_BEGIN(L"Network: Handle Packet");
 		bool handlePacketRet = HandleCSPackets(pPlayer, header.byType);
 		if (!handlePacketRet)
 		{
@@ -425,6 +422,7 @@ void Server::RecvProc(Session* pSession)
 			SetSessionDead(pSession);
 			return;
 		}
+		PRO_END(L"Network: Handle Packet");
 
 		useSize = pSession->_recvBuf.GetUseSize();
 	}
@@ -1255,55 +1253,37 @@ bool Server::HandleCSPackets(Player* pPlayer, BYTE type)
 	{
 	case dfPACKET_CS_MOVE_START:
 	{
-		PRO_BEGIN(L"Network: Handle Move Start");
-		bool ret = HandleCSPacket_MOVE_START(pPlayer);
-		PRO_END(L"Network: Handle Move Start");
-		return ret;
+		return HandleCSPacket_MOVE_START(pPlayer);
 	}
 		break;
 
 	case dfPACKET_CS_MOVE_STOP:
 	{
-		PRO_BEGIN(L"Network: Handle Move Stop");
-		bool ret = HandleCSPacket_MOVE_STOP(pPlayer);
-		PRO_END(L"Network: Handle Move Stop");
-		return ret;
+		return HandleCSPacket_MOVE_STOP(pPlayer);
 	}
 		break;
 
 	case dfPACKET_CS_ATTACK1:
 	{
-		PRO_BEGIN(L"Network: Handle Attack1");
-		bool ret = HandleCSPacket_ATTACK1(pPlayer);
-		PRO_END(L"Network: Handle Attack1");
-		return ret;
+		return HandleCSPacket_ATTACK1(pPlayer);
 	}
 		break;
 
 	case dfPACKET_CS_ATTACK2:
 	{
-		PRO_BEGIN(L"Network: Handle Attack2");
-		bool ret = HandleCSPacket_ATTACK2(pPlayer);
-		PRO_END(L"Network: Handle Attack2");
-		return ret;
+		return HandleCSPacket_ATTACK2(pPlayer);
 	}
 		break;
 
 	case dfPACKET_CS_ATTACK3:
 	{
-		PRO_BEGIN(L"Network: Handle Attack3");
-		bool ret = HandleCSPacket_ATTACK3(pPlayer);
-		PRO_END(L"Network: Handle Attack3");
-		return ret;
+		return HandleCSPacket_ATTACK3(pPlayer);
 	}
 		break;
 	
 	case dfPACKET_CS_ECHO:
 	{
-		PRO_BEGIN(L"Network: Handle Echo");
-		bool ret = HandleCSPacket_ECHO(pPlayer);
-		PRO_END(L"Network: Handle Echo");
-		return ret;
+		return HandleCSPacket_ECHO(pPlayer);
 	}
 		break;
 	}

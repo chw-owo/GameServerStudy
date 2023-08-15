@@ -50,8 +50,10 @@ public:
 	{
 		if (timeGetTime() - _oldTick > 1000)
 		{
+			int connected = dfSESSION_MAX - _emptySessionID.size();
+
 			printf("[%s %s]\n\n", __DATE__, __TIME__);
-			printf("Connected Session: %d\n", _connected);
+			printf("Connected Session: %d\n", connected);
 			printf("Sync/1sec: %d\n", _syncCnt);
 			printf("Accept/1sec: %d\n", _acceptCnt);
 			printf("Disconnect/1sec: %d\n", _disconnectCnt);
@@ -62,7 +64,7 @@ public:
 			PRO_PRINT_CONSOLE();
 
 			if (_checkPointsIdx < checkPointsMax &&
-				_checkPoints[_checkPointsIdx] < _connected)
+				_checkPoints[_checkPointsIdx] < connected)
 			{
 				WCHAR titleBuf[32] = { L"\0", };
 				wsprintf(titleBuf, L"ProfileBasic/%d.txt", _checkPoints[_checkPointsIdx]);
@@ -109,7 +111,7 @@ private:
 	};
 
 private:
-	void SelectProc(FD_SET rset, FD_SET wset, int rIdx, int wIdx);
+	void SelectProc(int rStartIdx, int rCount, int wStartIdx, int wCount);
 	void AcceptProc();
 	void RecvProc(Session* pSession);
 	void SendProc(Session* pSession);
@@ -121,20 +123,17 @@ private:
 	void EnqueueAroundSector(char* msg, int size, Sector* centerSector, Session* pExpSession = nullptr);
 
 private:
-	void SetAcceptedSession();
 	void SetSessionDead(Session* pSession);
 	void DisconnectDeadSession();
 
 private:
 	timeval _time;
-	int _connected;
 	SOCKET _listensock = INVALID_SOCKET;
 	CObjectPool<Session>* _pSessionPool;
 	Session* _SessionMap[dfSESSION_MAX];
 
-	Session* _rSessionArray[FD_SETSIZE - 1]; // -1 cuz listen socket
-	Session* _wSessionArray[FD_SETSIZE];
-	vector<Session*> _acceptedSessions;
+	Session* _rSessions[dfSESSION_MAX];
+	Session* _wSessions[dfSESSION_MAX];
 	vector<int> _disconnectedSessionIDs;
 	vector<int> _emptySessionID;
 	
@@ -156,6 +155,39 @@ private:
 		short _yPosMin;
 		short _xPosMax;
 		short _yPosMax;
+
+	public:
+		Sector* _llNew[3];
+		Sector* _luNew[5];
+		Sector* _uuNew[3];
+		Sector* _ruNew[5];
+		Sector* _rrNew[3];
+		Sector* _rdNew[5];
+		Sector* _ddNew[3];
+		Sector* _ldNew[5];
+
+		Sector* _llOld[3];
+		Sector* _luOld[5];
+		Sector* _uuOld[3];
+		Sector* _ruOld[5];
+		Sector* _rrOld[3];
+		Sector* _rdOld[5];
+		Sector* _ddOld[3];
+		Sector* _ldOld[5];
+
+	public:
+		Sector* _around[9];
+		Sector** _new[8] = 
+		{
+			_llNew, _luNew, _uuNew, _ruNew, 
+			_rrNew, _rdNew, _ddNew, _ldNew
+		};
+		
+		Sector** _old[8] =
+		{
+			_llOld, _luOld, _uuOld, _ruOld,
+			_rrOld, _rdOld, _ddOld, _ldOld
+		};
 	};
 
 private:
@@ -193,8 +225,9 @@ private:
 private:
 	int _playerID = 0;
 	CObjectPool<Player>* _pPlayerPool;
-	Player* _PlayerMap[dfPLAYER_MAX];
+	Player* _PlayerMap[dfSESSION_MAX];
 	Sector _sectors[dfSECTOR_CNT_Y][dfSECTOR_CNT_X];
+	int _sectorCnt[8] = { 3, 5, 3, 5, 3, 5, 3, 5 };
 
 private:
 	void CreatePlayer(Session* pSession);
@@ -205,10 +238,9 @@ private:
 	inline bool CheckMovable(short x, short y);
 
 private:
-	void UpdateSector(Player* pPlayer, Sector* inSector, Sector* outSector, 
-		int inSectorNum, int outSectorNum, Sector* newSector);
+	void UpdateSector(Player* pPlayer, short Direction);
+	inline void SetSectorsAroundInfo();
 	inline void SetSector(Player* pPlayer);
-	inline void GetAroundSector(Sector* centerSector, Sector* aroundSector);
 	
 
 // About Packet ====================================================

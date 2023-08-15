@@ -51,19 +51,21 @@ public:
 	{
 		if (timeGetTime() - _oldTick > 1000)
 		{
+			int connected = _SessionIDMap.size();
+
 			printf("[%s %s]\n\n", __DATE__, __TIME__);
-			printf("Connected Session: %llu\n", _SessionIDMap.size());
+			printf("Connected Session: %d\n", connected);
 			printf("Sync/1sec: %d\n", _syncCnt);
 			printf("Accept/1sec: %d\n", _acceptCnt);
 			printf("Disconnect/1sec: %d\n", _disconnectCnt);
 			printf(" - Dead: %d\n", _deadCnt);
 			printf(" - Timeout: %d\n", _timeoutCnt);
-			printf(" - ConnReset(10054): %d\n", _ConnResetCnt); 
+			printf(" - ConnReset(10054): %d\n", _ConnResetCnt);
 
 			PRO_PRINT_CONSOLE();
 
 			if (_checkPointsIdx < checkPointsMax &&
-				_checkPoints[_checkPointsIdx] < _SessionIDMap.size())
+				_checkPoints[_checkPointsIdx] < connected)
 			{
 				WCHAR titleBuf[32] = { L"\0", };
 				wsprintf(titleBuf, L"ProfileBasic/%d.txt", _checkPoints[_checkPointsIdx]);
