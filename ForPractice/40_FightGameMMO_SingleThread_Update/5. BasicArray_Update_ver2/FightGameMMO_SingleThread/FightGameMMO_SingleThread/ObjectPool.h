@@ -87,8 +87,8 @@ public:
 
 public:
 	template<typename... Types>
-	DATA* Alloc(Types... args);
-	bool Free(DATA* pData);
+	inline DATA* Alloc(Types... args);
+	inline bool Free(DATA* pData);
 
 private:
 	bool _bPlacementNew;

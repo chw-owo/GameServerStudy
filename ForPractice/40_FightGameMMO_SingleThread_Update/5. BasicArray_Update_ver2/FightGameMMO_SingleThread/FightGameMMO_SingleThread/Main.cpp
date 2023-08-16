@@ -7,15 +7,14 @@ int wmain(int argc, wchar_t* argv[])
 	SYSLOG_LEVEL(SystemLog::ERROR_LEVEL);
 	LOG(L"SYSTEM", SystemLog::SYSTEM_LEVEL, L"%s", L"Main Thread Start\n");
 
-	Server* server = Server::GetInstance();
+	Server* pServer = new Server;
 	while (!g_bShutdown)
 	{
-		server->NetworkUpdate();
-		server->ContentUpdate();
-		server->Monitor();
-		// server->Control();
+		pServer->NetworkUpdate();
+		pServer->ContentUpdate();
+		pServer->Monitor();
 	}
-
+	delete pServer;
 	LOG(L"SYSTEM", SystemLog::SYSTEM_LEVEL, L"%s", L"Main Thread Terminate\n");
 	return 0;
 }

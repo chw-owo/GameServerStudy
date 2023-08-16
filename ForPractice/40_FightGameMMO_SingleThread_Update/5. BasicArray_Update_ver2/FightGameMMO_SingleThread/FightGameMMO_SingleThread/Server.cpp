@@ -14,6 +14,7 @@ Server::Server()
 	
 	_pSessionPool = new CObjectPool<Session>(dfSESSION_MAX, true);
 	_pPlayerPool = new CObjectPool<Player>(dfSESSION_MAX, true);
+	_pSPacketPool = new CObjectPool<SerializePacket>(dfSPACKET_MAX, false);
 
 	memset(_SessionMap, 0, dfSESSION_MAX * sizeof(Session*));
 	memset(_PlayerMap, 0, dfSESSION_MAX * sizeof(Player*));
@@ -136,13 +137,16 @@ Server::~Server()
 
 	delete _pSessionPool;
 	delete _pPlayerPool;
+	delete _pSPacketPool;
 }
 
+/*
 Server* Server::GetInstance()
 {
 	static Server _server;
 	return &_server;
 }
+*/
 
 void Server::NetworkUpdate()
 { 
@@ -278,7 +282,10 @@ void Server::AcceptProc()
 	}
 
 	int ID = _emptySessionID.back();
-	Session* pSession = _pSessionPool->Alloc(ID);
+	SerializePacket* pRecvPacket = _pSPacketPool->Alloc();
+	SerializePacket* pSendPacket = _pSPacketPool->Alloc();
+	Session* pSession = _pSessionPool->Alloc(ID, pRecvPacket, pSendPacket);
+
 	_emptySessionID.pop_back();
 
 	if (pSession == nullptr)
@@ -416,10 +423,7 @@ void Server::RecvProc(Session* pSession)
 			return;
 		}
 		
-		PRO_BEGIN(L"Network: Handle Packet");
 		bool handlePacketRet = HandleCSPackets(pPlayer, header.byType);
-		PRO_END(L"Network: Handle Packet");
-
 		if (!handlePacketRet)
 		{
 			::printf("Error! Func %s Line %d: PlayerID %d, Session ID %d\n", 
@@ -445,12 +449,7 @@ void Server::SendProc(Session* pSession)
 	if (sendRet == SOCKET_ERROR)
 	{
 		int err = WSAGetLastError();
-		if (err == WSAECONNRESET)
-		{
-			SetSessionDead(pSession);
-			return;
-		}
-		else if (err == WSAECONNABORTED)
+		if (err == WSAECONNRESET || err == WSAECONNABORTED)
 		{
 			SetSessionDead(pSession);
 			return;
@@ -515,11 +514,12 @@ void Server::DisconnectDeadSession()
 				break;
 			}
 		}
-
-		SerializePacket buffer;
-		int deleteRet = SetSCPacket_DELETE_CHAR(&buffer, pPlayer->_ID);
-		EnqueueAroundSector(buffer.GetReadPtr(), deleteRet, pPlayer->_pSector);
+		
+		pPlayer->_pSession->_pSendPacket->Clear();
+		int deleteRet = SetSCPacket_DELETE_CHAR(pPlayer->_pSession->_pSendPacket, pPlayer->_ID);
+		EnqueueAroundSector(pPlayer->_pSession->_pSendPacket->GetReadPtr(), deleteRet, pPlayer->_pSector);
 		_pPlayerPool->Free(pPlayer);
+		
 		
 		Session* pSession = _SessionMap[ID];
 		if (pSession == nullptr)
@@ -533,7 +533,10 @@ void Server::DisconnectDeadSession()
 		_SessionMap[ID] = nullptr;
 
 		closesocket(pSession->_socket);	
+		_pSPacketPool->Free(pSession->_pRecvPacket);
+		_pSPacketPool->Free(pSession->_pSendPacket);
 		_pSessionPool->Free(pSession);
+
 		_emptySessionID.push_back(ID);
 		_disconnectCnt++;
 	}
@@ -564,7 +567,6 @@ void Server::EnqueueUnicast(char* msg, int size, Session* pSession)
 
 void Server::EnqueueOneSector(char* msg, int size, Sector* sector, Session* pExpSession)
 {
-	int enqueueRet;
 	if (pExpSession == nullptr)
 	{
 		vector<Player*>::iterator playerIter = sector->_players.begin();
@@ -579,7 +581,7 @@ void Server::EnqueueOneSector(char* msg, int size, Sector* sector, Session* pExp
 				return;
 			}
 
-			enqueueRet = (*playerIter)->_pSession->_sendBuf.Enqueue(msg, size);
+			int enqueueRet = (*playerIter)->_pSession->_sendBuf.Enqueue(msg, size);
 			if (enqueueRet != size)
 			{
 				::printf("Error! Func %s Line %d\n", __func__, __LINE__);
@@ -606,7 +608,7 @@ void Server::EnqueueOneSector(char* msg, int size, Sector* sector, Session* pExp
 					return;
 				}
 
-				enqueueRet = (*playerIter)->_pSession->_sendBuf.Enqueue(msg, size);
+				int enqueueRet = (*playerIter)->_pSession->_sendBuf.Enqueue(msg, size);
 				if (enqueueRet != size)
 				{
 					::printf("Error! Func %s Line %d\n", __func__, __LINE__);
@@ -621,7 +623,6 @@ void Server::EnqueueOneSector(char* msg, int size, Sector* sector, Session* pExp
 
 void Server::EnqueueAroundSector(char* msg, int size, Sector* centerSector, Session* pExpSession)
 {
-	int enqueueRet;
 	if (pExpSession == nullptr)
 	{
 		for(int i = 0; i < dfAROUND_SECTOR_NUM; i++)
@@ -639,7 +640,7 @@ void Server::EnqueueAroundSector(char* msg, int size, Sector* centerSector, Sess
 					return;
 				}
 
-				enqueueRet = (*playerIter)->_pSession->_sendBuf.Enqueue(msg, size);
+				int enqueueRet = (*playerIter)->_pSession->_sendBuf.Enqueue(msg, size);
 				if (enqueueRet != size)
 				{
 					::printf("Error! Func %s Line %d\n", __func__, __LINE__);
@@ -668,7 +669,7 @@ void Server::EnqueueAroundSector(char* msg, int size, Sector* centerSector, Sess
 					return;
 				}
 
-				enqueueRet = (*playerIter)->_pSession->_sendBuf.Enqueue(msg, size);
+				int enqueueRet = (*playerIter)->_pSession->_sendBuf.Enqueue(msg, size);
 				if (enqueueRet != size)
 				{
 					::printf("Error! Func %s Line %d\n", __func__, __LINE__);
@@ -694,7 +695,7 @@ void Server::EnqueueAroundSector(char* msg, int size, Sector* centerSector, Sess
 					return;
 				}
 
-				enqueueRet = (*playerIter)->_pSession->_sendBuf.Enqueue(msg, size);
+				int enqueueRet = (*playerIter)->_pSession->_sendBuf.Enqueue(msg, size);
 				if (enqueueRet != size)
 				{
 					::printf("Error! Func %s Line %d\n", __func__, __LINE__);
@@ -884,22 +885,24 @@ void Server::UpdateSector(Player* pPlayer, short direction)
 
 	// Send Data About My Player ==============================================
 
-	SerializePacket createMeToOther;
-	int createMeToOtherRet = SetSCPacket_CREATE_OTHER_CHAR(&createMeToOther,
+	
+
+	pPlayer->_pSession->_pSendPacket->Clear();
+	int createMeToOtherRet = SetSCPacket_CREATE_OTHER_CHAR(pPlayer->_pSession->_pSendPacket,
 		pPlayer->_ID, pPlayer->_direction, pPlayer->_x, pPlayer->_y, pPlayer->_hp);
 	for (int i = 0; i < sectorCnt; i++)
-		EnqueueOneSector(createMeToOther.GetReadPtr(), createMeToOtherRet, inSector[i]);
+		EnqueueOneSector(pPlayer->_pSession->_pSendPacket->GetReadPtr(), createMeToOtherRet, inSector[i]);
 
-	SerializePacket MoveMeToOther;
-	int MoveMeToOtherRet = SetSCPacket_MOVE_START(&MoveMeToOther,
+	pPlayer->_pSession->_pSendPacket->Clear();
+	int MoveMeToOtherRet = SetSCPacket_MOVE_START(pPlayer->_pSession->_pSendPacket,
 		pPlayer->_ID, pPlayer->_moveDirection, pPlayer->_x, pPlayer->_y);
 	for (int i = 0; i < sectorCnt; i++)
-		EnqueueOneSector(MoveMeToOther.GetReadPtr(), MoveMeToOtherRet, inSector[i]);
-
-	SerializePacket deleteMeToOther;
-	int deleteMeToOtherRet = SetSCPacket_DELETE_CHAR(&deleteMeToOther, pPlayer->_ID);
+		EnqueueOneSector(pPlayer->_pSession->_pSendPacket->GetReadPtr(), MoveMeToOtherRet, inSector[i]);
+	
+	pPlayer->_pSession->_pSendPacket->Clear();
+	int deleteMeToOtherRet = SetSCPacket_DELETE_CHAR(pPlayer->_pSession->_pSendPacket, pPlayer->_ID);
 	for (int i = 0; i < sectorCnt; i++)
-		EnqueueOneSector(deleteMeToOther.GetReadPtr(), deleteMeToOtherRet, outSector[i]);
+		EnqueueOneSector(pPlayer->_pSession->_pSendPacket->GetReadPtr(), deleteMeToOtherRet, outSector[i]);
 
 	// Send Data About Other Player ==============================================
 	
@@ -908,17 +911,17 @@ void Server::UpdateSector(Player* pPlayer, short direction)
 		vector<Player*>::iterator iter = inSector[i]->_players.begin();
 		for(; iter < inSector[i]->_players.end(); iter++)
 		{
-			SerializePacket createOther;
-			int createOtherRet = SetSCPacket_CREATE_OTHER_CHAR(&createOther,
+			pPlayer->_pSession->_pSendPacket->Clear();
+			int createOtherRet = SetSCPacket_CREATE_OTHER_CHAR(pPlayer->_pSession->_pSendPacket,
 				(*iter)->_ID, (*iter)->_direction, (*iter)->_x, (*iter)->_y, (*iter)->_hp);
-			EnqueueUnicast(createOther.GetReadPtr(), createOtherRet, pPlayer->_pSession);
+			EnqueueUnicast(pPlayer->_pSession->_pSendPacket->GetReadPtr(), createOtherRet, pPlayer->_pSession);
 
 			if((*iter)->_move)
 			{
-				SerializePacket MoveOther;
-				int MoveOtherRet = SetSCPacket_MOVE_START(&MoveOther,
+				pPlayer->_pSession->_pSendPacket->Clear();
+				int MoveOtherRet = SetSCPacket_MOVE_START(pPlayer->_pSession->_pSendPacket,
 					(*iter)->_ID, (*iter)->_moveDirection, (*iter)->_x, (*iter)->_y);
-				EnqueueUnicast(MoveOther.GetReadPtr(), MoveOtherRet, pPlayer->_pSession);
+				EnqueueUnicast(pPlayer->_pSession->_pSendPacket->GetReadPtr(), MoveOtherRet, pPlayer->_pSession);
 			}
 		}
 	}
@@ -928,14 +931,15 @@ void Server::UpdateSector(Player* pPlayer, short direction)
 		vector<Player*>::iterator iter = outSector[i]->_players.begin();
 		for (; iter < outSector[i]->_players.end(); iter++)
 		{
-			SerializePacket deleteOther;
-			int deleteOtherRet = SetSCPacket_DELETE_CHAR(&deleteOther, (*iter)->_ID);
-			EnqueueUnicast(deleteOther.GetReadPtr(), deleteOtherRet, pPlayer->_pSession);
+			pPlayer->_pSession->_pSendPacket->Clear();
+			int deleteOtherRet = SetSCPacket_DELETE_CHAR(pPlayer->_pSession->_pSendPacket, (*iter)->_ID);
+			EnqueueUnicast(pPlayer->_pSession->_pSendPacket->GetReadPtr(), deleteOtherRet, pPlayer->_pSession);
 		}
 	}
 
 	pPlayer->_pSector = newSector;
 	newSector->_players.push_back(pPlayer);
+	
 
 	PRO_END(L"Content: Update Sector");
 }
@@ -946,27 +950,28 @@ void Server::CreatePlayer(Session* pSession)
 	_PlayerMap[pSession->_ID] = pPlayer;
 	SetSector(pPlayer);
 	
-	SerializePacket createMe;
-	int createMeRet = SetSCPacket_CREATE_MY_CHAR(&createMe,
-		pPlayer->_ID, pPlayer->_direction, pPlayer->_x, pPlayer->_y, pPlayer->_hp);
-	EnqueueUnicast(createMe.GetReadPtr(), createMeRet, pPlayer->_pSession);
-
-	SerializePacket createMeToOther;
-	int createMeToOtherRet = SetSCPacket_CREATE_OTHER_CHAR(&createMeToOther,
-		pPlayer->_ID, pPlayer->_direction, pPlayer->_x, pPlayer->_y, pPlayer->_hp);
-	EnqueueAroundSector(createMeToOther.GetReadPtr(), 
-		createMeToOtherRet, pPlayer->_pSector, pPlayer->_pSession);
 	
+	pPlayer->_pSession->_pSendPacket->Clear();
+	int createMeRet = SetSCPacket_CREATE_MY_CHAR(pPlayer->_pSession->_pSendPacket,
+		pPlayer->_ID, pPlayer->_direction, pPlayer->_x, pPlayer->_y, pPlayer->_hp);
+	EnqueueUnicast(pPlayer->_pSession->_pSendPacket->GetReadPtr(), createMeRet, pPlayer->_pSession);
+
+	pPlayer->_pSession->_pSendPacket->Clear();
+	int createMeToOtherRet = SetSCPacket_CREATE_OTHER_CHAR(pPlayer->_pSession->_pSendPacket,
+		pPlayer->_ID, pPlayer->_direction, pPlayer->_x, pPlayer->_y, pPlayer->_hp);
+	EnqueueAroundSector(pPlayer->_pSession->_pSendPacket->GetReadPtr(),
+		createMeToOtherRet, pPlayer->_pSector, pPlayer->_pSession);
+
 	for (int i = 0; i < 8; i++)
 	{
 		vector<Player*>::iterator iter 
 			= pPlayer->_pSector->_around[i]->_players.begin();
 		for (; iter < pPlayer->_pSector->_around[i]->_players.end(); iter++)
 		{
-			SerializePacket createOther;
-			int createOtherRet = SetSCPacket_CREATE_OTHER_CHAR(&createOther,
+			pPlayer->_pSession->_pSendPacket->Clear();
+			int createOtherRet = SetSCPacket_CREATE_OTHER_CHAR(pPlayer->_pSession->_pSendPacket,
 				(*iter)->_ID, (*iter)->_direction, (*iter)->_x, (*iter)->_y, (*iter)->_hp);
-			EnqueueUnicast(createOther.GetReadPtr(), createOtherRet, pPlayer->_pSession);
+			EnqueueUnicast(pPlayer->_pSession->_pSendPacket->GetReadPtr(), createOtherRet, pPlayer->_pSession);
 		}
 	}
 
@@ -976,12 +981,14 @@ void Server::CreatePlayer(Session* pSession)
 	{
 		if ((*iter) != pPlayer)
 		{
-			SerializePacket createOther;
-			int createOtherRet = SetSCPacket_CREATE_OTHER_CHAR(&createOther,
+			pPlayer->_pSession->_pSendPacket->Clear();
+			int createOtherRet = SetSCPacket_CREATE_OTHER_CHAR(pPlayer->_pSession->_pSendPacket,
 				(*iter)->_ID, (*iter)->_direction, (*iter)->_x, (*iter)->_y, (*iter)->_hp);
-			EnqueueUnicast(createOther.GetReadPtr(), createOtherRet, pPlayer->_pSession);
+			EnqueueUnicast(pPlayer->_pSession->_pSendPacket->GetReadPtr(), createOtherRet, pPlayer->_pSession);
 		}
 	}
+
+	
 }
 
 // About Packet ====================================================
@@ -992,37 +999,55 @@ bool Server::HandleCSPackets(Player* pPlayer, BYTE type)
 	{
 	case dfPACKET_CS_MOVE_START:
 	{
-		return HandleCSPacket_MOVE_START(pPlayer);		
+		PRO_BEGIN(L"Network: MOVE START");
+		bool ret = HandleCSPacket_MOVE_START(pPlayer);	
+		PRO_END(L"Network: MOVE START");
+		return ret;
 	}
 		break;
 
 	case dfPACKET_CS_MOVE_STOP:
 	{
-		return HandleCSPacket_MOVE_STOP(pPlayer);	
+		PRO_BEGIN(L"Network: MOVE STOP");
+		bool ret = HandleCSPacket_MOVE_STOP(pPlayer);
+		PRO_END(L"Network: MOVE STOP");
+		return ret;
 	}
 		break;
 
 	case dfPACKET_CS_ATTACK1:
 	{
-		return HandleCSPacket_ATTACK1(pPlayer);	
+		PRO_BEGIN(L"Network: ATTACK1");
+		bool ret = HandleCSPacket_ATTACK1(pPlayer);
+		PRO_END(L"Network: ATTACK1");
+		return ret;
 	}
 		break;
 
 	case dfPACKET_CS_ATTACK2:
 	{
-		return HandleCSPacket_ATTACK2(pPlayer);	
+		PRO_BEGIN(L"Network: ATTACK2");
+		bool ret = HandleCSPacket_ATTACK2(pPlayer);
+		PRO_END(L"Network: ATTACK2");
+		return ret;
 	}
 		break;
 
 	case dfPACKET_CS_ATTACK3:
 	{
-		return HandleCSPacket_ATTACK3(pPlayer);	
+		PRO_BEGIN(L"Network: ATTACK3");
+		bool ret = HandleCSPacket_ATTACK3(pPlayer);
+		PRO_END(L"Network: ATTACK3");
+		return ret;
 	}
 		break;
 	
 	case dfPACKET_CS_ECHO:
 	{
-		return HandleCSPacket_ECHO(pPlayer);	
+		PRO_BEGIN(L"Network: ECHO");
+		bool ret = HandleCSPacket_ECHO(pPlayer);
+		PRO_END(L"Network: ECHO");
+		return ret;
 	}
 		break;
 	}
@@ -1038,27 +1063,30 @@ bool Server::HandleCSPacket_MOVE_START(Player* pPlayer)
 	BYTE moveDirection;
 	short x;
 	short y;
-	bool getRet = GetCSPacket_MOVE_START(&(pPlayer->_pSession->_recvBuf), moveDirection, x, y);
+
+	pPlayer->_pSession->_pRecvPacket->Clear();
+	bool getRet = GetCSPacket_MOVE_START(pPlayer->_pSession->_pRecvPacket, &(pPlayer->_pSession->_recvBuf), moveDirection, x, y);
 	if(!getRet) 
 	{
 		return false;
 	}
-
+	
 	if (abs(pPlayer->_x - x) > dfERROR_RANGE || abs(pPlayer->_y - y) > dfERROR_RANGE)
 	{
-		SerializePacket buffer;
-		int setRet = SetSCPacket_SYNC(&buffer, pPlayer->_ID, pPlayer->_x, pPlayer->_y);
-		EnqueueUnicast(buffer.GetReadPtr(), setRet, pPlayer->_pSession);
+		pPlayer->_pSession->_pSendPacket->Clear();
+		int setRet = SetSCPacket_SYNC(pPlayer->_pSession->_pSendPacket, pPlayer->_ID, pPlayer->_x, pPlayer->_y);
+		EnqueueUnicast(pPlayer->_pSession->_pSendPacket->GetReadPtr(), setRet, pPlayer->_pSession);
 		x = pPlayer->_x;
 		y = pPlayer->_y;
 	}
 
 	SetPlayerMoveStart(pPlayer, moveDirection, x, y);
 
-	SerializePacket buffer;
-	int setRet = SetSCPacket_MOVE_START(&buffer, pPlayer->_ID, pPlayer->_moveDirection, pPlayer->_x, pPlayer->_y);
-	EnqueueAroundSector(buffer.GetReadPtr(), setRet, pPlayer->_pSector, pPlayer->_pSession);
+	pPlayer->_pSession->_pSendPacket->Clear();
+	int setRet = SetSCPacket_MOVE_START(pPlayer->_pSession->_pSendPacket, pPlayer->_ID, pPlayer->_moveDirection, pPlayer->_x, pPlayer->_y);
+	EnqueueAroundSector(pPlayer->_pSession->_pSendPacket->GetReadPtr(), setRet, pPlayer->_pSector, pPlayer->_pSession);
 
+	
 	return true;
 }
 
@@ -1068,26 +1096,29 @@ bool Server::HandleCSPacket_MOVE_STOP(Player* pPlayer)
 	short x;
 	short y;
 
-	bool getRet = GetCSPacket_MOVE_STOP(&(pPlayer->_pSession->_recvBuf), direction, x, y);
+	pPlayer->_pSession->_pRecvPacket->Clear();
+	bool getRet = GetCSPacket_MOVE_STOP(pPlayer->_pSession->_pRecvPacket, &(pPlayer->_pSession->_recvBuf), direction, x, y);
 	if (!getRet) 
 	{
 		return false;
 	}
-
+	
 	if (abs(pPlayer->_x - x) > dfERROR_RANGE || abs(pPlayer->_y - y) > dfERROR_RANGE)
 	{
-		SerializePacket buffer;
-		int setRet = SetSCPacket_SYNC(&buffer, pPlayer->_ID, pPlayer->_x, pPlayer->_y);
-		EnqueueUnicast(buffer.GetReadPtr(), setRet, pPlayer->_pSession);
+		pPlayer->_pSession->_pSendPacket->Clear();
+		int setRet = SetSCPacket_SYNC(pPlayer->_pSession->_pSendPacket, pPlayer->_ID, pPlayer->_x, pPlayer->_y);
+		EnqueueUnicast(pPlayer->_pSession->_pSendPacket->GetReadPtr(), setRet, pPlayer->_pSession);
 		x = pPlayer->_x;
 		y = pPlayer->_y;
 	}
 
 	SetPlayerMoveStop(pPlayer, direction, x, y);
 
-	SerializePacket buffer;
-	int setRet = SetSCPacket_MOVE_STOP(&buffer, pPlayer->_ID, pPlayer->_direction, pPlayer->_x, pPlayer->_y);
-	EnqueueAroundSector(buffer.GetReadPtr(), setRet, pPlayer->_pSector, pPlayer->_pSession);
+	pPlayer->_pSession->_pSendPacket->Clear();
+	int setRet = SetSCPacket_MOVE_STOP(pPlayer->_pSession->_pSendPacket, pPlayer->_ID, pPlayer->_direction, pPlayer->_x, pPlayer->_y);
+	EnqueueAroundSector(pPlayer->_pSession->_pSendPacket->GetReadPtr(), setRet, pPlayer->_pSector, pPlayer->_pSession);
+	
+	
 
 	return true;
 }
@@ -1098,17 +1129,18 @@ bool Server::HandleCSPacket_ATTACK1(Player* pPlayer)
 	short x;
 	short y;
 
-	bool getRet = GetCSPacket_ATTACK1(&(pPlayer->_pSession->_recvBuf), direction, x, y);
+	pPlayer->_pSession->_pRecvPacket->Clear();
+	bool getRet = GetCSPacket_ATTACK1(pPlayer->_pSession->_pRecvPacket, &(pPlayer->_pSession->_recvBuf), direction, x, y);
 	if (!getRet) 
 	{
 		return false;
 	}
-
+	
 	if (abs(pPlayer->_x - x) > dfERROR_RANGE || abs(pPlayer->_y - y) > dfERROR_RANGE)
 	{
-		SerializePacket buffer;
-		int setRet = SetSCPacket_SYNC(&buffer, pPlayer->_ID, pPlayer->_x, pPlayer->_y);
-		EnqueueUnicast(buffer.GetReadPtr(), setRet, pPlayer->_pSession);
+		pPlayer->_pSession->_pSendPacket->Clear();
+		int setRet = SetSCPacket_SYNC(pPlayer->_pSession->_pSendPacket, pPlayer->_ID, pPlayer->_x, pPlayer->_y);
+		EnqueueUnicast(pPlayer->_pSession->_pSendPacket->GetReadPtr(), setRet, pPlayer->_pSession);
 		x = pPlayer->_x;
 		y = pPlayer->_y;
 	}
@@ -1116,19 +1148,20 @@ bool Server::HandleCSPacket_ATTACK1(Player* pPlayer)
 	Player* damagedPlayer = nullptr;
 	SetPlayerAttack1(pPlayer, damagedPlayer, direction, x, y);
 
-	SerializePacket attackBuffer;
-	int attackSetRet = SetSCPacket_ATTACK1(&attackBuffer, 
+	pPlayer->_pSession->_pSendPacket->Clear();
+	int attackSetRet = SetSCPacket_ATTACK1(pPlayer->_pSession->_pSendPacket, 
 		pPlayer->_ID, pPlayer->_direction, pPlayer->_x, pPlayer->_y);
-	EnqueueAroundSector(attackBuffer.GetReadPtr(), attackSetRet, pPlayer->_pSector);
+	EnqueueAroundSector(pPlayer->_pSession->_pSendPacket->GetReadPtr(), attackSetRet, pPlayer->_pSector);
 
 	if (damagedPlayer != nullptr)
 	{
-		SerializePacket damageBuffer;
+		pPlayer->_pSession->_pSendPacket->Clear();
 		int damageSetRet = SetSCPacket_DAMAGE(
-			&damageBuffer, pPlayer->_ID, damagedPlayer->_ID, damagedPlayer->_hp);
-		EnqueueAroundSector(damageBuffer.GetReadPtr(), damageSetRet, damagedPlayer->_pSector);
+			pPlayer->_pSession->_pSendPacket, pPlayer->_ID, damagedPlayer->_ID, damagedPlayer->_hp);
+		EnqueueAroundSector(pPlayer->_pSession->_pSendPacket->GetReadPtr(), damageSetRet, damagedPlayer->_pSector);
 	}
 
+	
 	return true;
 }
 
@@ -1138,7 +1171,8 @@ bool Server::HandleCSPacket_ATTACK2(Player* pPlayer)
 	short x;
 	short y;
 
-	bool getRet = GetCSPacket_ATTACK2(&(pPlayer->_pSession->_recvBuf), direction, x, y);
+	pPlayer->_pSession->_pRecvPacket->Clear();
+	bool getRet = GetCSPacket_ATTACK2(pPlayer->_pSession->_pRecvPacket, &(pPlayer->_pSession->_recvBuf), direction, x, y);
 	if (!getRet) 
 	{
 		return false;
@@ -1146,9 +1180,9 @@ bool Server::HandleCSPacket_ATTACK2(Player* pPlayer)
 
 	if (abs(pPlayer->_x - x) > dfERROR_RANGE || abs(pPlayer->_y - y) > dfERROR_RANGE)
 	{
-		SerializePacket buffer;
-		int setRet = SetSCPacket_SYNC(&buffer, pPlayer->_ID, pPlayer->_x, pPlayer->_y);
-		EnqueueUnicast(buffer.GetReadPtr(), setRet, pPlayer->_pSession);
+		pPlayer->_pSession->_pSendPacket->Clear();
+		int setRet = SetSCPacket_SYNC(pPlayer->_pSession->_pSendPacket, pPlayer->_ID, pPlayer->_x, pPlayer->_y);
+		EnqueueUnicast(pPlayer->_pSession->_pSendPacket->GetReadPtr(), setRet, pPlayer->_pSession);
 		x = pPlayer->_x;
 		y = pPlayer->_y;
 	}
@@ -1156,20 +1190,20 @@ bool Server::HandleCSPacket_ATTACK2(Player* pPlayer)
 	Player* damagedPlayer = nullptr;
 	SetPlayerAttack2(pPlayer, damagedPlayer, direction, x, y);
 
-	SerializePacket attackBuffer;
-	int attackSetRet = SetSCPacket_ATTACK2(&attackBuffer, 
+	pPlayer->_pSession->_pSendPacket->Clear();
+	int attackSetRet = SetSCPacket_ATTACK2(pPlayer->_pSession->_pSendPacket, 
 		pPlayer->_ID, pPlayer->_direction, pPlayer->_x, pPlayer->_y);
-	EnqueueAroundSector(attackBuffer.GetReadPtr(), attackSetRet, pPlayer->_pSector);
-
+	EnqueueAroundSector(pPlayer->_pSession->_pSendPacket->GetReadPtr(), attackSetRet, pPlayer->_pSector);
 
 	if (damagedPlayer != nullptr)
 	{
-		SerializePacket damageBuffer;
+		pPlayer->_pSession->_pSendPacket->Clear();
 		int damageSetRet = SetSCPacket_DAMAGE(
-			&damageBuffer, pPlayer->_ID, damagedPlayer->_ID, damagedPlayer->_hp);
-		EnqueueAroundSector(damageBuffer.GetReadPtr(), damageSetRet, damagedPlayer->_pSector);
+			pPlayer->_pSession->_pSendPacket, pPlayer->_ID, damagedPlayer->_ID, damagedPlayer->_hp);
+		EnqueueAroundSector(pPlayer->_pSession->_pSendPacket->GetReadPtr(), damageSetRet, damagedPlayer->_pSector);
 	}
 
+	
 	return true;
 }
 
@@ -1179,7 +1213,8 @@ bool Server::HandleCSPacket_ATTACK3(Player* pPlayer)
 	short x;
 	short y;
 
-	bool getRet = GetCSPacket_ATTACK3(&(pPlayer->_pSession->_recvBuf), direction, x, y);
+	pPlayer->_pSession->_pRecvPacket->Clear();
+	bool getRet = GetCSPacket_ATTACK3(pPlayer->_pSession->_pRecvPacket, &(pPlayer->_pSession->_recvBuf), direction, x, y);
 	if (!getRet) 
 	{
 		return false;
@@ -1187,9 +1222,9 @@ bool Server::HandleCSPacket_ATTACK3(Player* pPlayer)
 
 	if (abs(pPlayer->_x - x) > dfERROR_RANGE || abs(pPlayer->_y - y) > dfERROR_RANGE)
 	{
-		SerializePacket buffer;
-		int setRet = SetSCPacket_SYNC(&buffer, pPlayer->_ID, pPlayer->_x, pPlayer->_y);
-		EnqueueUnicast(buffer.GetReadPtr(), setRet, pPlayer->_pSession);
+		pPlayer->_pSession->_pSendPacket->Clear();
+		int setRet = SetSCPacket_SYNC(pPlayer->_pSession->_pSendPacket, pPlayer->_ID, pPlayer->_x, pPlayer->_y);
+		EnqueueUnicast(pPlayer->_pSession->_pSendPacket->GetReadPtr(), setRet, pPlayer->_pSession);
 		x = pPlayer->_x;
 		y = pPlayer->_y;
 	}
@@ -1197,41 +1232,42 @@ bool Server::HandleCSPacket_ATTACK3(Player* pPlayer)
 	Player* damagedPlayer = nullptr;
 	SetPlayerAttack3(pPlayer, damagedPlayer, direction, x, y);
 
-	SerializePacket attackBuffer;
-	int attackSetRet = SetSCPacket_ATTACK3(&attackBuffer, 
+	pPlayer->_pSession->_pSendPacket->Clear();
+	int attackSetRet = SetSCPacket_ATTACK3(pPlayer->_pSession->_pSendPacket, 
 		pPlayer->_ID, pPlayer->_direction, pPlayer->_x, pPlayer->_y);
-	EnqueueAroundSector(attackBuffer.GetReadPtr(), attackSetRet, pPlayer->_pSector);
+	EnqueueAroundSector(pPlayer->_pSession->_pSendPacket->GetReadPtr(), attackSetRet, pPlayer->_pSector);
 
 	if (damagedPlayer != nullptr)
 	{
-		SerializePacket damageBuffer;
+		pPlayer->_pSession->_pSendPacket->Clear();
 		int damageSetRet = SetSCPacket_DAMAGE(
-			&damageBuffer, pPlayer->_ID, damagedPlayer->_ID, damagedPlayer->_hp);
-		EnqueueAroundSector(damageBuffer.GetReadPtr(), damageSetRet, damagedPlayer->_pSector);
+			pPlayer->_pSession->_pSendPacket, pPlayer->_ID, damagedPlayer->_ID, damagedPlayer->_hp);
+		EnqueueAroundSector(pPlayer->_pSession->_pSendPacket->GetReadPtr(), damageSetRet, damagedPlayer->_pSector);
 	}
-	
+
 	return true;
 }
 
 bool Server::HandleCSPacket_ECHO(Player* pPlayer)
 {
 	int time;
-	bool getRet = GetCSPacket_ECHO(&(pPlayer->_pSession->_recvBuf), time);
+
+	pPlayer->_pSession->_pRecvPacket->Clear();
+	bool getRet = GetCSPacket_ECHO(pPlayer->_pSession->_pRecvPacket, &(pPlayer->_pSession->_recvBuf), time);
 	if (!getRet) return false;
-
-	SerializePacket buffer;
-	int setRet = SetSCPacket_ECHO(&buffer, time);
-	EnqueueUnicast(buffer.GetReadPtr(), setRet, pPlayer->_pSession);
+	
+	pPlayer->_pSession->_pSendPacket->Clear();
+	int setRet = SetSCPacket_ECHO(pPlayer->_pSession->_pSendPacket, time);
+	EnqueueUnicast(pPlayer->_pSession->_pSendPacket->GetReadPtr(), setRet, pPlayer->_pSession);
+	
 
 	return true;
 }
 
-bool Server::GetCSPacket_MOVE_START(RingBuffer* recvBuffer, BYTE& moveDirection, short& x, short& y)
+bool Server::GetCSPacket_MOVE_START(SerializePacket* pPacket, RingBuffer* recvBuffer, BYTE& moveDirection, short& x, short& y)
 {
-	SerializePacket buffer;
-
 	int size = sizeof(moveDirection) + sizeof(x) + sizeof(y);
-	int dequeueRet = recvBuffer->Dequeue(buffer.GetWritePtr(), size);
+	int dequeueRet = recvBuffer->Dequeue(pPacket->GetWritePtr(), size);
 	if (dequeueRet != size)
 	{
 		::printf("Error! Func %s Line %d\n", __func__, __LINE__);
@@ -1239,22 +1275,21 @@ bool Server::GetCSPacket_MOVE_START(RingBuffer* recvBuffer, BYTE& moveDirection,
 			L"%s[%d]\n", _T(__FUNCTION__), __LINE__);
 		return false;
 	}
-	buffer.MoveWritePos(dequeueRet);
+	pPacket->MoveWritePos(dequeueRet);
 
-	buffer >> moveDirection;
-	buffer >> x;
-	buffer >> y;
+	*pPacket >> moveDirection;
+	*pPacket >> x;
+	*pPacket >> y;
 
 	
 	return true;
 }
 
-bool Server::GetCSPacket_MOVE_STOP(RingBuffer* recvBuffer, BYTE& direction, short& x, short& y)
+bool Server::GetCSPacket_MOVE_STOP(SerializePacket* pPacket, RingBuffer* recvBuffer, BYTE& direction, short& x, short& y)
 {
-	SerializePacket buffer;
-
+	
 	int size = sizeof(direction) + sizeof(x) + sizeof(y);
-	int dequeueRet = recvBuffer->Dequeue(buffer.GetWritePtr(), size);
+	int dequeueRet = recvBuffer->Dequeue(pPacket->GetWritePtr(), size);
 	if (dequeueRet != size)
 	{
 		::printf("Error! Func %s Line %d\n", __func__, __LINE__);
@@ -1262,44 +1297,21 @@ bool Server::GetCSPacket_MOVE_STOP(RingBuffer* recvBuffer, BYTE& direction, shor
 			L"%s[%d]\n", _T(__FUNCTION__), __LINE__);
 		return false;
 	}
-	buffer.MoveWritePos(dequeueRet);
+	pPacket->MoveWritePos(dequeueRet);
 
-	buffer >> direction;
-	buffer >> x;
-	buffer >> y;
-
-	return true;
-}
-
-bool Server::GetCSPacket_ATTACK1(RingBuffer* recvBuffer, BYTE& direction, short& x, short& y)
-{
-	SerializePacket buffer;
-
-	int size = sizeof(direction) + sizeof(x) + sizeof(y);
-	int dequeueRet = recvBuffer->Dequeue(buffer.GetWritePtr(), size);
-	if (dequeueRet != size)
-	{
-		::printf("Error! Func %s Line %d\n", __func__, __LINE__);
-		LOG(L"ERROR", SystemLog::ERROR_LEVEL,
-			L"%s[%d]\n", _T(__FUNCTION__), __LINE__);
-		return false;
-	}
-	buffer.MoveWritePos(dequeueRet);
-
-	buffer >> direction;
-	buffer >> x;
-	buffer >> y;
+	*pPacket >> direction;
+	*pPacket >> x;
+	*pPacket >> y;
 
 	
 	return true;
 }
 
-bool Server::GetCSPacket_ATTACK2(RingBuffer* recvBuffer, BYTE& direction, short& x, short& y)
+bool Server::GetCSPacket_ATTACK1(SerializePacket* pPacket, RingBuffer* recvBuffer, BYTE& direction, short& x, short& y)
 {
-	SerializePacket buffer;
-
+	
 	int size = sizeof(direction) + sizeof(x) + sizeof(y);
-	int dequeueRet = recvBuffer->Dequeue(buffer.GetWritePtr(), size);
+	int dequeueRet = recvBuffer->Dequeue(pPacket->GetWritePtr(), size);
 	if (dequeueRet != size)
 	{
 		::printf("Error! Func %s Line %d\n", __func__, __LINE__);
@@ -1307,22 +1319,21 @@ bool Server::GetCSPacket_ATTACK2(RingBuffer* recvBuffer, BYTE& direction, short&
 			L"%s[%d]\n", _T(__FUNCTION__), __LINE__);
 		return false;
 	}
-	buffer.MoveWritePos(dequeueRet);
+	pPacket->MoveWritePos(dequeueRet);
 
-	buffer >> direction;
-	buffer >> x;
-	buffer >> y;
+	*pPacket >> direction;
+	*pPacket >> x;
+	*pPacket >> y;
 
 	
 	return true;
 }
 
-bool Server::GetCSPacket_ATTACK3(RingBuffer* recvBuffer, BYTE& direction, short& x, short& y)
+bool Server::GetCSPacket_ATTACK2(SerializePacket* pPacket, RingBuffer* recvBuffer, BYTE& direction, short& x, short& y)
 {
-	SerializePacket buffer;
-
+	
 	int size = sizeof(direction) + sizeof(x) + sizeof(y);
-	int dequeueRet = recvBuffer->Dequeue(buffer.GetWritePtr(), size);
+	int dequeueRet = recvBuffer->Dequeue(pPacket->GetWritePtr(), size);
 	if (dequeueRet != size)
 	{
 		::printf("Error! Func %s Line %d\n", __func__, __LINE__);
@@ -1330,22 +1341,43 @@ bool Server::GetCSPacket_ATTACK3(RingBuffer* recvBuffer, BYTE& direction, short&
 			L"%s[%d]\n", _T(__FUNCTION__), __LINE__);
 		return false;
 	}
-	buffer.MoveWritePos(dequeueRet);
+	pPacket->MoveWritePos(dequeueRet);
 
-	buffer >> direction;
-	buffer >> x;
-	buffer >> y;
+	*pPacket >> direction;
+	*pPacket >> x;
+	*pPacket >> y;
 
 	
 	return true;
 }
 
-bool Server::GetCSPacket_ECHO(RingBuffer* recvBuffer, int& time)
+bool Server::GetCSPacket_ATTACK3(SerializePacket* pPacket, RingBuffer* recvBuffer, BYTE& direction, short& x, short& y)
 {
-	SerializePacket buffer;
+	
+	int size = sizeof(direction) + sizeof(x) + sizeof(y);
+	int dequeueRet = recvBuffer->Dequeue(pPacket->GetWritePtr(), size);
+	if (dequeueRet != size)
+	{
+		::printf("Error! Func %s Line %d\n", __func__, __LINE__);
+		LOG(L"ERROR", SystemLog::ERROR_LEVEL,
+			L"%s[%d]\n", _T(__FUNCTION__), __LINE__);
+		return false;
+	}
+	pPacket->MoveWritePos(dequeueRet);
 
+	*pPacket >> direction;
+	*pPacket >> x;
+	*pPacket >> y;
+
+	
+	return true;
+}
+
+bool Server::GetCSPacket_ECHO(SerializePacket* pPacket, RingBuffer* recvBuffer, int& time)
+{
+	
 	int size = sizeof(time);
-	int dequeueRet = recvBuffer->Dequeue(buffer.GetWritePtr(), size);
+	int dequeueRet = recvBuffer->Dequeue(pPacket->GetWritePtr(), size);
 	if (dequeueRet != size)
 	{
 		::printf("Error! Func %s Line %d\n", __func__, __LINE__);
@@ -1353,9 +1385,8 @@ bool Server::GetCSPacket_ECHO(RingBuffer* recvBuffer, int& time)
 			L"%s[%d]\n", _T(__FUNCTION__), __LINE__);
 		return false;
 	}
-	buffer.MoveWritePos(dequeueRet);
-
-	buffer >> time;
+	pPacket->MoveWritePos(dequeueRet);
+	*pPacket >> time;
 
 	
 	return true;
@@ -1729,268 +1760,268 @@ void Server::SetPlayerAttack3(Player* pPlayer, Player*& pDamagedPlayer, BYTE& di
 	
 }
 
-void Server::SetSCPacket_HEADER(SerializePacket* buffer, BYTE size, BYTE type)
+void Server::SetSCPacket_HEADER(SerializePacket* pPacket, BYTE size, BYTE type)
 {
-	*buffer << (BYTE)dfPACKET_CODE;
-	*buffer << size;
-	*buffer << type;
+	*pPacket << (BYTE)dfPACKET_CODE;
+	*pPacket << size;
+	*pPacket << type;
 }
 
-int Server::SetSCPacket_CREATE_MY_CHAR(SerializePacket* buffer, int ID, BYTE direction, short x, short y, BYTE hp)
+int Server::SetSCPacket_CREATE_MY_CHAR(SerializePacket* pPacket, int ID, BYTE direction, short x, short y, BYTE hp)
 {
 	int size = sizeof(ID) + sizeof(direction) + sizeof(x) + sizeof(y) + sizeof(hp);
-	SetSCPacket_HEADER(buffer, size, dfPACKET_SC_CREATE_MY_CHARACTER);
+	SetSCPacket_HEADER(pPacket, size, dfPACKET_SC_CREATE_MY_CHARACTER);
 	
-	*buffer << ID;
-	*buffer << direction;
-	*buffer << x;
-	*buffer << y;
-	*buffer << hp;
+	*pPacket << ID;
+	*pPacket << direction;
+	*pPacket << x;
+	*pPacket << y;
+	*pPacket << hp;
 
-	if (buffer->GetDataSize() != dfHEADER_SIZE + size)
+	if (pPacket->GetDataSize() != dfHEADER_SIZE + size)
 	{
 		::printf("Create Packet Error, %d != %d: func %s, line %d\n",
-			buffer->GetDataSize(), dfHEADER_SIZE + size, __func__, __LINE__);
+			pPacket->GetDataSize(), dfHEADER_SIZE + size, __func__, __LINE__);
 
 		LOG(L"ERROR", SystemLog::ERROR_LEVEL,
 			L"%s[%d]: Create Packet Error, %d != %d\n",
-			_T(__FUNCTION__), __LINE__, buffer->GetDataSize(), dfHEADER_SIZE + size);
+			_T(__FUNCTION__), __LINE__, pPacket->GetDataSize(), dfHEADER_SIZE + size);
 	}
 
 	
-	return buffer->GetDataSize();
+	return pPacket->GetDataSize();
 }
 
-int Server::SetSCPacket_CREATE_OTHER_CHAR(SerializePacket* buffer, int ID, BYTE direction, short x, short y, BYTE hp)
+int Server::SetSCPacket_CREATE_OTHER_CHAR(SerializePacket* pPacket, int ID, BYTE direction, short x, short y, BYTE hp)
 {
 	int size = sizeof(ID) + sizeof(direction) + sizeof(x) + sizeof(y) + sizeof(hp);
-	SetSCPacket_HEADER(buffer, size, dfPACKET_SC_CREATE_OTHER_CHARACTER);
+	SetSCPacket_HEADER(pPacket, size, dfPACKET_SC_CREATE_OTHER_CHARACTER);
 
-	*buffer << ID;
-	*buffer << direction;
-	*buffer << x;
-	*buffer << y;
-	*buffer << hp;
+	*pPacket << ID;
+	*pPacket << direction;
+	*pPacket << x;
+	*pPacket << y;
+	*pPacket << hp;
 
-	if (buffer->GetDataSize() != dfHEADER_SIZE + size)
+	if (pPacket->GetDataSize() != dfHEADER_SIZE + size)
 	{
 		::printf("Create Packet Error, %d != %d: func %s, line %d\n",
-			buffer->GetDataSize(), dfHEADER_SIZE + size, __func__, __LINE__);
+			pPacket->GetDataSize(), dfHEADER_SIZE + size, __func__, __LINE__);
 
 		LOG(L"ERROR", SystemLog::ERROR_LEVEL,
 			L"%s[%d]: Create Packet Error, %d != %d\n",
-			_T(__FUNCTION__), __LINE__, buffer->GetDataSize(), dfHEADER_SIZE + size);
+			_T(__FUNCTION__), __LINE__, pPacket->GetDataSize(), dfHEADER_SIZE + size);
 	}
 
 	
-	return buffer->GetDataSize();
+	return pPacket->GetDataSize();
 }
 
-int Server::SetSCPacket_DELETE_CHAR(SerializePacket* buffer, int ID)
+int Server::SetSCPacket_DELETE_CHAR(SerializePacket* pPacket, int ID)
 {
 	int size = sizeof(ID);
-	SetSCPacket_HEADER(buffer, size, dfPACKET_SC_DELETE_CHARACTER);
+	SetSCPacket_HEADER(pPacket, size, dfPACKET_SC_DELETE_CHARACTER);
 
-	*buffer << ID;
+	*pPacket << ID;
 
-	if (buffer->GetDataSize() != dfHEADER_SIZE + size)
+	if (pPacket->GetDataSize() != dfHEADER_SIZE + size)
 	{
 		::printf("Create Packet Error, %d != %d: func %s, line %d\n",
-			buffer->GetDataSize(), dfHEADER_SIZE + size, __func__, __LINE__);
+			pPacket->GetDataSize(), dfHEADER_SIZE + size, __func__, __LINE__);
 
 		LOG(L"ERROR", SystemLog::ERROR_LEVEL,
 			L"%s[%d]: Create Packet Error, %d != %d\n",
-			_T(__FUNCTION__), __LINE__, buffer->GetDataSize(), dfHEADER_SIZE + size);
+			_T(__FUNCTION__), __LINE__, pPacket->GetDataSize(), dfHEADER_SIZE + size);
 	}
 
 	
-	return buffer->GetDataSize();
+	return pPacket->GetDataSize();
 }
 
-int Server::SetSCPacket_MOVE_START(SerializePacket* buffer, int ID, BYTE moveDirection, short x, short y)
+int Server::SetSCPacket_MOVE_START(SerializePacket* pPacket, int ID, BYTE moveDirection, short x, short y)
 {
 	int size = sizeof(ID) + sizeof(moveDirection) + sizeof(x) + sizeof(y);
-	SetSCPacket_HEADER(buffer, size, dfPACKET_SC_MOVE_START);
+	SetSCPacket_HEADER(pPacket, size, dfPACKET_SC_MOVE_START);
 
-	*buffer << ID;
-	*buffer << moveDirection;
-	*buffer << x;
-	*buffer << y;
+	*pPacket << ID;
+	*pPacket << moveDirection;
+	*pPacket << x;
+	*pPacket << y;
 
-	if (buffer->GetDataSize() != dfHEADER_SIZE + size)
+	if (pPacket->GetDataSize() != dfHEADER_SIZE + size)
 	{
 		::printf("Create Packet Error, %d != %d: func %s, line %d\n",
-			buffer->GetDataSize(), dfHEADER_SIZE + size, __func__, __LINE__);
+			pPacket->GetDataSize(), dfHEADER_SIZE + size, __func__, __LINE__);
 
 		LOG(L"ERROR", SystemLog::ERROR_LEVEL,
 			L"%s[%d]: Create Packet Error, %d != %d\n",
-			_T(__FUNCTION__), __LINE__, buffer->GetDataSize(), dfHEADER_SIZE + size);
+			_T(__FUNCTION__), __LINE__, pPacket->GetDataSize(), dfHEADER_SIZE + size);
 	}
 
 	
-	return buffer->GetDataSize();
+	return pPacket->GetDataSize();
 }
 
-int Server::SetSCPacket_MOVE_STOP(SerializePacket* buffer, int ID, BYTE direction, short x, short y)
+int Server::SetSCPacket_MOVE_STOP(SerializePacket* pPacket, int ID, BYTE direction, short x, short y)
 {
 	int size = sizeof(ID) + sizeof(direction) + sizeof(x) + sizeof(y);
-	SetSCPacket_HEADER(buffer, size, dfPACKET_SC_MOVE_STOP);
+	SetSCPacket_HEADER(pPacket, size, dfPACKET_SC_MOVE_STOP);
 
-	*buffer << ID;
-	*buffer << direction;
-	*buffer << x;
-	*buffer << y;
+	*pPacket << ID;
+	*pPacket << direction;
+	*pPacket << x;
+	*pPacket << y;
 
-	if (buffer->GetDataSize() != dfHEADER_SIZE + size)
+	if (pPacket->GetDataSize() != dfHEADER_SIZE + size)
 	{
 		::printf("Create Packet Error, %d != %d: func %s, line %d\n",
-			buffer->GetDataSize(), dfHEADER_SIZE + size, __func__, __LINE__);
+			pPacket->GetDataSize(), dfHEADER_SIZE + size, __func__, __LINE__);
 
 		LOG(L"ERROR", SystemLog::ERROR_LEVEL,
 			L"%s[%d]: Create Packet Error, %d != %d\n",
-			_T(__FUNCTION__), __LINE__, buffer->GetDataSize(), dfHEADER_SIZE + size);
+			_T(__FUNCTION__), __LINE__, pPacket->GetDataSize(), dfHEADER_SIZE + size);
 	}
 
 	
-	return buffer->GetDataSize();
+	return pPacket->GetDataSize();
 }
 
-int Server::SetSCPacket_ATTACK1(SerializePacket* buffer, int ID, BYTE direction, short x, short y)
+int Server::SetSCPacket_ATTACK1(SerializePacket* pPacket, int ID, BYTE direction, short x, short y)
 {
 	int size = sizeof(ID) + sizeof(direction) + sizeof(x) + sizeof(y);
-	SetSCPacket_HEADER(buffer, size, dfPACKET_SC_ATTACK1);
+	SetSCPacket_HEADER(pPacket, size, dfPACKET_SC_ATTACK1);
 
-	*buffer << ID;
-	*buffer << direction;
-	*buffer << x;
-	*buffer << y;
+	*pPacket << ID;
+	*pPacket << direction;
+	*pPacket << x;
+	*pPacket << y;
 
-	if (buffer->GetDataSize() != dfHEADER_SIZE + size)
+	if (pPacket->GetDataSize() != dfHEADER_SIZE + size)
 	{
 		::printf("Create Packet Error, %d != %d: func %s, line %d\n",
-			buffer->GetDataSize(), dfHEADER_SIZE + size, __func__, __LINE__);
+			pPacket->GetDataSize(), dfHEADER_SIZE + size, __func__, __LINE__);
 
 		LOG(L"ERROR", SystemLog::ERROR_LEVEL,
 			L"%s[%d]: Create Packet Error, %d != %d\n",
-			_T(__FUNCTION__), __LINE__, buffer->GetDataSize(), dfHEADER_SIZE + size);
+			_T(__FUNCTION__), __LINE__, pPacket->GetDataSize(), dfHEADER_SIZE + size);
 	}
 
 	
-	return buffer->GetDataSize();
+	return pPacket->GetDataSize();
 }
 
-int Server::SetSCPacket_ATTACK2(SerializePacket* buffer, int ID, BYTE direction, short x, short y)
+int Server::SetSCPacket_ATTACK2(SerializePacket* pPacket, int ID, BYTE direction, short x, short y)
 {
 	int size = sizeof(ID) + sizeof(direction) + sizeof(x) + sizeof(y);
-	SetSCPacket_HEADER(buffer, size, dfPACKET_SC_ATTACK2);
+	SetSCPacket_HEADER(pPacket, size, dfPACKET_SC_ATTACK2);
 
-	*buffer << ID;
-	*buffer << direction;
-	*buffer << x;
-	*buffer << y;
+	*pPacket << ID;
+	*pPacket << direction;
+	*pPacket << x;
+	*pPacket << y;
 
-	if (buffer->GetDataSize() != dfHEADER_SIZE + size)
+	if (pPacket->GetDataSize() != dfHEADER_SIZE + size)
 	{
 		::printf("Create Packet Error, %d != %d: func %s, line %d\n",
-			buffer->GetDataSize(), dfHEADER_SIZE + size, __func__, __LINE__);
+			pPacket->GetDataSize(), dfHEADER_SIZE + size, __func__, __LINE__);
 
 		LOG(L"ERROR", SystemLog::ERROR_LEVEL,
 			L"%s[%d]: Create Packet Error, %d != %d\n",
-			_T(__FUNCTION__), __LINE__, buffer->GetDataSize(), dfHEADER_SIZE + size);
+			_T(__FUNCTION__), __LINE__, pPacket->GetDataSize(), dfHEADER_SIZE + size);
 	}
 
 	
-	return buffer->GetDataSize();
+	return pPacket->GetDataSize();
 }
 
-int Server::SetSCPacket_ATTACK3(SerializePacket* buffer, int ID, BYTE direction, short x, short y)
+int Server::SetSCPacket_ATTACK3(SerializePacket* pPacket, int ID, BYTE direction, short x, short y)
 {
 	int size = sizeof(ID) + sizeof(direction) + sizeof(x) + sizeof(y);
-	SetSCPacket_HEADER(buffer, size, dfPACKET_SC_ATTACK3);
+	SetSCPacket_HEADER(pPacket, size, dfPACKET_SC_ATTACK3);
 
-	*buffer << ID;
-	*buffer << direction;
-	*buffer << x;
-	*buffer << y;
+	*pPacket << ID;
+	*pPacket << direction;
+	*pPacket << x;
+	*pPacket << y;
 
-	if (buffer->GetDataSize() != dfHEADER_SIZE + size)
+	if (pPacket->GetDataSize() != dfHEADER_SIZE + size)
 	{
 		::printf("Create Packet Error, %d != %d: func %s, line %d\n",
-			buffer->GetDataSize(), dfHEADER_SIZE + size, __func__, __LINE__);
+			pPacket->GetDataSize(), dfHEADER_SIZE + size, __func__, __LINE__);
 
 		LOG(L"ERROR", SystemLog::ERROR_LEVEL,
 			L"%s[%d]: Create Packet Error, %d != %d\n",
-			_T(__FUNCTION__), __LINE__, buffer->GetDataSize(), dfHEADER_SIZE + size);
+			_T(__FUNCTION__), __LINE__, pPacket->GetDataSize(), dfHEADER_SIZE + size);
 	}
 
 	
-	return buffer->GetDataSize();
+	return pPacket->GetDataSize();
 }
 
-int Server::SetSCPacket_DAMAGE(SerializePacket* buffer, int attackID, int damageID, BYTE damageHP)
+int Server::SetSCPacket_DAMAGE(SerializePacket* pPacket, int attackID, int damageID, BYTE damageHP)
 {
 	int size = sizeof(attackID) + sizeof(damageID) + sizeof(damageHP);
-	SetSCPacket_HEADER(buffer, size, dfPACKET_SC_DAMAGE);
+	SetSCPacket_HEADER(pPacket, size, dfPACKET_SC_DAMAGE);
 
-	*buffer << attackID;
-	*buffer << damageID;
-	*buffer << damageHP;
+	*pPacket << attackID;
+	*pPacket << damageID;
+	*pPacket << damageHP;
 
-	if (buffer->GetDataSize() != dfHEADER_SIZE + size)
+	if (pPacket->GetDataSize() != dfHEADER_SIZE + size)
 	{
 		::printf("Create Packet Error, %d != %d: func %s, line %d\n",
-			buffer->GetDataSize(), dfHEADER_SIZE + size, __func__, __LINE__);
+			pPacket->GetDataSize(), dfHEADER_SIZE + size, __func__, __LINE__);
 
 		LOG(L"ERROR", SystemLog::ERROR_LEVEL,
 			L"%s[%d]: Create Packet Error, %d != %d\n",
-			_T(__FUNCTION__), __LINE__, buffer->GetDataSize(), dfHEADER_SIZE + size);
+			_T(__FUNCTION__), __LINE__, pPacket->GetDataSize(), dfHEADER_SIZE + size);
 	}
 
 	
-	return buffer->GetDataSize();
+	return pPacket->GetDataSize();
 }
 
-int Server::SetSCPacket_SYNC(SerializePacket* buffer, int ID, short x, short y)
+int Server::SetSCPacket_SYNC(SerializePacket* pPacket, int ID, short x, short y)
 {
 	int size = sizeof(ID) + sizeof(x) + sizeof(y);
-	SetSCPacket_HEADER(buffer, size, dfPACKET_SC_SYNC);
+	SetSCPacket_HEADER(pPacket, size, dfPACKET_SC_SYNC);
 
-	*buffer << ID;
-	*buffer << x;
-	*buffer << y;
+	*pPacket << ID;
+	*pPacket << x;
+	*pPacket << y;
 
-	if (buffer->GetDataSize() != dfHEADER_SIZE + size)
+	if (pPacket->GetDataSize() != dfHEADER_SIZE + size)
 	{
 		::printf("Create Packet Error, %d != %d: func %s, line %d\n",
-			buffer->GetDataSize(), dfHEADER_SIZE + size, __func__, __LINE__);
+			pPacket->GetDataSize(), dfHEADER_SIZE + size, __func__, __LINE__);
 
 		LOG(L"ERROR", SystemLog::ERROR_LEVEL,
 			L"%s[%d]: Create Packet Error, %d != %d\n",
-			_T(__FUNCTION__), __LINE__, buffer->GetDataSize(), dfHEADER_SIZE + size);
+			_T(__FUNCTION__), __LINE__, pPacket->GetDataSize(), dfHEADER_SIZE + size);
 	}
 
 	_syncCnt++;
-	return buffer->GetDataSize();
+	return pPacket->GetDataSize();
 }
 
-int Server::SetSCPacket_ECHO(SerializePacket* buffer, int time)
+int Server::SetSCPacket_ECHO(SerializePacket* pPacket, int time)
 {
 	int size = sizeof(time);
-	SetSCPacket_HEADER(buffer, size, dfPACKET_SC_ECHO);
+	SetSCPacket_HEADER(pPacket, size, dfPACKET_SC_ECHO);
 
-	*buffer << time;
+	*pPacket << time;
 
-	if (buffer->GetDataSize() != dfHEADER_SIZE + size)
+	if (pPacket->GetDataSize() != dfHEADER_SIZE + size)
 	{
 		::printf("Create Packet Error, %d != %d: func %s, line %d\n",
-			buffer->GetDataSize(), dfHEADER_SIZE + size, __func__, __LINE__);
+			pPacket->GetDataSize(), dfHEADER_SIZE + size, __func__, __LINE__);
 
 		LOG(L"ERROR", SystemLog::ERROR_LEVEL,
 			L"%s[%d]: Create Packet Error, %d != %d\n",
-			_T(__FUNCTION__), __LINE__, buffer->GetDataSize(), dfHEADER_SIZE + size);
+			_T(__FUNCTION__), __LINE__, pPacket->GetDataSize(), dfHEADER_SIZE + size);
 	}
 	
-	return buffer->GetDataSize();
+	return pPacket->GetDataSize();
 }
 
 void Server::Sector::InitializeSector(short xIndex, short yIndex)

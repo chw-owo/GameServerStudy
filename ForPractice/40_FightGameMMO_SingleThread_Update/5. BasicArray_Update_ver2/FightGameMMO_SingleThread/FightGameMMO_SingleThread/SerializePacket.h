@@ -11,6 +11,8 @@
 #include <windows.h>
 #include "SystemLog.h"
 
+#define __SPACKET_DEBUG__
+
 class SerializePacket
 {
 public:
@@ -22,15 +24,64 @@ public:
 		eBUFFER_MAX = 4096
 	};
 
-	SerializePacket();
-	SerializePacket(int iBufferSize);
-	~SerializePacket();
+	SerializePacket()
+		: _iBufferSize(eBUFFER_DEFAULT), _iDataSize(0), _iReadPos(0), _iWritePos(0)
+	{
+		_chpBuffer = new char[_iBufferSize];
+	}
 
-	void Clear(void);
-	int Resize(int iBufferSize);
+	SerializePacket(int iBufferSize)
+		: _iBufferSize(iBufferSize), _iDataSize(0), _iReadPos(0), _iWritePos(0)
+	{
+		_chpBuffer = new char[_iBufferSize];
+	}
 
-	int	MoveWritePos(int iSize);
-	int	MoveReadPos(int iSize);
+	~SerializePacket()
+	{
+		delete[] _chpBuffer;
+	}
+
+	inline void Clear(void)
+	{
+		_iReadPos = 0;
+		_iWritePos = 0;
+	}
+
+	inline int Resize(int iBufferSize)
+	{
+		if (iBufferSize > eBUFFER_MAX)
+		{
+			::printf("Requested Resize Size is too Big!! %d -> %d\n", _iBufferSize, iBufferSize);
+			LOG(L"ERROR", SystemLog::ERROR_LEVEL,
+				L"%s[%d]: buffer size %d, req size: %d\n",
+				_T(__FUNCTION__), __LINE__, _iBufferSize, iBufferSize);
+			return -1;
+		}
+
+		char* chpNewBuffer = new char[iBufferSize];
+		memcpy_s(chpNewBuffer, iBufferSize, _chpBuffer, _iBufferSize);
+		delete[] _chpBuffer;
+
+		_chpBuffer = chpNewBuffer;
+		_iBufferSize = iBufferSize;
+
+		return _iBufferSize;
+	}
+
+	inline int	MoveWritePos(int iSize)
+	{
+		if (iSize < 0) return -1;
+		_iWritePos += iSize;
+		return iSize;
+	}
+
+	inline int	MoveReadPos(int iSize)
+	{
+		if (iSize < 0) return -1;
+		_iReadPos += iSize;
+		return iSize;
+	}
+
 	inline char* GetWritePtr(void) { return &_chpBuffer[_iWritePos]; }
 	inline char* GetReadPtr(void) { return &_chpBuffer[_iReadPos]; }
 
@@ -404,7 +455,7 @@ public:
 		return iSize;
 	}
 
-	inline int  CheckData(int iSize)
+	inline int CheckData(int iSize)
 	{
 		if (_iWritePos - _iReadPos < iSize)
 		{
@@ -431,8 +482,6 @@ public:
 		_iWritePos += iSrcSize;
 		return iSrcSize;
 	}
-
-
 
 protected:
 	int	_iBufferSize;

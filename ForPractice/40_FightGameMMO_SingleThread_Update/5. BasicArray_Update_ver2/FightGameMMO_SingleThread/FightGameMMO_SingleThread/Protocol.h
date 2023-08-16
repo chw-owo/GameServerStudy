@@ -12,6 +12,8 @@
 #define dfNETWORK_PORT 20000
 
 #define dfSESSION_MAX						6000
+#define dfSPACKET_MAX						12000
+
 #define dfDEFAULT_PLAYERS_PER_SECTOR		1024
 #define dfDEFAULT_DISCONNECT_NUM			1024
 
@@ -318,9 +320,9 @@ struct st_PACKET_HEADER
 //-----------------------------------------------------------------
 // 캐릭터 이동 속도 
 //-----------------------------------------------------------------
-#define dfSPEED_PLAYER_X	3   // 6 25fps, 3 50fps
-#define dfSPEED_PLAYER_Y	2	// 4 25fps, 2 50fps
-#define dfFPS 50
+#define dfSPEED_PLAYER_X	6   // 6 25fps, 3 50fps
+#define dfSPEED_PLAYER_Y	4	// 4 25fps, 2 50fps
+#define dfFPS 25
 
 //-----------------------------------------------------------------
 // 이동 오류체크 범위
@@ -331,8 +333,8 @@ struct st_PACKET_HEADER
 // 섹터 설정값
 //-----------------------------------------------------------------
 
-#define dfSECTOR_SIZE_X					256
-#define dfSECTOR_SIZE_Y					256
+#define dfSECTOR_SIZE_X					200
+#define dfSECTOR_SIZE_Y					200 
 #define dfSECTOR_CNT_X					(dfRANGE_MOVE_RIGHT / dfSECTOR_SIZE_X) + 4
 #define dfSECTOR_CNT_Y					(dfRANGE_MOVE_BOTTOM / dfSECTOR_SIZE_Y) + 4
 #define dfAROUND_SECTOR_NUM				9

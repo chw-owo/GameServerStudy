@@ -14,37 +14,16 @@ using namespace std;
 
 class Server
 {
-private:
+public:
 	Server();
 	~Server();
-
-public:
-	static Server* GetInstance();
-
-public:
 	void NetworkUpdate();
 	void ContentUpdate();
 
-private:
-	static Server _server;
-
-// Monitor and Control ==================================================
-private:
-	DWORD _oldTick;
-
-	int _syncCnt = 0;
-	int _acceptCnt = 0;
-	int _disconnectCnt = 0;
-	int _deadCnt = 0;
-	int _timeoutCnt = 0;
-	int _ConnResetCnt = 0;
+// Monitor ===============================================================
+public:
 
 #define checkPointsMax 11
-	int _checkPointsIdx = 0;
-	int _checkPoints[checkPointsMax]
-		= { 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 5500, 6000 };
-
-public:
 #define dfPRO_TITLE_LEN 64
 	inline void Monitor()
 	{
@@ -85,14 +64,31 @@ public:
 		}
 	}
 
-	inline void Control() {}
+private:
+	DWORD _oldTick;
+	int _syncCnt = 0;
+	int _acceptCnt = 0;
+	int _disconnectCnt = 0;
+	int _deadCnt = 0;
+	int _timeoutCnt = 0;
+	int _ConnResetCnt = 0;
+
+	int _checkPointsIdx = 0;
+	int _checkPoints[checkPointsMax]
+		= { 1000, 1500, 2000, 2500, 3000, 3500, 4000, 4500, 5000, 5500, 6000 };
 
 // About Network ==================================================
 private:
 	class Session
 	{
 	public:
-		Session(int ID) { _ID = ID; }
+		Session(int ID, SerializePacket* pRecvPacket, SerializePacket* pSendPacket)
+		{ 
+			_ID = ID; 
+			_pRecvPacket = pRecvPacket;
+			_pSendPacket = pSendPacket;
+		}
+
 		Session() 
 		{ 
 			printf("Error! Session() is called\n"); 
@@ -107,29 +103,30 @@ private:
 		SOCKADDR_IN _addr;
 		RingBuffer _recvBuf;
 		RingBuffer _sendBuf;
+		SerializePacket* _pRecvPacket;
+		SerializePacket* _pSendPacket;
 		DWORD _lastRecvTime;
 	};
 
 private:
-	void SelectProc(int rStartIdx, int rCount, int wStartIdx, int wCount);
-	void AcceptProc();
-	void RecvProc(Session* pSession);
-	void SendProc(Session* pSession);
+	inline void SelectProc(int rStartIdx, int rCount, int wStartIdx, int wCount);
+	inline void AcceptProc();
+	inline void RecvProc(Session* pSession);
+	inline void SendProc(Session* pSession);
 
 private:
 	class Sector;
-	void EnqueueUnicast(char* msg, int size, Session* pSession);
-	void EnqueueOneSector(char* msg, int size, Sector* sector, Session* pExpSession = nullptr);
-	void EnqueueAroundSector(char* msg, int size, Sector* centerSector, Session* pExpSession = nullptr);
+	inline void EnqueueUnicast(char* msg, int size, Session* pSession);
+	inline void EnqueueOneSector(char* msg, int size, Sector* sector, Session* pExpSession = nullptr);
+	inline void EnqueueAroundSector(char* msg, int size, Sector* centerSector, Session* pExpSession = nullptr);
 
 private:
-	void SetSessionDead(Session* pSession);
-	void DisconnectDeadSession();
+	inline void SetSessionDead(Session* pSession);
+	inline void DisconnectDeadSession();
 
 private:
 	timeval _time;
 	SOCKET _listensock = INVALID_SOCKET;
-	CObjectPool<Session>* _pSessionPool;
 	Session* _SessionMap[dfSESSION_MAX];
 
 	Session* _rSessions[dfSESSION_MAX];
@@ -223,25 +220,28 @@ private:
 	};
 
 private:
+	inline void CreatePlayer(Session* pSession);
+
+private:
+	inline void UpdatePlayerMove(Player* pPlayer);
+	inline bool SkipForFixedFrame();
+	inline bool CheckMovable(short x, short y);
+
+private:
+	inline void UpdateSector(Player* pPlayer, short Direction);
+	inline void SetSectorsAroundInfo();
+	inline void SetSector(Player* pPlayer);
+	
+private:
 	int _playerID = 0;
-	CObjectPool<Player>* _pPlayerPool;
 	Player* _PlayerMap[dfSESSION_MAX];
 	Sector _sectors[dfSECTOR_CNT_Y][dfSECTOR_CNT_X];
 	int _sectorCnt[8] = { 3, 5, 3, 5, 3, 5, 3, 5 };
 
 private:
-	void CreatePlayer(Session* pSession);
-
-private:
-	void UpdatePlayerMove(Player* pPlayer);
-	inline bool SkipForFixedFrame();
-	inline bool CheckMovable(short x, short y);
-
-private:
-	void UpdateSector(Player* pPlayer, short Direction);
-	inline void SetSectorsAroundInfo();
-	inline void SetSector(Player* pPlayer);
-	
+	CObjectPool<Session>* _pSessionPool;
+	CObjectPool<Player>* _pPlayerPool;
+	CObjectPool<SerializePacket>* _pSPacketPool;
 
 // About Packet ====================================================
 private:
@@ -255,12 +255,12 @@ private:
 	inline bool HandleCSPacket_ECHO(Player* pPlayer);
 
 	// Get Data from CS Packet
-	inline bool GetCSPacket_MOVE_START(RingBuffer* recvBuffer, BYTE& moveDirection, short& x, short& y);
-	inline bool GetCSPacket_MOVE_STOP(RingBuffer* recvBuffer, BYTE& direction, short& x, short& y);
-	inline bool GetCSPacket_ATTACK1(RingBuffer* recvBuffer, BYTE& direction, short& x, short& y);
-	inline bool GetCSPacket_ATTACK2(RingBuffer* recvBuffer, BYTE& direction, short& x, short& y);
-	inline bool GetCSPacket_ATTACK3(RingBuffer* recvBuffer, BYTE& direction, short& x, short& y);
-	inline bool GetCSPacket_ECHO(RingBuffer* recvBuffer, int& time);
+	inline bool GetCSPacket_MOVE_START(SerializePacket* pPacket, RingBuffer* recvBuffer, BYTE& moveDirection, short& x, short& y);
+	inline bool GetCSPacket_MOVE_STOP(SerializePacket* pPacket, RingBuffer* recvBuffer, BYTE& direction, short& x, short& y);
+	inline bool GetCSPacket_ATTACK1(SerializePacket* pPacket, RingBuffer* recvBuffer, BYTE& direction, short& x, short& y);
+	inline bool GetCSPacket_ATTACK2(SerializePacket* pPacket, RingBuffer* recvBuffer, BYTE& direction, short& x, short& y);
+	inline bool GetCSPacket_ATTACK3(SerializePacket* pPacket, RingBuffer* recvBuffer, BYTE& direction, short& x, short& y);
+	inline bool GetCSPacket_ECHO(SerializePacket* pPacket, RingBuffer* recvBuffer, int& time);
 
 	// Set Game Data from Packet Data
 	inline void SetPlayerMoveStart(Player* pPlayer, BYTE& moveDirection, short& x, short& y);
@@ -270,18 +270,18 @@ private:
 	inline void SetPlayerAttack3(Player* pPlayer, Player*& pDamagedPlayer, BYTE& direction, short& x, short& y);
 	
 	// Set Data on SC Packet
-	inline void SetSCPacket_HEADER(SerializePacket* buffer, BYTE size, BYTE type);
-	inline int SetSCPacket_CREATE_MY_CHAR(SerializePacket* buffer, int ID, BYTE direction, short x, short y, BYTE hp);
-	inline int SetSCPacket_CREATE_OTHER_CHAR(SerializePacket* buffer, int ID, BYTE direction, short x, short y, BYTE hp);
-	inline int SetSCPacket_DELETE_CHAR(SerializePacket* buffer, int ID);
-	inline int SetSCPacket_MOVE_START(SerializePacket* buffer, int ID, BYTE moveDirection, short x, short y);
-	inline int SetSCPacket_MOVE_STOP(SerializePacket* buffer, int ID, BYTE direction, short x, short y);
-	inline int SetSCPacket_ATTACK1(SerializePacket* buffer, int ID, BYTE direction, short x, short y);
-	inline int SetSCPacket_ATTACK2(SerializePacket* buffer, int ID, BYTE direction, short x, short y);
-	inline int SetSCPacket_ATTACK3(SerializePacket* buffer, int ID, BYTE direction, short x, short y);
-	inline int SetSCPacket_DAMAGE(SerializePacket* buffer, int attackID, int damageID, BYTE damageHP);
-	inline int SetSCPacket_SYNC(SerializePacket* buffer, int ID, short x, short y);
-	inline int SetSCPacket_ECHO(SerializePacket* buffer, int time);
+	inline void SetSCPacket_HEADER(SerializePacket* pPacket, BYTE size, BYTE type);
+	inline int SetSCPacket_CREATE_MY_CHAR(SerializePacket* pPacket, int ID, BYTE direction, short x, short y, BYTE hp);
+	inline int SetSCPacket_CREATE_OTHER_CHAR(SerializePacket* pPacket, int ID, BYTE direction, short x, short y, BYTE hp);
+	inline int SetSCPacket_DELETE_CHAR(SerializePacket* pPacket, int ID);
+	inline int SetSCPacket_MOVE_START(SerializePacket* pPacket, int ID, BYTE moveDirection, short x, short y);
+	inline int SetSCPacket_MOVE_STOP(SerializePacket* pPacket, int ID, BYTE direction, short x, short y);
+	inline int SetSCPacket_ATTACK1(SerializePacket* pPacket, int ID, BYTE direction, short x, short y);
+	inline int SetSCPacket_ATTACK2(SerializePacket* pPacket, int ID, BYTE direction, short x, short y);
+	inline int SetSCPacket_ATTACK3(SerializePacket* pPacket, int ID, BYTE direction, short x, short y);
+	inline int SetSCPacket_DAMAGE(SerializePacket* pPacket, int attackID, int damageID, BYTE damageHP);
+	inline int SetSCPacket_SYNC(SerializePacket* pPacket, int ID, short x, short y);
+	inline int SetSCPacket_ECHO(SerializePacket* pPacket, int time);
 
 };
 
