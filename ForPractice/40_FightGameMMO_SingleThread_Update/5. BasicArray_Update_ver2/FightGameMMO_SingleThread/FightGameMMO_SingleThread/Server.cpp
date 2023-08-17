@@ -16,17 +16,6 @@ Server::Server()
 	_pPlayerPool = new CObjectPool<Player>(dfSESSION_MAX, true);
 	_pSPacketPool = new CObjectPool<SerializePacket>(dfSPACKET_MAX, false);
 
-	memset(_SessionMap, 0, dfSESSION_MAX * sizeof(Session*));
-	memset(_PlayerMap, 0, dfSESSION_MAX * sizeof(Player*));
-
-	_disconnectedSessionIDs.reserve(dfDEFAULT_DISCONNECT_NUM);
-	_emptySessionID.reserve(dfSESSION_MAX);
-
-	for (int i = dfSESSION_MAX - 1; i >= 0; i--)
-	{
-		_emptySessionID.push_back(i);
-	}
-
 	// Initialize Winsock
 	WSADATA wsa;
 	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
@@ -113,7 +102,7 @@ Server::Server()
 
 	SetSectorsAroundInfo();
 
-	_oldTick = timeGetTime();
+	_oldTick = GetTickCount64();
 	::printf("Content Setting Complete!\n");
 
 }
@@ -154,8 +143,6 @@ void Server::NetworkUpdate()
 
 	int rStopIdx = 0;
 	int wStopIdx = 0;
-	int rStartIdx = 0;
-	int wStartIdx = 0;
 
 	for (int i = 0; i < dfSESSION_MAX; i++)
 	{
@@ -166,28 +153,42 @@ void Server::NetworkUpdate()
 			_wSessions[wStopIdx++] = _SessionMap[i];
 	}
 
-	while ((rStopIdx - rStartIdx) >= (FD_SETSIZE - 1) || 
+	FD_SET rset;
+	FD_SET wset;
+	FD_ZERO(&rset);
+	FD_ZERO(&wset);
+	int rStartIdx = 0;
+	int wStartIdx = 0;
+
+	while ((rStopIdx - rStartIdx) >= (FD_SETSIZE - 1) &&
 		(wStopIdx - wStartIdx) >= FD_SETSIZE)
 	{
-		if ((wStopIdx - wStartIdx) < FD_SETSIZE)
-		{
-			SelectProc(rStartIdx, (FD_SETSIZE - 1), 0, 0);
-			rStartIdx += (FD_SETSIZE - 1);
-		}
-		else if ((rStopIdx - rStartIdx) < (FD_SETSIZE - 1))
-		{
-			SelectProc(0, 0, wStartIdx, FD_SETSIZE);
-			wStartIdx += FD_SETSIZE;
-		}
-		else
-		{
-			SelectProc(rStartIdx, (FD_SETSIZE - 1), wStartIdx, FD_SETSIZE);
-			rStartIdx += (FD_SETSIZE - 1);
-			wStartIdx += FD_SETSIZE;
-		}	
+		SelectProc(rset, wset, rStartIdx, (FD_SETSIZE - 1), wStartIdx, FD_SETSIZE);
+		rStartIdx += (FD_SETSIZE - 1);
+		wStartIdx += FD_SETSIZE;
+		FD_ZERO(&rset);
+		FD_ZERO(&wset);
 	}
-	
-	SelectProc(rStartIdx, rStopIdx - rStartIdx, wStartIdx, wStopIdx - wStartIdx);
+
+	while((rStopIdx - rStartIdx) >= (FD_SETSIZE - 1) && 
+		(wStopIdx - wStartIdx) < FD_SETSIZE)
+	{
+		SelectProc(rset, wset, rStartIdx, (FD_SETSIZE - 1), 0, 0);
+		rStartIdx += (FD_SETSIZE - 1);
+		FD_ZERO(&rset);
+		FD_ZERO(&wset);
+	}
+
+	while ((rStopIdx - rStartIdx) < (FD_SETSIZE - 1) &&
+		(wStopIdx - wStartIdx) >= FD_SETSIZE)
+	{
+		SelectProc(rset, wset, 0, 0, wStartIdx, FD_SETSIZE);
+		wStartIdx += FD_SETSIZE;
+		FD_ZERO(&rset);
+		FD_ZERO(&wset);
+	}
+
+	SelectProc(rset, wset, rStartIdx, rStopIdx - rStartIdx, wStartIdx, wStopIdx - wStartIdx);
 
 	PRO_END(L"Network");
 
@@ -206,7 +207,7 @@ void Server::ContentUpdate()
 	{
 		if (_PlayerMap[i] == nullptr) continue;
 
-		if (timeGetTime() - _PlayerMap[i]->_pSession->_lastRecvTime 
+		if (GetTickCount64() - _PlayerMap[i]->_pSession->_lastRecvTime 
 				> dfNETWORK_PACKET_RECV_TIMEOUT)
 		{
 			_timeoutCnt++;
@@ -225,17 +226,11 @@ void Server::ContentUpdate()
 
 // About Network ==================================================
 
-void Server::SelectProc(int rStartIdx, int rCount, int wStartIdx, int wCount)
+void Server::SelectProc(FD_SET rset, FD_SET wset, int rStartIdx, int rCount, int wStartIdx, int wCount)
 {
-	FD_SET rset;
-	FD_SET wset;
-	FD_ZERO(&rset);
-	FD_ZERO(&wset);
 	FD_SET(_listensock, &rset);
-
 	for (int i = 0; i < wCount; i++)
 		FD_SET(_wSessions[wStartIdx + i]->_socket, &wset);
-
 	for (int i = 0; i < rCount; i++)
 		FD_SET(_rSessions[rStartIdx + i]->_socket, &rset);
 
@@ -259,34 +254,32 @@ void Server::SelectProc(int rStartIdx, int rCount, int wStartIdx, int wCount)
 			AcceptProc();
 
 		for (int i = 0; i < wCount; i++)
-		{
 			if (FD_ISSET(_wSessions[wStartIdx + i]->_socket, &wset))
 				SendProc(_wSessions[wStartIdx + i]);
-		}
 
 		for (int i = 0; i < rCount; i++)
-		{
 			if (FD_ISSET(_rSessions[rStartIdx + i]->_socket, &rset))
 				RecvProc(_rSessions[rStartIdx + i]);
-		}
-
 	}
 }
 
 void Server::AcceptProc()
 {
-	if(_emptySessionID.empty())
+	if (_usableCnt == 0 && _sessionIDs == dfSESSION_MAX)
 	{
 		::printf("Can't Accept More!\n");
 		return;
 	}
+	
+	int ID;
+	if (_usableCnt == 0)
+		ID = _sessionIDs++;
+	else
+		ID = _usableSessionID[--_usableCnt];
 
-	int ID = _emptySessionID.back();
 	SerializePacket* pRecvPacket = _pSPacketPool->Alloc();
 	SerializePacket* pSendPacket = _pSPacketPool->Alloc();
 	Session* pSession = _pSessionPool->Alloc(ID, pRecvPacket, pSendPacket);
-
-	_emptySessionID.pop_back();
 
 	if (pSession == nullptr)
 	{
@@ -311,7 +304,7 @@ void Server::AcceptProc()
 		return;
 	}
 
-	pSession->_lastRecvTime = timeGetTime();
+	pSession->_lastRecvTime = GetTickCount64();
 	_SessionMap[pSession->_ID] = pSession;
 	CreatePlayer(pSession);
 
@@ -320,7 +313,7 @@ void Server::AcceptProc()
 
 void Server::RecvProc(Session* pSession)
 {
-	pSession->_lastRecvTime = timeGetTime();
+	pSession->_lastRecvTime = GetTickCount64();
 
 	PRO_BEGIN(L"Network: Recv");
 	int recvRet = recv(pSession->_socket,
@@ -331,15 +324,9 @@ void Server::RecvProc(Session* pSession)
 	if (recvRet == SOCKET_ERROR)
 	{
 		int err = WSAGetLastError();
-		if (err == WSAECONNRESET)
+		if (err == WSAECONNRESET || err == WSAECONNABORTED)
 		{
-			_ConnResetCnt++;
-			SetSessionDead(pSession);
-			return;
-		}
-		else if (err == WSAECONNABORTED)
-		{
-			SetSessionDead(pSession);
+			SetSessionDead(pSession, true);
 			return;
 		}
 		else if(err != WSAEWOULDBLOCK)
@@ -351,11 +338,10 @@ void Server::RecvProc(Session* pSession)
 			SetSessionDead(pSession);
 			return;
 		}
-
 	}
 	else if (recvRet == 0)
 	{
-		SetSessionDead(pSession);
+		SetSessionDead(pSession, true);
 		return;
 	}
 
@@ -368,7 +354,6 @@ void Server::RecvProc(Session* pSession)
 		g_bShutdown = true;
 		return;
 	}
-
 	int useSize = pSession->_recvBuf.GetUseSize();
 
 	Player* pPlayer = _PlayerMap[pSession->_ID];
@@ -381,7 +366,6 @@ void Server::RecvProc(Session* pSession)
 		g_bShutdown = true;
 		return;
 	}
-
 	
 	while (useSize > 0)
 	{
@@ -451,7 +435,7 @@ void Server::SendProc(Session* pSession)
 		int err = WSAGetLastError();
 		if (err == WSAECONNRESET || err == WSAECONNABORTED)
 		{
-			SetSessionDead(pSession);
+			SetSessionDead(pSession, true);
 			return;
 		}
 		else if (err != WSAEWOULDBLOCK)
@@ -476,22 +460,25 @@ void Server::SendProc(Session* pSession)
 	}
 }
 
-void Server::SetSessionDead(Session* pSession)
+void Server::SetSessionDead(Session* pSession, bool connectEnd)
 {
 	if(pSession->_alive)
 	{
 		pSession->_alive = false;
-		_disconnectedSessionIDs.push_back(pSession->_ID);
+		_disconnectedSessionIDs[_disconnectCnt] = pSession->_ID;
+		_disconnectCnt++;	
+
+		if (connectEnd)
+			_connectEndCnt++;
+		_disconnectMonitorCnt++;
 	}
 }
 
 void Server::DisconnectDeadSession()
 {
-	vector<int>::iterator iter = _disconnectedSessionIDs.begin();
-
-	for (; iter != _disconnectedSessionIDs.end(); iter++)
+	for (int i = 0; i < _disconnectCnt; i++)
 	{
-		int ID = *iter;
+		int ID = _disconnectedSessionIDs[i];
 
 		Player* pPlayer = _PlayerMap[ID];
 		if (pPlayer == nullptr)
@@ -520,7 +507,6 @@ void Server::DisconnectDeadSession()
 		EnqueueAroundSector(pPlayer->_pSession->_pSendPacket->GetReadPtr(), deleteRet, pPlayer->_pSector);
 		_pPlayerPool->Free(pPlayer);
 		
-		
 		Session* pSession = _SessionMap[ID];
 		if (pSession == nullptr)
 		{
@@ -537,11 +523,10 @@ void Server::DisconnectDeadSession()
 		_pSPacketPool->Free(pSession->_pSendPacket);
 		_pSessionPool->Free(pSession);
 
-		_emptySessionID.push_back(ID);
-		_disconnectCnt++;
+		_usableSessionID[_usableCnt++] = ID;
 	}
 
-	_disconnectedSessionIDs.clear();
+	_disconnectCnt = 0;
 }
 
 void Server::EnqueueUnicast(char* msg, int size, Session* pSession)
@@ -629,6 +614,7 @@ void Server::EnqueueAroundSector(char* msg, int size, Sector* centerSector, Sess
 		{
 			vector<Player*>::iterator playerIter 
 				= centerSector->_around[i]->_players.begin();
+
 			for (; playerIter < centerSector->_around[i]->_players.end(); playerIter++)
 			{
 				if ((*playerIter) == nullptr)
@@ -712,8 +698,8 @@ void Server::EnqueueAroundSector(char* msg, int size, Sector* centerSector, Sess
 
 bool Server::SkipForFixedFrame()
 {
-	static DWORD oldTick = timeGetTime();
-	if ((timeGetTime() - oldTick) < (1000 / dfFPS))
+	static DWORD oldTick = GetTickCount64();
+	if ((GetTickCount64() - oldTick) < (1000 / dfFPS))
 		return true;
 	oldTick += (1000 / dfFPS);
 	return false;
@@ -885,7 +871,6 @@ void Server::UpdateSector(Player* pPlayer, short direction)
 
 	// Send Data About My Player ==============================================
 
-	
 
 	pPlayer->_pSession->_pSendPacket->Clear();
 	int createMeToOtherRet = SetSCPacket_CREATE_OTHER_CHAR(pPlayer->_pSession->_pSendPacket,
@@ -949,7 +934,6 @@ void Server::CreatePlayer(Session* pSession)
 	Player* pPlayer = _pPlayerPool->Alloc(pSession, _playerID++);
 	_PlayerMap[pSession->_ID] = pPlayer;
 	SetSector(pPlayer);
-	
 	
 	pPlayer->_pSession->_pSendPacket->Clear();
 	int createMeRet = SetSCPacket_CREATE_MY_CHAR(pPlayer->_pSession->_pSendPacket,
@@ -1066,10 +1050,7 @@ bool Server::HandleCSPacket_MOVE_START(Player* pPlayer)
 
 	pPlayer->_pSession->_pRecvPacket->Clear();
 	bool getRet = GetCSPacket_MOVE_START(pPlayer->_pSession->_pRecvPacket, &(pPlayer->_pSession->_recvBuf), moveDirection, x, y);
-	if(!getRet) 
-	{
-		return false;
-	}
+	if(!getRet) return false;
 	
 	if (abs(pPlayer->_x - x) > dfERROR_RANGE || abs(pPlayer->_y - y) > dfERROR_RANGE)
 	{
@@ -1085,7 +1066,6 @@ bool Server::HandleCSPacket_MOVE_START(Player* pPlayer)
 	pPlayer->_pSession->_pSendPacket->Clear();
 	int setRet = SetSCPacket_MOVE_START(pPlayer->_pSession->_pSendPacket, pPlayer->_ID, pPlayer->_moveDirection, pPlayer->_x, pPlayer->_y);
 	EnqueueAroundSector(pPlayer->_pSession->_pSendPacket->GetReadPtr(), setRet, pPlayer->_pSector, pPlayer->_pSession);
-
 	
 	return true;
 }
@@ -1098,10 +1078,7 @@ bool Server::HandleCSPacket_MOVE_STOP(Player* pPlayer)
 
 	pPlayer->_pSession->_pRecvPacket->Clear();
 	bool getRet = GetCSPacket_MOVE_STOP(pPlayer->_pSession->_pRecvPacket, &(pPlayer->_pSession->_recvBuf), direction, x, y);
-	if (!getRet) 
-	{
-		return false;
-	}
+	if (!getRet) return false;
 	
 	if (abs(pPlayer->_x - x) > dfERROR_RANGE || abs(pPlayer->_y - y) > dfERROR_RANGE)
 	{
@@ -1118,8 +1095,6 @@ bool Server::HandleCSPacket_MOVE_STOP(Player* pPlayer)
 	int setRet = SetSCPacket_MOVE_STOP(pPlayer->_pSession->_pSendPacket, pPlayer->_ID, pPlayer->_direction, pPlayer->_x, pPlayer->_y);
 	EnqueueAroundSector(pPlayer->_pSession->_pSendPacket->GetReadPtr(), setRet, pPlayer->_pSector, pPlayer->_pSession);
 	
-	
-
 	return true;
 }
 
@@ -1131,10 +1106,7 @@ bool Server::HandleCSPacket_ATTACK1(Player* pPlayer)
 
 	pPlayer->_pSession->_pRecvPacket->Clear();
 	bool getRet = GetCSPacket_ATTACK1(pPlayer->_pSession->_pRecvPacket, &(pPlayer->_pSession->_recvBuf), direction, x, y);
-	if (!getRet) 
-	{
-		return false;
-	}
+	if (!getRet) return false;
 	
 	if (abs(pPlayer->_x - x) > dfERROR_RANGE || abs(pPlayer->_y - y) > dfERROR_RANGE)
 	{
@@ -1161,7 +1133,6 @@ bool Server::HandleCSPacket_ATTACK1(Player* pPlayer)
 		EnqueueAroundSector(pPlayer->_pSession->_pSendPacket->GetReadPtr(), damageSetRet, damagedPlayer->_pSector);
 	}
 
-	
 	return true;
 }
 
@@ -1173,10 +1144,7 @@ bool Server::HandleCSPacket_ATTACK2(Player* pPlayer)
 
 	pPlayer->_pSession->_pRecvPacket->Clear();
 	bool getRet = GetCSPacket_ATTACK2(pPlayer->_pSession->_pRecvPacket, &(pPlayer->_pSession->_recvBuf), direction, x, y);
-	if (!getRet) 
-	{
-		return false;
-	}
+	if (!getRet) return false;
 
 	if (abs(pPlayer->_x - x) > dfERROR_RANGE || abs(pPlayer->_y - y) > dfERROR_RANGE)
 	{
@@ -1215,10 +1183,7 @@ bool Server::HandleCSPacket_ATTACK3(Player* pPlayer)
 
 	pPlayer->_pSession->_pRecvPacket->Clear();
 	bool getRet = GetCSPacket_ATTACK3(pPlayer->_pSession->_pRecvPacket, &(pPlayer->_pSession->_recvBuf), direction, x, y);
-	if (!getRet) 
-	{
-		return false;
-	}
+	if (!getRet) return false;
 
 	if (abs(pPlayer->_x - x) > dfERROR_RANGE || abs(pPlayer->_y - y) > dfERROR_RANGE)
 	{
@@ -1260,7 +1225,6 @@ bool Server::HandleCSPacket_ECHO(Player* pPlayer)
 	int setRet = SetSCPacket_ECHO(pPlayer->_pSession->_pSendPacket, time);
 	EnqueueUnicast(pPlayer->_pSession->_pSendPacket->GetReadPtr(), setRet, pPlayer->_pSession);
 	
-
 	return true;
 }
 
@@ -1281,7 +1245,6 @@ bool Server::GetCSPacket_MOVE_START(SerializePacket* pPacket, RingBuffer* recvBu
 	*pPacket >> x;
 	*pPacket >> y;
 
-	
 	return true;
 }
 

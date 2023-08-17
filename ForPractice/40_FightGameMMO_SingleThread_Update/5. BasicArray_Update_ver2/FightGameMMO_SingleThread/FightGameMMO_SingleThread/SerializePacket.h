@@ -20,7 +20,7 @@ public:
 	enum en_BUFFER
 	{
 		// 패킷의 기본 버퍼 사이즈.
-		eBUFFER_DEFAULT = 1024,
+		eBUFFER_DEFAULT = 2048,
 		eBUFFER_MAX = 4096
 	};
 

@@ -33,7 +33,7 @@ void ProfileBegin(const WCHAR* szName)
 			wcscmp(PROFILE_RESULT[i].szName, szName) == 0)
 		{
 			_PROFILE_RESULT& pf = PROFILE_RESULT[i];
-			pf.lFlag = 2;
+			//pf.lFlag = 2;
 			QueryPerformanceCounter(&pf.lStartTime);
 			return;
 		}

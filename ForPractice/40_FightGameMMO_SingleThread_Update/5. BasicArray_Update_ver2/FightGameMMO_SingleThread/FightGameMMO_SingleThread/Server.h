@@ -27,18 +27,18 @@ public:
 #define dfPRO_TITLE_LEN 64
 	inline void Monitor()
 	{
-		if (timeGetTime() - _oldTick > 1000)
+		if (GetTickCount64() - _oldTick > 1000)
 		{
-			int connected = dfSESSION_MAX - _emptySessionID.size();
+			int connected = _sessionIDs - _usableCnt;
 
 			printf("[%s %s]\n\n", __DATE__, __TIME__);
 			printf("Connected Session: %d\n", connected);
 			printf("Sync/1sec: %d\n", _syncCnt);
 			printf("Accept/1sec: %d\n", _acceptCnt);
-			printf("Disconnect/1sec: %d\n", _disconnectCnt);
+			printf("Disconnect/1sec: %d\n", _disconnectMonitorCnt);
 			printf(" - Dead: %d\n", _deadCnt);
 			printf(" - Timeout: %d\n", _timeoutCnt);
-			printf(" - ConnReset(10054): %d\n", _ConnResetCnt); 
+			printf(" - Connect End(10054): %d\n", _connectEndCnt); 
 
 			PRO_PRINT_CONSOLE();
 
@@ -55,10 +55,10 @@ public:
 
 			_syncCnt = 0;
 			_acceptCnt = 0;
-			_disconnectCnt = 0;
+			_disconnectMonitorCnt = 0;
 			_deadCnt = 0;
 			_timeoutCnt = 0;
-			_ConnResetCnt = 0;
+			_connectEndCnt = 0;
 
 			_oldTick += 1000;
 		}
@@ -68,10 +68,10 @@ private:
 	DWORD _oldTick;
 	int _syncCnt = 0;
 	int _acceptCnt = 0;
-	int _disconnectCnt = 0;
 	int _deadCnt = 0;
 	int _timeoutCnt = 0;
-	int _ConnResetCnt = 0;
+	int _connectEndCnt = 0;
+	int _disconnectMonitorCnt = 0;
 
 	int _checkPointsIdx = 0;
 	int _checkPoints[checkPointsMax]
@@ -82,14 +82,14 @@ private:
 	class Session
 	{
 	public:
-		Session(int ID, SerializePacket* pRecvPacket, SerializePacket* pSendPacket)
+		inline Session(int ID, SerializePacket* pRecvPacket, SerializePacket* pSendPacket)
 		{ 
 			_ID = ID; 
 			_pRecvPacket = pRecvPacket;
 			_pSendPacket = pSendPacket;
 		}
 
-		Session() 
+		inline Session() 
 		{ 
 			printf("Error! Session() is called\n"); 
 			LOG(L"ERROR", SystemLog::ERROR_LEVEL,
@@ -109,7 +109,7 @@ private:
 	};
 
 private:
-	inline void SelectProc(int rStartIdx, int rCount, int wStartIdx, int wCount);
+	inline void SelectProc(FD_SET rset, FD_SET wset, int rStartIdx, int rCount, int wStartIdx, int wCount);
 	inline void AcceptProc();
 	inline void RecvProc(Session* pSession);
 	inline void SendProc(Session* pSession);
@@ -121,18 +121,21 @@ private:
 	inline void EnqueueAroundSector(char* msg, int size, Sector* centerSector, Session* pExpSession = nullptr);
 
 private:
-	inline void SetSessionDead(Session* pSession);
+	inline void SetSessionDead(Session* pSession, bool connectEnd = false);
 	inline void DisconnectDeadSession();
 
 private:
 	timeval _time;
 	SOCKET _listensock = INVALID_SOCKET;
 	Session* _SessionMap[dfSESSION_MAX];
-
 	Session* _rSessions[dfSESSION_MAX];
 	Session* _wSessions[dfSESSION_MAX];
-	vector<int> _disconnectedSessionIDs;
-	vector<int> _emptySessionID;
+
+	int _sessionIDs = 0;
+	int _usableCnt = 0;
+	int _usableSessionID[dfSESSION_MAX];
+	int _disconnectCnt = 0;
+	int _disconnectedSessionIDs[dfSESSION_MAX];
 	
 // About Content ====================================================
 private:
@@ -191,7 +194,7 @@ private:
 	class Player
 	{
 	public:
-		Player(Session* pSession, int ID)
+		inline Player(Session* pSession, int ID)
 			: _pSession(pSession), _pSector(nullptr), _ID(ID), _hp(dfMAX_HP), 
 			_move(false), _direction(dfPACKET_MOVE_DIR_LL), _moveDirection(dfPACKET_MOVE_DIR_LL)
 		{
@@ -199,7 +202,7 @@ private:
 			_y = rand() % dfRANGE_MOVE_BOTTOM;
 		}
 
-		Player() 
+		inline Player() 
 		{ 
 			printf("Error! Player() is called\n"); 
 			LOG(L"ERROR", SystemLog::ERROR_LEVEL,
@@ -220,11 +223,11 @@ private:
 	};
 
 private:
-	inline void CreatePlayer(Session* pSession);
+	inline bool SkipForFixedFrame();
 
 private:
+	inline void CreatePlayer(Session* pSession);
 	inline void UpdatePlayerMove(Player* pPlayer);
-	inline bool SkipForFixedFrame();
 	inline bool CheckMovable(short x, short y);
 
 private:
