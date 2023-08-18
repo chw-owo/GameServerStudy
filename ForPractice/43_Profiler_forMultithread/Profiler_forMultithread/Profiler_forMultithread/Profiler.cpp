@@ -1,38 +1,54 @@
 #include "Profiler.h"
 
-void CProfiler::ProfileBegin(const WCHAR* _szName)
+// TO-DO
+// wchar* 을 key로 쓸 수 있게 cmp 만들어서 넣어보기
+
+CProfilerManager* g_pManager = CProfilerManager::GetInstance();
+
+void CProfiler::ProfileBegin(const wchar_t* _szName)
 {
 	int i = 0;
+
 	for (; i < PROFILE_CNT; i++)
 	{
+		WaitOnAddress(&_profileResults[i]._lFlag,
+			&_pauseFlag, sizeof(LONG), INFINITE);
+
 		if (_profileResults[i]._lFlag != none &&
 			wcscmp(_profileResults[i]._szName, _szName) == 0)
 		{
-			_PROFILE_RESULT& pf = _profileResults[i];
-			_profileResults[i]._lFlag = begin_in;
-			QueryPerformanceCounter(&pf._lStartTime);
-			_profileResults[i]._lFlag = begin_out;
+			_PROFILE_RESULT& result = _profileResults[i];
+			result._lFlag = underway;
+			QueryPerformanceCounter(&result._lStartTime);
 			return;
 		}
 
 		else if (_profileResults[i]._lFlag == none)
 		{
-			_PROFILE_RESULT& pf = _profileResults[i];
-			_profileResults[i]._lFlag = begin_in;
+			_PROFILE_RESULT& result = _profileResults[i];
+			result._lFlag = underway;
+			wcscpy_s(result._szName, NAME_LEN, _szName);
 
-			wcscpy_s(pf._szName, NAME_LEN, _szName);
-			QueryPerformanceCounter(&pf._lStartTime);
+			unordered_map<wchar_t*, _PROFILE_RESULT_FOR_ADDUP*>::iterator iter
+				= g_pManager->_resultAddupMap.find(result._szName);
+
+			if (iter == g_pManager->_resultAddupMap.end())
+			{
+				_PROFILE_RESULT_FOR_ADDUP* resultAddup = new _PROFILE_RESULT_FOR_ADDUP;
+				g_pManager->_resultAddupMap.insert(make_pair(result._szName, resultAddup));
+			}
+
+			QueryPerformanceCounter(&result._lStartTime);
 			QueryPerformanceFrequency(&_freq);
 
-			pf._dTotalTime = 0;
+			result._dTotalTime = 0;
 
 			for (int min = 0; min < MINMAX_CNT; min++)
-				pf._dMin[min] = DBL_MAX;
+				result._dMin[min] = DBL_MAX;
 			for (int max = 0; max < MINMAX_CNT; max++)
-				pf._dMax[max] = 0;
+				result._dMax[max] = 0;
 
-			pf._iCall = 0;
-			_profileResults[i]._lFlag = begin_out;
+			result._iCall = 0;
 			return;
 		}
 	}
@@ -44,71 +60,73 @@ void CProfiler::ProfileBegin(const WCHAR* _szName)
 	}
 }
 
-void CProfiler::ProfileEnd(const WCHAR* _szName)
+void CProfiler::ProfileEnd(const wchar_t* _szName)
 {
 	int i = 0;
 	for (; i < PROFILE_CNT; i++)
 	{
+		WaitOnAddress(&_profileResults[i]._lFlag,
+			&_pauseFlag, sizeof(LONG), INFINITE);
+
 		if (_profileResults[i]._lFlag != none &&
 			wcscmp(_profileResults[i]._szName, _szName) == 0)
 		{
-			_profileResults[i]._lFlag = end_in;
-
-			_PROFILE_RESULT& pf = _profileResults[i];
+			_PROFILE_RESULT& result = _profileResults[i];
 
 			LARGE_INTEGER endTime;
 			QueryPerformanceCounter(&endTime);
 
-			double result =
-				(endTime.QuadPart - pf._lStartTime.QuadPart)
+			double interval =
+				(endTime.QuadPart - result._lStartTime.QuadPart)
 				/ (double)_freq.QuadPart;
 
-			pf._dTotalTime += result;
+			result._dTotalTime += interval;
 
 			for (int min = 0; min < MINMAX_CNT; min++)
 			{
-				if (pf._dMin[min] > result)
+				if (result._dMin[min] > interval)
 				{
 					if (min == MINMAX_CNT - 1)
 					{
-						pf._dMin[min] = result;
+						result._dMin[min] = interval;
 					}
 					else
 					{
 						int tmpMin = min;
 						while (tmpMin < MINMAX_CNT - 1)
 						{
-							pf._dMin[tmpMin + 1] = pf._dMin[tmpMin];
+							result._dMin[tmpMin + 1] = result._dMin[tmpMin];
 							tmpMin++;
 						}
-						pf._dMin[min] = result;
+						result._dMin[min] = interval;
 					}
 				}
 			}
 
 			for (int max = 0; max < MINMAX_CNT; max++)
 			{
-				if (pf._dMax[max] < result)
+				if (result._dMax[max] < interval)
 				{
 					if (max == MINMAX_CNT - 1)
 					{
-						pf._dMax[max] = result;
+						result._dMax[max] = interval;
 					}
 					else
 					{
 						int tmpMax = max;
 						while (tmpMax < MINMAX_CNT - 1)
 						{
-							pf._dMax[tmpMax + 1] = pf._dMax[tmpMax];
+							result._dMax[tmpMax + 1] = result._dMax[tmpMax];
 							tmpMax++;
 						}
-						pf._dMax[max] = result;
+						result._dMax[max] = interval;
 					}
 				}
 			}
-			pf._iCall++;
+			result._iCall++;
 
-			_profileResults[i]._lFlag = end_out;
+			result._lFlag = complete;
+			WakeByAddressSingle(&result._lFlag);
 			return;
 		}
 	}
@@ -137,12 +155,14 @@ CProfilerManager::CProfilerManager()
 
 CProfilerManager::~CProfilerManager()
 {
+	/*
 	while(!_profilers.empty())
 	{
 		CProfiler* pProfiler = _profilers.back();
 		delete pProfiler;
 		_profilers.pop_back();
 	}
+	*/
 }
 
 CProfilerManager* CProfilerManager::GetInstance()
@@ -151,117 +171,70 @@ CProfilerManager* CProfilerManager::GetInstance()
 	return  &_manager;
 }
 
-void CProfilerManager::InitializeProfiler()
+void CProfilerManager::SetProfiler(CProfiler* pProfiler, DWORD threadID)
 {
-	CProfiler* pProfiler = new CProfiler;
+#ifdef USE_STLS
+
+	pProfiler->_threadID = threadID;
 	_profilers.push_back(pProfiler);
 
-#ifdef USE_STLS
-	pSTLSProfiler = pProfiler;
 #endif
 }
 
-void CProfilerManager::PauseAllProfiler()
+void CProfilerManager::PrintResult(void)
 {
 	vector<CProfiler*>::iterator iter = _profilers.begin();
 	for (; iter != _profilers.end(); iter++)
 	{
-		CProfiler* p = *iter;
+		CProfiler* pf = *iter;
+		
+		::printf(
+			"\n<Thread ID: %d>\n"
+			"----------------------------------------------\n"
+			"| Name | Average | Min | Max | Call | Total |\n"
+			"----------------------------------------------\n", 
+			pf->_threadID);
 
 		int idx = 0;
-		switch (p->_profileResults[idx]._lFlag)
+		while (pf->_profileResults[idx]._lFlag != none)
 		{
-		case none:
-			break;
-		case begin_in:
-			break;
-		case begin_out:
-			break;
-		case end_in:
-			break;
-		case end_out:
-			break;
-		}
-	}
-}
-
-void CProfilerManager::RestartAllProfiler()
-{
-	vector<CProfiler*>::iterator iter = _profilers.begin();
-	for (; iter != _profilers.end(); iter++)
-	{
-		CProfiler* p = *iter;
-
-		int idx = 0;
-		switch (p->_profileResults[idx]._lFlag)
-		{
-		case none:
-			break;
-		case begin_in:
-			break;
-		case begin_out:
-			break;
-		case end_in:
-			break;
-		case end_out:
-			break;
-		}
-	}
-}
-
-void CProfilerManager::PrintDataOnConsole()
-{
-	PauseAllProfiler();
-
-	::printf(
-		"\n----------------------------------------------\n"
-		"| Name | Average | Min | Max | Call | Total |\n"
-		"----------------------------------------------\n");
-
-	vector<CProfiler*>::iterator iter = _profilers.begin();
-	for(; iter != _profilers.end();iter++)
-	{
-		CProfiler* p = *iter;
-
-		int idx = 0;
-		while (p->_profileResults[idx]._lFlag != none)
-		{
-			_PROFILE_RESULT& pf = p->_profileResults[idx];
+			_PROFILE_RESULT& result = pf->_profileResults[idx];
+			WaitOnAddress(&result._lFlag, &_underwayFlag, sizeof(LONG), INFINITE);
+			result._lFlag = pause;
 
 #ifdef USE_MS_UNIT
 			::printf(
 				"| %ls | %.4lfms | %.4lfms | %.4lfms | %lld | %.2lfms |\n",
-				pf._szName,
-				(pf._dTotalTime / pf._iCall) * MS_PER_SEC,
-				pf._dMin[0] * MS_PER_SEC,
-				pf._dMax[0] * MS_PER_SEC,
-				pf._iCall,
-				pf._dTotalTime * MS_PER_SEC);
+				result._szName,
+				(result._dTotalTime / result._iCall) * MS_PER_SEC,
+				result._dMin[0] * MS_PER_SEC,
+				result._dMax[0] * MS_PER_SEC,
+				result._iCall,
+				result._dTotalTime * MS_PER_SEC);
 #endif
 
 #ifdef USE_NS_UNIT
 			::printf(
 				"| %ls | %.4lfμs | %.4lfμs | %.4lfμs | %lld | %.2lfμs |\n",
-				pf._szName,
-				(pf._dTotalTime / pf._iCall) * NS_PER_SEC,
-				pf._dMin[0] * NS_PER_SEC,
-				pf._dMax[0] * NS_PER_SEC,
-				pf._iCall,
-				pf._dTotalTime * NS_PER_SEC);
+				result._szName,
+				(result._dTotalTime / result._iCall) * NS_PER_SEC,
+				result._dMin[0] * NS_PER_SEC,
+				result._dMax[0] * NS_PER_SEC,
+				result._iCall,
+				result._dTotalTime * NS_PER_SEC);
 #endif
 
 			::printf("----------------------------------------------\n");
+			result._lFlag = complete;
+			WakeByAddressSingle(&result._lFlag);
+
 			idx++;
 		}
 	}
-
-	RestartAllProfiler();
 }
 
-void CProfilerManager::ProfileDataOutText(const WCHAR* szFileName)
+void CProfilerManager::SaveResult(const wchar_t* szFileName)
 {
-	PauseAllProfiler();
-
 	char data[OUTPUT_SIZE] =
 		"\n----------------------------------------------\n"
 		"| Name | Average | Min | Max | Call | Total |\n"
@@ -270,55 +243,230 @@ void CProfilerManager::ProfileDataOutText(const WCHAR* szFileName)
 	vector<CProfiler*>::iterator iter = _profilers.begin();
 	for (; iter != _profilers.end(); iter++)
 	{
-		CProfiler* p = *iter;
+		CProfiler* pf = *iter;
 
 		int idx = 0;
 		char buffer[BUFFER_SIZE];
-		while (p->_profileResults[idx]._lFlag != none)
+		while (pf->_profileResults[idx]._lFlag != none)
 		{
-			_PROFILE_RESULT& pf = p->_profileResults[idx];
+			_PROFILE_RESULT& result = pf->_profileResults[idx];
+			WaitOnAddress(&result._lFlag, &_underwayFlag, sizeof(LONG), INFINITE);
+			result._lFlag = pause;
+
 			memset(buffer, '\0', BUFFER_SIZE);
 
 #ifdef USE_MS_UNIT
 			sprintf_s(buffer, BUFFER_SIZE,
 				"| %ls | %.4lfms | %.4lfms | %.4lfms | %lld | %.2lfms |\n",
-				pf._szName,
-				(pf._dTotalTime / pf._iCall) * MS_PER_SEC,
-				pf._dMin[0] * MS_PER_SEC,
-				pf._dMax[0] * MS_PER_SEC,
-				pf._iCall,
-				pf._dTotalTime * MS_PER_SEC);
+				result._szName,
+				(result._dTotalTime / result._iCall) * MS_PER_SEC,
+				result._dMin[0] * MS_PER_SEC,
+				result._dMax[0] * MS_PER_SEC,
+				result._iCall,
+				result._dTotalTime * MS_PER_SEC);
 #endif
 
 #ifdef USE_NS_UNIT
 
 			sprintf_s(buffer, BUFFER_SIZE,
 				"| %ls | %.4lfμs | %.4lfμs | %.4lfμs | %lld | %.2lfμs |\n",
-				pf._szName,
-				(pf._dTotalTime / pf._iCall) * NS_PER_SEC,
-				pf._dMin[0] * NS_PER_SEC,
-				pf._dMax[0] * NS_PER_SEC,
-				pf._iCall,
-				pf._dTotalTime * NS_PER_SEC);
+				result._szName,
+				(result._dTotalTime / result._iCall) * NS_PER_SEC,
+				result._dMin[0] * NS_PER_SEC,
+				result._dMax[0] * NS_PER_SEC,
+				result._iCall,
+				result._dTotalTime * NS_PER_SEC);
 #endif
 
+
 			strcat_s(data, OUTPUT_SIZE, buffer);
+			result._lFlag = complete;
+			WakeByAddressSingle(&result._lFlag);
 			idx++;
 		}
 
 		strcat_s(data, OUTPUT_SIZE,
 			"----------------------------------------------\n\n");
 
+		wchar_t fileName[FILE_NAME_LEN] = { '\0', };
+		wprintf_s(fileName, FILE_NAME_LEN, "%s_%d.txt", szFileName, pf->_threadID);
+
 		FILE* file;
 		errno_t ret;
-		ret = _wfopen_s(&file, szFileName, L"wb");
+		ret = _wfopen_s(&file, fileName, L"wb");
 		if (ret != 0)
-			::wprintf(L"Fail to open %s : %d\n", szFileName, ret);
-		fwrite(data, strlen(data), 1, file);
-		fclose(file);
+			::wprintf(L"Fail to open %s : %d\n", fileName, ret);
+		::fwrite(data, strlen(data), 1, file);
+		::fclose(file);
 
-		::printf("Profile Data Out Success!\n");
+		::printf("Save Thread %d Result Success!\n", pf->_threadID);
+
+	}
+}
+
+void CProfilerManager::PrintResultAddup(void)
+{
+	vector<CProfiler*>::iterator profilerIter = _profilers.begin();
+	unordered_map<wchar_t*, _PROFILE_RESULT_FOR_ADDUP*>::iterator resultIter;
+
+	for (; profilerIter != _profilers.end(); profilerIter++)
+	{
+		CProfiler* pf = *profilerIter;
+
+		int idx = 0;
+		while (pf->_profileResults[idx]._lFlag != none)
+		{ 
+			_PROFILE_RESULT& result = pf->_profileResults[idx];
+			WaitOnAddress(&result._lFlag, &_underwayFlag, sizeof(LONG), INFINITE);
+			result._lFlag = pause;
+
+			resultIter = _resultAddupMap.find(result._szName);
+			if(resultIter != _resultAddupMap.end())
+			{
+				_PROFILE_RESULT_FOR_ADDUP* resultAddup = resultIter->second;
+
+				for (int i = 0; i < MINMAX_CNT; i++)
+				{
+					resultAddup->_dMin[i] += result._dMin[i];
+					resultAddup->_dMax[i] += result._dMax[i];
+				}
+				resultAddup->_iCall += result._iCall;
+				resultAddup->_dTotalTime += result._dTotalTime;
+				resultAddup->_profileCnt++;
+			}
+
+			result._lFlag = complete;
+			WakeByAddressSingle(&result._lFlag);
+			idx++;
+		}
 	}
 
-	RestartAllProfiler();
+	::printf(
+		"\n----------------------------------------------\n"
+		"| Name | Average | Min | Max | Call | Total |\n"
+		"----------------------------------------------\n");
+
+	resultIter = _resultAddupMap.begin();
+	for(; resultIter != _resultAddupMap.end(); resultIter++)
+	{
+		_PROFILE_RESULT_FOR_ADDUP* resultAddup = resultIter->second;
+		if (resultAddup->_profileCnt == 0) continue;
+
+#ifdef USE_MS_UNIT
+		::printf(
+			"| %ls | %.4lfms | %.4lfms | %.4lfms | %lld | %.2lfms |\n",
+			resultIter->first,
+			(resultAddup->_dTotalTime / resultAddup->_iCall) * MS_PER_SEC / resultAddup ->_profileCnt,
+			resultAddup->_dMin[0] * MS_PER_SEC / resultAddup->_profileCnt,
+			resultAddup->_dMax[0] * MS_PER_SEC / resultAddup->_profileCnt,
+			resultAddup->_iCall / resultAddup->_profileCnt,
+			resultAddup->_dTotalTime * MS_PER_SEC / resultAddup->_profileCnt);
+#endif
+
+#ifdef USE_NS_UNIT
+		::printf(
+			"| %ls | %.4lfμs | %.4lfμs | %.4lfμs | %lld | %.2lfμs |\n",
+			resultIter->first,
+			(resultAddup->_dTotalTime / resultAddup->_iCall) * NS_PER_SEC / resultAddup->_profileCnt,
+			resultAddup->_dMin[0] * NS_PER_SEC / resultAddup->_profileCnt,
+			resultAddup->_dMax[0] * NS_PER_SEC / resultAddup->_profileCnt,
+			resultAddup->_iCall / resultAddup->_profileCnt,
+			resultAddup->_dTotalTime * NS_PER_SEC / resultAddup->_profileCnt);
+#endif	
+	}
+
+	::printf("\n----------------------------------------------\n");
+}
+
+void CProfilerManager::SaveResultAddup(const wchar_t* szFileName)
+{
+	vector<CProfiler*>::iterator profilerIter = _profilers.begin();
+	unordered_map<wchar_t*, _PROFILE_RESULT_FOR_ADDUP*>::iterator resultIter;
+
+	for (; profilerIter != _profilers.end(); profilerIter++)
+	{
+		CProfiler* pf = *profilerIter;
+
+		int idx = 0;
+		while (pf->_profileResults[idx]._lFlag != none)
+		{
+			_PROFILE_RESULT& result = pf->_profileResults[idx];
+			WaitOnAddress(&result._lFlag, &_underwayFlag, sizeof(LONG), INFINITE);
+			result._lFlag = pause;
+
+			resultIter = _resultAddupMap.find(result._szName);
+			_PROFILE_RESULT_FOR_ADDUP* resultAddup = resultIter->second;
+
+			for (int i = 0; i < MINMAX_CNT; i++)
+			{
+				resultAddup->_dMin[i] += result._dMin[i];
+				resultAddup->_dMax[i] += result._dMax[i];
+			}
+			resultAddup->_iCall += result._iCall;
+			resultAddup->_dTotalTime += result._dTotalTime;
+			resultAddup->_profileCnt++;
+
+			result._lFlag = complete;
+			WakeByAddressSingle(&result._lFlag);
+			idx++;
+		}
+	}
+
+	char data[OUTPUT_SIZE] =
+		"\n----------------------------------------------\n"
+		"| Name | Average | Min | Max | Call | Total |\n"
+		"----------------------------------------------\n";
+
+	char buffer[BUFFER_SIZE];
+
+	resultIter = _resultAddupMap.begin();
+	for (; resultIter != _resultAddupMap.end(); resultIter++)
+	{
+		_PROFILE_RESULT_FOR_ADDUP* resultAddup = resultIter->second;
+		if (resultAddup->_profileCnt == 0) continue;
+		
+		memset(buffer, '\0', BUFFER_SIZE);
+
+#ifdef USE_MS_UNIT
+		sprintf_s(buffer, BUFFER_SIZE,
+			"| %ls | %.4lfms | %.4lfms | %.4lfms | %lld | %.2lfms |\n",
+			resultIter->first,
+			(resultAddup->_dTotalTime / resultAddup->_iCall) * MS_PER_SEC / resultAddup->_profileCnt,
+			resultAddup->_dMin[0] * MS_PER_SEC / resultAddup->_profileCnt,
+			resultAddup->_dMax[0] * MS_PER_SEC / resultAddup->_profileCnt,
+			resultAddup->_iCall / resultAddup->_profileCnt,
+			resultAddup->_dTotalTime * MS_PER_SEC / resultAddup->_profileCnt);
+#endif
+
+#ifdef USE_NS_UNIT
+
+		sprintf_s(buffer, BUFFER_SIZE,
+			"| %ls | %.4lfms | %.4lfms | %.4lfms | %lld | %.2lfms |\n",
+			resultAddup->_szName,
+			(resultAddup->_dTotalTime / resultAddup->_iCall) * NS_PER_SEC / resultAddup->_profileCnt,
+			resultAddup->_dMin[0] * NS_PER_SEC / resultAddup->_profileCnt,
+			resultAddup->_dMax[0] * NS_PER_SEC / resultAddup->_profileCnt,
+			resultAddup->_iCall / resultAddup->_profileCnt,
+			resultAddup->_dTotalTime * NS_PER_SEC / resultAddup->_profileCnt);
+#endif
+
+		strcat_s(data, OUTPUT_SIZE, buffer);
+
+	}
+
+	strcat_s(data, OUTPUT_SIZE,
+		"----------------------------------------------\n\n");
+
+	wchar_t fileName[FILE_NAME_LEN] = { '\0', };
+	wprintf_s(fileName, FILE_NAME_LEN, "%s.txt", szFileName);
+
+	FILE* file;
+	errno_t ret;
+	ret = _wfopen_s(&file, fileName, L"wb");
+	if (ret != 0)
+		::wprintf(L"Fail to open %s : %d\n", fileName, ret);
+	fwrite(data, strlen(data), 1, file);
+	fclose(file);
+
+	::printf("Save Addup Result Success!\n");
 }

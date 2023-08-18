@@ -7,6 +7,10 @@
 #pragma comment(lib, "Synchronization.lib")
 #pragma comment(lib, "winmm.lib")
 
+#ifdef USE_STLS
+__declspec (thread) CProfiler* pSTLSProfiler = new CProfiler;
+#endif
+
 #define threadCnt 6
 bool g_bTerminate = false;
 
@@ -34,10 +38,24 @@ int wmain(int argc, wchar_t* argv[])
 			g_bTerminate = true;
 		}
 
-		if (GetAsyncKeyState(VK_SPACE))
+		if (GetAsyncKeyState(0x31))
 		{
-			PRO_PRINT_CONSOLE();
-			PRO_FILE_OUT(L"output.txt");
+			PRO_PRINT();
+		}
+
+		if (GetAsyncKeyState(0x32))
+		{
+			PRO_SAVE(L"result");
+		}
+
+		if (GetAsyncKeyState(0x33))
+		{
+			PRO_PRINT_ADDUP();
+		}
+
+		if (GetAsyncKeyState(0x34))
+		{
+			PRO_SAVE_ADDUP(L"result");
 		}
 	}
 
@@ -51,6 +69,8 @@ int wmain(int argc, wchar_t* argv[])
 unsigned WINAPI Func1(void* arg)
 {
 	::printf("\nThread %d Start!\n", GetCurrentThreadId());
+	PRO_SET(pSTLSProfiler, GetCurrentThreadId());
+
 	int a = 0;
 
 	while(!g_bTerminate)
@@ -65,11 +85,14 @@ unsigned WINAPI Func1(void* arg)
 	}
 
 	::printf("\nThread %d Terminate!\n", GetCurrentThreadId());
+	return 0;
 }
 
 unsigned WINAPI Func2(void* arg)
 {
 	::printf("\nThread %d Start!\n", GetCurrentThreadId());
+	PRO_SET(pSTLSProfiler, GetCurrentThreadId());
+
 	int a = 0;
 	int b = 0;
 
@@ -88,14 +111,18 @@ unsigned WINAPI Func2(void* arg)
 	}
 
 	::printf("\nThread %d Terminate!\n", GetCurrentThreadId());
+	return 0;
 }
 
 unsigned WINAPI Func3(void* arg)
 {
 	::printf("\nThread %d Start!\n", GetCurrentThreadId());
+	PRO_SET(pSTLSProfiler, GetCurrentThreadId());
+
 	int a = 0;
 	int b = 0;
 	int c = 5;
+
 	while (!g_bTerminate)
 	{
 		PRO_BEGIN(L"Func 3-1");
@@ -113,4 +140,5 @@ unsigned WINAPI Func3(void* arg)
 	}
 
 	::printf("\nThread %d Terminate!\n", GetCurrentThreadId());
+	return 0;
 }
