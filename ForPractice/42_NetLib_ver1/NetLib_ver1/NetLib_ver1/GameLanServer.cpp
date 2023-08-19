@@ -1,13 +1,13 @@
 #include "GameLanServer.h"
 #include "Main.h"
-
+#define dfSESSION_MAX 10000
 GameLanServer::GameLanServer()
 {
 	SYSTEM_INFO si;
 	GetSystemInfo(&si);
 	int cpuCnt = (int)si.dwNumberOfProcessors;
 
-	if (!NetworkStart(dfSERVER_IP, dfLANSERVER_PORT, cpuCnt, false, 50))
+	if (!NetworkStart(dfSERVER_IP, dfLANSERVER_PORT, cpuCnt, false, dfSESSION_MAX))
 		g_bShutdown = true;
 }
 

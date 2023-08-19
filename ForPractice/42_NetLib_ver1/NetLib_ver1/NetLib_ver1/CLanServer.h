@@ -30,10 +30,13 @@ protected:
 	virtual void OnError(int errorCode, wchar_t* errorMsg) = 0;
 
 protected:
-	int GetAcceptTPS() { return _acceptTPS; }
-	int GetRecvMsgTPS() { return _recvMsgTPS; }
-	int GetSendMsgTPS() { return _sendMsgTPS; }
-	long GetSessionCount() { return _sessionCnt; }
+	inline int GetAcceptTotal() { return _acceptTotal; }
+	inline int GetDisconnectTotal() { return _disconnectTotal; }
+	inline int GetAcceptTPS() { return _acceptTPS; }
+	inline int GetDisconnectTPS() { return _disconnectTPS; }
+	inline int GetRecvMsgTPS() { return _recvMsgTPS; }
+	inline int GetSendMsgTPS() { return _sendMsgTPS; }
+	inline long GetSessionCount() { return _sessionCnt; }
 
 // Called in Network Library
 private:
@@ -63,10 +66,16 @@ private:
 	SRWLOCK _SessionMapLock;
 
 private:
+	int _acceptTotal = 0;
+	int _disconnectTotal = 0;
+
 	int _acceptTPS = 0;
+	int _disconnectTPS = 0;
 	int _recvMsgTPS = 0;
 	int _sendMsgTPS = 0;
+
 	int _acceptCnt = 0;
+	int _disconnectCnt = 0;
 	int _recvMsgCnt = 0;
 	int _sendMsgCnt = 0;
 

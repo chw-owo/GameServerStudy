@@ -184,7 +184,7 @@ void CLanServer::NetworkStop()
 		closesocket(pSession->_sock);
 		__int64 ID = pSession->_ID;
 		delete(pSession);
-		::printf("Disconnect Client(ID: % llu)\n", ID);
+		//::printf("Disconnect Client(ID: % llu)\n", ID);
 		iter = _SessionMap.erase(iter);
 	}
 
@@ -270,8 +270,7 @@ bool CLanServer::SendPacket(__int64 sessionID, CPacket* packet)
 		return false;
 	}
 
-	if (InterlockedIncrement(&pSession->_sendFlag) == 1)
-		SendPost(pSession);
+	SendPost(pSession);
 
 	LeaveCriticalSection(&pSession->_cs);
 	return true;
@@ -319,7 +318,7 @@ unsigned int __stdcall CLanServer::AcceptThread(void* arg)
 		pLanServer->_SessionMap.insert(make_pair(pSession->_ID, pSession));
 		ReleaseSRWLockExclusive(&pLanServer->_SessionMapLock);
 
-		::printf("Accept New Session (ID: %llu)\n", pSession->_ID);
+		//::printf("Accept New Session (ID: %llu)\n", pSession->_ID);
 		InterlockedIncrement(&pLanServer->_sessionCnt);
 		pLanServer->_acceptCnt++;
 		pLanServer->OnAcceptClient();
@@ -418,6 +417,7 @@ unsigned int __stdcall CLanServer::ReleaseThread(void* arg)
 			ReleaseSRWLockExclusive(&pLanServer->_SessionMapLock);
 			return 0;
 		}
+
 		pLanServer->_SessionMap.erase(iter);
 		ReleaseSRWLockExclusive(&pLanServer->_SessionMapLock);
 
@@ -428,7 +428,8 @@ unsigned int __stdcall CLanServer::ReleaseThread(void* arg)
 		__int64 ID = pSession->_ID;
 		delete(pSession);
 
-		::printf("%llu: Disconnect Client\n", ID);
+		//::printf("%llu: Disconnect Client\n", ID);
+		pLanServer->_disconnectCnt++;
 		InterlockedDecrement(&pLanServer->_sessionCnt);
 		pLanServer->OnReleaseClient(ID);
 	}
@@ -447,9 +448,30 @@ unsigned int __stdcall CLanServer::MonitorThread(void* arg)
 		if (!pLanServer->_alive) break;
 
 		pLanServer->_acceptTPS = pLanServer->_acceptCnt;
+		pLanServer->_disconnectTPS = pLanServer->_disconnectCnt;
 		pLanServer->_recvMsgTPS = pLanServer->_recvMsgCnt;
 		pLanServer->_sendMsgTPS = pLanServer->_sendMsgCnt;
+		
+		pLanServer->_acceptTotal += pLanServer->_acceptTPS;
+		pLanServer->_disconnectTotal += pLanServer->_disconnectTPS;
+
+		printf("\nSession: %d\n"
+			"Accept Total: %d\n"
+			"Disconnect Total: %d\n"
+			"Accept TPS: %d\n"
+			"Disconnect TPS: %d\n"
+			"Recv Msg TPS: %d\n"
+			"Send Msg TPS: %d\n\n",
+			pLanServer->GetSessionCount(),
+			pLanServer->GetAcceptTotal(),
+			pLanServer->GetDisconnectTotal(),
+			pLanServer->GetAcceptTPS(), 
+			pLanServer->GetDisconnectTPS(),
+			pLanServer->GetRecvMsgTPS(), 
+			pLanServer->GetSendMsgTPS());
+
 		pLanServer->_acceptCnt = 0;
+		pLanServer->_disconnectCnt = 0;
 		pLanServer->_recvMsgCnt = 0;
 		pLanServer->_sendMsgCnt = 0;
 	}
@@ -559,8 +581,8 @@ void CLanServer::HandleSendCP(__int64 sessionID, int sendBytes)
 	}
 
 	OnSend(pSession->_ID, sendBytes);
-	if (InterlockedDecrement(&pSession->_sendFlag) != 0)
-		SendPost(pSession);		
+	InterlockedExchange(&pSession->_sendFlag, 0);
+	SendPost(pSession);		
 
 	LeaveCriticalSection(&pSession->_cs);
 }
@@ -601,6 +623,14 @@ void CLanServer::RecvPost(CSession* pSession)
 
 void CLanServer::SendPost(CSession* pSession)
 {
+	if (pSession->_sendBuf.GetUseSize() == 0) return;
+	if(InterlockedExchange(&pSession->_sendFlag, 1) == 1) return;
+	if (pSession->_sendBuf.GetUseSize() == 0)
+	{
+		InterlockedExchange(&pSession->_sendFlag, 0);
+		return;
+	}
+
 	DWORD sendBytes;
 
 	int useSize = pSession->_sendBuf.GetUseSize();

@@ -12,7 +12,6 @@ int wmain(int argc, wchar_t* argv[])
         {
             pGameLanServer->NetworkStop();
         }
-        pGameLanServer->PrintMonitorData();
     }
 
     return 0;

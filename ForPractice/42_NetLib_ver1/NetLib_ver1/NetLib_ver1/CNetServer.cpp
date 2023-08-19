@@ -175,7 +175,7 @@ void CNetServer::NetworkStop()
 		closesocket(pSession->_sock);
 		__int64 ID = pSession->_ID;
 		delete(pSession);
-		::printf("Disconnect Client(ID: % llu)\n", ID);
+		//::printf("Disconnect Client(ID: % llu)\n", ID);
 		iter = _SessionMap.erase(iter);
 	}
 	_sessionCnt = 0;
@@ -421,7 +421,7 @@ unsigned int __stdcall CNetServer::ReleaseThread(void* arg)
 		__int64 ID = pSession->_ID;
 		delete(pSession);
 
-		::printf("Disconnect Client (ID: %llu)\n", ID);
+		//::printf("Disconnect Client (ID: %llu)\n", ID);
 		InterlockedDecrement(&pNetServer->_sessionCnt);
 		pNetServer->OnReleaseClient(ID);
 	}
