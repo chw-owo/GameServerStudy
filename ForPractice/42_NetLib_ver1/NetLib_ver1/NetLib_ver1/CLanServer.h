@@ -30,6 +30,7 @@ protected:
 	virtual void OnError(int errorCode, wchar_t* errorMsg) = 0;
 
 protected:
+	void UpdateMonitorData();
 	inline int GetAcceptTotal() { return _acceptTotal; }
 	inline int GetDisconnectTotal() { return _disconnectTotal; }
 	inline int GetAcceptTPS() { return _acceptTPS; }
@@ -43,7 +44,6 @@ private:
 	static unsigned int WINAPI AcceptThread(void* arg);
 	static unsigned int WINAPI NetworkThread(void* arg);
 	static unsigned int WINAPI ReleaseThread(void* arg);
-	static unsigned int WINAPI MonitorThread(void* arg);
 
 private:
 	void HandleRecvCP(__int64 sessionID, int recvBytes);
@@ -68,12 +68,10 @@ private:
 private:
 	int _acceptTotal = 0;
 	int _disconnectTotal = 0;
-
 	int _acceptTPS = 0;
 	int _disconnectTPS = 0;
 	int _recvMsgTPS = 0;
 	int _sendMsgTPS = 0;
-
 	int _acceptCnt = 0;
 	int _disconnectCnt = 0;
 	int _recvMsgCnt = 0;
@@ -82,11 +80,9 @@ private:
 private:
 	HANDLE _acceptThread;
 	HANDLE _releaseThread;
-	HANDLE _monitorThread;
 	HANDLE* _networkThreads;
 	HANDLE _hReleaseCP;
 	HANDLE _hNetworkCP;
-
 };
 
 

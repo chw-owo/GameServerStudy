@@ -13,6 +13,9 @@ public:
 private:
 	static GameLanServer _GameLanServer;
 
+public: 
+	void PrintNetworkData();
+
 private:
 	bool OnConnectRequest();
 	void OnAcceptClient();

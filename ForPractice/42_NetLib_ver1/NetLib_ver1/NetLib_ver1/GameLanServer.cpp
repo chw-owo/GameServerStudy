@@ -22,6 +22,26 @@ GameLanServer* GameLanServer::GetInstance()
     return  &_GameLanServer;
 }
 
+void GameLanServer::PrintNetworkData()
+{
+	UpdateMonitorData();
+
+	printf("Session: %d\n"
+		"Accept Total: %d\n"
+		"Disconnect Total: %d\n"
+		"Accept TPS: %d\n"
+		"Disconnect TPS: %d\n"
+		"Recv Msg TPS: %d\n"
+		"Send Msg TPS: %d\n\n",
+		GetSessionCount(),
+		GetAcceptTotal(),
+		GetDisconnectTotal(),
+		GetAcceptTPS(),
+		GetDisconnectTPS(),
+		GetRecvMsgTPS(),
+		GetSendMsgTPS());
+}
+
 bool GameLanServer::OnConnectRequest()
 {
     // TO-DO: Invalid Check

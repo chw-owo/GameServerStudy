@@ -14,9 +14,6 @@
     <Filter Include="GameServer">
       <UniqueIdentifier>{e01c4b7b-c18c-4fd4-90e7-fb600fa552e6}</UniqueIdentifier>
     </Filter>
-    <Filter Include="NetLib\Utils">
-      <UniqueIdentifier>{0e87b212-754c-4346-9271-0f2d0348eaa5}</UniqueIdentifier>
-    </Filter>
     <Filter Include="NetLib\Commons">
       <UniqueIdentifier>{662faf7e-a835-4d4b-9621-c4850b4575c8}</UniqueIdentifier>
     </Filter>
@@ -26,16 +23,22 @@
     <Filter Include="NetLib\Server">
       <UniqueIdentifier>{7375ce33-fc08-47ac-8dc4-737d1e49aab4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="NetLib\NetUtils">
+      <UniqueIdentifier>{0e87b212-754c-4346-9271-0f2d0348eaa5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Utils">
+      <UniqueIdentifier>{2a1b7f43-af66-4a1f-af17-c4f00724d073}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
       <Filter>Main</Filter>
     </ClCompile>
     <ClCompile Include="CRingBuffer.cpp">
-      <Filter>NetLib\Utils</Filter>
+      <Filter>NetLib\NetUtils</Filter>
     </ClCompile>
     <ClCompile Include="CPacket.cpp">
-      <Filter>NetLib\Utils</Filter>
+      <Filter>NetLib\NetUtils</Filter>
     </ClCompile>
     <ClCompile Include="GameLanServer.cpp">
       <Filter>GameServer</Filter>
@@ -58,13 +61,19 @@
     <ClCompile Include="GameNetServer.cpp">
       <Filter>GameServer</Filter>
     </ClCompile>
+    <ClCompile Include="CProcessCpuUsage.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="CProcessorCpuUsage.cpp">
+      <Filter>Utils</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CRingBuffer.h">
-      <Filter>NetLib\Utils</Filter>
+      <Filter>NetLib\NetUtils</Filter>
     </ClInclude>
     <ClInclude Include="CPacket.h">
-      <Filter>NetLib\Utils</Filter>
+      <Filter>NetLib\NetUtils</Filter>
     </ClInclude>
     <ClInclude Include="Main.h">
       <Filter>Main</Filter>
@@ -92,6 +101,12 @@
     </ClInclude>
     <ClInclude Include="GameNetServer.h">
       <Filter>GameServer</Filter>
+    </ClInclude>
+    <ClInclude Include="CProcessorCpuUsage.h">
+      <Filter>Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="CProcessCpuUsage.h">
+      <Filter>Utils</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -72,14 +72,6 @@ bool CLanServer::NetworkStart(const wchar_t* IP, short port,
 	CLanServer* pLanServer = this;
 	InitializeSRWLock(&_SessionMapLock);
 
-	// Create Monitor Thread
-	_monitorThread = (HANDLE)_beginthreadex(NULL, 0, MonitorThread, pLanServer, 0, nullptr);
-	if (_monitorThread == NULL)
-	{
-		::printf("Error! %s(%d)\n", __func__, __LINE__);
-		return false;
-	}
-
 	// Create Accept Thread
 	_acceptThread = (HANDLE)_beginthreadex(NULL, 0, AcceptThread, pLanServer, 0, nullptr);
 	if (_acceptThread == NULL)
@@ -172,7 +164,6 @@ void CLanServer::NetworkStop()
 	// Terminate Release Threads
 	PostQueuedCompletionStatus(_hReleaseCP, 0, 0, 0);
 	WaitForSingleObject(_releaseThread, INFINITE);
-	WaitForSingleObject(_monitorThread, INFINITE);
 
 	// Release All Session
 	closesocket(socktmp);
@@ -195,7 +186,6 @@ void CLanServer::NetworkStop()
 	CloseHandle(_hNetworkCP);
 	CloseHandle(_acceptThread);
 	CloseHandle(_releaseThread);
-	CloseHandle(_monitorThread);
 	for (int i = 0; i < _numOfWorkerThreads; i++)
 		CloseHandle(_networkThreads[i]);
 	delete[] _networkThreads;
@@ -437,47 +427,20 @@ unsigned int __stdcall CLanServer::ReleaseThread(void* arg)
 	return 0;
 }
 
-unsigned int __stdcall CLanServer::MonitorThread(void* arg)
+void CLanServer::UpdateMonitorData()
 {
-	CLanServer* pLanServer = (CLanServer*)arg;
-	int threadID = GetCurrentThreadId();
-	
-	for(;;)
-	{
-		Sleep(1000);
-		if (!pLanServer->_alive) break;
-
-		pLanServer->_acceptTPS = pLanServer->_acceptCnt;
-		pLanServer->_disconnectTPS = pLanServer->_disconnectCnt;
-		pLanServer->_recvMsgTPS = pLanServer->_recvMsgCnt;
-		pLanServer->_sendMsgTPS = pLanServer->_sendMsgCnt;
+	_acceptTPS = _acceptCnt;
+	_disconnectTPS = _disconnectCnt;
+	_recvMsgTPS = _recvMsgCnt;
+	_sendMsgTPS = _sendMsgCnt;
 		
-		pLanServer->_acceptTotal += pLanServer->_acceptTPS;
-		pLanServer->_disconnectTotal += pLanServer->_disconnectTPS;
+	_acceptTotal += _acceptTPS;
+	_disconnectTotal += _disconnectTPS;
 
-		printf("\nSession: %d\n"
-			"Accept Total: %d\n"
-			"Disconnect Total: %d\n"
-			"Accept TPS: %d\n"
-			"Disconnect TPS: %d\n"
-			"Recv Msg TPS: %d\n"
-			"Send Msg TPS: %d\n\n",
-			pLanServer->GetSessionCount(),
-			pLanServer->GetAcceptTotal(),
-			pLanServer->GetDisconnectTotal(),
-			pLanServer->GetAcceptTPS(), 
-			pLanServer->GetDisconnectTPS(),
-			pLanServer->GetRecvMsgTPS(), 
-			pLanServer->GetSendMsgTPS());
-
-		pLanServer->_acceptCnt = 0;
-		pLanServer->_disconnectCnt = 0;
-		pLanServer->_recvMsgCnt = 0;
-		pLanServer->_sendMsgCnt = 0;
-	}
-
-	::printf("Monitor Thread Terminate (thread: %d)\n", threadID);
-	return 0;
+	_acceptCnt = 0;
+	_disconnectCnt = 0;
+	_recvMsgCnt = 0;
+	_sendMsgCnt = 0;
 }
 
 void CLanServer::HandleRecvCP(__int64 sessionID, int recvBytes)
