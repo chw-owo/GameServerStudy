@@ -12,6 +12,7 @@ __declspec (thread) CProfiler* pSTLSProfiler = new CProfiler;
 #endif
 
 #define threadCnt 6
+#define clickTerm 1000
 bool g_bTerminate = false;
 
 unsigned WINAPI Func1(void* arg);
@@ -30,7 +31,8 @@ int wmain(int argc, wchar_t* argv[])
 	arrThread[4] = (HANDLE)_beginthreadex(NULL, 0, Func3, NULL, 0, nullptr);
 	arrThread[5] = (HANDLE)_beginthreadex(NULL, 0, Func3, NULL, 0, nullptr);
 
-	
+	ULONGLONG click = GetTickCount64();
+
 	while (!g_bTerminate)
 	{
 		if (GetAsyncKeyState(VK_ESCAPE))
@@ -38,24 +40,28 @@ int wmain(int argc, wchar_t* argv[])
 			g_bTerminate = true;
 		}
 
-		if (GetAsyncKeyState(0x31))
+		if (GetAsyncKeyState(0x31) && (GetTickCount64() - click) > clickTerm)
 		{
 			PRO_PRINT();
+			click = GetTickCount64();
 		}
 
-		if (GetAsyncKeyState(0x32))
+		if (GetAsyncKeyState(0x32) && (GetTickCount64() - click) > clickTerm)
 		{
 			PRO_SAVE(L"result");
+			click = GetTickCount64();
 		}
 
-		if (GetAsyncKeyState(0x33))
+		if (GetAsyncKeyState(0x33) && (GetTickCount64() - click) > clickTerm)
 		{
 			PRO_PRINT_ADDUP();
+			click = GetTickCount64();
 		}
 
-		if (GetAsyncKeyState(0x34))
+		if (GetAsyncKeyState(0x34) && (GetTickCount64() - click) > clickTerm)
 		{
 			PRO_SAVE_ADDUP(L"result");
+			click = GetTickCount64();
 		}
 	}
 

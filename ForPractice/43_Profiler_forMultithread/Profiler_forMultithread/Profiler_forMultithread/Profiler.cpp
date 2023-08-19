@@ -1,11 +1,8 @@
 #include "Profiler.h"
 
-// TO-DO
-// wchar* 을 key로 쓸 수 있게 cmp 만들어서 넣어보기
-
 CProfilerManager* g_pManager = CProfilerManager::GetInstance();
 
-void CProfiler::ProfileBegin(const wchar_t* _szName)
+void CProfiler::ProfileBegin(wstring _szName)
 {
 	int i = 0;
 
@@ -15,7 +12,7 @@ void CProfiler::ProfileBegin(const wchar_t* _szName)
 			&_pauseFlag, sizeof(LONG), INFINITE);
 
 		if (_profileResults[i]._lFlag != none &&
-			wcscmp(_profileResults[i]._szName, _szName) == 0)
+			_profileResults[i]._szName == _szName)
 		{
 			_PROFILE_RESULT& result = _profileResults[i];
 			result._lFlag = underway;
@@ -27,9 +24,9 @@ void CProfiler::ProfileBegin(const wchar_t* _szName)
 		{
 			_PROFILE_RESULT& result = _profileResults[i];
 			result._lFlag = underway;
-			wcscpy_s(result._szName, NAME_LEN, _szName);
+			result._szName = _szName;
 
-			unordered_map<wchar_t*, _PROFILE_RESULT_FOR_ADDUP*>::iterator iter
+			unordered_map<wstring, _PROFILE_RESULT_FOR_ADDUP*>::iterator iter
 				= g_pManager->_resultAddupMap.find(result._szName);
 
 			if (iter == g_pManager->_resultAddupMap.end())
@@ -60,7 +57,7 @@ void CProfiler::ProfileBegin(const wchar_t* _szName)
 	}
 }
 
-void CProfiler::ProfileEnd(const wchar_t* _szName)
+void CProfiler::ProfileEnd(wstring _szName)
 {
 	int i = 0;
 	for (; i < PROFILE_CNT; i++)
@@ -69,7 +66,7 @@ void CProfiler::ProfileEnd(const wchar_t* _szName)
 			&_pauseFlag, sizeof(LONG), INFINITE);
 
 		if (_profileResults[i]._lFlag != none &&
-			wcscmp(_profileResults[i]._szName, _szName) == 0)
+			_profileResults[i]._szName == _szName)
 		{
 			_PROFILE_RESULT& result = _profileResults[i];
 
@@ -174,7 +171,6 @@ CProfilerManager* CProfilerManager::GetInstance()
 void CProfilerManager::SetProfiler(CProfiler* pProfiler, DWORD threadID)
 {
 #ifdef USE_STLS
-
 	pProfiler->_threadID = threadID;
 	_profilers.push_back(pProfiler);
 
@@ -205,7 +201,7 @@ void CProfilerManager::PrintResult(void)
 #ifdef USE_MS_UNIT
 			::printf(
 				"| %ls | %.4lfms | %.4lfms | %.4lfms | %lld | %.2lfms |\n",
-				result._szName,
+				result._szName.c_str(),
 				(result._dTotalTime / result._iCall) * MS_PER_SEC,
 				result._dMin[0] * MS_PER_SEC,
 				result._dMax[0] * MS_PER_SEC,
@@ -216,7 +212,7 @@ void CProfilerManager::PrintResult(void)
 #ifdef USE_NS_UNIT
 			::printf(
 				"| %ls | %.4lfμs | %.4lfμs | %.4lfμs | %lld | %.2lfμs |\n",
-				result._szName,
+				result._szName.c_str(),
 				(result._dTotalTime / result._iCall) * NS_PER_SEC,
 				result._dMin[0] * NS_PER_SEC,
 				result._dMax[0] * NS_PER_SEC,
@@ -235,14 +231,14 @@ void CProfilerManager::PrintResult(void)
 
 void CProfilerManager::SaveResult(const wchar_t* szFileName)
 {
-	char data[OUTPUT_SIZE] =
-		"\n----------------------------------------------\n"
-		"| Name | Average | Min | Max | Call | Total |\n"
-		"----------------------------------------------\n";
-
 	vector<CProfiler*>::iterator iter = _profilers.begin();
 	for (; iter != _profilers.end(); iter++)
 	{
+		char data[OUTPUT_SIZE] =
+			"\n----------------------------------------------\n"
+			"| Name | Average | Min | Max | Call | Total |\n"
+			"----------------------------------------------\n";
+
 		CProfiler* pf = *iter;
 
 		int idx = 0;
@@ -258,7 +254,7 @@ void CProfilerManager::SaveResult(const wchar_t* szFileName)
 #ifdef USE_MS_UNIT
 			sprintf_s(buffer, BUFFER_SIZE,
 				"| %ls | %.4lfms | %.4lfms | %.4lfms | %lld | %.2lfms |\n",
-				result._szName,
+				result._szName.c_str(),
 				(result._dTotalTime / result._iCall) * MS_PER_SEC,
 				result._dMin[0] * MS_PER_SEC,
 				result._dMax[0] * MS_PER_SEC,
@@ -270,14 +266,13 @@ void CProfilerManager::SaveResult(const wchar_t* szFileName)
 
 			sprintf_s(buffer, BUFFER_SIZE,
 				"| %ls | %.4lfμs | %.4lfμs | %.4lfμs | %lld | %.2lfμs |\n",
-				result._szName,
+				result._szName.c_str(),
 				(result._dTotalTime / result._iCall) * NS_PER_SEC,
 				result._dMin[0] * NS_PER_SEC,
 				result._dMax[0] * NS_PER_SEC,
 				result._iCall,
 				result._dTotalTime * NS_PER_SEC);
 #endif
-
 
 			strcat_s(data, OUTPUT_SIZE, buffer);
 			result._lFlag = complete;
@@ -289,7 +284,7 @@ void CProfilerManager::SaveResult(const wchar_t* szFileName)
 			"----------------------------------------------\n\n");
 
 		wchar_t fileName[FILE_NAME_LEN] = { '\0', };
-		wprintf_s(fileName, FILE_NAME_LEN, "%s_%d.txt", szFileName, pf->_threadID);
+		swprintf_s(fileName, FILE_NAME_LEN, L"%s_%d.txt", szFileName, pf->_threadID);
 
 		FILE* file;
 		errno_t ret;
@@ -307,7 +302,7 @@ void CProfilerManager::SaveResult(const wchar_t* szFileName)
 void CProfilerManager::PrintResultAddup(void)
 {
 	vector<CProfiler*>::iterator profilerIter = _profilers.begin();
-	unordered_map<wchar_t*, _PROFILE_RESULT_FOR_ADDUP*>::iterator resultIter;
+	unordered_map<wstring, _PROFILE_RESULT_FOR_ADDUP*>::iterator resultIter;
 
 	for (; profilerIter != _profilers.end(); profilerIter++)
 	{
@@ -332,7 +327,6 @@ void CProfilerManager::PrintResultAddup(void)
 				}
 				resultAddup->_iCall += result._iCall;
 				resultAddup->_dTotalTime += result._dTotalTime;
-				resultAddup->_profileCnt++;
 			}
 
 			result._lFlag = complete;
@@ -350,28 +344,27 @@ void CProfilerManager::PrintResultAddup(void)
 	for(; resultIter != _resultAddupMap.end(); resultIter++)
 	{
 		_PROFILE_RESULT_FOR_ADDUP* resultAddup = resultIter->second;
-		if (resultAddup->_profileCnt == 0) continue;
 
 #ifdef USE_MS_UNIT
 		::printf(
 			"| %ls | %.4lfms | %.4lfms | %.4lfms | %lld | %.2lfms |\n",
-			resultIter->first,
-			(resultAddup->_dTotalTime / resultAddup->_iCall) * MS_PER_SEC / resultAddup ->_profileCnt,
-			resultAddup->_dMin[0] * MS_PER_SEC / resultAddup->_profileCnt,
-			resultAddup->_dMax[0] * MS_PER_SEC / resultAddup->_profileCnt,
-			resultAddup->_iCall / resultAddup->_profileCnt,
-			resultAddup->_dTotalTime * MS_PER_SEC / resultAddup->_profileCnt);
+			resultIter->first.c_str(),
+			(resultAddup->_dTotalTime / resultAddup->_iCall) * MS_PER_SEC,
+			resultAddup->_dMin[0] * MS_PER_SEC,
+			resultAddup->_dMax[0] * MS_PER_SEC,
+			resultAddup->_iCall,
+			resultAddup->_dTotalTime * MS_PER_SEC);
 #endif
 
 #ifdef USE_NS_UNIT
 		::printf(
 			"| %ls | %.4lfμs | %.4lfμs | %.4lfμs | %lld | %.2lfμs |\n",
-			resultIter->first,
-			(resultAddup->_dTotalTime / resultAddup->_iCall) * NS_PER_SEC / resultAddup->_profileCnt,
-			resultAddup->_dMin[0] * NS_PER_SEC / resultAddup->_profileCnt,
-			resultAddup->_dMax[0] * NS_PER_SEC / resultAddup->_profileCnt,
-			resultAddup->_iCall / resultAddup->_profileCnt,
-			resultAddup->_dTotalTime * NS_PER_SEC / resultAddup->_profileCnt);
+			resultIter->first.c_str(),
+			(resultAddup->_dTotalTime / resultAddup->_iCall) * NS_PER_SEC,
+			resultAddup->_dMin[0] * NS_PER_SEC,
+			resultAddup->_dMax[0] * NS_PER_SEC,
+			resultAddup->_iCall,
+			resultAddup->_dTotalTime * NS_PER_SEC);
 #endif	
 	}
 
@@ -381,7 +374,7 @@ void CProfilerManager::PrintResultAddup(void)
 void CProfilerManager::SaveResultAddup(const wchar_t* szFileName)
 {
 	vector<CProfiler*>::iterator profilerIter = _profilers.begin();
-	unordered_map<wchar_t*, _PROFILE_RESULT_FOR_ADDUP*>::iterator resultIter;
+	unordered_map<wstring, _PROFILE_RESULT_FOR_ADDUP*>::iterator resultIter;
 
 	for (; profilerIter != _profilers.end(); profilerIter++)
 	{
@@ -404,7 +397,6 @@ void CProfilerManager::SaveResultAddup(const wchar_t* szFileName)
 			}
 			resultAddup->_iCall += result._iCall;
 			resultAddup->_dTotalTime += result._dTotalTime;
-			resultAddup->_profileCnt++;
 
 			result._lFlag = complete;
 			WakeByAddressSingle(&result._lFlag);
@@ -422,32 +414,30 @@ void CProfilerManager::SaveResultAddup(const wchar_t* szFileName)
 	resultIter = _resultAddupMap.begin();
 	for (; resultIter != _resultAddupMap.end(); resultIter++)
 	{
-		_PROFILE_RESULT_FOR_ADDUP* resultAddup = resultIter->second;
-		if (resultAddup->_profileCnt == 0) continue;
-		
+		_PROFILE_RESULT_FOR_ADDUP* resultAddup = resultIter->second;	
 		memset(buffer, '\0', BUFFER_SIZE);
 
 #ifdef USE_MS_UNIT
 		sprintf_s(buffer, BUFFER_SIZE,
 			"| %ls | %.4lfms | %.4lfms | %.4lfms | %lld | %.2lfms |\n",
-			resultIter->first,
-			(resultAddup->_dTotalTime / resultAddup->_iCall) * MS_PER_SEC / resultAddup->_profileCnt,
-			resultAddup->_dMin[0] * MS_PER_SEC / resultAddup->_profileCnt,
-			resultAddup->_dMax[0] * MS_PER_SEC / resultAddup->_profileCnt,
-			resultAddup->_iCall / resultAddup->_profileCnt,
-			resultAddup->_dTotalTime * MS_PER_SEC / resultAddup->_profileCnt);
+			resultIter->first.c_str(),
+			(resultAddup->_dTotalTime / resultAddup->_iCall) * MS_PER_SEC,
+			resultAddup->_dMin[0] * MS_PER_SEC,
+			resultAddup->_dMax[0] * MS_PER_SEC,
+			resultAddup->_iCall,
+			resultAddup->_dTotalTime * MS_PER_SEC);
 #endif
 
 #ifdef USE_NS_UNIT
 
 		sprintf_s(buffer, BUFFER_SIZE,
 			"| %ls | %.4lfms | %.4lfms | %.4lfms | %lld | %.2lfms |\n",
-			resultAddup->_szName,
-			(resultAddup->_dTotalTime / resultAddup->_iCall) * NS_PER_SEC / resultAddup->_profileCnt,
-			resultAddup->_dMin[0] * NS_PER_SEC / resultAddup->_profileCnt,
-			resultAddup->_dMax[0] * NS_PER_SEC / resultAddup->_profileCnt,
-			resultAddup->_iCall / resultAddup->_profileCnt,
-			resultAddup->_dTotalTime * NS_PER_SEC / resultAddup->_profileCnt);
+			resultAddup->_szName.c_str(),
+			(resultAddup->_dTotalTime / resultAddup->_iCall) * NS_PER_SEC,
+			resultAddup->_dMin[0] * NS_PER_SEC,
+			resultAddup->_dMax[0] * NS_PER_SEC ,
+			resultAddup->_iCall,
+			resultAddup->_dTotalTime * NS_PER_SEC);
 #endif
 
 		strcat_s(data, OUTPUT_SIZE, buffer);
@@ -458,7 +448,7 @@ void CProfilerManager::SaveResultAddup(const wchar_t* szFileName)
 		"----------------------------------------------\n\n");
 
 	wchar_t fileName[FILE_NAME_LEN] = { '\0', };
-	wprintf_s(fileName, FILE_NAME_LEN, "%s.txt", szFileName);
+	swprintf_s(fileName, FILE_NAME_LEN, L"%s.txt", szFileName);
 
 	FILE* file;
 	errno_t ret;

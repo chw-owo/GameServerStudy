@@ -4,6 +4,7 @@
 #endif
 #include <windows.h>
 #include <iostream>
+#include <string>
 #include <float.h>
 #include <vector>
 #include <unordered_set>
@@ -57,7 +58,7 @@ class _PROFILE_RESULT
 {
 public:
 	long			_lFlag = none;							  // 프로파일 사용 여부 및 상태		  
-	wchar_t			_szName[NAME_LEN] = { '/0', };			  // 프로파일 샘플 이름
+	wstring			_szName;								  // 프로파일 샘플 이름
 	LARGE_INTEGER	_lStartTime;							  // 프로파일 샘플 실행 시간
 
 	double			_dTotalTime = 0;						  // 전체 사용시간 카운터 Time
@@ -69,7 +70,6 @@ public:
 class _PROFILE_RESULT_FOR_ADDUP
 {
 public:	  
-	int				_profileCnt = 0;
 	double			_dTotalTime = 0;						  // 전체 사용시간 카운터 Time
 	double			_dMin[MINMAX_CNT] = { 0, 0 }; // 최소 사용시간 카운터 Time
 	double			_dMax[MINMAX_CNT] = { 0, 0 };			  // 최대 사용시간 카운터 Time
@@ -82,8 +82,8 @@ class CProfiler
 	friend CProfilerManager;
 
 public:
-	void ProfileBegin(const wchar_t* _szName);
-	void ProfileEnd(const wchar_t* _szName);
+	void ProfileBegin(wstring _szName);
+	void ProfileEnd(wstring _szName);
 	void ProfileReset(void);
 
 private:
@@ -116,7 +116,7 @@ private:
 	long _underwayFlag = underway;
 
 public:
-	unordered_map<wchar_t*, _PROFILE_RESULT_FOR_ADDUP*> _resultAddupMap;
+	unordered_map<wstring, _PROFILE_RESULT_FOR_ADDUP*> _resultAddupMap;
 };
 
 extern CProfilerManager* g_pManager;
