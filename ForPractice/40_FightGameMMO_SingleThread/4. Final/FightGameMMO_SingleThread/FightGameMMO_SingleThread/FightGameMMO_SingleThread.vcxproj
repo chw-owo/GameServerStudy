@@ -135,15 +135,17 @@
   <ItemGroup>
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="ObjectPool.cpp" />
+    <ClCompile Include="ProcessCpuUsage.cpp" />
+    <ClCompile Include="ProcessorCpuUsage.cpp" />
     <ClCompile Include="Profiler.cpp" />
-    <ClCompile Include="RingBuffer.cpp" />
-    <ClCompile Include="SerializePacket.cpp" />
     <ClCompile Include="Server.cpp" />
     <ClCompile Include="SystemLog.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Main.h" />
     <ClInclude Include="ObjectPool.h" />
+    <ClInclude Include="ProcessCpuUsage.h" />
+    <ClInclude Include="ProcessorCpuUsage.h" />
     <ClInclude Include="Profiler.h" />
     <ClInclude Include="Protocol.h" />
     <ClInclude Include="RingBuffer.h" />

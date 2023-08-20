@@ -11,11 +11,10 @@
 #define dfNETWORK_IP L"0.0.0.0"
 #define dfNETWORK_PORT 20000
 
-#define dfDEFAULT_SESSIONS_NUM				6000
-#define dfDEFAULT_PLAYERS_NUM				6000
+#define dfSESSION_MAX						6000
+#define dfSPACKET_MAX						30000
 #define dfDEFAULT_PLAYERS_PER_SECTOR		1024
-#define dfDEFAULT_ACCEPTED_SESSIONS_NUM		128
-#define dfDEFAULT_DISCONNECT_SESSIONS_NUM	512
+#define dfDEFAULT_DISCONNECT_NUM			1024
 
 struct st_PACKET_HEADER
 {
@@ -333,10 +332,10 @@ struct st_PACKET_HEADER
 // 섹터 설정값
 //-----------------------------------------------------------------
 
-#define dfSECTOR_SIZE_X					256
-#define dfSECTOR_SIZE_Y					256
-#define dfSECTOR_CNT_X					(dfRANGE_MOVE_RIGHT / dfSECTOR_SIZE_X) + 2
-#define dfSECTOR_CNT_Y					(dfRANGE_MOVE_BOTTOM / dfSECTOR_SIZE_Y) + 2
+#define dfSECTOR_SIZE_X					200
+#define dfSECTOR_SIZE_Y					200
+#define dfSECTOR_CNT_X					(dfRANGE_MOVE_RIGHT / dfSECTOR_SIZE_X) + 4
+#define dfSECTOR_CNT_Y					(dfRANGE_MOVE_BOTTOM / dfSECTOR_SIZE_Y) + 4
 #define dfAROUND_SECTOR_NUM				9
 
 #endif

@@ -2,6 +2,8 @@
 #include "Main.h"
 #include <stdio.h>
 
+ // Test: 4800부터 Sync 발생
+
 Server::Server()
 {
 	int err;
@@ -14,6 +16,7 @@ Server::Server()
 	
 	_pSessionPool = new CObjectPool<Session>(dfSESSION_MAX, true);
 	_pPlayerPool = new CObjectPool<Player>(dfSESSION_MAX, true);
+	_pSPacketPool = new CObjectPool<SerializePacket>(dfSPACKET_MAX, false);
 
 	memset(_SessionMap, 0, dfSESSION_MAX * sizeof(Session*));
 	memset(_PlayerMap, 0, dfSESSION_MAX * sizeof(Player*));
@@ -516,11 +519,14 @@ void Server::DisconnectDeadSession()
 			}
 		}
 
-		SerializePacket buffer;
-		int deleteRet = SetSCPacket_DELETE_CHAR(&buffer, pPlayer->_ID);
-		EnqueueAroundSector(buffer.GetReadPtr(), deleteRet, pPlayer->_pSector);
+		SerializePacket* packet = _pSPacketPool->Alloc();
+
+		packet->Clear();
+		int deleteRet = SetSCPacket_DELETE_CHAR(packet, pPlayer->_ID);
+		EnqueueAroundSector(packet->GetReadPtr(), deleteRet, pPlayer->_pSector);
 		_pPlayerPool->Free(pPlayer);
-		
+		_pSPacketPool->Free(packet);
+
 		Session* pSession = _SessionMap[ID];
 		if (pSession == nullptr)
 		{
@@ -884,22 +890,24 @@ void Server::UpdateSector(Player* pPlayer, short direction)
 
 	// Send Data About My Player ==============================================
 
-	SerializePacket createMeToOther;
-	int createMeToOtherRet = SetSCPacket_CREATE_OTHER_CHAR(&createMeToOther,
+	SerializePacket* packet = _pSPacketPool->Alloc();
+
+	packet->Clear();
+	int createMeToOtherRet = SetSCPacket_CREATE_OTHER_CHAR(packet,
 		pPlayer->_ID, pPlayer->_direction, pPlayer->_x, pPlayer->_y, pPlayer->_hp);
 	for (int i = 0; i < sectorCnt; i++)
-		EnqueueOneSector(createMeToOther.GetReadPtr(), createMeToOtherRet, inSector[i]);
-
-	SerializePacket MoveMeToOther;
-	int MoveMeToOtherRet = SetSCPacket_MOVE_START(&MoveMeToOther,
+		EnqueueOneSector(packet->GetReadPtr(), createMeToOtherRet, inSector[i]);
+	
+	packet->Clear();
+	int MoveMeToOtherRet = SetSCPacket_MOVE_START(packet,
 		pPlayer->_ID, pPlayer->_moveDirection, pPlayer->_x, pPlayer->_y);
 	for (int i = 0; i < sectorCnt; i++)
-		EnqueueOneSector(MoveMeToOther.GetReadPtr(), MoveMeToOtherRet, inSector[i]);
+		EnqueueOneSector(packet->GetReadPtr(), MoveMeToOtherRet, inSector[i]);
 
-	SerializePacket deleteMeToOther;
-	int deleteMeToOtherRet = SetSCPacket_DELETE_CHAR(&deleteMeToOther, pPlayer->_ID);
+	packet->Clear();
+	int deleteMeToOtherRet = SetSCPacket_DELETE_CHAR(packet, pPlayer->_ID);
 	for (int i = 0; i < sectorCnt; i++)
-		EnqueueOneSector(deleteMeToOther.GetReadPtr(), deleteMeToOtherRet, outSector[i]);
+		EnqueueOneSector(packet->GetReadPtr(), deleteMeToOtherRet, outSector[i]);
 
 	// Send Data About Other Player ==============================================
 	
@@ -908,17 +916,17 @@ void Server::UpdateSector(Player* pPlayer, short direction)
 		vector<Player*>::iterator iter = inSector[i]->_players.begin();
 		for(; iter < inSector[i]->_players.end(); iter++)
 		{
-			SerializePacket createOther;
-			int createOtherRet = SetSCPacket_CREATE_OTHER_CHAR(&createOther,
+			packet->Clear();
+			int createOtherRet = SetSCPacket_CREATE_OTHER_CHAR(packet,
 				(*iter)->_ID, (*iter)->_direction, (*iter)->_x, (*iter)->_y, (*iter)->_hp);
-			EnqueueUnicast(createOther.GetReadPtr(), createOtherRet, pPlayer->_pSession);
+			EnqueueUnicast(packet->GetReadPtr(), createOtherRet, pPlayer->_pSession);
 
 			if((*iter)->_move)
 			{
-				SerializePacket MoveOther;
-				int MoveOtherRet = SetSCPacket_MOVE_START(&MoveOther,
+				packet->Clear();
+				int MoveOtherRet = SetSCPacket_MOVE_START(packet,
 					(*iter)->_ID, (*iter)->_moveDirection, (*iter)->_x, (*iter)->_y);
-				EnqueueUnicast(MoveOther.GetReadPtr(), MoveOtherRet, pPlayer->_pSession);
+				EnqueueUnicast(packet->GetReadPtr(), MoveOtherRet, pPlayer->_pSession);
 			}
 		}
 	}
@@ -928,14 +936,15 @@ void Server::UpdateSector(Player* pPlayer, short direction)
 		vector<Player*>::iterator iter = outSector[i]->_players.begin();
 		for (; iter < outSector[i]->_players.end(); iter++)
 		{
-			SerializePacket deleteOther;
-			int deleteOtherRet = SetSCPacket_DELETE_CHAR(&deleteOther, (*iter)->_ID);
-			EnqueueUnicast(deleteOther.GetReadPtr(), deleteOtherRet, pPlayer->_pSession);
+			packet->Clear();
+			int deleteOtherRet = SetSCPacket_DELETE_CHAR(packet, (*iter)->_ID);
+			EnqueueUnicast(packet->GetReadPtr(), deleteOtherRet, pPlayer->_pSession);
 		}
 	}
 
 	pPlayer->_pSector = newSector;
 	newSector->_players.push_back(pPlayer);
+	_pSPacketPool->Free(packet);
 
 	PRO_END(L"Content: Update Sector");
 }
@@ -946,15 +955,17 @@ void Server::CreatePlayer(Session* pSession)
 	_PlayerMap[pSession->_ID] = pPlayer;
 	SetSector(pPlayer);
 	
-	SerializePacket createMe;
-	int createMeRet = SetSCPacket_CREATE_MY_CHAR(&createMe,
-		pPlayer->_ID, pPlayer->_direction, pPlayer->_x, pPlayer->_y, pPlayer->_hp);
-	EnqueueUnicast(createMe.GetReadPtr(), createMeRet, pPlayer->_pSession);
+	SerializePacket* packet = _pSPacketPool->Alloc();
 
-	SerializePacket createMeToOther;
-	int createMeToOtherRet = SetSCPacket_CREATE_OTHER_CHAR(&createMeToOther,
+	packet->Clear();
+	int createMeRet = SetSCPacket_CREATE_MY_CHAR(packet,
 		pPlayer->_ID, pPlayer->_direction, pPlayer->_x, pPlayer->_y, pPlayer->_hp);
-	EnqueueAroundSector(createMeToOther.GetReadPtr(), 
+	EnqueueUnicast(packet->GetReadPtr(), createMeRet, pPlayer->_pSession);
+
+	packet->Clear();
+	int createMeToOtherRet = SetSCPacket_CREATE_OTHER_CHAR(packet,
+		pPlayer->_ID, pPlayer->_direction, pPlayer->_x, pPlayer->_y, pPlayer->_hp);
+	EnqueueAroundSector(packet->GetReadPtr(),
 		createMeToOtherRet, pPlayer->_pSector, pPlayer->_pSession);
 	
 	for (int i = 0; i < 8; i++)
@@ -963,10 +974,10 @@ void Server::CreatePlayer(Session* pSession)
 			= pPlayer->_pSector->_around[i]->_players.begin();
 		for (; iter < pPlayer->_pSector->_around[i]->_players.end(); iter++)
 		{
-			SerializePacket createOther;
-			int createOtherRet = SetSCPacket_CREATE_OTHER_CHAR(&createOther,
+			packet->Clear();
+			int createOtherRet = SetSCPacket_CREATE_OTHER_CHAR(packet,
 				(*iter)->_ID, (*iter)->_direction, (*iter)->_x, (*iter)->_y, (*iter)->_hp);
-			EnqueueUnicast(createOther.GetReadPtr(), createOtherRet, pPlayer->_pSession);
+			EnqueueUnicast(packet->GetReadPtr(), createOtherRet, pPlayer->_pSession);
 		}
 	}
 
@@ -976,10 +987,10 @@ void Server::CreatePlayer(Session* pSession)
 	{
 		if ((*iter) != pPlayer)
 		{
-			SerializePacket createOther;
-			int createOtherRet = SetSCPacket_CREATE_OTHER_CHAR(&createOther,
+			packet->Clear();
+			int createOtherRet = SetSCPacket_CREATE_OTHER_CHAR(packet,
 				(*iter)->_ID, (*iter)->_direction, (*iter)->_x, (*iter)->_y, (*iter)->_hp);
-			EnqueueUnicast(createOther.GetReadPtr(), createOtherRet, pPlayer->_pSession);
+			EnqueueUnicast(packet->GetReadPtr(), createOtherRet, pPlayer->_pSession);
 		}
 	}
 }
@@ -1044,21 +1055,24 @@ bool Server::HandleCSPacket_MOVE_START(Player* pPlayer)
 		return false;
 	}
 
+	SerializePacket* packet = _pSPacketPool->Alloc();
+
 	if (abs(pPlayer->_x - x) > dfERROR_RANGE || abs(pPlayer->_y - y) > dfERROR_RANGE)
 	{
-		SerializePacket buffer;
-		int setRet = SetSCPacket_SYNC(&buffer, pPlayer->_ID, pPlayer->_x, pPlayer->_y);
-		EnqueueUnicast(buffer.GetReadPtr(), setRet, pPlayer->_pSession);
+		packet->Clear();
+		int setRet = SetSCPacket_SYNC(packet, pPlayer->_ID, pPlayer->_x, pPlayer->_y);
+		EnqueueUnicast(packet->GetReadPtr(), setRet, pPlayer->_pSession);
 		x = pPlayer->_x;
 		y = pPlayer->_y;
 	}
 
 	SetPlayerMoveStart(pPlayer, moveDirection, x, y);
 
-	SerializePacket buffer;
-	int setRet = SetSCPacket_MOVE_START(&buffer, pPlayer->_ID, pPlayer->_moveDirection, pPlayer->_x, pPlayer->_y);
-	EnqueueAroundSector(buffer.GetReadPtr(), setRet, pPlayer->_pSector, pPlayer->_pSession);
+	packet->Clear();
+	int setRet = SetSCPacket_MOVE_START(packet, pPlayer->_ID, pPlayer->_moveDirection, pPlayer->_x, pPlayer->_y);
+	EnqueueAroundSector(packet->GetReadPtr(), setRet, pPlayer->_pSector, pPlayer->_pSession);
 
+	_pSPacketPool->Free(packet);
 	return true;
 }
 
@@ -1074,20 +1088,22 @@ bool Server::HandleCSPacket_MOVE_STOP(Player* pPlayer)
 		return false;
 	}
 
+	SerializePacket* packet = _pSPacketPool->Alloc();
+
 	if (abs(pPlayer->_x - x) > dfERROR_RANGE || abs(pPlayer->_y - y) > dfERROR_RANGE)
 	{
-		SerializePacket buffer;
-		int setRet = SetSCPacket_SYNC(&buffer, pPlayer->_ID, pPlayer->_x, pPlayer->_y);
-		EnqueueUnicast(buffer.GetReadPtr(), setRet, pPlayer->_pSession);
+		packet->Clear();
+		int setRet = SetSCPacket_SYNC(packet, pPlayer->_ID, pPlayer->_x, pPlayer->_y);
+		EnqueueUnicast(packet->GetReadPtr(), setRet, pPlayer->_pSession);
 		x = pPlayer->_x;
 		y = pPlayer->_y;
 	}
 
 	SetPlayerMoveStop(pPlayer, direction, x, y);
 
-	SerializePacket buffer;
-	int setRet = SetSCPacket_MOVE_STOP(&buffer, pPlayer->_ID, pPlayer->_direction, pPlayer->_x, pPlayer->_y);
-	EnqueueAroundSector(buffer.GetReadPtr(), setRet, pPlayer->_pSector, pPlayer->_pSession);
+	packet->Clear();
+	int setRet = SetSCPacket_MOVE_STOP(packet, pPlayer->_ID, pPlayer->_direction, pPlayer->_x, pPlayer->_y);
+	EnqueueAroundSector(packet->GetReadPtr(), setRet, pPlayer->_pSector, pPlayer->_pSession);
 
 	return true;
 }
@@ -1104,11 +1120,13 @@ bool Server::HandleCSPacket_ATTACK1(Player* pPlayer)
 		return false;
 	}
 
+	SerializePacket* packet = _pSPacketPool->Alloc();
+
 	if (abs(pPlayer->_x - x) > dfERROR_RANGE || abs(pPlayer->_y - y) > dfERROR_RANGE)
 	{
-		SerializePacket buffer;
-		int setRet = SetSCPacket_SYNC(&buffer, pPlayer->_ID, pPlayer->_x, pPlayer->_y);
-		EnqueueUnicast(buffer.GetReadPtr(), setRet, pPlayer->_pSession);
+		packet->Clear();
+		int setRet = SetSCPacket_SYNC(packet, pPlayer->_ID, pPlayer->_x, pPlayer->_y);
+		EnqueueUnicast(packet->GetReadPtr(), setRet, pPlayer->_pSession);
 		x = pPlayer->_x;
 		y = pPlayer->_y;
 	}
@@ -1116,19 +1134,20 @@ bool Server::HandleCSPacket_ATTACK1(Player* pPlayer)
 	Player* damagedPlayer = nullptr;
 	SetPlayerAttack1(pPlayer, damagedPlayer, direction, x, y);
 
-	SerializePacket attackBuffer;
-	int attackSetRet = SetSCPacket_ATTACK1(&attackBuffer, 
+	packet->Clear();
+	int attackSetRet = SetSCPacket_ATTACK1(packet, 
 		pPlayer->_ID, pPlayer->_direction, pPlayer->_x, pPlayer->_y);
-	EnqueueAroundSector(attackBuffer.GetReadPtr(), attackSetRet, pPlayer->_pSector);
+	EnqueueAroundSector(packet->GetReadPtr(), attackSetRet, pPlayer->_pSector);
 
 	if (damagedPlayer != nullptr)
 	{
-		SerializePacket damageBuffer;
+		packet->Clear();
 		int damageSetRet = SetSCPacket_DAMAGE(
-			&damageBuffer, pPlayer->_ID, damagedPlayer->_ID, damagedPlayer->_hp);
-		EnqueueAroundSector(damageBuffer.GetReadPtr(), damageSetRet, damagedPlayer->_pSector);
+			packet, pPlayer->_ID, damagedPlayer->_ID, damagedPlayer->_hp);
+		EnqueueAroundSector(packet->GetReadPtr(), damageSetRet, damagedPlayer->_pSector);
 	}
 
+	_pSPacketPool->Free(packet);
 	return true;
 }
 
@@ -1144,11 +1163,13 @@ bool Server::HandleCSPacket_ATTACK2(Player* pPlayer)
 		return false;
 	}
 
+	SerializePacket* packet = _pSPacketPool->Alloc();
+
 	if (abs(pPlayer->_x - x) > dfERROR_RANGE || abs(pPlayer->_y - y) > dfERROR_RANGE)
 	{
-		SerializePacket buffer;
-		int setRet = SetSCPacket_SYNC(&buffer, pPlayer->_ID, pPlayer->_x, pPlayer->_y);
-		EnqueueUnicast(buffer.GetReadPtr(), setRet, pPlayer->_pSession);
+		packet->Clear();
+		int setRet = SetSCPacket_SYNC(packet, pPlayer->_ID, pPlayer->_x, pPlayer->_y);
+		EnqueueUnicast(packet->GetReadPtr(), setRet, pPlayer->_pSession);
 		x = pPlayer->_x;
 		y = pPlayer->_y;
 	}
@@ -1156,20 +1177,20 @@ bool Server::HandleCSPacket_ATTACK2(Player* pPlayer)
 	Player* damagedPlayer = nullptr;
 	SetPlayerAttack2(pPlayer, damagedPlayer, direction, x, y);
 
-	SerializePacket attackBuffer;
-	int attackSetRet = SetSCPacket_ATTACK2(&attackBuffer, 
+	packet->Clear();
+	int attackSetRet = SetSCPacket_ATTACK2(packet,
 		pPlayer->_ID, pPlayer->_direction, pPlayer->_x, pPlayer->_y);
-	EnqueueAroundSector(attackBuffer.GetReadPtr(), attackSetRet, pPlayer->_pSector);
-
+	EnqueueAroundSector(packet->GetReadPtr(), attackSetRet, pPlayer->_pSector);
 
 	if (damagedPlayer != nullptr)
 	{
-		SerializePacket damageBuffer;
+		packet->Clear();
 		int damageSetRet = SetSCPacket_DAMAGE(
-			&damageBuffer, pPlayer->_ID, damagedPlayer->_ID, damagedPlayer->_hp);
-		EnqueueAroundSector(damageBuffer.GetReadPtr(), damageSetRet, damagedPlayer->_pSector);
+			packet, pPlayer->_ID, damagedPlayer->_ID, damagedPlayer->_hp);
+		EnqueueAroundSector(packet->GetReadPtr(), damageSetRet, damagedPlayer->_pSector);
 	}
 
+	_pSPacketPool->Free(packet);
 	return true;
 }
 
@@ -1185,11 +1206,13 @@ bool Server::HandleCSPacket_ATTACK3(Player* pPlayer)
 		return false;
 	}
 
+	SerializePacket* packet = _pSPacketPool->Alloc();
+
 	if (abs(pPlayer->_x - x) > dfERROR_RANGE || abs(pPlayer->_y - y) > dfERROR_RANGE)
 	{
-		SerializePacket buffer;
-		int setRet = SetSCPacket_SYNC(&buffer, pPlayer->_ID, pPlayer->_x, pPlayer->_y);
-		EnqueueUnicast(buffer.GetReadPtr(), setRet, pPlayer->_pSession);
+		packet->Clear();
+		int setRet = SetSCPacket_SYNC(packet, pPlayer->_ID, pPlayer->_x, pPlayer->_y);
+		EnqueueUnicast(packet->GetReadPtr(), setRet, pPlayer->_pSession);
 		x = pPlayer->_x;
 		y = pPlayer->_y;
 	}
@@ -1197,19 +1220,20 @@ bool Server::HandleCSPacket_ATTACK3(Player* pPlayer)
 	Player* damagedPlayer = nullptr;
 	SetPlayerAttack3(pPlayer, damagedPlayer, direction, x, y);
 
-	SerializePacket attackBuffer;
-	int attackSetRet = SetSCPacket_ATTACK3(&attackBuffer, 
+	packet->Clear();
+	int attackSetRet = SetSCPacket_ATTACK3(packet, 
 		pPlayer->_ID, pPlayer->_direction, pPlayer->_x, pPlayer->_y);
-	EnqueueAroundSector(attackBuffer.GetReadPtr(), attackSetRet, pPlayer->_pSector);
+	EnqueueAroundSector(packet->GetReadPtr(), attackSetRet, pPlayer->_pSector);
 
 	if (damagedPlayer != nullptr)
 	{
-		SerializePacket damageBuffer;
+		packet->Clear();
 		int damageSetRet = SetSCPacket_DAMAGE(
-			&damageBuffer, pPlayer->_ID, damagedPlayer->_ID, damagedPlayer->_hp);
-		EnqueueAroundSector(damageBuffer.GetReadPtr(), damageSetRet, damagedPlayer->_pSector);
+			packet, pPlayer->_ID, damagedPlayer->_ID, damagedPlayer->_hp);
+		EnqueueAroundSector(packet->GetReadPtr(), damageSetRet, damagedPlayer->_pSector);
 	}
 	
+	_pSPacketPool->Free(packet);
 	return true;
 }
 
@@ -1219,19 +1243,22 @@ bool Server::HandleCSPacket_ECHO(Player* pPlayer)
 	bool getRet = GetCSPacket_ECHO(&(pPlayer->_pSession->_recvBuf), time);
 	if (!getRet) return false;
 
-	SerializePacket buffer;
-	int setRet = SetSCPacket_ECHO(&buffer, time);
-	EnqueueUnicast(buffer.GetReadPtr(), setRet, pPlayer->_pSession);
+	SerializePacket* packet = _pSPacketPool->Alloc();
+	packet->Clear();
+	int setRet = SetSCPacket_ECHO(packet, time);
+	EnqueueUnicast(packet->GetReadPtr(), setRet, pPlayer->_pSession);
 
+	_pSPacketPool->Free(packet);
 	return true;
 }
 
 bool Server::GetCSPacket_MOVE_START(RingBuffer* recvBuffer, BYTE& moveDirection, short& x, short& y)
 {
-	SerializePacket buffer;
+	SerializePacket* packet = _pSPacketPool->Alloc();
+	packet->Clear();
 
 	int size = sizeof(moveDirection) + sizeof(x) + sizeof(y);
-	int dequeueRet = recvBuffer->Dequeue(buffer.GetWritePtr(), size);
+	int dequeueRet = recvBuffer->Dequeue(packet->GetWritePtr(), size);
 	if (dequeueRet != size)
 	{
 		::printf("Error! Func %s Line %d\n", __func__, __LINE__);
@@ -1239,22 +1266,23 @@ bool Server::GetCSPacket_MOVE_START(RingBuffer* recvBuffer, BYTE& moveDirection,
 			L"%s[%d]\n", _T(__FUNCTION__), __LINE__);
 		return false;
 	}
-	buffer.MoveWritePos(dequeueRet);
+	packet->MoveWritePos(dequeueRet);
 
-	buffer >> moveDirection;
-	buffer >> x;
-	buffer >> y;
+	*packet >> moveDirection;
+	*packet >> x;
+	*packet >> y;
 
-	
+	_pSPacketPool->Free(packet);
 	return true;
 }
 
 bool Server::GetCSPacket_MOVE_STOP(RingBuffer* recvBuffer, BYTE& direction, short& x, short& y)
 {
-	SerializePacket buffer;
+	SerializePacket* packet = _pSPacketPool->Alloc();
+	packet->Clear();
 
 	int size = sizeof(direction) + sizeof(x) + sizeof(y);
-	int dequeueRet = recvBuffer->Dequeue(buffer.GetWritePtr(), size);
+	int dequeueRet = recvBuffer->Dequeue(packet->GetWritePtr(), size);
 	if (dequeueRet != size)
 	{
 		::printf("Error! Func %s Line %d\n", __func__, __LINE__);
@@ -1262,21 +1290,23 @@ bool Server::GetCSPacket_MOVE_STOP(RingBuffer* recvBuffer, BYTE& direction, shor
 			L"%s[%d]\n", _T(__FUNCTION__), __LINE__);
 		return false;
 	}
-	buffer.MoveWritePos(dequeueRet);
+	packet->MoveWritePos(dequeueRet);
 
-	buffer >> direction;
-	buffer >> x;
-	buffer >> y;
+	*packet >> direction;
+	*packet >> x;
+	*packet >> y;
 
+	_pSPacketPool->Free(packet);
 	return true;
 }
 
 bool Server::GetCSPacket_ATTACK1(RingBuffer* recvBuffer, BYTE& direction, short& x, short& y)
 {
-	SerializePacket buffer;
+	SerializePacket* packet = _pSPacketPool->Alloc();
+	packet->Clear();
 
 	int size = sizeof(direction) + sizeof(x) + sizeof(y);
-	int dequeueRet = recvBuffer->Dequeue(buffer.GetWritePtr(), size);
+	int dequeueRet = recvBuffer->Dequeue(packet->GetWritePtr(), size);
 	if (dequeueRet != size)
 	{
 		::printf("Error! Func %s Line %d\n", __func__, __LINE__);
@@ -1284,22 +1314,23 @@ bool Server::GetCSPacket_ATTACK1(RingBuffer* recvBuffer, BYTE& direction, short&
 			L"%s[%d]\n", _T(__FUNCTION__), __LINE__);
 		return false;
 	}
-	buffer.MoveWritePos(dequeueRet);
+	packet->MoveWritePos(dequeueRet);
 
-	buffer >> direction;
-	buffer >> x;
-	buffer >> y;
+	*packet >> direction;
+	*packet >> x;
+	*packet >> y;
 
-	
+	_pSPacketPool->Free(packet);
 	return true;
 }
 
 bool Server::GetCSPacket_ATTACK2(RingBuffer* recvBuffer, BYTE& direction, short& x, short& y)
 {
-	SerializePacket buffer;
+	SerializePacket* packet = _pSPacketPool->Alloc();
+	packet->Clear();
 
 	int size = sizeof(direction) + sizeof(x) + sizeof(y);
-	int dequeueRet = recvBuffer->Dequeue(buffer.GetWritePtr(), size);
+	int dequeueRet = recvBuffer->Dequeue(packet->GetWritePtr(), size);
 	if (dequeueRet != size)
 	{
 		::printf("Error! Func %s Line %d\n", __func__, __LINE__);
@@ -1307,22 +1338,23 @@ bool Server::GetCSPacket_ATTACK2(RingBuffer* recvBuffer, BYTE& direction, short&
 			L"%s[%d]\n", _T(__FUNCTION__), __LINE__);
 		return false;
 	}
-	buffer.MoveWritePos(dequeueRet);
+	packet->MoveWritePos(dequeueRet);
 
-	buffer >> direction;
-	buffer >> x;
-	buffer >> y;
+	*packet >> direction;
+	*packet >> x;
+	*packet >> y;
 
-	
+	_pSPacketPool->Free(packet);
 	return true;
 }
 
 bool Server::GetCSPacket_ATTACK3(RingBuffer* recvBuffer, BYTE& direction, short& x, short& y)
 {
-	SerializePacket buffer;
+	SerializePacket* packet = _pSPacketPool->Alloc();
+	packet->Clear();
 
 	int size = sizeof(direction) + sizeof(x) + sizeof(y);
-	int dequeueRet = recvBuffer->Dequeue(buffer.GetWritePtr(), size);
+	int dequeueRet = recvBuffer->Dequeue(packet->GetWritePtr(), size);
 	if (dequeueRet != size)
 	{
 		::printf("Error! Func %s Line %d\n", __func__, __LINE__);
@@ -1330,22 +1362,23 @@ bool Server::GetCSPacket_ATTACK3(RingBuffer* recvBuffer, BYTE& direction, short&
 			L"%s[%d]\n", _T(__FUNCTION__), __LINE__);
 		return false;
 	}
-	buffer.MoveWritePos(dequeueRet);
+	packet->MoveWritePos(dequeueRet);
 
-	buffer >> direction;
-	buffer >> x;
-	buffer >> y;
+	*packet >> direction;
+	*packet >> x;
+	*packet >> y;
 
-	
+	_pSPacketPool->Free(packet);
 	return true;
 }
 
 bool Server::GetCSPacket_ECHO(RingBuffer* recvBuffer, int& time)
 {
-	SerializePacket buffer;
+	SerializePacket* packet = _pSPacketPool->Alloc();
+	packet->Clear();
 
 	int size = sizeof(time);
-	int dequeueRet = recvBuffer->Dequeue(buffer.GetWritePtr(), size);
+	int dequeueRet = recvBuffer->Dequeue(packet->GetWritePtr(), size);
 	if (dequeueRet != size)
 	{
 		::printf("Error! Func %s Line %d\n", __func__, __LINE__);
@@ -1353,11 +1386,10 @@ bool Server::GetCSPacket_ECHO(RingBuffer* recvBuffer, int& time)
 			L"%s[%d]\n", _T(__FUNCTION__), __LINE__);
 		return false;
 	}
-	buffer.MoveWritePos(dequeueRet);
+	packet->MoveWritePos(dequeueRet);
 
-	buffer >> time;
-
-	
+	*packet >> time;
+	_pSPacketPool->Free(packet);
 	return true;
 }
 

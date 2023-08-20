@@ -225,6 +225,7 @@ private:
 private:
 	int _playerID = 0;
 	CObjectPool<Player>* _pPlayerPool;
+	CObjectPool<SerializePacket>* _pSPacketPool;
 	Player* _PlayerMap[dfSESSION_MAX];
 	Sector _sectors[dfSECTOR_CNT_Y][dfSECTOR_CNT_X];
 	int _sectorCnt[8] = { 3, 5, 3, 5, 3, 5, 3, 5 };

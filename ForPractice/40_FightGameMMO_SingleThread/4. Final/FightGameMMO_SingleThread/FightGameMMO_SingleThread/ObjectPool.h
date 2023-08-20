@@ -3,7 +3,7 @@
 #define  __OBJECT_POOL__
 #include <new.h>
 #include <stdlib.h>
-#include <tchar.h>
+#include <wchar.h>
 #include "SystemLog.h"
 
 //#define __OBJECT_POOL_DEBUG__
@@ -82,55 +82,55 @@ private:
 
 public:
 	template<typename... Types>
-	CObjectPool(int iBlockNum, bool bPlacementNew, Types... args);
+	CObjectPool(int blockNum, bool placementNew, Types... args);
 	virtual	~CObjectPool();
 
 public:
 	template<typename... Types>
-	DATA* Alloc(Types... args);
-	bool Free(DATA* pData);
+	inline DATA* Alloc(Types... args);
+	inline bool Free(DATA* pData);
 
 private:
-	bool _bPlacementNew;
-	int _iBlockNum;
+	bool _placementNew;
+	int _blockNum;
 	stNODE* _pFreeNode = nullptr;
 
 #ifdef __OBJECT_POOL_DEBUG__
 public:
-	int		GetCapacityCount(void) { return _iCapacity; }
-	int		GetUseCount(void) { return _iUseCount; }
+	int		GetCapacityCount(void) { return _capacity; }
+	int		GetUseCount(void) { return _useCount; }
 
 private:
-	int _iCapacity;
-	int _iUseCount;
-	unsigned char _iPoolID;
+	int _capacity;
+	int _useCount;
+	unsigned char _poolID;
 #endif
 
 };
 
 template<class DATA>
 template<typename... Types>
-CObjectPool<DATA>::CObjectPool(int iBlockNum, bool bPlacementNew, Types... args)
-	:_bPlacementNew(bPlacementNew), _iBlockNum(iBlockNum), _pFreeNode(nullptr)
+CObjectPool<DATA>::CObjectPool(int blockNum, bool placementNew, Types... args)
+	:_placementNew(placementNew), _blockNum(blockNum), _pFreeNode(nullptr)
 {
 #ifdef __OBJECT_POOL_DEBUG__
 
-	_iCapacity = _iBlockNum;
-	_iUseCount = 0;
-	_iPoolID = gObjectPoolID;
+	_capacity = _blockNum;
+	_useCount = 0;
+	_poolID = gObjectPoolID;
 	gObjectPoolID++;
 #endif
 
-	if (_iBlockNum <= 0)
+	if (_blockNum <= 0)
 		return;
 
-	if (_bPlacementNew)
+	if (_placementNew)
 	{
 		// Alloc 시 Data의 생성자를 호출하므로 이때 호출하면 안된다
 
 		_pFreeNode = (stNODE*)malloc(sizeof(stNODE));
 		_pFreeNode->tail = (size_t)nullptr;
-		for (int i = 1; i < _iBlockNum; i++)
+		for (int i = 1; i < _blockNum; i++)
 		{
 			stNODE* p = (stNODE*)malloc(sizeof(stNODE));
 			p->tail = (size_t)_pFreeNode;
@@ -143,7 +143,7 @@ CObjectPool<DATA>::CObjectPool(int iBlockNum, bool bPlacementNew, Types... args)
 
 		_pFreeNode = (stNODE*)malloc(sizeof(stNODE));
 		_pFreeNode->tail = (size_t)nullptr;
-		for (int i = 1; i < _iBlockNum; i++)
+		for (int i = 1; i < _blockNum; i++)
 		{
 			new (&(_pFreeNode->data)) DATA(args...);
 			stNODE* p = (stNODE*)malloc(sizeof(stNODE));
@@ -159,10 +159,15 @@ CObjectPool<DATA>::~CObjectPool()
 {
 #ifdef __OBJECT_POOL_DEBUG__
 
-	if (_iUseCount != 0)
+	if (_useCount != 0)
 	{
-		printf("There is Unfree Data!!\n");
-		LOG(L"ERROR", SystemLog::ERROR_LEVEL, L"%s[%d]: There is Unfree Data\n", _T(__FUNCTION__), __LINE__);
+		LOG(L"FightGame", CSystemLog::ERROR_LEVEL, 
+			L"%s[%d]: There is Unfree Data\n", 
+			_T(__FUNCTION__), __LINE__);
+
+		::wprintf(L"ERROR", CSystemLog::ERROR_LEVEL,
+			L"%s[%d]: There is Unfree Data\n",
+			_T(__FUNCTION__), __LINE__);
 	}
 
 #endif
@@ -170,7 +175,7 @@ CObjectPool<DATA>::~CObjectPool()
 	if (_pFreeNode == nullptr)
 		return;
 
-	if (_bPlacementNew)
+	if (_placementNew)
 	{
 		// Free 시 Data의 소멸자를 호출하므로 이때는 호출하면 안된다
 
@@ -211,11 +216,11 @@ DATA* CObjectPool<DATA>::Alloc(Types... args)
 
 #ifdef __OBJECT_POOL_DEBUG__
 
-		_iCapacity++;
-		_iUseCount++;
+		_capacity++;
+		_useCount++;
 
 		size_t code = 0;
-		code |= (size_t)_iPoolID << (3 * 3);
+		code |= (size_t)_poolID << (3 * 3);
 		code |= 0777 & (size_t)(&(pNew->data));
 
 		pNew->head = code;
@@ -226,7 +231,7 @@ DATA* CObjectPool<DATA>::Alloc(Types... args)
 		return &(pNew->data);
 	}
 
-	if (_bPlacementNew)
+	if (_placementNew)
 	{
 		// 비어있는 노드가 있다면 가져온 후 Data의 생성자를 호출한다
 
@@ -236,10 +241,10 @@ DATA* CObjectPool<DATA>::Alloc(Types... args)
 
 #ifdef __OBJECT_POOL_DEBUG__
 
-		_iUseCount++;
+		_useCount++;
 
 		size_t code = 0;
-		code |= (size_t)_iPoolID << (3 * 3);
+		code |= (size_t)_poolID << (3 * 3);
 		code |= 0777 & (size_t)(&(p->data));
 
 		p->head = code;
@@ -257,10 +262,10 @@ DATA* CObjectPool<DATA>::Alloc(Types... args)
 
 #ifdef __OBJECT_POOL_DEBUG__
 
-		_iUseCount++;
+		_useCount++;
 
 		size_t code = 0;
-		code |= (size_t)_iPoolID << (3 * 3);
+		code |= (size_t)_poolID << (3 * 3);
 		code |= 0777 & (size_t)(&(p->data));
 
 		p->head = code;
@@ -277,16 +282,16 @@ DATA* CObjectPool<DATA>::Alloc(Types... args)
 template<class DATA>
 bool CObjectPool<DATA>::Free(DATA* pData)
 {
-	if (_bPlacementNew)
+	if (_placementNew)
 	{
 		// Data의 소멸자를 호출한 후 _pFreeNode에 push한다
 
 #ifdef __OBJECT_POOL_DEBUG__
 
-		_iUseCount--;
+		_useCount--;
 
 		size_t code = 0;
-		code |= (size_t)_iPoolID << (3 * 3);
+		code |= (size_t)_poolID << (3 * 3);
 		code |= 0777 & (size_t)pData;
 
 
@@ -295,10 +300,11 @@ bool CObjectPool<DATA>::Free(DATA* pData)
 
 		if (pNode->head != code || pNode->tail != code)
 		{
-			printf("Error! code %o, head %o, tail %o\n",
-				code, pNode->head, pNode->tail);
-			LOG(L"ERROR", SystemLog::ERROR_LEVEL, 
-				L"%s[%d]: code %o, head %o, tail %o\n", 
+			LOG(L"FightGame", CSystemLog::ERROR_LEVEL, 
+				L"%s[%d]: Code is Diffrent. code %o, head %o, tail %o\n", 
+				_T(__FUNCTION__), __LINE__, code, pNode->head, pNode->tail);
+
+			::wprintf(L"%s[%d]: Code is Diffrent. code %o, head %o, tail %o\n",
 				_T(__FUNCTION__), __LINE__, code, pNode->head, pNode->tail);
 		}
 
@@ -321,10 +327,10 @@ bool CObjectPool<DATA>::Free(DATA* pData)
 
 #ifdef __OBJECT_POOL_DEBUG__
 
-		_iUseCount--;
+		_useCount--;
 
 		size_t code = 0;
-		code |= (size_t)_iPoolID << (3 * 3);
+		code |= (size_t)_poolID << (3 * 3);
 		code |= 0777 & (size_t)pData;
 
 		size_t offset = (size_t)(&(((stNODE*)nullptr)->data));
@@ -332,11 +338,13 @@ bool CObjectPool<DATA>::Free(DATA* pData)
 
 		if (pNode->head != code || pNode->tail != code)
 		{
-			printf("Error! code %o, head %o, tail %o\n",
-				code, pNode->head, pNode->tail);
-			LOG(L"ERROR", SystemLog::ERROR_LEVEL,
-				L"%s[%d]: code %o, head %o, tail %o\n",
+			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+				L"%s[%d]: Code is Different. code %o, head %o, tail %o\n",
 				_T(__FUNCTION__), __LINE__, code, pNode->head, pNode->tail);
+
+			::wprintf(L"%s[%d]: Code is Different. code %o, head %o, tail %o\n",
+				_T(__FUNCTION__), __LINE__, code, pNode->head, pNode->tail);
+
 			return false;
 		}
 

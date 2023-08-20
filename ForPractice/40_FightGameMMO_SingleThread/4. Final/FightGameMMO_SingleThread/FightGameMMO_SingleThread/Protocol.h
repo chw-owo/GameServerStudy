@@ -10,19 +10,20 @@
 
 #define dfNETWORK_IP L"0.0.0.0"
 #define dfNETWORK_PORT 20000
+#define dfMONITOR_CHECKPOINT 11
 
-#define dfSESSION_MAX						6000
-#define dfDEFAULT_PLAYERS_PER_SECTOR		1024
-#define dfDEFAULT_DISCONNECT_NUM			1024
+#define dfSESSION_MAX					6000
+#define dfDEFAULT_PLAYERS_PER_SECTOR	1024
+#define dfDEFAULT_DISCONNECT_NUM		1024
 
-struct st_PACKET_HEADER
+struct stPacketHeader
 {
-	BYTE	byCode;			// 패킷코드 0x89 고정.
-	BYTE	bySize;			// 패킷 사이즈.
-	BYTE	byType;			// 패킷타입.
+	BYTE	code;			// 패킷코드 0x89 고정.
+	BYTE	size;			// 패킷 사이즈.
+	BYTE	type;			// 패킷타입.
 };
 
-#define dfHEADER_SIZE		sizeof(st_PACKET_HEADER)
+#define dfHEADER_SIZE		sizeof(stPacketHeader)
 #define dfPACKET_CODE		0x89
 
 #define	dfPACKET_SC_CREATE_MY_CHARACTER			0
@@ -87,16 +88,18 @@ struct st_PACKET_HEADER
 //	2	-	Y
 //
 //---------------------------------------------------------------
-#define dfPACKET_MOVE_DIR_LL					0
-#define dfPACKET_MOVE_DIR_LU					1
-#define dfPACKET_MOVE_DIR_UU					2
-#define dfPACKET_MOVE_DIR_RU					3
-#define dfPACKET_MOVE_DIR_RR					4
-#define dfPACKET_MOVE_DIR_RD					5
-#define dfPACKET_MOVE_DIR_DD					6
-#define dfPACKET_MOVE_DIR_LD					7
+#define dfMOVE_DIR_LL				0
+#define dfMOVE_DIR_LU				1
+#define dfMOVE_DIR_UU				2
+#define dfMOVE_DIR_RU				3
+#define dfMOVE_DIR_RR				4
+#define dfMOVE_DIR_RD				5
+#define dfMOVE_DIR_DD				6
+#define dfMOVE_DIR_LD				7
+#define dfMOVE_DIR_MAX				8
+#define dfMOVE_DIR_INPLACE				dfMOVE_DIR_MAX
 
-#define	dfPACKET_SC_MOVE_START					11
+#define	dfPACKET_SC_MOVE_START		11
 //---------------------------------------------------------------
 // 캐릭터 이동시작 패킷						Server -> Client
 //
@@ -318,9 +321,9 @@ struct st_PACKET_HEADER
 //-----------------------------------------------------------------
 // 캐릭터 이동 속도 
 //-----------------------------------------------------------------
-#define dfSPEED_PLAYER_X	3   // 6 25fps, 3 50fps
-#define dfSPEED_PLAYER_Y	2	// 4 25fps, 2 50fps
-#define dfFPS 50
+#define dfSPEED_PLAYER_X	6   // 6 25fps, 3 50fps
+#define dfSPEED_PLAYER_Y	4	// 4 25fps, 2 50fps
+#define dfFPS 25
 
 //-----------------------------------------------------------------
 // 이동 오류체크 범위
@@ -331,10 +334,13 @@ struct st_PACKET_HEADER
 // 섹터 설정값
 //-----------------------------------------------------------------
 
-#define dfSECTOR_SIZE_X					256
-#define dfSECTOR_SIZE_Y					256
+#define dfSECTOR_SIZE_X					200
+#define dfSECTOR_SIZE_Y					200 
 #define dfSECTOR_CNT_X					(dfRANGE_MOVE_RIGHT / dfSECTOR_SIZE_X) + 4
 #define dfSECTOR_CNT_Y					(dfRANGE_MOVE_BOTTOM / dfSECTOR_SIZE_Y) + 4
+
 #define dfAROUND_SECTOR_NUM				9
+#define dfVERT_SECTOR_NUM				3
+#define dfDIAG_SECTOR_NUM				5
 
 #endif
