@@ -1,4 +1,5 @@
 #pragma once
+
 #ifndef __PROTOCOL__
 #define __PROTOCOL__
 
@@ -6,24 +7,21 @@
 #define _WINSOCKAPI_
 #endif
 
-#include <Windows.h>
+#include <windows.h>
 
-#define dfNETWORK_IP L"0.0.0.0"
-#define dfNETWORK_PORT 20000
+#define dfSERVER_IP L"0.0.0.0"
+#define dfSERVER_PORT 6000
 #define dfMONITOR_CHECKPOINT 11
 
 #define dfSESSION_MAX					6000
 #define dfDEFAULT_PLAYERS_PER_SECTOR	1024
 
-struct stPacketHeader
+struct st_PACKET_HEADER
 {
-	BYTE	code;			// 패킷코드 0x89 고정.
-	BYTE	size;			// 패킷 사이즈.
-	BYTE	type;			// 패킷타입.
+	unsigned short	Len;	// 메시지 길이
 };
 
-#define dfHEADER_SIZE		sizeof(stPacketHeader)
-#define dfPACKET_CODE		0x89
+#define dfHEADER_LEN		sizeof(st_PACKET_HEADER)
 
 #define	dfPACKET_SC_CREATE_MY_CHARACTER			0
 //---------------------------------------------------------------
@@ -34,6 +32,7 @@ struct stPacketHeader
 // 
 // 이 패킷을 받으면 자신의 ID,X,Y,HP 를 저장하고 캐릭터를 생성시켜야 한다.
 //
+//	2	-	Type
 //	4	-	ID
 //	1	-	Direction
 //	2	-	X
@@ -51,6 +50,7 @@ struct stPacketHeader
 // 또는 게임중에 접속된 클라이언트들의 생성 용 정보.
 //
 //
+//	2	-	Type
 //	4	-	ID
 //	1	-	Direction
 //	2	-	X
@@ -66,6 +66,7 @@ struct stPacketHeader
 //
 // 캐릭터의 접속해제 또는 캐릭터가 죽었을때 전송됨.
 //
+//	2	-	Type
 //	4	-	ID
 //
 //---------------------------------------------------------------
@@ -82,6 +83,7 @@ struct stPacketHeader
 //
 // (왼쪽 이동중 위로 이동 / 왼쪽 이동중 왼쪽 위로 이동... 등등)
 //
+//	2	-	Type
 //	1	-	Direction	( 방향 디파인 값 8방향 사용 )
 //	2	-	X
 //	2	-	Y
@@ -98,7 +100,7 @@ struct stPacketHeader
 #define dfMOVE_DIR_MAX				8
 #define dfMOVE_DIR_INPLACE			dfMOVE_DIR_MAX
 
-#define	dfPACKET_SC_MOVE_START		11
+#define	dfPACKET_SC_MOVE_START					11
 //---------------------------------------------------------------
 // 캐릭터 이동시작 패킷						Server -> Client
 //
@@ -108,6 +110,7 @@ struct stPacketHeader
 // 패킷 수신 시 해당 키가 계속해서 눌린것으로 생각하고
 // 해당 방향으로 계속 이동을 하고 있어야만 한다.
 //
+//	2	-	Type
 //	4	-	ID
 //	1	-	Direction	( 방향 디파인 값 8방향 )
 //	2	-	X
@@ -124,6 +127,7 @@ struct stPacketHeader
 //
 // 이동중 키보드 입력이 없어서 정지되었을 때, 이 패킷을 서버에 보내준다.
 //
+//	2	-	Type
 //	1	-	Direction	( 방향 디파인 값 좌/우만 사용 )
 //	2	-	X
 //	2	-	Y
@@ -138,6 +142,7 @@ struct stPacketHeader
 // ID 에 해당하는 캐릭터가 이동을 멈춘것이므로 
 // 캐릭터를 찾아서 방향과, 좌표를 입력해주고 멈추도록 처리한다.
 //
+//	2	-	Type
 //	4	-	ID
 //	1	-	Direction	( 방향 디파인 값. 좌/우만 사용 )
 //	2	-	X
@@ -156,6 +161,7 @@ struct stPacketHeader
 //
 // 공격 동작 시작시 한번만 서버에게 보내줘야 한다.
 //
+//	2	-	Type
 //	1	-	Direction	( 방향 디파인 값. 좌/우만 사용 )
 //	2	-	X
 //	2	-	Y	
@@ -169,6 +175,7 @@ struct stPacketHeader
 // 패킷 수신시 해당 캐릭터를 찾아서 공격1번 동작으로 액션을 취해준다.
 // 방향이 다를 경우에는 해당 방향으로 바꾼 후 해준다.
 //
+//	2	-	Type
 //	4	-	ID
 //	1	-	Direction	( 방향 디파인 값. 좌/우만 사용 )
 //	2	-	X
@@ -187,6 +194,7 @@ struct stPacketHeader
 //
 // 공격 동작 시작시 한번만 서버에게 보내줘야 한다.
 //
+//	2	-	Type
 //	1	-	Direction	( 방향 디파인 값. 좌/우만 사용 )
 //	2	-	X
 //	2	-	Y
@@ -200,6 +208,7 @@ struct stPacketHeader
 // 패킷 수신시 해당 캐릭터를 찾아서 공격2번 동작으로 액션을 취해준다.
 // 방향이 다를 경우에는 해당 방향으로 바꾼 후 해준다.
 //
+//	2	-	Type
 //	4	-	ID
 //	1	-	Direction	( 방향 디파인 값. 좌/우만 사용 )
 //	2	-	X
@@ -216,6 +225,7 @@ struct stPacketHeader
 //
 // 공격 동작 시작시 한번만 서버에게 보내줘야 한다.
 //
+//	2	-	Type
 //	1	-	Direction	( 방향 디파인 값. 좌/우만 사용 )
 //	2	-	X
 //	2	-	Y
@@ -229,6 +239,7 @@ struct stPacketHeader
 // 패킷 수신시 해당 캐릭터를 찾아서 공격3번 동작으로 액션을 취해준다.
 // 방향이 다를 경우에는 해당 방향으로 바꾼 후 해준다.
 //
+//	2	-	Type
 //	4	-	ID
 //	1	-	Direction	( 방향 디파인 값. 좌/우만 사용 )
 //	2	-	X
@@ -246,6 +257,7 @@ struct stPacketHeader
 //
 // 공격에 맞은 캐릭터의 정보를 보냄.
 //
+//	2	-	Type
 //	4	-	AttackID	( 공격자 ID )
 //	4	-	DamageID	( 피해자 ID )
 //	1	-	DamageHP	( 피해자 HP )
@@ -260,6 +272,7 @@ struct stPacketHeader
 // 서버로부터 동기화 패킷을 받으면 해당 캐릭터를 찾아서
 // 캐릭터 좌표를 보정해준다.
 //
+//	2	-	Type
 //	4	-	ID
 //	2	-	X
 //	2	-	Y
@@ -272,6 +285,7 @@ struct stPacketHeader
 //---------------------------------------------------------------
 // Echo 용 패킷					Client -> Server
 //
+//	2	-	Type
 //	4	-	Time
 //
 //---------------------------------------------------------------
@@ -280,6 +294,7 @@ struct stPacketHeader
 //---------------------------------------------------------------
 // Echo 응답 패킷				Server -> Client
 //
+//	2	-	Type
 //	4	-	Time
 //
 //---------------------------------------------------------------

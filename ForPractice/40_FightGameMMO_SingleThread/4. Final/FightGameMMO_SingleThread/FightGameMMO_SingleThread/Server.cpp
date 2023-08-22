@@ -1484,10 +1484,11 @@ void CServer::SetPlayerAttack1(Player* pPlayer, Player*& pDamagedPlayer, BYTE& d
 
 	if (direction == dfMOVE_DIR_LL)
 	{
-		vector<Player*>::iterator iter 
-			= pPlayer->_pSector->_around[dfMOVE_DIR_INPLACE]->_players.begin();
+		vector<Player*>::iterator iter;
+		Sector* pSector = pPlayer->_pSector;
 
-		for (; iter < pPlayer->_pSector->_around[dfMOVE_DIR_INPLACE]->_players.end(); iter++)
+		iter = pSector->_around[dfMOVE_DIR_INPLACE]->_players.begin();
+		for (; iter < pSector->_around[dfMOVE_DIR_INPLACE]->_players.end(); iter++)
 		{
 			if ((*iter) != pPlayer)
 			{
@@ -1501,19 +1502,17 @@ void CServer::SetPlayerAttack1(Player* pPlayer, Player*& pDamagedPlayer, BYTE& d
 					if (pDamagedPlayer->_hp <= 0)
 					{
 						_deadCnt++;
-						SetSessionDead(pDamagedPlayer->_pSession);	
+						SetSessionDead(pDamagedPlayer->_pSession);
 					}
 					return;
 				}
 			}
 		}
 
-		for (int i = 0; i < dfMOVE_DIR_MAX; i++)
+		if (pPlayer->_x <= pSector->_xPosMin + dfATTACK1_RANGE_X)
 		{
-			vector<Player*>::iterator iter
-				= pPlayer->_pSector->_around[i]->_players.begin();
-
-			for (; iter < pPlayer->_pSector->_around[i]->_players.end(); iter++)
+			iter = pSector->_around[dfMOVE_DIR_LL]->_players.begin();
+			for (; iter < pSector->_around[dfMOVE_DIR_LL]->_players.end(); iter++)
 			{
 				int dist = pPlayer->_x - (*iter)->_x;
 				if (dist >= 0 && dist <= dfATTACK1_RANGE_X &&
@@ -1521,7 +1520,7 @@ void CServer::SetPlayerAttack1(Player* pPlayer, Player*& pDamagedPlayer, BYTE& d
 				{
 					pDamagedPlayer = (*iter);
 					pDamagedPlayer->_hp -= dfATTACK1_DAMAGE;
-					
+
 					if (pDamagedPlayer->_hp <= 0)
 					{
 						_deadCnt++;
@@ -1530,15 +1529,105 @@ void CServer::SetPlayerAttack1(Player* pPlayer, Player*& pDamagedPlayer, BYTE& d
 					return;
 				}
 			}
+
+			if (pPlayer->_y <= pSector->_yPosMin + dfATTACK1_RANGE_Y)
+			{
+				iter = pSector->_around[dfMOVE_DIR_LD]->_players.begin();
+				for (; iter < pSector->_around[dfMOVE_DIR_LD]->_players.end(); iter++)
+				{
+					int dist = pPlayer->_x - (*iter)->_x;
+					if (dist >= 0 && dist <= dfATTACK1_RANGE_X &&
+						abs((*iter)->_y - pPlayer->_y) <= dfATTACK1_RANGE_Y)
+					{
+						pDamagedPlayer = (*iter);
+						pDamagedPlayer->_hp -= dfATTACK1_DAMAGE;
+
+						if (pDamagedPlayer->_hp <= 0)
+						{
+							_deadCnt++;
+							SetSessionDead(pDamagedPlayer->_pSession);
+						}
+						return;
+					}
+				}
+			}
+			else if (pPlayer->_y >= pSector->_yPosMax - dfATTACK1_RANGE_Y)
+			{
+				iter = pSector->_around[dfMOVE_DIR_LU]->_players.begin();
+				for (; iter < pSector->_around[dfMOVE_DIR_LU]->_players.end(); iter++)
+				{
+					int dist = pPlayer->_x - (*iter)->_x;
+					if (dist >= 0 && dist <= dfATTACK1_RANGE_X &&
+						abs((*iter)->_y - pPlayer->_y) <= dfATTACK1_RANGE_Y)
+					{
+						pDamagedPlayer = (*iter);
+						pDamagedPlayer->_hp -= dfATTACK1_DAMAGE;
+
+						if (pDamagedPlayer->_hp <= 0)
+						{
+							_deadCnt++;
+							SetSessionDead(pDamagedPlayer->_pSession);
+						}
+						return;
+					}
+				}
+			}
+		}
+		else
+		{
+			if (pPlayer->_y <= pSector->_yPosMin + dfATTACK1_RANGE_Y)
+			{
+				iter = pSector->_around[dfMOVE_DIR_DD]->_players.begin();
+				for (; iter < pSector->_around[dfMOVE_DIR_DD]->_players.end(); iter++)
+				{
+					int dist = pPlayer->_x - (*iter)->_x;
+					if (dist >= 0 && dist <= dfATTACK1_RANGE_X &&
+						abs((*iter)->_y - pPlayer->_y) <= dfATTACK1_RANGE_Y)
+					{
+						pDamagedPlayer = (*iter);
+						pDamagedPlayer->_hp -= dfATTACK1_DAMAGE;
+
+						if (pDamagedPlayer->_hp <= 0)
+						{
+							_deadCnt++;
+							SetSessionDead(pDamagedPlayer->_pSession);
+						}
+						return;
+					}
+				}
+			}
+			else if (pPlayer->_y >= pSector->_yPosMax - dfATTACK1_RANGE_Y)
+			{
+				iter = pSector->_around[dfMOVE_DIR_UU]->_players.begin();
+				for (; iter < pSector->_around[dfMOVE_DIR_UU]->_players.end(); iter++)
+				{
+					int dist = pPlayer->_x - (*iter)->_x;
+					if (dist >= 0 && dist <= dfATTACK1_RANGE_X &&
+						abs((*iter)->_y - pPlayer->_y) <= dfATTACK1_RANGE_Y)
+					{
+						pDamagedPlayer = (*iter);
+						pDamagedPlayer->_hp -= dfATTACK1_DAMAGE;
+
+						if (pDamagedPlayer->_hp <= 0)
+						{
+							_deadCnt++;
+							SetSessionDead(pDamagedPlayer->_pSession);
+						}
+						return;
+					}
+				}
+			}
 		}
 	}
 	else if (direction == dfMOVE_DIR_RR)
 	{
-		vector<Player*>::iterator iter 
-			= pPlayer->_pSector->_around[dfMOVE_DIR_INPLACE]->_players.begin();
-		for (; iter < pPlayer->_pSector->_around[dfMOVE_DIR_INPLACE]->_players.end(); iter++)
+		vector<Player*>::iterator iter;
+		Sector* pSector = pPlayer->_pSector;
+		
+		iter = pSector->_around[dfMOVE_DIR_INPLACE]->_players.begin();
+		for (; iter < pSector->_around[dfMOVE_DIR_INPLACE]->_players.end(); iter++)
 		{
-			if((*iter) != pPlayer)
+			if ((*iter) != pPlayer)
 			{
 				int dist = (*iter)->_x - pPlayer->_x;
 				if (dist >= 0 && dist <= dfATTACK1_RANGE_X &&
@@ -1546,7 +1635,7 @@ void CServer::SetPlayerAttack1(Player* pPlayer, Player*& pDamagedPlayer, BYTE& d
 				{
 					pDamagedPlayer = (*iter);
 					pDamagedPlayer->_hp -= dfATTACK1_DAMAGE;
-					
+
 					if (pDamagedPlayer->_hp <= 0)
 					{
 						_deadCnt++;
@@ -1557,12 +1646,10 @@ void CServer::SetPlayerAttack1(Player* pPlayer, Player*& pDamagedPlayer, BYTE& d
 			}
 		}
 
-		
-		for (int i = 0; i < dfMOVE_DIR_MAX; i++)
+		if (pPlayer->_x >= pSector->_xPosMax - dfATTACK1_RANGE_X)
 		{
-			vector<Player*>::iterator iter
-				= pPlayer->_pSector->_around[i]->_players.begin();
-			for (; iter < pPlayer->_pSector->_around[i]->_players.end(); iter++)
+			iter = pSector->_around[dfMOVE_DIR_RR]->_players.begin();
+			for (; iter < pSector->_around[dfMOVE_DIR_RR]->_players.end(); iter++)
 			{
 				int dist = (*iter)->_x - pPlayer->_x;
 				if (dist >= 0 && dist <= dfATTACK1_RANGE_X &&
@@ -1570,13 +1657,101 @@ void CServer::SetPlayerAttack1(Player* pPlayer, Player*& pDamagedPlayer, BYTE& d
 				{
 					pDamagedPlayer = (*iter);
 					pDamagedPlayer->_hp -= dfATTACK1_DAMAGE;
-					
+
 					if (pDamagedPlayer->_hp <= 0)
 					{
 						_deadCnt++;
 						SetSessionDead(pDamagedPlayer->_pSession);
 					}
 					return;
+				}
+			}
+
+			if (pPlayer->_y >= pSector->_yPosMax - dfATTACK1_RANGE_Y)
+			{
+				iter = pSector->_around[dfMOVE_DIR_RU]->_players.begin();
+				for (; iter < pSector->_around[dfMOVE_DIR_RU]->_players.end(); iter++)
+				{
+					int dist = (*iter)->_x - pPlayer->_x;
+					if (dist >= 0 && dist <= dfATTACK1_RANGE_X &&
+						abs((*iter)->_y - pPlayer->_y) <= dfATTACK1_RANGE_Y)
+					{
+						pDamagedPlayer = (*iter);
+						pDamagedPlayer->_hp -= dfATTACK1_DAMAGE;
+
+						if (pDamagedPlayer->_hp <= 0)
+						{
+							_deadCnt++;
+							SetSessionDead(pDamagedPlayer->_pSession);
+						}
+						return;
+					}
+				}
+			}
+			else if(pPlayer->_y <= pSector->_yPosMin + dfATTACK1_RANGE_Y)
+			{
+				iter = pSector->_around[dfMOVE_DIR_RD]->_players.begin();
+				for (; iter < pSector->_around[dfMOVE_DIR_RD]->_players.end(); iter++)
+				{
+					int dist = (*iter)->_x - pPlayer->_x;
+					if (dist >= 0 && dist <= dfATTACK1_RANGE_X &&
+						abs((*iter)->_y - pPlayer->_y) <= dfATTACK1_RANGE_Y)
+					{
+						pDamagedPlayer = (*iter);
+						pDamagedPlayer->_hp -= dfATTACK1_DAMAGE;
+
+						if (pDamagedPlayer->_hp <= 0)
+						{
+							_deadCnt++;
+							SetSessionDead(pDamagedPlayer->_pSession);
+						}
+						return;
+					}
+				}
+			}
+		}
+		else
+		{
+			if (pPlayer->_y >= pSector->_yPosMax - dfATTACK1_RANGE_Y)
+			{
+				iter = pSector->_around[dfMOVE_DIR_UU]->_players.begin();
+				for (; iter < pSector->_around[dfMOVE_DIR_UU]->_players.end(); iter++)
+				{
+					int dist = (*iter)->_x - pPlayer->_x;
+					if (dist >= 0 && dist <= dfATTACK1_RANGE_X &&
+						abs((*iter)->_y - pPlayer->_y) <= dfATTACK1_RANGE_Y)
+					{
+						pDamagedPlayer = (*iter);
+						pDamagedPlayer->_hp -= dfATTACK1_DAMAGE;
+
+						if (pDamagedPlayer->_hp <= 0)
+						{
+							_deadCnt++;
+							SetSessionDead(pDamagedPlayer->_pSession);
+						}
+						return;
+					}
+				}
+			}
+			else if (pPlayer->_y <= pSector->_yPosMin + dfATTACK1_RANGE_Y)
+			{
+				iter = pSector->_around[dfMOVE_DIR_DD]->_players.begin();
+				for (; iter < pSector->_around[dfMOVE_DIR_DD]->_players.end(); iter++)
+				{
+					int dist = (*iter)->_x - pPlayer->_x;
+					if (dist >= 0 && dist <= dfATTACK1_RANGE_X &&
+						abs((*iter)->_y - pPlayer->_y) <= dfATTACK1_RANGE_Y)
+					{
+						pDamagedPlayer = (*iter);
+						pDamagedPlayer->_hp -= dfATTACK1_DAMAGE;
+
+						if (pDamagedPlayer->_hp <= 0)
+						{
+							_deadCnt++;
+							SetSessionDead(pDamagedPlayer->_pSession);
+						}
+						return;
+					}
 				}
 			}
 		}
@@ -1590,13 +1765,14 @@ void CServer::SetPlayerAttack2(Player* pPlayer, Player*& pDamagedPlayer, BYTE& d
 	pPlayer->_direction = direction;
 
 	if (direction == dfMOVE_DIR_LL)
-	{	
-		vector<Player*>::iterator iter 
-			= pPlayer->_pSector->_around[dfMOVE_DIR_INPLACE]->_players.begin();
+	{
+		vector<Player*>::iterator iter;
+		Sector* pSector = pPlayer->_pSector;
 
-		for (; iter < pPlayer->_pSector->_around[dfMOVE_DIR_INPLACE]->_players.end(); iter++)
+		iter = pSector->_around[dfMOVE_DIR_INPLACE]->_players.begin();
+		for (; iter < pSector->_around[dfMOVE_DIR_INPLACE]->_players.end(); iter++)
 		{
-			if((*iter) != pPlayer)
+			if ((*iter) != pPlayer)
 			{
 				int dist = pPlayer->_x - (*iter)->_x;
 				if (dist >= 0 && dist <= dfATTACK2_RANGE_X &&
@@ -1604,7 +1780,7 @@ void CServer::SetPlayerAttack2(Player* pPlayer, Player*& pDamagedPlayer, BYTE& d
 				{
 					pDamagedPlayer = (*iter);
 					pDamagedPlayer->_hp -= dfATTACK2_DAMAGE;
-					
+
 					if (pDamagedPlayer->_hp <= 0)
 					{
 						_deadCnt++;
@@ -1615,12 +1791,10 @@ void CServer::SetPlayerAttack2(Player* pPlayer, Player*& pDamagedPlayer, BYTE& d
 			}
 		}
 
-		
-		for (int i = 0; i < dfMOVE_DIR_MAX; i++)
+		if (pPlayer->_x <= pSector->_xPosMin + dfATTACK2_RANGE_X)
 		{
-			vector<Player*>::iterator iter
-				= pPlayer->_pSector->_around[i]->_players.begin();
-			for (; iter < pPlayer->_pSector->_around[i]->_players.end(); iter++)
+			iter = pSector->_around[dfMOVE_DIR_LL]->_players.begin();
+			for (; iter < pSector->_around[dfMOVE_DIR_LL]->_players.end(); iter++)
 			{
 				int dist = pPlayer->_x - (*iter)->_x;
 				if (dist >= 0 && dist <= dfATTACK2_RANGE_X &&
@@ -1628,24 +1802,112 @@ void CServer::SetPlayerAttack2(Player* pPlayer, Player*& pDamagedPlayer, BYTE& d
 				{
 					pDamagedPlayer = (*iter);
 					pDamagedPlayer->_hp -= dfATTACK2_DAMAGE;
-					
+
 					if (pDamagedPlayer->_hp <= 0)
 					{
 						_deadCnt++;
-						SetSessionDead(pDamagedPlayer->_pSession);	
+						SetSessionDead(pDamagedPlayer->_pSession);
 					}
 					return;
+				}
+			}
+
+			if (pPlayer->_y <= pSector->_yPosMin + dfATTACK2_RANGE_Y)
+			{
+				iter = pSector->_around[dfMOVE_DIR_LD]->_players.begin();
+				for (; iter < pSector->_around[dfMOVE_DIR_LD]->_players.end(); iter++)
+				{
+					int dist = pPlayer->_x - (*iter)->_x;
+					if (dist >= 0 && dist <= dfATTACK2_RANGE_X &&
+						abs((*iter)->_y - pPlayer->_y) <= dfATTACK2_RANGE_Y)
+					{
+						pDamagedPlayer = (*iter);
+						pDamagedPlayer->_hp -= dfATTACK2_DAMAGE;
+
+						if (pDamagedPlayer->_hp <= 0)
+						{
+							_deadCnt++;
+							SetSessionDead(pDamagedPlayer->_pSession);
+						}
+						return;
+					}
+				}
+			}
+			else if (pPlayer->_y >= pSector->_yPosMax - dfATTACK2_RANGE_Y)
+			{
+				iter = pSector->_around[dfMOVE_DIR_LU]->_players.begin();
+				for (; iter < pSector->_around[dfMOVE_DIR_LU]->_players.end(); iter++)
+				{
+					int dist = pPlayer->_x - (*iter)->_x;
+					if (dist >= 0 && dist <= dfATTACK2_RANGE_X &&
+						abs((*iter)->_y - pPlayer->_y) <= dfATTACK2_RANGE_Y)
+					{
+						pDamagedPlayer = (*iter);
+						pDamagedPlayer->_hp -= dfATTACK2_DAMAGE;
+
+						if (pDamagedPlayer->_hp <= 0)
+						{
+							_deadCnt++;
+							SetSessionDead(pDamagedPlayer->_pSession);
+						}
+						return;
+					}
+				}
+			}
+		}
+		else
+		{
+			if (pPlayer->_y <= pSector->_yPosMin + dfATTACK2_RANGE_Y)
+			{
+				iter = pSector->_around[dfMOVE_DIR_DD]->_players.begin();
+				for (; iter < pSector->_around[dfMOVE_DIR_DD]->_players.end(); iter++)
+				{
+					int dist = pPlayer->_x - (*iter)->_x;
+					if (dist >= 0 && dist <= dfATTACK2_RANGE_X &&
+						abs((*iter)->_y - pPlayer->_y) <= dfATTACK2_RANGE_Y)
+					{
+						pDamagedPlayer = (*iter);
+						pDamagedPlayer->_hp -= dfATTACK2_DAMAGE;
+
+						if (pDamagedPlayer->_hp <= 0)
+						{
+							_deadCnt++;
+							SetSessionDead(pDamagedPlayer->_pSession);
+						}
+						return;
+					}
+				}
+			}
+			else if (pPlayer->_y >= pSector->_yPosMax - dfATTACK2_RANGE_Y)
+			{
+				iter = pSector->_around[dfMOVE_DIR_UU]->_players.begin();
+				for (; iter < pSector->_around[dfMOVE_DIR_UU]->_players.end(); iter++)
+				{
+					int dist = pPlayer->_x - (*iter)->_x;
+					if (dist >= 0 && dist <= dfATTACK2_RANGE_X &&
+						abs((*iter)->_y - pPlayer->_y) <= dfATTACK2_RANGE_Y)
+					{
+						pDamagedPlayer = (*iter);
+						pDamagedPlayer->_hp -= dfATTACK2_DAMAGE;
+
+						if (pDamagedPlayer->_hp <= 0)
+						{
+							_deadCnt++;
+							SetSessionDead(pDamagedPlayer->_pSession);
+						}
+						return;
+					}
 				}
 			}
 		}
 	}
 	else if (direction == dfMOVE_DIR_RR)
 	{
+		vector<Player*>::iterator iter;
+		Sector* pSector = pPlayer->_pSector;
 
-		vector<Player*>::iterator iter
-			= pPlayer->_pSector->_around[dfMOVE_DIR_INPLACE]->_players.begin();
-
-		for (; iter < pPlayer->_pSector->_around[dfMOVE_DIR_INPLACE]->_players.end(); iter++)
+		iter = pSector->_around[dfMOVE_DIR_INPLACE]->_players.begin();
+		for (; iter < pSector->_around[dfMOVE_DIR_INPLACE]->_players.end(); iter++)
 		{
 			if ((*iter) != pPlayer)
 			{
@@ -1666,12 +1928,10 @@ void CServer::SetPlayerAttack2(Player* pPlayer, Player*& pDamagedPlayer, BYTE& d
 			}
 		}
 
-
-		for (int i = 0; i < dfMOVE_DIR_MAX; i++)
+		if (pPlayer->_x >= pSector->_xPosMax - dfATTACK2_RANGE_X)
 		{
-			vector<Player*>::iterator iter
-				= pPlayer->_pSector->_around[i]->_players.begin();
-			for (; iter < pPlayer->_pSector->_around[i]->_players.end(); iter++)
+			iter = pSector->_around[dfMOVE_DIR_RR]->_players.begin();
+			for (; iter < pSector->_around[dfMOVE_DIR_RR]->_players.end(); iter++)
 			{
 				int dist = (*iter)->_x - pPlayer->_x;
 				if (dist >= 0 && dist <= dfATTACK2_RANGE_X &&
@@ -1688,10 +1948,97 @@ void CServer::SetPlayerAttack2(Player* pPlayer, Player*& pDamagedPlayer, BYTE& d
 					return;
 				}
 			}
+
+			if (pPlayer->_y >= pSector->_yPosMax - dfATTACK2_RANGE_Y)
+			{
+				iter = pSector->_around[dfMOVE_DIR_RU]->_players.begin();
+				for (; iter < pSector->_around[dfMOVE_DIR_RU]->_players.end(); iter++)
+				{
+					int dist = (*iter)->_x - pPlayer->_x;
+					if (dist >= 0 && dist <= dfATTACK2_RANGE_X &&
+						abs((*iter)->_y - pPlayer->_y) <= dfATTACK2_RANGE_Y)
+					{
+						pDamagedPlayer = (*iter);
+						pDamagedPlayer->_hp -= dfATTACK2_DAMAGE;
+
+						if (pDamagedPlayer->_hp <= 0)
+						{
+							_deadCnt++;
+							SetSessionDead(pDamagedPlayer->_pSession);
+						}
+						return;
+					}
+				}
+			}
+			else if (pPlayer->_y <= pSector->_yPosMin + dfATTACK2_RANGE_Y)
+			{
+				iter = pSector->_around[dfMOVE_DIR_RD]->_players.begin();
+				for (; iter < pSector->_around[dfMOVE_DIR_RD]->_players.end(); iter++)
+				{
+					int dist = (*iter)->_x - pPlayer->_x;
+					if (dist >= 0 && dist <= dfATTACK2_RANGE_X &&
+						abs((*iter)->_y - pPlayer->_y) <= dfATTACK2_RANGE_Y)
+					{
+						pDamagedPlayer = (*iter);
+						pDamagedPlayer->_hp -= dfATTACK2_DAMAGE;
+
+						if (pDamagedPlayer->_hp <= 0)
+						{
+							_deadCnt++;
+							SetSessionDead(pDamagedPlayer->_pSession);
+						}
+						return;
+					}
+				}
+			}
+		}
+		else
+		{
+			if (pPlayer->_y >= pSector->_yPosMax - dfATTACK2_RANGE_Y)
+			{
+				iter = pSector->_around[dfMOVE_DIR_UU]->_players.begin();
+				for (; iter < pSector->_around[dfMOVE_DIR_UU]->_players.end(); iter++)
+				{
+					int dist = (*iter)->_x - pPlayer->_x;
+					if (dist >= 0 && dist <= dfATTACK2_RANGE_X &&
+						abs((*iter)->_y - pPlayer->_y) <= dfATTACK2_RANGE_Y)
+					{
+						pDamagedPlayer = (*iter);
+						pDamagedPlayer->_hp -= dfATTACK2_DAMAGE;
+
+						if (pDamagedPlayer->_hp <= 0)
+						{
+							_deadCnt++;
+							SetSessionDead(pDamagedPlayer->_pSession);
+						}
+						return;
+					}
+				}
+			}
+			else if (pPlayer->_y <= pSector->_yPosMin + dfATTACK2_RANGE_Y)
+			{
+				iter = pSector->_around[dfMOVE_DIR_DD]->_players.begin();
+				for (; iter < pSector->_around[dfMOVE_DIR_DD]->_players.end(); iter++)
+				{
+					int dist = (*iter)->_x - pPlayer->_x;
+					if (dist >= 0 && dist <= dfATTACK2_RANGE_X &&
+						abs((*iter)->_y - pPlayer->_y) <= dfATTACK2_RANGE_Y)
+					{
+						pDamagedPlayer = (*iter);
+						pDamagedPlayer->_hp -= dfATTACK2_DAMAGE;
+
+						if (pDamagedPlayer->_hp <= 0)
+						{
+							_deadCnt++;
+							SetSessionDead(pDamagedPlayer->_pSession);
+						}
+						return;
+					}
+				}
+			}
 		}
 	}
 }
-
 void CServer::SetPlayerAttack3(Player* pPlayer, Player*& pDamagedPlayer, BYTE& direction, short& x, short& y)
 {
 	pPlayer->_x = x;
@@ -1700,11 +2047,13 @@ void CServer::SetPlayerAttack3(Player* pPlayer, Player*& pDamagedPlayer, BYTE& d
 
 	if (direction == dfMOVE_DIR_LL)
 	{
-		vector<Player*>::iterator iter 
-			= pPlayer->_pSector->_around[dfMOVE_DIR_INPLACE]->_players.begin();
-		for (; iter < pPlayer->_pSector->_around[dfMOVE_DIR_INPLACE]->_players.end(); iter++)
+		vector<Player*>::iterator iter;
+		Sector* pSector = pPlayer->_pSector;
+
+		iter = pSector->_around[dfMOVE_DIR_INPLACE]->_players.begin();
+		for (; iter < pSector->_around[dfMOVE_DIR_INPLACE]->_players.end(); iter++)
 		{
-			if((*iter) != pPlayer)
+			if ((*iter) != pPlayer)
 			{
 				int dist = pPlayer->_x - (*iter)->_x;
 				if (dist >= 0 && dist <= dfATTACK3_RANGE_X &&
@@ -1712,7 +2061,7 @@ void CServer::SetPlayerAttack3(Player* pPlayer, Player*& pDamagedPlayer, BYTE& d
 				{
 					pDamagedPlayer = (*iter);
 					pDamagedPlayer->_hp -= dfATTACK3_DAMAGE;
-					
+
 					if (pDamagedPlayer->_hp <= 0)
 					{
 						_deadCnt++;
@@ -1722,12 +2071,11 @@ void CServer::SetPlayerAttack3(Player* pPlayer, Player*& pDamagedPlayer, BYTE& d
 				}
 			}
 		}
-		
-		for (int i = 0; i < dfMOVE_DIR_MAX; i++)
+
+		if (pPlayer->_x <= pSector->_xPosMin + dfATTACK3_RANGE_X)
 		{
-			vector<Player*>::iterator iter 
-				= pPlayer->_pSector->_around[i]->_players.begin();
-			for (; iter < pPlayer->_pSector->_around[i]->_players.end(); iter++)
+			iter = pSector->_around[dfMOVE_DIR_LL]->_players.begin();
+			for (; iter < pSector->_around[dfMOVE_DIR_LL]->_players.end(); iter++)
 			{
 				int dist = pPlayer->_x - (*iter)->_x;
 				if (dist >= 0 && dist <= dfATTACK3_RANGE_X &&
@@ -1735,24 +2083,114 @@ void CServer::SetPlayerAttack3(Player* pPlayer, Player*& pDamagedPlayer, BYTE& d
 				{
 					pDamagedPlayer = (*iter);
 					pDamagedPlayer->_hp -= dfATTACK3_DAMAGE;
-					
+
 					if (pDamagedPlayer->_hp <= 0)
 					{
 						_deadCnt++;
 						SetSessionDead(pDamagedPlayer->_pSession);
 					}
 					return;
+				}
+			}
+
+			if (pPlayer->_y <= pSector->_yPosMin + dfATTACK3_RANGE_Y)
+			{
+				iter = pSector->_around[dfMOVE_DIR_LD]->_players.begin();
+				for (; iter < pSector->_around[dfMOVE_DIR_LD]->_players.end(); iter++)
+				{
+					int dist = pPlayer->_x - (*iter)->_x;
+					if (dist >= 0 && dist <= dfATTACK3_RANGE_X &&
+						abs((*iter)->_y - pPlayer->_y) <= dfATTACK3_RANGE_Y)
+					{
+						pDamagedPlayer = (*iter);
+						pDamagedPlayer->_hp -= dfATTACK3_DAMAGE;
+
+						if (pDamagedPlayer->_hp <= 0)
+						{
+							_deadCnt++;
+							SetSessionDead(pDamagedPlayer->_pSession);
+						}
+						return;
+					}
+				}
+			}
+			else if (pPlayer->_y >= pSector->_yPosMax - dfATTACK3_RANGE_Y)
+			{
+				iter = pSector->_around[dfMOVE_DIR_LU]->_players.begin();
+				for (; iter < pSector->_around[dfMOVE_DIR_LU]->_players.end(); iter++)
+				{
+					int dist = pPlayer->_x - (*iter)->_x;
+					if (dist >= 0 && dist <= dfATTACK3_RANGE_X &&
+						abs((*iter)->_y - pPlayer->_y) <= dfATTACK3_RANGE_Y)
+					{
+						pDamagedPlayer = (*iter);
+						pDamagedPlayer->_hp -= dfATTACK3_DAMAGE;
+
+						if (pDamagedPlayer->_hp <= 0)
+						{
+							_deadCnt++;
+							SetSessionDead(pDamagedPlayer->_pSession);
+						}
+						return;
+					}
+				}
+			}
+		}
+		else
+		{
+			if (pPlayer->_y <= pSector->_yPosMin + dfATTACK3_RANGE_Y)
+			{
+				iter = pSector->_around[dfMOVE_DIR_DD]->_players.begin();
+				for (; iter < pSector->_around[dfMOVE_DIR_DD]->_players.end(); iter++)
+				{
+					int dist = pPlayer->_x - (*iter)->_x;
+					if (dist >= 0 && dist <= dfATTACK3_RANGE_X &&
+						abs((*iter)->_y - pPlayer->_y) <= dfATTACK3_RANGE_Y)
+					{
+						pDamagedPlayer = (*iter);
+						pDamagedPlayer->_hp -= dfATTACK3_DAMAGE;
+
+						if (pDamagedPlayer->_hp <= 0)
+						{
+							_deadCnt++;
+							SetSessionDead(pDamagedPlayer->_pSession);
+						}
+						return;
+					}
+				}
+			}
+			else if (pPlayer->_y >= pSector->_yPosMax - dfATTACK3_RANGE_Y)
+			{
+				iter = pSector->_around[dfMOVE_DIR_UU]->_players.begin();
+				for (; iter < pSector->_around[dfMOVE_DIR_UU]->_players.end(); iter++)
+				{
+					int dist = pPlayer->_x - (*iter)->_x;
+					if (dist >= 0 && dist <= dfATTACK3_RANGE_X &&
+						abs((*iter)->_y - pPlayer->_y) <= dfATTACK3_RANGE_Y)
+					{
+						pDamagedPlayer = (*iter);
+						pDamagedPlayer->_hp -= dfATTACK3_DAMAGE;
+
+						if (pDamagedPlayer->_hp <= 0)
+						{
+							_deadCnt++;
+							SetSessionDead(pDamagedPlayer->_pSession);
+						}
+						return;
+					}
 				}
 			}
 		}
 	}
 	else if (direction == dfMOVE_DIR_RR)
 	{
-		vector<Player*>::iterator iter 
-			= pPlayer->_pSector->_around[dfMOVE_DIR_INPLACE]->_players.begin();
-		for (; iter < pPlayer->_pSector->_around[dfMOVE_DIR_INPLACE]->_players.end(); iter++)
+		vector<Player*>::iterator iter;
+		Sector* pSector = pPlayer->_pSector;
+
+		iter = pSector->_around[dfMOVE_DIR_INPLACE]->_players.begin();
+		for (; iter < pSector->_around[dfMOVE_DIR_INPLACE]->_players.end(); iter++)
 		{
-			if((*iter)!= pPlayer)
+			if ((*iter) != pPlayer)
 			{
 				int dist = (*iter)->_x - pPlayer->_x;
 				if (dist >= 0 && dist <= dfATTACK3_RANGE_X &&
@@ -1760,7 +2198,7 @@ void CServer::SetPlayerAttack3(Player* pPlayer, Player*& pDamagedPlayer, BYTE& d
 				{
 					pDamagedPlayer = (*iter);
 					pDamagedPlayer->_hp -= dfATTACK3_DAMAGE;
-					
+
 					if (pDamagedPlayer->_hp <= 0)
 					{
 						_deadCnt++;
@@ -1770,12 +2208,11 @@ void CServer::SetPlayerAttack3(Player* pPlayer, Player*& pDamagedPlayer, BYTE& d
 				}
 			}
 		}
-		
-		for (int i = 0; i < dfMOVE_DIR_MAX; i++)
+
+		if (pPlayer->_x >= pSector->_xPosMax - dfATTACK3_RANGE_X)
 		{
-			vector<Player*>::iterator iter 
-				= pPlayer->_pSector->_around[i]->_players.begin();
-			for (; iter < pPlayer->_pSector->_around[i]->_players.end(); iter++)
+			iter = pSector->_around[dfMOVE_DIR_RR]->_players.begin();
+			for (; iter < pSector->_around[dfMOVE_DIR_RR]->_players.end(); iter++)
 			{
 				int dist = (*iter)->_x - pPlayer->_x;
 				if (dist >= 0 && dist <= dfATTACK3_RANGE_X &&
@@ -1783,13 +2220,101 @@ void CServer::SetPlayerAttack3(Player* pPlayer, Player*& pDamagedPlayer, BYTE& d
 				{
 					pDamagedPlayer = (*iter);
 					pDamagedPlayer->_hp -= dfATTACK3_DAMAGE;
-					
+
 					if (pDamagedPlayer->_hp <= 0)
 					{
 						_deadCnt++;
 						SetSessionDead(pDamagedPlayer->_pSession);
 					}
 					return;
+				}
+			}
+
+			if (pPlayer->_y >= pSector->_yPosMax - dfATTACK3_RANGE_Y)
+			{
+				iter = pSector->_around[dfMOVE_DIR_RU]->_players.begin();
+				for (; iter < pSector->_around[dfMOVE_DIR_RU]->_players.end(); iter++)
+				{
+					int dist = (*iter)->_x - pPlayer->_x;
+					if (dist >= 0 && dist <= dfATTACK3_RANGE_X &&
+						abs((*iter)->_y - pPlayer->_y) <= dfATTACK3_RANGE_Y)
+					{
+						pDamagedPlayer = (*iter);
+						pDamagedPlayer->_hp -= dfATTACK3_DAMAGE;
+
+						if (pDamagedPlayer->_hp <= 0)
+						{
+							_deadCnt++;
+							SetSessionDead(pDamagedPlayer->_pSession);
+						}
+						return;
+					}
+				}
+			}
+			else if (pPlayer->_y <= pSector->_yPosMin + dfATTACK3_RANGE_Y)
+			{
+				iter = pSector->_around[dfMOVE_DIR_RD]->_players.begin();
+				for (; iter < pSector->_around[dfMOVE_DIR_RD]->_players.end(); iter++)
+				{
+					int dist = (*iter)->_x - pPlayer->_x;
+					if (dist >= 0 && dist <= dfATTACK3_RANGE_X &&
+						abs((*iter)->_y - pPlayer->_y) <= dfATTACK3_RANGE_Y)
+					{
+						pDamagedPlayer = (*iter);
+						pDamagedPlayer->_hp -= dfATTACK3_DAMAGE;
+
+						if (pDamagedPlayer->_hp <= 0)
+						{
+							_deadCnt++;
+							SetSessionDead(pDamagedPlayer->_pSession);
+						}
+						return;
+					}
+				}
+			}
+		}
+		else
+		{
+			if (pPlayer->_y >= pSector->_yPosMax - dfATTACK3_RANGE_Y)
+			{
+				iter = pSector->_around[dfMOVE_DIR_UU]->_players.begin();
+				for (; iter < pSector->_around[dfMOVE_DIR_UU]->_players.end(); iter++)
+				{
+					int dist = (*iter)->_x - pPlayer->_x;
+					if (dist >= 0 && dist <= dfATTACK3_RANGE_X &&
+						abs((*iter)->_y - pPlayer->_y) <= dfATTACK3_RANGE_Y)
+					{
+						pDamagedPlayer = (*iter);
+						pDamagedPlayer->_hp -= dfATTACK3_DAMAGE;
+
+						if (pDamagedPlayer->_hp <= 0)
+						{
+							_deadCnt++;
+							SetSessionDead(pDamagedPlayer->_pSession);
+						}
+						return;
+					}
+				}
+			}
+			else if (pPlayer->_y <= pSector->_yPosMin + dfATTACK3_RANGE_Y)
+			{
+				iter = pSector->_around[dfMOVE_DIR_DD]->_players.begin();
+				for (; iter < pSector->_around[dfMOVE_DIR_DD]->_players.end(); iter++)
+				{
+					int dist = (*iter)->_x - pPlayer->_x;
+					if (dist >= 0 && dist <= dfATTACK3_RANGE_X &&
+						abs((*iter)->_y - pPlayer->_y) <= dfATTACK3_RANGE_Y)
+					{
+						pDamagedPlayer = (*iter);
+						pDamagedPlayer->_hp -= dfATTACK3_DAMAGE;
+
+						if (pDamagedPlayer->_hp <= 0)
+						{
+							_deadCnt++;
+							SetSessionDead(pDamagedPlayer->_pSession);
+						}
+						return;
+					}
 				}
 			}
 		}

@@ -22,7 +22,7 @@ class CServer
 public:
 	CServer();
 	~CServer();
-
+	
 public:
 	void NetworkUpdate();
 	void ContentUpdate();
