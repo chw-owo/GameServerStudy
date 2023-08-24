@@ -1,6 +1,14 @@
 #include "CPacket.h"
 #include <stdio.h>
 
+CPacket::CPacket()
+    : _iBufferSize(eBUFFER_DEFAULT), _iPayloadSize(0), _iHeaderSize(dfHEADER_LEN),
+    _iPayloadReadPos(dfHEADER_LEN), _iPayloadWritePos(dfHEADER_LEN),
+    _iHeaderReadPos(0), _iHeaderWritePos(0)
+{
+    _chpBuffer = new char[_iBufferSize];
+}
+
 CPacket::CPacket(int headerLen)
     : _iBufferSize(eBUFFER_DEFAULT), _iPayloadSize(0), _iHeaderSize(headerLen),
     _iPayloadReadPos(headerLen), _iPayloadWritePos(headerLen),
@@ -100,14 +108,14 @@ int CPacket::MovePayloadWritePos(int iSize)
         return -1;
     }
 
-    _iPayloadWritePos += iSize;
-
-    if (_iPayloadWritePos > _iBufferSize)
+    if (_iPayloadWritePos + iSize > _iBufferSize)
     {
         ::printf("Error! Func %s Line %d (write pos - %d, req size - %d)\n",
             __func__, __LINE__, _iPayloadWritePos, iSize);
         return -1;
     }
+
+    _iPayloadWritePos += iSize;
 
     return iSize;
 }
@@ -121,14 +129,14 @@ int CPacket::MovePayloadReadPos(int iSize)
         return -1;
     }
 
-    _iPayloadReadPos += iSize;
-
-    if (_iPayloadReadPos > _iBufferSize)
+    if (_iPayloadReadPos + iSize > _iBufferSize)
     {
         ::printf("Error! Func %s Line %d (read pos - %d, req size - %d)\n",
             __func__, __LINE__, _iPayloadReadPos, iSize);
         return -1;
     }
+
+    _iPayloadReadPos += iSize;
 
     return iSize;
 }
@@ -292,8 +300,8 @@ CPacket& CPacket::operator>>(BYTE& byValue)
 {
     if (_iPayloadWritePos - _iPayloadReadPos < sizeof(BYTE))
     {
-        ::printf("Used Size(%d) < Requested Size(%llu)!\n",
-            _iPayloadWritePos - _iPayloadReadPos, sizeof(BYTE));
+        ::printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n",
+            _iPayloadWritePos - _iPayloadReadPos, sizeof(BYTE), __func__, __LINE__);
         return *this;
     }
 
@@ -481,17 +489,10 @@ int CPacket::GetHeaderData(char* chpDest, int iSize)
 
 int CPacket::PeekHeaderData(char* chpDest, int iSize)
 {
-    if (_iHeaderSize < iSize)
-    {
-        ::printf("Header(%d) is small than Requested Size(%d)! (read: %d)\n",
-            _iHeaderSize, iSize, _iHeaderReadPos);
-        return -1;
-    }
-
     if (_iHeaderWritePos - _iHeaderReadPos < iSize)
     {
-        ::printf("Used Size(%d) is small than Requested Size(%d)!\n",
-            _iHeaderWritePos - _iHeaderReadPos, iSize);
+        ::printf("Usable Size(%d) is small than Requested Size(%d)! (header read pos: %d)\n",
+            _iHeaderWritePos - _iHeaderReadPos, iSize, _iHeaderReadPos);
         return -1;
     }
 
@@ -503,14 +504,8 @@ int CPacket::PutHeaderData(char* chpSrc, int iSrcSize)
 {
     if (_iHeaderSize < _iHeaderWritePos + iSrcSize)
     {
-        ::printf("Header(%d) is small than Requested Size(%d)! (write: %d)\n",
-            _iHeaderSize, iSrcSize, _iHeaderWritePos);
-        return -1;
-    }
-
-    if (_iHeaderWritePos == _iHeaderSize)
-    {
-        ::printf("Header is already filled!\n");
+        ::printf("Usable size(%d) is small than Requested Size(%d)! (header write pos: %d)\n",
+            _iHeaderSize - _iHeaderWritePos, iSrcSize, _iHeaderWritePos);
         return -1;
     }
 

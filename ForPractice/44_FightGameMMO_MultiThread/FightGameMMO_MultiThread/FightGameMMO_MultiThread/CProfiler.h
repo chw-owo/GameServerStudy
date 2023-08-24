@@ -85,7 +85,6 @@ class CProfiler
 public:
 	void ProfileBegin(wstring _szName);
 	void ProfileEnd(wstring _szName);
-	void ProfileReset(void);
 
 private:
 	LARGE_INTEGER _freq;
@@ -105,6 +104,7 @@ public:
 	static CProfilerManager* GetInstance();
 
 public:
+	void ProfileReset(void);
 	void SetProfiler(CProfiler* pProfiler, DWORD threadID);
 	void PrintResult(void);
 	void SaveResult(const wchar_t* szFileName);
@@ -127,24 +127,21 @@ extern CProfilerManager* g_pManager;
 #define PRO_PRINT()						g_pManager->PrintResult()
 #define PRO_SAVE_ADDUP(FileName)		g_pManager->SaveResultAddup(FileName)
 #define PRO_PRINT_ADDUP()				g_pManager->PrintResultAddup()
+#define PRO_RESET()						g_pManager->ProfileReset()
 
 #ifdef USE_STLS
 #define PRO_BEGIN(TagName)		pSTLSProfiler->ProfileBegin(TagName)
 #define PRO_END(TagName)		pSTLSProfiler->ProfileEnd(TagName)
-#define PRO_RESET()				pSTLSProfiler->ProfileReset()
-
 #endif
 
 #ifdef USE_DTLS
 #define PRO_BEGIN(TagName)		pProfiler->ProfileBegin(TagName)
 #define PRO_END(TagName)		pProfiler->ProfileEnd(TagName)
-#define PRO_RESET()				pProfiler->ProfileReset()
 #endif
 
 #ifdef SINGLE_THREAD
 #define PRO_BEGIN(TagName)		pProfiler->ProfileBegin(TagName)
 #define PRO_END(TagName)		pProfiler->ProfileEnd(TagName)
-#define PRO_RESET()				pProfiler->ProfileReset()
 #endif
 
 #else

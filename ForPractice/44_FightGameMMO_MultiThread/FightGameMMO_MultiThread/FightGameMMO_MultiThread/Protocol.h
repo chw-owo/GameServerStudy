@@ -10,16 +10,21 @@
 #include <windows.h>
 
 #define dfSERVER_IP L"0.0.0.0"
-#define dfSERVER_PORT 6000
+#define dfSERVER_PORT 20000
 #define dfMONITOR_CHECKPOINT 11
 
 #define dfSESSION_MAX					6000
+#define dfPLAYER_MAX					6000
+#define dfJOB_MAX						30000
+#define dfPACKET_MAX					30000
 #define dfDEFAULT_PLAYERS_PER_SECTOR	1024
 
+#pragma pack (push, 1)
 struct st_PACKET_HEADER
 {
 	unsigned short	Len;	// 메시지 길이
 };
+#pragma pack (pop)
 
 #define dfHEADER_LEN		sizeof(st_PACKET_HEADER)
 
@@ -337,7 +342,7 @@ struct st_PACKET_HEADER
 //-----------------------------------------------------------------
 #define dfSPEED_PLAYER_X	6   // 6 25fps, 3 50fps
 #define dfSPEED_PLAYER_Y	4	// 4 25fps, 2 50fps
-#define dfFPS 25
+#define dfFPS				25
 
 //-----------------------------------------------------------------
 // 이동 오류체크 범위
@@ -348,8 +353,8 @@ struct st_PACKET_HEADER
 // 섹터 설정값
 //-----------------------------------------------------------------
 
-#define dfSECTOR_SIZE_X					200
-#define dfSECTOR_SIZE_Y					200 
+#define dfSECTOR_SIZE_X					100
+#define dfSECTOR_SIZE_Y					100 
 #define dfSECTOR_CNT_X					(dfRANGE_MOVE_RIGHT / dfSECTOR_SIZE_X) + 4
 #define dfSECTOR_CNT_Y					(dfRANGE_MOVE_BOTTOM / dfSECTOR_SIZE_Y) + 4
 

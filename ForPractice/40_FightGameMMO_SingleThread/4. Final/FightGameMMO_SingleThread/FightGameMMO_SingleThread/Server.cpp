@@ -2722,6 +2722,6 @@ inline CServer::Player::Player(Session* pSession, int ID)
 	: _pSession(pSession), _pSector(nullptr), _ID(ID), _hp(dfMAX_HP),
 	_move(false), _direction(dfMOVE_DIR_LL), _moveDirection(dfMOVE_DIR_LL)
 {
-	_x = rand() % dfRANGE_MOVE_RIGHT;
-	_y = rand() % dfRANGE_MOVE_BOTTOM;
+	_x = 50; // rand() % dfRANGE_MOVE_RIGHT;
+	_y = 50; // rand() % dfRANGE_MOVE_BOTTOM;
 }

@@ -9,7 +9,8 @@
 #define dfTITLE_LEN 256
 #define dfHEXDATA_LEN 32
 
-#define SYSTEM_LOG
+#define __SYSTEM_LOG
+#define __SYSTEM_LOG_MULTITHREAD
 
 class CSystemLog
 {
@@ -40,6 +41,10 @@ private:
 	WCHAR* _dir = nullptr;
 	LOG_LEVEL _logLevel;
 	__int64 _logCount;
+
+#ifdef  __SYSTEM_LOG_MULTITHREAD
+	CRITICAL_SECTION _cs;
+#endif
 };
 
 extern CSystemLog* g_pSystemLog;

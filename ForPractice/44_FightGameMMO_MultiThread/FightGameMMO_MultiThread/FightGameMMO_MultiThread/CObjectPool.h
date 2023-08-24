@@ -3,10 +3,11 @@
 #define  __OBJECT_POOL__
 #include <new.h>
 #include <stdlib.h>
-#include <wchar.h>
+#include <tchar.h>
 #include "CSystemLog.h"
 
 //#define __OBJECT_POOL_DEBUG__
+#define __OBJECT_POOL_MULTITHREAD__
 
 /* ===============================================
 
@@ -95,6 +96,11 @@ private:
 	int _blockNum;
 	stNODE* _pFreeNode = nullptr;
 
+#ifdef	__OBJECT_POOL_MULTITHREAD__
+private:
+	CRITICAL_SECTION _cs;
+#endif
+
 #ifdef __OBJECT_POOL_DEBUG__
 public:
 	int		GetCapacityCount(void) { return _capacity; }
@@ -113,6 +119,10 @@ template<typename... Types>
 CObjectPool<DATA>::CObjectPool(int blockNum, bool placementNew, Types... args)
 	:_placementNew(placementNew), _blockNum(blockNum), _pFreeNode(nullptr)
 {
+#ifdef	__OBJECT_POOL_MULTITHREAD__
+	InitializeCriticalSection(&_cs);
+#endif
+
 #ifdef __OBJECT_POOL_DEBUG__
 
 	_capacity = _blockNum;
@@ -207,6 +217,10 @@ template<class DATA>
 template<typename... Types>
 DATA* CObjectPool<DATA>::Alloc(Types... args)
 {
+#ifdef	__OBJECT_POOL_MULTITHREAD__
+	EnterCriticalSection(&_cs);
+#endif
+
 	if (_pFreeNode == nullptr)
 	{
 		// 비어있는 노드가 없다면 생성한 후 Data의 생성자를 호출한다 (최초 생성)
@@ -228,6 +242,9 @@ DATA* CObjectPool<DATA>::Alloc(Types... args)
 
 #endif
 
+#ifdef	__OBJECT_POOL_MULTITHREAD__
+		LeaveCriticalSection(&_cs);
+#endif
 		return &(pNew->data);
 	}
 
@@ -251,6 +268,9 @@ DATA* CObjectPool<DATA>::Alloc(Types... args)
 		p->tail = code;
 #endif
 
+#ifdef	__OBJECT_POOL_MULTITHREAD__
+		LeaveCriticalSection(&_cs);
+#endif
 		return &(p->data);
 	}
 	else
@@ -272,16 +292,24 @@ DATA* CObjectPool<DATA>::Alloc(Types... args)
 		p->tail = code;
 
 #endif
-
+#ifdef	__OBJECT_POOL_MULTITHREAD__
+		LeaveCriticalSection(&_cs);
+#endif
 		return &(p->data);
 	}
 
+#ifdef	__OBJECT_POOL_MULTITHREAD__
+	LeaveCriticalSection(&_cs);
+#endif
 	return nullptr;
 }
 
 template<class DATA>
 bool CObjectPool<DATA>::Free(DATA* pData)
 {
+#ifdef	__OBJECT_POOL_MULTITHREAD__
+	EnterCriticalSection(&_cs);
+#endif
 	if (_placementNew)
 	{
 		// Data의 소멸자를 호출한 후 _pFreeNode에 push한다
@@ -306,6 +334,11 @@ bool CObjectPool<DATA>::Free(DATA* pData)
 
 			::wprintf(L"%s[%d]: Code is Diffrent. code %o, head %o, tail %o\n",
 				_T(__FUNCTION__), __LINE__, code, pNode->head, pNode->tail);
+
+#ifdef	__OBJECT_POOL_MULTITHREAD__
+			LeaveCriticalSection(&_cs);
+#endif
+			return false;
 		}
 
 		pData->~DATA();
@@ -318,6 +351,9 @@ bool CObjectPool<DATA>::Free(DATA* pData)
 		((stNODE*)pData)->tail = (size_t)_pFreeNode;
 		_pFreeNode = (stNODE*)pData;
 
+#endif
+#ifdef	__OBJECT_POOL_MULTITHREAD__
+		LeaveCriticalSection(&_cs);
 #endif
 		return true;
 	}
@@ -345,6 +381,9 @@ bool CObjectPool<DATA>::Free(DATA* pData)
 			::wprintf(L"%s[%d]: Code is Different. code %o, head %o, tail %o\n",
 				_T(__FUNCTION__), __LINE__, code, pNode->head, pNode->tail);
 
+#ifdef	__OBJECT_POOL_MULTITHREAD__
+			LeaveCriticalSection(&_cs);
+#endif
 			return false;
 		}
 
@@ -357,8 +396,16 @@ bool CObjectPool<DATA>::Free(DATA* pData)
 		_pFreeNode = (stNODE*)pData;
 
 #endif
+
+#ifdef	__OBJECT_POOL_MULTITHREAD__
+		LeaveCriticalSection(&_cs);
+#endif
 		return true;
 	}
+
+#ifdef	__OBJECT_POOL_MULTITHREAD__
+	LeaveCriticalSection(&_cs);
+#endif
 	return false;
 }
 

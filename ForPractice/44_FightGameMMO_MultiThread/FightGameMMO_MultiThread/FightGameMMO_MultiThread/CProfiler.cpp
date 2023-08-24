@@ -50,11 +50,8 @@ void CProfiler::ProfileBegin(wstring _szName)
 		}
 	}
 
-	if (i == PROFILE_CNT)
-	{
-		::wprintf(L"profiler is full!: %s\n", _szName);
-		return;
-	}
+	::wprintf(L"profiler is full!: %s\n", _szName.c_str());
+	return;
 }
 
 void CProfiler::ProfileEnd(wstring _szName)
@@ -128,21 +125,53 @@ void CProfiler::ProfileEnd(wstring _szName)
 		}
 	}
 
-	if (i == PROFILE_CNT)
-	{
-		::wprintf(L"Can't find the profiler: %s\n", _szName);
-		return;
-	}
+	::wprintf(L"Can't find the profiler: %s\n", _szName.c_str());
+	return;
 }
 
 
-void CProfiler::ProfileReset(void)
+void CProfilerManager::ProfileReset(void)
 {
-	for (int i = 0; i < PROFILE_CNT; i++)
+	vector<CProfiler*>::iterator iter = _profilers.begin();
+	for(; iter != _profilers.end(); iter++)
 	{
-		memset(&_profileResults[i], 0, sizeof(_PROFILE_RESULT));
+		for (int i = 0; i < PROFILE_CNT; i++)
+		{
+			if ((*iter)->_profileResults[i]._lFlag != none)
+			{
+				_PROFILE_RESULT& result = (*iter)->_profileResults[i];
+				WaitOnAddress(&result._lFlag, &_underwayFlag, sizeof(LONG), INFINITE);
+				result._lFlag = pause;
+
+				result._iCall = 0;
+				result._dTotalTime = 0;
+				for (int i = 0; i < MINMAX_CNT; i++)
+				{
+					result._dMin[i] = 0;
+					result._dMax[i] = 0;
+				}
+
+				result._lFlag = complete;
+				WakeByAddressSingle(&result._lFlag);
+			}
+		}
 	}
-	::printf("Profile Reset Success!\n");
+
+	unordered_map<wstring, _PROFILE_RESULT_FOR_ADDUP*>::iterator addIter = _resultAddupMap.begin();
+	for (; addIter != _resultAddupMap.end(); addIter++)
+	{
+		_PROFILE_RESULT_FOR_ADDUP* resultAddup = addIter->second;
+
+		for (int i = 0; i < MINMAX_CNT; i++)
+		{
+			resultAddup->_dMin[i] = 0;
+			resultAddup->_dMax[i] = 0;
+		}
+		resultAddup->_iCall = 0;
+		resultAddup->_dTotalTime = 0;
+	}
+
+	//::printf("Profile Reset Success!\n");
 }
 
 CProfilerManager::CProfilerManager()
@@ -334,7 +363,7 @@ void CProfilerManager::PrintResultAddup(void)
 			idx++;
 		}
 	}
-
+	/*	
 	::printf(
 		"\n----------------------------------------------\n"
 		"| Name | Average | Min | Max | Call | Total |\n"
@@ -352,6 +381,26 @@ void CProfilerManager::PrintResultAddup(void)
 			(resultAddup->_dTotalTime / resultAddup->_iCall) * MS_PER_SEC,
 			resultAddup->_dMin[0] * MS_PER_SEC,
 			resultAddup->_dMax[0] * MS_PER_SEC,
+			resultAddup->_iCall,
+			resultAddup->_dTotalTime * MS_PER_SEC);
+#endif
+
+*/
+	::printf(
+		"\n----------------------------------------------\n"
+		"| Name | Average | Call | Total |\n"
+		"----------------------------------------------\n");
+
+	resultIter = _resultAddupMap.begin();
+	for (; resultIter != _resultAddupMap.end(); resultIter++)
+	{
+		_PROFILE_RESULT_FOR_ADDUP* resultAddup = resultIter->second;
+
+#ifdef USE_MS_UNIT
+		::printf(
+			"| %ls | %.4lfms | %lld | %.2lfms |\n",
+			resultIter->first.c_str(),
+			(resultAddup->_dTotalTime / resultAddup->_iCall) * MS_PER_SEC,
 			resultAddup->_iCall,
 			resultAddup->_dTotalTime * MS_PER_SEC);
 #endif
@@ -404,7 +453,8 @@ void CProfilerManager::SaveResultAddup(const wchar_t* szFileName)
 		}
 	}
 
-	char data[OUTPUT_SIZE] =
+	/*
+		char data[OUTPUT_SIZE] =
 		"\n----------------------------------------------\n"
 		"| Name | Average | Min | Max | Call | Total |\n"
 		"----------------------------------------------\n";
@@ -424,6 +474,29 @@ void CProfilerManager::SaveResultAddup(const wchar_t* szFileName)
 			(resultAddup->_dTotalTime / resultAddup->_iCall) * MS_PER_SEC,
 			resultAddup->_dMin[0] * MS_PER_SEC,
 			resultAddup->_dMax[0] * MS_PER_SEC,
+			resultAddup->_iCall,
+			resultAddup->_dTotalTime * MS_PER_SEC);
+#endif
+	*/
+
+	char data[OUTPUT_SIZE] =
+		"\n----------------------------------------------\n"
+		"| Name | Average | Call | Total |\n"
+		"----------------------------------------------\n";
+
+	char buffer[BUFFER_SIZE];
+
+	resultIter = _resultAddupMap.begin();
+	for (; resultIter != _resultAddupMap.end(); resultIter++)
+	{
+		_PROFILE_RESULT_FOR_ADDUP* resultAddup = resultIter->second;
+		memset(buffer, '\0', BUFFER_SIZE);
+
+#ifdef USE_MS_UNIT
+		sprintf_s(buffer, BUFFER_SIZE,
+			"| %ls | %.4lfms | %lld | %.2lfms |\n",
+			resultIter->first.c_str(),
+			(resultAddup->_dTotalTime / resultAddup->_iCall) * MS_PER_SEC,
 			resultAddup->_iCall,
 			resultAddup->_dTotalTime * MS_PER_SEC);
 #endif
@@ -458,5 +531,5 @@ void CProfilerManager::SaveResultAddup(const wchar_t* szFileName)
 	fwrite(data, strlen(data), 1, file);
 	fclose(file);
 
-	::printf("Save Addup Result Success!\n");
+	//::printf("Save Addup Result Success!\n");
 }
