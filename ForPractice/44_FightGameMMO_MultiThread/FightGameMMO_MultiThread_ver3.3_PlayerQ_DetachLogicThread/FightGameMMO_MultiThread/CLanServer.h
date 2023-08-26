@@ -11,7 +11,6 @@
 #pragma comment(lib, "ws2_32.lib")
 using namespace std;
 
-#define USE_STLS
 #ifdef USE_STLS
 extern __declspec (thread) CProfiler* pSTLSProfiler;
 #endif
@@ -45,7 +44,7 @@ protected:
 	inline int GetDisconnectTPS() { return _disconnectTPS; }
 	inline int GetRecvMsgTPS() { return _recvMsgTPS; }
 	inline int GetSendMsgTPS() { return _sendMsgTPS; }
-	inline long GetSessionCount() { return _sessionCnt; }
+	inline long GetSessionCount() { return _sessionMap->_map.size(); }
 
 protected:
 	CObjectPool<CPacket>* _pPacketPool;

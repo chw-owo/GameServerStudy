@@ -1,6 +1,7 @@
 #pragma once
 #include "CSystemLog.h"
 #include "CSector.h"
+#include <synchapi.h>
 #include <tchar.h>
 
 enum PLAYER_STATE
@@ -17,9 +18,10 @@ public:
 		: _state(ALIVE), _sessionID(sessionID), _playerID(playerID), _pSector(nullptr),
 		_move(false), _hp(dfMAX_HP), _direction(dfMOVE_DIR_LL), _moveDirection(dfMOVE_DIR_LL)
 	{
-		_x = rand() % dfRANGE_MOVE_RIGHT;
-		_y = rand() % dfRANGE_MOVE_BOTTOM;
+		_x = 50; // rand() % dfRANGE_MOVE_RIGHT;
+		_y = 50; // rand() % dfRANGE_MOVE_BOTTOM;
 		_lastRecvTime = GetTickCount64();
+		InitializeSRWLock(&_lock);
 	}
 
 	inline CPlayer()
@@ -41,4 +43,5 @@ public:
 		unsigned char _moveDirection;
 		CSector* _pSector;
 		DWORD _lastRecvTime;
+		SRWLOCK _lock;
 	};

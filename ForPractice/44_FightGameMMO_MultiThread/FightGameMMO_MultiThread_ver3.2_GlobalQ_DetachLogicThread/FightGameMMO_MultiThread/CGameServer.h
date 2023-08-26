@@ -1,6 +1,7 @@
 #pragma once
 #include "CLanServer.h"
 #include "CObjectPool.h"
+#include "CJobQueue.h"
 #include "CSector.h"
 #include "CPlayer.h"
 #include "CProcessCpu.h"
@@ -31,6 +32,7 @@ private:
 private:
 	static unsigned int WINAPI UpdateThread(void* arg);
 	static unsigned int WINAPI MonitorThread(void* arg);
+	static unsigned int WINAPI GetPacketThread(void* arg);
 
 private:
 	void ReqSendUnicast(CPacket* packet, __int64 sessionID);
@@ -38,7 +40,8 @@ private:
 	void ReqSendAroundSector(CPacket* packet, CSector* centerSector, CPlayer* pExpPlayer = nullptr);
 
 private:
-	bool SkipForFixedFrame();
+	void GetDataFromPacket();
+	void SleepForFixedFrame();
 	void LogicUpdate();
 
 private:
@@ -98,9 +101,12 @@ private:
 private:
 	HANDLE _updateThread;
 	HANDLE _monitorThread;
+	HANDLE _getPacketThread;
+	CJobQueue* _jobQueue;
 
 private:
 	CObjectPool<CPlayer>* _pPlayerPool;
+	CObjectPool<CJob>* _pJobPool;
 	CSector _sectors[dfSECTOR_CNT_Y][dfSECTOR_CNT_X];
 	int _sectorCnt[dfMOVE_DIR_MAX] =
 					{ dfVERT_SECTOR_NUM, dfDIAG_SECTOR_NUM,
@@ -117,8 +123,13 @@ private:
 	int _usableIDs[dfPLAYER_MAX];
 	int _usableIDCnt = 0;
 
+	SRWLOCK _playerMapLock;
+	SRWLOCK _playersLock;
+	SRWLOCK _usableIDLock;
+
 private:
 	// For Monitor
+	int _logicFPS = 0;
 	int _syncCnt = 0;
 	int _deadCnt = 0;
 	int _timeoutCnt = 0;

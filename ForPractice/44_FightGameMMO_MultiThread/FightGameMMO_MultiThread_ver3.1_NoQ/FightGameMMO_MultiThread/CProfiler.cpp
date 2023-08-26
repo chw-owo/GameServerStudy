@@ -1,5 +1,6 @@
 #include "CProfiler.h"
 
+#ifdef PROFILE
 CProfilerManager* g_pManager = CProfilerManager::GetInstance();
 
 void CProfiler::ProfileBegin(wstring _szName)
@@ -533,3 +534,4 @@ void CProfilerManager::SaveResultAddup(const wchar_t* szFileName)
 
 	//::printf("Save Addup Result Success!\n");
 }
+#endif

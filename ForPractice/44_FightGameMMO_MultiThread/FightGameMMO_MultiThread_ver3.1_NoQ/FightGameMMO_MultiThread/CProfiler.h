@@ -27,8 +27,8 @@ using namespace std;
 
 ==============================================================*/
 
-#define PROFILE
-#define USE_STLS
+//#define PROFILE
+//#define USE_STLS
 //#define USE_DTLS
 //#define SINGLE_THREAD
 
@@ -145,6 +145,7 @@ extern CProfilerManager* g_pManager;
 #endif
 
 #else
+#define PRO_SET(profiler, threadID)
 #define PRO_INIT()	
 #define PRO_BEGIN(TagName)
 #define PRO_END(TagName)
