@@ -12,9 +12,8 @@
 // 연결 설정
 //-----------------------------------------------------------------
 
-#define dfNETWORK_IP L"0.0.0.0"
-#define dfNETWORK_PORT 20000
-#define dfMONITOR_CHECKPOINT 11
+#define dfNETWORK_PORT					11650
+#define dfMONITOR_CHECKPOINT			11
 
 #define dfSESSION_MAX					7000
 #define dfDEFAULT_PLAYERS_PER_SECTOR	1024

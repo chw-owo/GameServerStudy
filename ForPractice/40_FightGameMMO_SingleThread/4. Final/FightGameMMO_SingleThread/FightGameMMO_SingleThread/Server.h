@@ -15,8 +15,6 @@
 #pragma comment(lib, "ws2_32")
 using namespace std;
 
-// Test: 5400부터 Sync 발생
-
 class CServer
 {
 public:
@@ -44,8 +42,8 @@ public:
 
 			// ProcessCPUTime.PrintCpuData();
 			// ProcessorCPUTime.PrintCpuData();
-			PRO_PRINT();
 
+			PRO_PRINT();
 			if (_checkPointsIdx < dfMONITOR_CHECKPOINT &&
 				_checkPoints[_checkPointsIdx] < connected)
 			{

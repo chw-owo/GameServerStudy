@@ -320,9 +320,9 @@ struct st_PACKET_HEADER
 //-----------------------------------------------------------------
 // 캐릭터 이동 속도 
 //-----------------------------------------------------------------
-#define dfSPEED_PLAYER_X	3   // 6 25fps, 3 50fps
-#define dfSPEED_PLAYER_Y	2	// 4 25fps, 2 50fps
-#define dfFPS 50
+#define dfSPEED_PLAYER_X	6   // 6 25fps, 3 50fps
+#define dfSPEED_PLAYER_Y	4	// 4 25fps, 2 50fps
+#define dfFPS 25
 
 //-----------------------------------------------------------------
 // 이동 오류체크 범위
@@ -333,8 +333,8 @@ struct st_PACKET_HEADER
 // 섹터 설정값
 //-----------------------------------------------------------------
 
-#define dfSECTOR_SIZE_X					128
-#define dfSECTOR_SIZE_Y					128
+#define dfSECTOR_SIZE_X					200
+#define dfSECTOR_SIZE_Y					200
 #define dfSECTOR_CNT_X					(dfRANGE_MOVE_RIGHT / dfSECTOR_SIZE_X) + 2
 #define dfSECTOR_CNT_Y					(dfRANGE_MOVE_BOTTOM / dfSECTOR_SIZE_Y) + 2
 #define dfAROUND_SECTOR_NUM				9

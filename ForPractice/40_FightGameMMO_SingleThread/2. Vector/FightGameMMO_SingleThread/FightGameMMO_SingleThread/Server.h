@@ -52,13 +52,13 @@ public:
 		if (timeGetTime() - _oldTick > 1000)
 		{
 			printf("[%s %s]\n\n", __DATE__, __TIME__);
-			printf("Connected Session: %llu\n", _connected);
+			printf("Connected Session: %d\n", _connected);
 			printf("Sync/1sec: %d\n", _syncCnt);
 			printf("Accept/1sec: %d\n", _acceptCnt);
 			printf("Disconnect/1sec: %d\n", _disconnectCnt);
 			printf(" - Dead: %d\n", _deadCnt);
 			printf(" - Timeout: %d\n", _timeoutCnt);
-			printf(" - ConnReset(10054): %d\n", _ConnResetCnt); 
+			printf(" - Connnet End: %d\n", _ConnResetCnt); 
 
 			PRO_PRINT_CONSOLE();
 

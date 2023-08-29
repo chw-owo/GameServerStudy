@@ -64,7 +64,7 @@
       <Filter>Etc</Filter>
     </ClInclude>
     <ClInclude Include="Protocol.h">
-      <Filter>Main</Filter>
+      <Filter>Server</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

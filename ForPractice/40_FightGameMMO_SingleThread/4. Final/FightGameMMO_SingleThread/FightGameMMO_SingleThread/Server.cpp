@@ -51,7 +51,7 @@ CServer::CServer()
 	SOCKADDR_IN serveraddr;
 	ZeroMemory(&serveraddr, sizeof(serveraddr));
 	serveraddr.sin_family = AF_INET;
-	InetPton(AF_INET, dfNETWORK_IP, &serveraddr.sin_addr);
+	serveraddr.sin_addr.s_addr = htonl(INADDR_ANY);
 	serveraddr.sin_port = htons(dfNETWORK_PORT);
 
 	bindRet = bind(_listensock, (SOCKADDR*)&serveraddr, sizeof(serveraddr));
@@ -288,10 +288,10 @@ void CServer::AcceptProc()
 	{
 		LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
 			L"%s[%d]: new Error, %d\n",
-			_T(__FUNCTION__), __LINE__);
+			_T(__FUNCTION__), __LINE__, ID);
 
 		::wprintf(L"%s[%d]: new Error, %d\n",
-			_T(__FUNCTION__), __LINE__);
+			_T(__FUNCTION__), __LINE__, ID);
 
 		dump.Crash();	
 		return;
@@ -325,9 +325,22 @@ void CServer::RecvProc(Session* pSession)
 	pSession->_lastRecvTime = GetTickCount64();
 
 	PRO_BEGIN(L"Network: Recv");
-	int recvRet = recv(pSession->_socket,
-		pSession->_recvRBuffer.GetWritePtr(),
-		pSession->_recvRBuffer.DirectEnqueueSize(), 0);
+
+	int recvRet;
+
+	if (pSession->_recvRBuffer.DirectEnqueueSize() == 0)
+	{
+		recvRet = recv(pSession->_socket,
+			pSession->_recvRBuffer.GetWritePtr(),
+			pSession->_recvRBuffer.GetFreeSize(), 0);
+	}
+	else
+	{
+		recvRet = recv(pSession->_socket,
+			pSession->_recvRBuffer.GetWritePtr(),
+			pSession->_recvRBuffer.DirectEnqueueSize(), 0);
+	}
+
 	PRO_END(L"Network: Recv");
 
 	if (recvRet == SOCKET_ERROR)
@@ -370,10 +383,11 @@ void CServer::RecvProc(Session* pSession)
 		dump.Crash();
 		return;
 	}
+	
 	int useSize = pSession->_recvRBuffer.GetUseSize();
 
 	Player* pPlayer =_Players[pSession->_ID];
-	
+
 	if (pPlayer == nullptr)
 	{
 		LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
@@ -458,9 +472,23 @@ void CServer::RecvProc(Session* pSession)
 void CServer::SendProc(Session* pSession)
 {
 	PRO_BEGIN(L"Network: Send");
-	int sendRet = send(pSession->_socket,
-		pSession->_sendRBuffer.GetReadPtr(),
-		pSession->_sendRBuffer.DirectDequeueSize(), 0);
+
+	int sendRet;
+	
+	if (pSession->_sendRBuffer.DirectDequeueSize() == 0)
+	{
+		sendRet = send(pSession->_socket,
+			pSession->_sendRBuffer.GetReadPtr(),
+			pSession->_sendRBuffer.GetUseSize(), 0);
+	}
+	else
+	{
+		sendRet = send(pSession->_socket,
+			pSession->_sendRBuffer.GetReadPtr(),
+			pSession->_sendRBuffer.DirectDequeueSize(), 0);
+	}
+	
+
 	PRO_END(L"Network: Send");
 
 	if (sendRet == SOCKET_ERROR)
@@ -600,6 +628,7 @@ void CServer::EnqueueUnicast(char* msg, int size, Session* pSession)
 		dump.Crash();
 		return;
 	}
+
 }
 
 void CServer::EnqueueOneSector(char* msg, int size, Sector* sector, Session* pExpSession)
@@ -635,7 +664,6 @@ void CServer::EnqueueOneSector(char* msg, int size, Sector* sector, Session* pEx
 				dump.Crash();
 				return;
 			}
-			
 		}
 	}
 	else
@@ -674,6 +702,7 @@ void CServer::EnqueueOneSector(char* msg, int size, Sector* sector, Session* pEx
 			}
 		}
 	}
+
 }
 
 void CServer::EnqueueAroundSector(char* msg, int size, Sector* centerSector, Session* pExpSession)

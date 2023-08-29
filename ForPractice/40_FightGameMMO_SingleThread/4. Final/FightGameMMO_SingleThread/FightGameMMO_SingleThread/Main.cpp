@@ -13,7 +13,6 @@ int wmain(int argc, wchar_t* argv[])
 	CServer* pServer = new CServer;
 	for(;;)
 	{
-		//if (GetAsyncKeyState(VK_SPACE)) break;
 		pServer->NetworkUpdate();
 		pServer->ContentUpdate();
 		pServer->MonitorUpdate();

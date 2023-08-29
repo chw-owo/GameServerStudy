@@ -20,7 +20,7 @@
 #define PRO_END(tagname)
 #define PRO_RESET()	
 #define PRO_SAVE(tagname)	
-#define PRO_PRO_PRINT()			
+#define PRO_PRINT()			
 #endif
 
 struct _PROFILE_RESULT;

@@ -3,8 +3,8 @@
 #include "SystemLog.h"
 #include <tchar.h>
 
-#define DEFAULT_BUF_SIZE (32768 + 1) 
-#define MAX_BUF_SIZE (65536 + 1)
+#define DEFAULT_BUF_SIZE 32768
+#define MAX_BUF_SIZE 65536
 
 #define __RINGBUFFER_DEBUG__
 
@@ -45,7 +45,7 @@ public:
         _writePos = 0;
         _useSize = 0;
         _bufferSize = _initBufferSize;
-        _freeSize = _bufferSize;
+        _freeSize = _bufferSize - 1;
     }
 
     inline int Peek(char* chpDest, int size)
@@ -199,9 +199,9 @@ public:
             {
                 LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
                     L"%s[%d] Fail to Resize",
-                    _T(__FUNCTION__), __LINE__, size, MAX_BUF_SIZE);
+                    _T(__FUNCTION__), __LINE__);
                 ::wprintf(L"%s[%d] Fail to Resize",
-                    _T(__FUNCTION__), __LINE__, size, MAX_BUF_SIZE);
+                    _T(__FUNCTION__), __LINE__);
 
                 return -1;
             }
@@ -217,8 +217,9 @@ public:
     inline int GetBufferSize(void) { return _bufferSize; }
     inline int GetUseSize(void) { return _useSize; }
     inline int GetFreeSize(void) { return _freeSize; }
-    inline char* GetReadPtr(void) { return &_buffer[_readPos + 1]; }
-    inline char* GetWritePtr(void) { return &_buffer[_writePos + 1]; }
+    inline char* GetReadPtr(void) { return &_buffer[(_readPos + 1) % _bufferSize]; }
+    inline char* GetWritePtr(void) { return &_buffer[(_writePos + 1) % _bufferSize]; }
+
     inline int DirectEnqueueSize(void)
     {
         if (_writePos >= _readPos)
@@ -276,25 +277,26 @@ public:
         }
 
         char* newBuffer = new char[size];
+        memset(newBuffer, '\0', size);
 
         if (_writePos > _readPos)
         {
-            memcpy_s(newBuffer, size, &_buffer[_readPos % _bufferSize], _useSize + 1);
+            memcpy_s(&newBuffer[1], size - 1, &_buffer[(_readPos + 1) % _bufferSize], _useSize);
         }
-        else if (_writePos < _readPos)
+        else if (_writePos <= _readPos)
         {
-            int size1 = _bufferSize - _readPos;
+            int size1 = _bufferSize - _readPos - 1;
             int size2 = _writePos + 1;
-            memcpy_s(newBuffer, size, &_buffer[_readPos % _bufferSize], size1);
-            memcpy_s(&newBuffer[size1], size - size1, _buffer, size2);
+            memcpy_s(&newBuffer[1], size - 1, &_buffer[(_readPos + 1) % _bufferSize], size1);
+            memcpy_s(&newBuffer[size1 + 1], size - (size1 + 1), &_buffer[0], size2);
         }
 
         delete[] _buffer;
         _buffer = newBuffer;
-        _bufferSize = size;
-        _freeSize = _bufferSize - _useSize - 1;
         _readPos = 0;
         _writePos = _useSize;
+        _bufferSize = size;
+        _freeSize = _bufferSize - _useSize - 1;
 
         return true;
     }
@@ -303,10 +305,11 @@ private:
     char* _buffer;
     int _readPos = 0;
     int _writePos = 0;
-
-    int _initBufferSize;
     int _bufferSize;
     int _useSize = 0;
     int _freeSize = 0;
+   
+    int _initBufferSize;
+    
 };
 
