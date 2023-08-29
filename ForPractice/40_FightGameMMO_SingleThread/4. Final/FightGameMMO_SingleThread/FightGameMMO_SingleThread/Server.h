@@ -44,7 +44,6 @@ public:
 
 			// ProcessCPUTime.PrintCpuData();
 			// ProcessorCPUTime.PrintCpuData();
-			
 			PRO_PRINT();
 
 			if (_checkPointsIdx < dfMONITOR_CHECKPOINT &&
@@ -179,12 +178,7 @@ private:
 	{
 	public:
 		inline Player(Session* pSession, int ID);
-		inline Player()
-		{
-			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
-				L"%s[%d]: Player() is called\n", _T(__FUNCTION__), __LINE__);
-			::wprintf(L"%s[%d]: Player() is called\n", _T(__FUNCTION__), __LINE__);
-		}
+		inline Player();
 
 	public:
 		int _ID;

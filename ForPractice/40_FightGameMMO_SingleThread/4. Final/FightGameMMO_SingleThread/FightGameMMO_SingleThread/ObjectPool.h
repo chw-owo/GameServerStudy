@@ -168,6 +168,8 @@ CObjectPool<DATA>::~CObjectPool()
 		::wprintf(L"ERROR", CSystemLog::ERROR_LEVEL,
 			L"%s[%d]: There is Unfree Data\n",
 			_T(__FUNCTION__), __LINE__);
+
+		dump.Crash();
 	}
 
 #endif
@@ -306,6 +308,8 @@ bool CObjectPool<DATA>::Free(DATA* pData)
 
 			::wprintf(L"%s[%d]: Code is Diffrent. code %o, head %o, tail %o\n",
 				_T(__FUNCTION__), __LINE__, code, pNode->head, pNode->tail);
+
+			dump.Crash();
 		}
 
 		pData->~DATA();
@@ -345,6 +349,7 @@ bool CObjectPool<DATA>::Free(DATA* pData)
 			::wprintf(L"%s[%d]: Code is Different. code %o, head %o, tail %o\n",
 				_T(__FUNCTION__), __LINE__, code, pNode->head, pNode->tail);
 
+			dump.Crash();
 			return false;
 		}
 

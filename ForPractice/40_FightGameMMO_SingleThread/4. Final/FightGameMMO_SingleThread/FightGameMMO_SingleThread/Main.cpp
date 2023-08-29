@@ -2,7 +2,8 @@
 #include "Server.h"
 #include "SystemLog.h"
 
-bool g_Shutdown = false;
+CCrashDump dump;
+
 int wmain(int argc, wchar_t* argv[])
 {
 	SYSLOG_DIRECTORY(L"SystemLog");
@@ -10,10 +11,9 @@ int wmain(int argc, wchar_t* argv[])
 	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"%s", L"Main Thread Start\n");
 
 	CServer* pServer = new CServer;
-
-	while (!g_Shutdown)
+	for(;;)
 	{
-		if (GetAsyncKeyState(VK_SPACE)) break;
+		//if (GetAsyncKeyState(VK_SPACE)) break;
 		pServer->NetworkUpdate();
 		pServer->ContentUpdate();
 		pServer->MonitorUpdate();

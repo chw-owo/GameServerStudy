@@ -40,6 +40,9 @@
     <ClCompile Include="ProcessorCpuUsage.cpp">
       <Filter>Etc</Filter>
     </ClCompile>
+    <ClCompile Include="CrashDump.cpp">
+      <Filter>Etc</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Main.h">
@@ -63,14 +66,17 @@
     <ClInclude Include="SystemLog.h">
       <Filter>Etc</Filter>
     </ClInclude>
-    <ClInclude Include="Protocol.h">
-      <Filter>Main</Filter>
-    </ClInclude>
     <ClInclude Include="ProcessCpuUsage.h">
       <Filter>Etc</Filter>
     </ClInclude>
     <ClInclude Include="ProcessorCpuUsage.h">
       <Filter>Etc</Filter>
+    </ClInclude>
+    <ClInclude Include="CrashDump.h">
+      <Filter>Etc</Filter>
+    </ClInclude>
+    <ClInclude Include="Protocol.h">
+      <Filter>Server</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

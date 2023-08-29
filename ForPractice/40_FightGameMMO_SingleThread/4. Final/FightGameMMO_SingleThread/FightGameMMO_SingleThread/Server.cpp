@@ -19,7 +19,14 @@ CServer::CServer()
 	WSADATA wsa;
 	if (WSAStartup(MAKEWORD(2, 2), &wsa) != 0)
 	{
-		g_Shutdown = true;
+		LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+			L"%s[%d]: WSAStartup Error\n",
+			_T(__FUNCTION__), __LINE__);
+
+		::wprintf(L"%s[%d]: WSAStartup Error\n",
+			_T(__FUNCTION__), __LINE__);
+
+		dump.Crash();
 		return;
 	}
 
@@ -36,7 +43,7 @@ CServer::CServer()
 		::wprintf(L"%s[%d]: listen sock is INVALIED, %d\n",
 			_T(__FUNCTION__), __LINE__, err);
 
-		g_Shutdown = true;
+		dump.Crash();
 		return;
 	}
 
@@ -59,7 +66,7 @@ CServer::CServer()
 		::wprintf(L"%s[%d]: bind Error, %d\n",
 			_T(__FUNCTION__), __LINE__, err);
 
-		g_Shutdown = true;
+		dump.Crash();
 		return;
 	}
 
@@ -76,7 +83,7 @@ CServer::CServer()
 		::wprintf(L"%s[%d]: listen Error, %d\n",
 			_T(__FUNCTION__), __LINE__, err);
 
-		g_Shutdown = true;
+		dump.Crash();
 		return;
 	}
 
@@ -94,7 +101,7 @@ CServer::CServer()
 		::wprintf(L"%s[%d]: ioct Error, %d\n",
 			_T(__FUNCTION__), __LINE__, err);
 
-		g_Shutdown = true;
+		dump.Crash();
 		return;
 	}
 
@@ -242,7 +249,7 @@ void CServer::SelectProc(int rStartIdx, int rCount, int wStartIdx, int wCount)
 		::wprintf(L"%s[%d]: select Error, %d\n",
 			_T(__FUNCTION__), __LINE__, err);
 
-		g_Shutdown = true;
+		dump.Crash();
 		return;
 	}
 
@@ -286,7 +293,7 @@ void CServer::AcceptProc()
 		::wprintf(L"%s[%d]: new Error, %d\n",
 			_T(__FUNCTION__), __LINE__);
 
-		g_Shutdown = true;	
+		dump.Crash();	
 		return;
 	}
 
@@ -302,7 +309,7 @@ void CServer::AcceptProc()
 		::wprintf(L"%s[%d]: accept Error, %d\n",
 			_T(__FUNCTION__), __LINE__, err);
 
-		g_Shutdown = true;
+		dump.Crash();
 		return;
 	}
 
@@ -360,7 +367,7 @@ void CServer::RecvProc(Session* pSession)
 		::wprintf(L"%s[%d] Session %d - recvRBuf moveWritePos Error (req - %d, ret - %d)\n",
 			_T(__FUNCTION__), __LINE__, pSession->_ID, recvRet, moveRet);
 
-		g_Shutdown = true;
+		dump.Crash();
 		return;
 	}
 	int useSize = pSession->_recvRBuffer.GetUseSize();
@@ -376,7 +383,7 @@ void CServer::RecvProc(Session* pSession)
 		::wprintf(L"%s[%d] Session %d player is nullptr\n",
 			_T(__FUNCTION__), __LINE__, pSession->_ID);
 
-		g_Shutdown = true;
+		dump.Crash();
 		return;
 	}
 	
@@ -396,13 +403,12 @@ void CServer::RecvProc(Session* pSession)
 			::wprintf(L"%s[%d]  Session %d - recvRBuf Peek Error (req - %d, ret - %d)\n",
 				_T(__FUNCTION__), __LINE__, pSession->_ID, dfHEADER_SIZE, peekRet);
 
-			g_Shutdown = true;
+			dump.Crash();
 			return;
 		}
 
 		if ((char) header.code != (char)dfPACKET_CODE)
-		{
-			
+		{		
 			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
 				L"%s[%d]: Session %d Wrong Header Code Error, %x\n", 
 				_T(__FUNCTION__), __LINE__, pSession->_ID, header.code);
@@ -427,7 +433,7 @@ void CServer::RecvProc(Session* pSession)
 			::wprintf(L"%s[%d] Session %d - recvRBuf moveReadPos Error (req - %d, ret - %d)\n",
 				_T(__FUNCTION__), __LINE__, pSession->_ID, dfHEADER_SIZE, moveReadRet);
 
-			g_Shutdown = true;
+			dump.Crash();
 			return;
 		}
 		
@@ -489,7 +495,7 @@ void CServer::SendProc(Session* pSession)
 		::wprintf(L"%s[%d] Session %d - sendRBuf moveReadPos Error (req - %d, ret - %d)\n",
 			_T(__FUNCTION__), __LINE__, pSession->_ID, sendRet, moveRet);
 
-		SetSessionDead(pSession);
+		dump.Crash();
 		return;
 	}
 }
@@ -524,7 +530,7 @@ void CServer::DisconnectDeadSession()
 			::wprintf(L"%s[%d] Session %d player is nullptr\n",
 				_T(__FUNCTION__), __LINE__, ID);
 
-			g_Shutdown = true;
+			dump.Crash();
 			return;
 		}
 		_Players[ID] = nullptr;
@@ -555,7 +561,7 @@ void CServer::DisconnectDeadSession()
 			::wprintf(L"%s[%d] Session %d is nullptr\n",
 				_T(__FUNCTION__), __LINE__, ID);
 
-			g_Shutdown = true;
+			dump.Crash();
 			return;
 		}
 		_Sessions[ID] = nullptr;
@@ -577,7 +583,7 @@ void CServer::EnqueueUnicast(char* msg, int size, Session* pSession)
 
 		::wprintf(L"%s[%d] Session is nullptr\n", _T(__FUNCTION__), __LINE__);
 
-		g_Shutdown = true;
+		dump.Crash();
 		return;
 	}
 
@@ -591,7 +597,8 @@ void CServer::EnqueueUnicast(char* msg, int size, Session* pSession)
 		::wprintf(L"%s[%d] Session %d - sendRBuf Enqueue Error (req - %d, ret - %d)\n",
 			_T(__FUNCTION__), __LINE__, pSession->_ID, size, enqueueRet);
 
-		SetSessionDead(pSession);
+		dump.Crash();
+		return;
 	}
 }
 
@@ -611,7 +618,7 @@ void CServer::EnqueueOneSector(char* msg, int size, Sector* sector, Session* pEx
 				::wprintf(L"%s[%d] Player in sector[%d][%d] is nullptr\n",
 					_T(__FUNCTION__), __LINE__, sector->_xIndex, sector->_yIndex);
 
-				g_Shutdown = true;
+				dump.Crash();
 				return;
 			}
 
@@ -625,7 +632,8 @@ void CServer::EnqueueOneSector(char* msg, int size, Sector* sector, Session* pEx
 				::wprintf(L"%s[%d] Session %d - sendRBuf Enqueue Error (req - %d, ret - %d)\n",
 					_T(__FUNCTION__), __LINE__, (*playerIter)->_pSession->_ID, size, enqueueRet);
 
-				SetSessionDead((*playerIter)->_pSession);
+				dump.Crash();
+				return;
 			}
 			
 		}
@@ -646,7 +654,7 @@ void CServer::EnqueueOneSector(char* msg, int size, Sector* sector, Session* pEx
 					::wprintf(L"%s[%d] Player in sector[%d][%d] is nullptr\n",
 						_T(__FUNCTION__), __LINE__, sector->_xIndex, sector->_yIndex);
 
-					g_Shutdown = true;
+					dump.Crash();
 					return;
 				}
 
@@ -660,7 +668,8 @@ void CServer::EnqueueOneSector(char* msg, int size, Sector* sector, Session* pEx
 					::wprintf(L"%s[%d] Session %d - sendRBuf Enqueue Error (req - %d, ret - %d)\n",
 						_T(__FUNCTION__), __LINE__, (*playerIter)->_pSession->_ID, size, enqueueRet);
 
-					SetSessionDead((*playerIter)->_pSession);
+					dump.Crash();
+					return;
 				}
 			}
 		}
@@ -691,7 +700,7 @@ void CServer::EnqueueAroundSector(char* msg, int size, Sector* centerSector, Ses
 						centerSector->_around[i]->_xIndex, 
 						centerSector->_around[i]->_yIndex);
 
-					g_Shutdown = true;
+					dump.Crash();
 					return;
 				}
 
@@ -705,7 +714,8 @@ void CServer::EnqueueAroundSector(char* msg, int size, Sector* centerSector, Ses
 					::wprintf(L"%s[%d] Session %d - sendRBuf Enqueue Error (req - %d, ret - %d)\n",
 						_T(__FUNCTION__), __LINE__, (*playerIter)->_pSession->_ID, size, enqueueRet);
 
-					SetSessionDead((*playerIter)->_pSession);
+					dump.Crash();
+					return;
 				}
 			}
 		}
@@ -732,7 +742,7 @@ void CServer::EnqueueAroundSector(char* msg, int size, Sector* centerSector, Ses
 						centerSector->_around[i]->_xIndex,
 						centerSector->_around[i]->_yIndex);
 
-					g_Shutdown = true;
+					dump.Crash();
 					return;
 				}
 
@@ -746,7 +756,8 @@ void CServer::EnqueueAroundSector(char* msg, int size, Sector* centerSector, Ses
 					::wprintf(L"%s[%d] Session %d - sendRBuf Enqueue Error (req - %d, ret - %d)\n",
 						_T(__FUNCTION__), __LINE__, (*playerIter)->_pSession->_ID, size, enqueueRet);
 
-					SetSessionDead((*playerIter)->_pSession);
+					dump.Crash();
+					return;
 				}
 			}
 		}
@@ -770,7 +781,7 @@ void CServer::EnqueueAroundSector(char* msg, int size, Sector* centerSector, Ses
 						centerSector->_around[dfMOVE_DIR_INPLACE]->_xIndex,
 						centerSector->_around[dfMOVE_DIR_INPLACE]->_yIndex);
 
-					g_Shutdown = true;
+					dump.Crash();
 					return;
 				}
 
@@ -784,7 +795,8 @@ void CServer::EnqueueAroundSector(char* msg, int size, Sector* centerSector, Ses
 					::wprintf(L"%s[%d] Session %d - sendRBuf Enqueue Error (req - %d, ret - %d)\n",
 						_T(__FUNCTION__), __LINE__, (*playerIter)->_pSession->_ID, size, enqueueRet);
 
-					SetSessionDead((*playerIter)->_pSession);
+					dump.Crash();
+					return;
 				}
 			}
 		}
@@ -1101,8 +1113,8 @@ bool CServer::HandleCSPackets(Player* pPlayer, BYTE type)
 
 	LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
 		L"%s[%d] No Switch Case, %d\n", _T(__FUNCTION__), __LINE__, type);
-
 	::wprintf(L"%s[%d] No Switch Case, %d\n", _T(__FUNCTION__), __LINE__, type);
+
 	return false;
 }
 
@@ -1244,7 +1256,6 @@ bool CServer::HandleCSPacket_ATTACK2(Player* pPlayer)
 			pPlayer->_ID, damagedPlayer->_ID, damagedPlayer->_hp);
 		EnqueueAroundSector(pPlayer->_pSession->_sendSPacket.GetReadPtr(), damageSetRet, damagedPlayer->_pSector);
 	}
-
 	
 	return true;
 }
@@ -1317,6 +1328,7 @@ bool CServer::GetCSPacket_MOVE_START(CSerializePacket* pPacket, CRingBuffer* rec
 		::wprintf(L"%s[%d] recvRBuf Dequeue Error (req - %d, ret - %d)\n",
 			_T(__FUNCTION__), __LINE__, size, dequeueRet);
 
+		dump.Crash();
 		return false;
 	}
 	pPacket->MoveWritePos(dequeueRet);
@@ -1341,6 +1353,7 @@ bool CServer::GetCSPacket_MOVE_STOP(CSerializePacket* pPacket, CRingBuffer* recv
 		::wprintf(L"%s[%d] recvRBuf Dequeue Error (req - %d, ret - %d)\n",
 			_T(__FUNCTION__), __LINE__, size, dequeueRet);
 
+		dump.Crash();
 		return false;
 	}
 	pPacket->MoveWritePos(dequeueRet);
@@ -1365,6 +1378,7 @@ bool CServer::GetCSPacket_ATTACK1(CSerializePacket* pPacket, CRingBuffer* recvRB
 		::wprintf(L"%s[%d] recvRBuf Dequeue Error (req - %d, ret - %d)\n",
 			_T(__FUNCTION__), __LINE__, size, dequeueRet);
 
+		dump.Crash();
 		return false;
 	}
 	pPacket->MoveWritePos(dequeueRet);
@@ -1389,6 +1403,7 @@ bool CServer::GetCSPacket_ATTACK2(CSerializePacket* pPacket, CRingBuffer* recvRB
 		::wprintf(L"%s[%d] recvRBuf Dequeue Error (req - %d, ret - %d)\n",
 			_T(__FUNCTION__), __LINE__, size, dequeueRet);
 
+		dump.Crash();
 		return false;
 	}
 	pPacket->MoveWritePos(dequeueRet);
@@ -1413,6 +1428,7 @@ bool CServer::GetCSPacket_ATTACK3(CSerializePacket* pPacket, CRingBuffer* recvRB
 		::wprintf(L"%s[%d] recvRBuf Dequeue Error (req - %d, ret - %d)\n",
 			_T(__FUNCTION__), __LINE__, size, dequeueRet);
 
+		dump.Crash();
 		return false;
 	}
 	pPacket->MoveWritePos(dequeueRet);
@@ -1437,6 +1453,7 @@ bool CServer::GetCSPacket_ECHO(CSerializePacket* pPacket, CRingBuffer* recvRBuff
 		::wprintf(L"%s[%d] recvRBuf Dequeue Error (req - %d, ret - %d)\n",
 			_T(__FUNCTION__), __LINE__, size, dequeueRet);
 
+		dump.Crash();
 		return false;
 	}
 	pPacket->MoveWritePos(dequeueRet);
@@ -2347,6 +2364,8 @@ int CServer::SetSCPacket_CREATE_MY_CHAR(CSerializePacket* pPacket, int ID, BYTE 
 
 		::wprintf(L"%s[%d]: Create Packet Error, %d != %llu\n",
 			_T(__FUNCTION__), __LINE__, pPacket->GetDataSize(), dfHEADER_SIZE + size);
+
+		dump.Crash();
 	}
 
 	return pPacket->GetDataSize();
@@ -2371,6 +2390,8 @@ int CServer::SetSCPacket_CREATE_OTHER_CHAR(CSerializePacket* pPacket, int ID, BY
 
 		::wprintf(L"%s[%d]: Create Packet Error, %d != %llu\n",
 			_T(__FUNCTION__), __LINE__, pPacket->GetDataSize(), dfHEADER_SIZE + size);
+
+		dump.Crash();
 	}
 
 	return pPacket->GetDataSize();
@@ -2391,6 +2412,8 @@ int CServer::SetSCPacket_DELETE_CHAR(CSerializePacket* pPacket, int ID)
 
 		::wprintf(L"%s[%d]: Create Packet Error, %d != %llu\n",
 			_T(__FUNCTION__), __LINE__, pPacket->GetDataSize(), dfHEADER_SIZE + size);
+
+		dump.Crash();
 	}
 	
 	return pPacket->GetDataSize();
@@ -2414,6 +2437,8 @@ int CServer::SetSCPacket_MOVE_START(CSerializePacket* pPacket, int ID, BYTE move
 
 		::wprintf(L"%s[%d]: Create Packet Error, %d != %llu\n",
 			_T(__FUNCTION__), __LINE__, pPacket->GetDataSize(), dfHEADER_SIZE + size);
+
+		dump.Crash();
 	}
 
 	return pPacket->GetDataSize();
@@ -2437,6 +2462,8 @@ int CServer::SetSCPacket_MOVE_STOP(CSerializePacket* pPacket, int ID, BYTE direc
 
 		::wprintf(L"%s[%d]: Create Packet Error, %d != %llu\n",
 			_T(__FUNCTION__), __LINE__, pPacket->GetDataSize(), dfHEADER_SIZE + size);
+
+		dump.Crash();
 	}
 
 	return pPacket->GetDataSize();
@@ -2460,6 +2487,8 @@ int CServer::SetSCPacket_ATTACK1(CSerializePacket* pPacket, int ID, BYTE directi
 
 		::wprintf(L"%s[%d]: Create Packet Error, %d != %llu\n",
 			_T(__FUNCTION__), __LINE__, pPacket->GetDataSize(), dfHEADER_SIZE + size);
+
+		dump.Crash();
 	}
 
 	return pPacket->GetDataSize();
@@ -2483,6 +2512,8 @@ int CServer::SetSCPacket_ATTACK2(CSerializePacket* pPacket, int ID, BYTE directi
 
 		::wprintf(L"%s[%d]: Create Packet Error, %d != %llu\n",
 			_T(__FUNCTION__), __LINE__, pPacket->GetDataSize(), dfHEADER_SIZE + size);
+
+		dump.Crash();
 	}
 
 	return pPacket->GetDataSize();
@@ -2506,6 +2537,8 @@ int CServer::SetSCPacket_ATTACK3(CSerializePacket* pPacket, int ID, BYTE directi
 
 		::wprintf(L"%s[%d]: Create Packet Error, %d != %llu\n",
 			_T(__FUNCTION__), __LINE__, pPacket->GetDataSize(), dfHEADER_SIZE + size);
+
+		dump.Crash();
 	}
 
 	return pPacket->GetDataSize();
@@ -2528,6 +2561,8 @@ int CServer::SetSCPacket_DAMAGE(CSerializePacket* pPacket, int attackID, int dam
 
 		::wprintf(L"%s[%d]: Create Packet Error, %d != %llu\n",
 			_T(__FUNCTION__), __LINE__, pPacket->GetDataSize(), dfHEADER_SIZE + size);
+
+		dump.Crash();
 	}
 
 	
@@ -2551,6 +2586,8 @@ int CServer::SetSCPacket_SYNC(CSerializePacket* pPacket, int ID, short x, short 
 
 		::wprintf(L"%s[%d]: Create Packet Error, %d != %llu\n",
 			_T(__FUNCTION__), __LINE__, pPacket->GetDataSize(), dfHEADER_SIZE + size);
+
+		dump.Crash();
 	}
 
 	_syncCnt++;
@@ -2572,6 +2609,8 @@ int CServer::SetSCPacket_ECHO(CSerializePacket* pPacket, int time)
 
 		::wprintf(L"%s[%d]: Create Packet Error, %d != %llu\n",
 			_T(__FUNCTION__), __LINE__, pPacket->GetDataSize(), dfHEADER_SIZE + size);
+
+		dump.Crash();
 	}
 	
 	return pPacket->GetDataSize();
@@ -2724,4 +2763,14 @@ inline CServer::Player::Player(Session* pSession, int ID)
 {
 	_x = rand() % dfRANGE_MOVE_RIGHT;
 	_y = rand() % dfRANGE_MOVE_BOTTOM;
+}
+
+inline CServer::Player::Player()
+{
+	LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+		L"%s[%d]: Player() is called\n", _T(__FUNCTION__), __LINE__);
+
+	::wprintf(L"%s[%d]: Player() is called\n", _T(__FUNCTION__), __LINE__);
+
+	dump.Crash();
 }

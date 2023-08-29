@@ -8,12 +8,35 @@
 
 #include <Windows.h>
 
+//-----------------------------------------------------------------
+// 연결 설정
+//-----------------------------------------------------------------
+
 #define dfNETWORK_IP L"0.0.0.0"
 #define dfNETWORK_PORT 20000
 #define dfMONITOR_CHECKPOINT 11
 
-#define dfSESSION_MAX					6000
+#define dfSESSION_MAX					7000
 #define dfDEFAULT_PLAYERS_PER_SECTOR	1024
+
+
+//-----------------------------------------------------------------
+// 섹터 설정
+//-----------------------------------------------------------------
+
+#define dfSECTOR_SIZE_X					200
+#define dfSECTOR_SIZE_Y					200 
+#define dfSECTOR_CNT_X					(dfRANGE_MOVE_RIGHT / dfSECTOR_SIZE_X) + 4
+#define dfSECTOR_CNT_Y					(dfRANGE_MOVE_BOTTOM / dfSECTOR_SIZE_Y) + 4
+
+#define dfAROUND_SECTOR_NUM				9
+#define dfVERT_SECTOR_NUM				3
+#define dfDIAG_SECTOR_NUM				5
+
+
+//-----------------------------------------------------------------
+// 메시지
+//-----------------------------------------------------------------
 
 struct stPacketHeader
 {
@@ -26,6 +49,7 @@ struct stPacketHeader
 #define dfPACKET_CODE		0x89
 
 #define	dfPACKET_SC_CREATE_MY_CHARACTER			0
+
 //---------------------------------------------------------------
 // 클라이언트 자신의 캐릭터 할당		Server -> Client
 //
@@ -329,17 +353,5 @@ struct stPacketHeader
 //-----------------------------------------------------------------
 #define dfERROR_RANGE		50
 
-//-----------------------------------------------------------------
-// 섹터 설정값
-//-----------------------------------------------------------------
-
-#define dfSECTOR_SIZE_X					200
-#define dfSECTOR_SIZE_Y					200 
-#define dfSECTOR_CNT_X					(dfRANGE_MOVE_RIGHT / dfSECTOR_SIZE_X) + 4
-#define dfSECTOR_CNT_Y					(dfRANGE_MOVE_BOTTOM / dfSECTOR_SIZE_Y) + 4
-
-#define dfAROUND_SECTOR_NUM				9
-#define dfVERT_SECTOR_NUM				3
-#define dfDIAG_SECTOR_NUM				5
 
 #endif

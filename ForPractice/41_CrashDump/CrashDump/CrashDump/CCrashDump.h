@@ -8,6 +8,8 @@
 #include <windows.h>
 #include <minidumpapiset.h>
 
+#pragma comment(lib, "Dbghelp.lib")
+
 class CCrashDump
 {
 public:
@@ -66,7 +68,7 @@ public:
 
 	static void Crash(void)
 	{
-		__debugbreak;
+		__debugbreak();
 	}
 
 	static void SetHandlerDump()
@@ -94,5 +96,7 @@ public:
 
 	static long _dumpCount;
 };
+
+long CCrashDump::_dumpCount = 0;
 
 #endif __CRASH_DUMP__

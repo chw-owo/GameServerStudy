@@ -57,6 +57,7 @@ public:
 
 			::wprintf(L"%s[%d]: buffer size %d, req size: %d\n",
 				_T(__FUNCTION__), __LINE__, bufferSize, eBUFFER_MAX);
+
 			return -1;
 		}
 
@@ -127,8 +128,6 @@ public:
 	{
 		if (_writePos - _readPos < sizeof(float))
 		{
-			
-
 			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
 				L"%s[%d]: used size %d < req size: %llu\n",
 				_T(__FUNCTION__), __LINE__, _writePos - _readPos, sizeof(float));

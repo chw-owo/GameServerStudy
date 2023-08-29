@@ -133,6 +133,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="CrashDump.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="ObjectPool.cpp" />
     <ClCompile Include="ProcessCpuUsage.cpp" />
@@ -142,6 +143,7 @@
     <ClCompile Include="SystemLog.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CrashDump.h" />
     <ClInclude Include="Main.h" />
     <ClInclude Include="ObjectPool.h" />
     <ClInclude Include="ProcessCpuUsage.h" />

@@ -85,6 +85,7 @@ public:
             LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
                 L"%s[%d] req %d, max %d",
                 _T(__FUNCTION__), __LINE__, size, MAX_BUF_SIZE);
+
             ::wprintf(L"%s[%d] req %d, max %d",
                 _T(__FUNCTION__), __LINE__, size, MAX_BUF_SIZE);
 
@@ -96,9 +97,10 @@ public:
             {          
                 LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
                     L"%s[%d] Fail to Resize",
-                    _T(__FUNCTION__), __LINE__, size, MAX_BUF_SIZE);
+                    _T(__FUNCTION__), __LINE__);
+
                 ::wprintf(L"%s[%d] Fail to Resize",
-                    _T(__FUNCTION__), __LINE__, size, MAX_BUF_SIZE);
+                    _T(__FUNCTION__), __LINE__);
 
                 return -1;
             }
