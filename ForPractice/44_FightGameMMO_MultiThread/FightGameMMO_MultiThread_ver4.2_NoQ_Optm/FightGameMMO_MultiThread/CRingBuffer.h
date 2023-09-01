@@ -1,12 +1,10 @@
 #pragma once
 #include <iostream>
-#include "SystemLog.h"
 #include <tchar.h>
+#include "CSystemLog.h"
 
-#define DEFAULT_BUF_SIZE 32768
+#define DEFAULT_BUF_SIZE 32768 
 #define MAX_BUF_SIZE 65536
-
-#define __RINGBUFFER_DEBUG__
 
 /*====================================================================
 
@@ -21,16 +19,16 @@
 class CRingBuffer
 {
 public:
-    inline CRingBuffer(void) 
+    inline CRingBuffer(void)
         : _initBufferSize(DEFAULT_BUF_SIZE), _bufferSize(DEFAULT_BUF_SIZE), _freeSize(DEFAULT_BUF_SIZE - 1)
-    { 
-        _buffer = new char[_bufferSize]; 
+    {
+        _buffer = new char[_bufferSize];
     }
 
-    inline CRingBuffer(int bufferSize) 
+    inline CRingBuffer(int bufferSize)
         : _initBufferSize(bufferSize), _bufferSize(bufferSize), _freeSize(bufferSize - 1)
-    { 
-        _buffer = new char[_bufferSize]; 
+    {
+        _buffer = new char[_bufferSize];
     }
 
     inline ~CRingBuffer(void)
@@ -85,7 +83,6 @@ public:
             LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
                 L"%s[%d] req %d, max %d",
                 _T(__FUNCTION__), __LINE__, size, MAX_BUF_SIZE);
-
             ::wprintf(L"%s[%d] req %d, max %d",
                 _T(__FUNCTION__), __LINE__, size, MAX_BUF_SIZE);
 
@@ -94,11 +91,10 @@ public:
         else if (size > _freeSize)
         {
             if (!Resize(_bufferSize + (int)(size * 1.5f)))
-            {          
+            {
                 LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
                     L"%s[%d] Fail to Resize",
                     _T(__FUNCTION__), __LINE__);
-
                 ::wprintf(L"%s[%d] Fail to Resize",
                     _T(__FUNCTION__), __LINE__);
 
@@ -199,9 +195,9 @@ public:
             {
                 LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
                     L"%s[%d] Fail to Resize",
-                    _T(__FUNCTION__), __LINE__);
+                    _T(__FUNCTION__), __LINE__, size, MAX_BUF_SIZE);
                 ::wprintf(L"%s[%d] Fail to Resize",
-                    _T(__FUNCTION__), __LINE__);
+                    _T(__FUNCTION__), __LINE__, size, MAX_BUF_SIZE);
 
                 return -1;
             }
@@ -217,9 +213,9 @@ public:
     inline int GetBufferSize(void) { return _bufferSize; }
     inline int GetUseSize(void) { return _useSize; }
     inline int GetFreeSize(void) { return _freeSize; }
-    inline char* GetReadPtr(void) { return &_buffer[(_readPos + 1) % _bufferSize]; }
+    inline char* GetReadPtr(void) { return  &_buffer[(_readPos + 1) % _bufferSize]; }
     inline char* GetWritePtr(void) { return &_buffer[(_writePos + 1) % _bufferSize]; }
-
+    inline char* GetFrontPtr(void) { return &_buffer[0]; }
     inline int DirectEnqueueSize(void)
     {
         if (_writePos >= _readPos)
@@ -310,11 +306,10 @@ private:
     char* _buffer;
     int _readPos = 0;
     int _writePos = 0;
+
+    int _initBufferSize;
     int _bufferSize;
     int _useSize = 0;
     int _freeSize = 0;
-   
-    int _initBufferSize;
-    
 };
 

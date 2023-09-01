@@ -6,7 +6,7 @@
 
 #include <windows.h>
 
-#define PROFILE
+//#define PROFILE
 #define dfPRO_TITLE_LEN 64
 
 #ifdef PROFILE

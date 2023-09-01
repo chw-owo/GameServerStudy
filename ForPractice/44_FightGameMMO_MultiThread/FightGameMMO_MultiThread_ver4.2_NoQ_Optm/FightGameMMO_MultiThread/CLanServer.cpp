@@ -205,19 +205,16 @@ void CLanServer::NetworkTerminate()
 bool CLanServer::Disconnect(__int64 sessionID)
 {
 	AcquireSRWLockShared(&_sessionMap->_lock);
-
 	unordered_map<__int64, CSession*>::iterator iter = _sessionMap->_map.find(sessionID);
 	if (iter == _sessionMap->_map.end())
 	{
 		ReleaseSRWLockShared(&_sessionMap->_lock);
 		return false;
 	}
-
 	CSession* pSession = iter->second;
 	AcquireSRWLockExclusive(&pSession->_lock);
 	ReleaseSRWLockShared(&_sessionMap->_lock);
 
-	pSession->_alive = false;
 	PostQueuedCompletionStatus(_hNetworkCP, 0, (ULONG_PTR)pSession, 0);
 	PostQueuedCompletionStatus(_hNetworkCP, 0, (ULONG_PTR)pSession, 0);
 
@@ -229,16 +226,13 @@ bool CLanServer::Disconnect(__int64 sessionID)
 bool CLanServer::SendPacket(__int64 sessionID, CPacket* packet)
 {	
 	AcquireSRWLockShared(&_sessionMap->_lock);
-
 	unordered_map<__int64, CSession*>::iterator iter = _sessionMap->_map.find(sessionID);
 	if (iter == _sessionMap->_map.end())
 	{
 		ReleaseSRWLockShared(&_sessionMap->_lock);
 		return false;
 	}
-
 	CSession* pSession = iter->second;
-
 	AcquireSRWLockExclusive(&pSession->_lock);
 	ReleaseSRWLockShared(&_sessionMap->_lock);
 
@@ -259,8 +253,7 @@ bool CLanServer::SendPacket(__int64 sessionID, CPacket* packet)
 	}
 
 	int packetSize = packet->GetPacketSize();
-	int enqueueRet = pSession->_sendBuf.Enqueue(
-		packet->GetPacketReadPtr(), packetSize);
+	int enqueueRet = pSession->_sendBuf.Enqueue(packet->GetPacketReadPtr(), packetSize);
 
 	if (enqueueRet != packetSize)
 	{
@@ -301,17 +294,15 @@ unsigned int __stdcall CLanServer::AcceptThread(void* arg)
 		if (!pLanServer->OnConnectRequest()) continue;
 
 		if (pLanServer->_sessionCnt >= pLanServer->_sessionMax)
-		{
+		{     
 			closesocket(client_sock);
 			continue;
 		}
 
 		PRO_BEGIN(L"LS: AcceptThread");
 
-		// Create Session
 		CSession* pSession = pLanServer->_pSessionPool->Alloc();
 		pSession->Initialize(sessionID++, client_sock, clientaddr);
-
 		if (pSession == nullptr)
 		{
 			::printf("Error! %s(%d)\n", __func__, __LINE__);
@@ -322,19 +313,19 @@ unsigned int __stdcall CLanServer::AcceptThread(void* arg)
 		AcquireSRWLockExclusive(&pLanServer->_sessionMap->_lock);
 		pLanServer->_sessionMap->_map.insert(make_pair(pSession->_ID, pSession));
 		ReleaseSRWLockExclusive(&pLanServer->_sessionMap->_lock);
-
+		
 		//::printf("Accept New Session (ID: %llu)\n", pSession->_ID);
 		InterlockedIncrement(&pLanServer->_sessionCnt);
 		pLanServer->_acceptCnt++;
-		pLanServer->OnAcceptClient(pSession->_ID);
 
-		// Connect Session to IOCP and Post Recv
+		// Connect Session to IOCP and Post Recv                                      
 		CreateIoCompletionPort((HANDLE)pSession->_sock,
 			pLanServer->_hNetworkCP, (ULONG_PTR)pSession, 0);
 
 		PRO_END(L"LS: AcceptThread");
 
 		pLanServer->RecvPost(pSession);
+		pLanServer->OnAcceptClient(pSession->_ID);		
 	}
 
 	::printf("Accept Thread Terminate (thread: %d)\n", GetCurrentThreadId());
@@ -363,14 +354,14 @@ unsigned int __stdcall CLanServer::NetworkThread(void* arg)
 		// Check Exception
 		if (GQCSRet == 0 || cbTransferred == 0)
 		{
+			pSession->_alive = false;
 			if (GQCSRet == 0)
 			{
 				DWORD arg1, arg2;
 				WSAGetOverlappedResult(pSession->_sock, (LPOVERLAPPED)pNetOvl, &arg1, FALSE, &arg2);
 				int err = WSAGetLastError();
-
-				if (err != WSAECONNRESET && err != WSAECONNABORTED && 
-					err != WSAENOTSOCK && err != WSAEDESTADDRREQ)
+				if (err != WSAECONNRESET && 
+					err != WSAECONNABORTED && err != WSAENOTSOCK)
 				{
 					::printf("Error! %s(%d): %d\n", __func__, __LINE__, err);
 				}
@@ -378,13 +369,13 @@ unsigned int __stdcall CLanServer::NetworkThread(void* arg)
 		}
 		else if (pNetOvl->_type == NET_TYPE::RECV)
 		{
-			//::printf("%llu: Complete Recv %d bytes (%d)\n", pSession->_ID, cbTransferred, threadID);
+			//::printf("%d: %llu Complete Recv %d bytes\n", GetCurrentThreadId(), pSession->_ID, cbTransferred);
 			pLanServer->_recvMsgCnt++;
 			pLanServer->HandleRecvCP(pSession->_ID, cbTransferred);
 		}
 		else if (pNetOvl->_type == NET_TYPE::SEND)
 		{
-			//::printf("%llu: Complete Send %d bytes (%d)\n", pSession->_ID, cbTransferred, threadID);
+			//::printf("%d: %llu Complete Send %d bytes\n", GetCurrentThreadId(), pSession->_ID, cbTransferred);
 			pLanServer->_sendMsgCnt++;
 			pLanServer->HandleSendCP(pSession->_ID, cbTransferred);
 		}
@@ -392,6 +383,7 @@ unsigned int __stdcall CLanServer::NetworkThread(void* arg)
 		AcquireSRWLockExclusive(&pSession->_lock);
 		if (InterlockedDecrement(&pSession->_IOCount) == 0)
 		{
+			//::printf("%d: %llu IO Count is 0\n", GetCurrentThreadId(), pSession->_ID);
 			PostQueuedCompletionStatus(
 				pLanServer->_hReleaseCP, 0, (ULONG_PTR)pSession, 0);
 		}
@@ -534,7 +526,11 @@ void CLanServer::HandleRecvCP(__int64 sessionID, int recvBytes)
 			break;
 		}
 		packet->MovePayloadWritePos(dequeueRet);
+		ReleaseSRWLockExclusive(&pSession->_lock);
+
 		OnRecv(pSession->_ID, packet);
+
+		AcquireSRWLockExclusive(&pSession->_lock);
 		useSize = pSession->_recvBuf.GetUseSize();
 	}
 
@@ -550,8 +546,6 @@ void CLanServer::HandleSendCP(__int64 sessionID, int sendBytes)
 	unordered_map<__int64, CSession*>::iterator iter = _sessionMap->_map.find(sessionID);
 	if (iter == _sessionMap->_map.end())
 	{
-		::printf("Error! %s(%d)\n", __func__, __LINE__);
-		g_bShutdown = true;
 		ReleaseSRWLockShared(&_sessionMap->_lock);
 		return;
 	}
@@ -570,6 +564,7 @@ void CLanServer::HandleSendCP(__int64 sessionID, int sendBytes)
 	}
 
 	OnSend(pSession->_ID, sendBytes);
+
 	InterlockedExchange(&pSession->_sendFlag, 0);
 	SendPost(pSession);
 
@@ -578,7 +573,7 @@ void CLanServer::HandleSendCP(__int64 sessionID, int sendBytes)
 
 void CLanServer::RecvPost(CSession* pSession)
 {
-	if (!pSession->_alive) return; 
+	if (!pSession->_alive) return;
 
 	DWORD flags = 0;
 	DWORD recvBytes = 0;
@@ -595,14 +590,17 @@ void CLanServer::RecvPost(CSession* pSession)
 	int recvRet = WSARecv(pSession->_sock, pSession->_wsaRecvbuf,
 		2, &recvBytes, &flags, (LPOVERLAPPED)&pSession->_recvOvl, NULL);
 
-	//::printf("%llu: Request Recv (%d)\n", pSession->_ID, GetCurrentThreadId());
+	//::printf("%d: %llu Request Recv\n", GetCurrentThreadId(), pSession->_ID);
 
 	if (recvRet == SOCKET_ERROR)
 	{
 		int err = WSAGetLastError();
 		if (err != ERROR_IO_PENDING)
 		{
-			if (err != WSAECONNRESET)
+			pSession->_alive = true;
+			if (err != WSAECONNRESET &&
+				err != WSAECONNABORTED &&
+				err != WSAENOTSOCK)
 			{
 				::printf("Error! %s(%d): %d\n", __func__, __LINE__, err);
 			}
@@ -613,11 +611,24 @@ void CLanServer::RecvPost(CSession* pSession)
 
 void CLanServer::SendPost(CSession* pSession)
 {
-	if (!pSession->_alive) return;
-	if (pSession->_sendBuf.GetUseSize() == 0) return;
-	if (InterlockedExchange(&pSession->_sendFlag, 1) == 1) return;
+	if (!pSession->_alive) 
+	{
+		//::printf("%d: %llu %s, Session is not alive\n", GetCurrentThreadId(), pSession->_ID, __func__);
+		return;
+	}
+	if (pSession->_sendBuf.GetUseSize() == 0) 
+	{
+		//::printf("%d: %llu %s, Send Buf 0 (1)\n", GetCurrentThreadId(), pSession->_ID, __func__);
+		return;
+	}
+	if (InterlockedExchange(&pSession->_sendFlag, 1) == 1) 
+	{
+		//::printf("%d: %llu %s, Send Flag 1\n", GetCurrentThreadId(), pSession->_ID, __func__);
+		return;
+	}
 	if (pSession->_sendBuf.GetUseSize() == 0)
 	{
+		//::printf("%d: %llu %s, Send Buf 0 (2)\n", GetCurrentThreadId(), pSession->_ID, __func__);
 		InterlockedExchange(&pSession->_sendFlag, 0);
 		return;
 	}
@@ -636,15 +647,18 @@ void CLanServer::SendPost(CSession* pSession)
 
 	int sendRet = WSASend(pSession->_sock, pSession->_wsaSendbuf,
 		2, &sendBytes, 0, (LPOVERLAPPED)&pSession->_sendOvl, NULL);
-
-	//::printf("%llu: Request Send %d bytes (%d)\n", pSession->_ID , useSize, GetCurrentThreadId());
+	
+	//::printf("%d: %llu Request Send %d bytes\n", GetCurrentThreadId(), pSession->_ID , useSize);
 
 	if (sendRet == SOCKET_ERROR)
 	{
 		int err = WSAGetLastError();
 		if (err != ERROR_IO_PENDING)
 		{
-			if (err != WSAECONNRESET)
+			pSession->_alive = true;
+			if (err != WSAECONNRESET &&
+				err != WSAECONNABORTED &&
+				err != WSAENOTSOCK)
 			{
 				::printf("Error! %s(%d): %d\n", __func__, __LINE__, err);
 			}

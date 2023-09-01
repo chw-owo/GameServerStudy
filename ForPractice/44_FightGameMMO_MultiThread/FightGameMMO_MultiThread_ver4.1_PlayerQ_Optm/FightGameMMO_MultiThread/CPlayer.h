@@ -43,16 +43,6 @@ public:
 	{
 		_x = rand() % dfRANGE_MOVE_RIGHT;
 		_y = rand() % dfRANGE_MOVE_BOTTOM;
-
-		InitializeSRWLock(&_stateLock);
-		InitializeSRWLock(&_recvTimeLock);
-		InitializeSRWLock(&_xLock);
-		InitializeSRWLock(&_yLock);
-		InitializeSRWLock(&_hpLock);
-		InitializeSRWLock(&_moveLock);
-		InitializeSRWLock(&_dirLock);
-		InitializeSRWLock(&_moveDirLock);
-		InitializeSRWLock(&_sectorLock);
 	}
 
 	inline CPlayer()
@@ -64,7 +54,6 @@ public:
 
 	void Initialize(int sessionID, int playerID)
 	{
-		_state = ALIVE;
 		_playerID = playerID;
 		_sessionID = sessionID;
 		
@@ -72,8 +61,8 @@ public:
 		_hp = dfMAX_HP; 
 		_direction = dfMOVE_DIR_LL; 
 		_moveDirection = dfMOVE_DIR_LL;
-		_x = rand() % dfRANGE_MOVE_RIGHT;
-		_y = rand() % dfRANGE_MOVE_BOTTOM;
+		_x = rand() % 200; // dfRANGE_MOVE_RIGHT;
+		_y = rand() % 200; // dfRANGE_MOVE_BOTTOM;
 
 		_pSector = nullptr;
 		_lastRecvTime = GetTickCount64();
@@ -97,16 +86,4 @@ public:
 	CSector* _pSector;
 	DWORD _lastRecvTime;
 	CJobQueue _jobQ;
-
-public:
-	SRWLOCK _stateLock;
-	SRWLOCK _recvTimeLock;
-	SRWLOCK _xLock;
-	SRWLOCK _yLock;
-	SRWLOCK _hpLock;
-	SRWLOCK _moveLock;
-	SRWLOCK _dirLock;
-	SRWLOCK _moveDirLock;
-	SRWLOCK _sectorLock;
-
 };

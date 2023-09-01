@@ -273,7 +273,16 @@ void CServer::AcceptProc()
 {
 	// Session Num is more than SESSION_MAX
 	if (_usableCnt == 0 && _sessionIDs == dfSESSION_MAX)
+	{
+		LOG(L"FightGame", CSystemLog::DEBUG_LEVEL,
+			L"%s[%d]: usableCnt = 0, sessionIDs = MAX\n",
+			_T(__FUNCTION__), __LINE__);
+
+		::wprintf(L"%s[%d]: usableCnt = 0, sessionIDs = MAX\n",
+			_T(__FUNCTION__), __LINE__);
+
 		return;
+	}
 
 	int ID;
 	if (_usableCnt == 0)
@@ -326,9 +335,16 @@ void CServer::RecvProc(Session* pSession)
 
 	PRO_BEGIN(L"Network: Recv");
 
-	int recvRet;
-
-	if (pSession->_recvRBuffer.DirectEnqueueSize() == 0)
+	int recvRet = 0;
+	
+	if (pSession->_recvRBuffer.DirectEnqueueSize() != 0)
+	{
+		recvRet = recv(pSession->_socket,
+			pSession->_recvRBuffer.GetWritePtr(),
+			pSession->_recvRBuffer.DirectEnqueueSize(), 0);
+	}
+	else if (pSession->_recvRBuffer.DirectEnqueueSize() == 0 &&
+		pSession->_recvRBuffer.GetFreeSize() != 0)
 	{
 		recvRet = recv(pSession->_socket,
 			pSession->_recvRBuffer.GetWritePtr(),
@@ -336,6 +352,7 @@ void CServer::RecvProc(Session* pSession)
 	}
 	else
 	{
+		pSession->_recvRBuffer.Resize(pSession->_recvRBuffer.GetBufferSize() * 1.5f);
 		recvRet = recv(pSession->_socket,
 			pSession->_recvRBuffer.GetWritePtr(),
 			pSession->_recvRBuffer.DirectEnqueueSize(), 0);
@@ -366,7 +383,15 @@ void CServer::RecvProc(Session* pSession)
 	}
 	else if (recvRet == 0)
 	{
+		LOG(L"FightGame", CSystemLog::DEBUG_LEVEL,
+			L"%s[%d]: recv returns 0\n",
+			_T(__FUNCTION__), __LINE__);
+
+		::wprintf(L"%s[%d]: recv returns 0\n",
+			_T(__FUNCTION__), __LINE__);
+
 		SetSessionDead(pSession, true);
+
 		return;
 	}
 
@@ -473,7 +498,7 @@ void CServer::SendProc(Session* pSession)
 {
 	PRO_BEGIN(L"Network: Send");
 
-	int sendRet;
+	int sendRet = 0;
 	
 	if (pSession->_sendRBuffer.DirectDequeueSize() == 0)
 	{
@@ -1092,6 +1117,14 @@ void CServer::CreatePlayer(Session* pSession)
 			int createOtherRet = SetSCPacket_CREATE_OTHER_CHAR(&pPlayer->_pSession->_sendSPacket,
 				(*iter)->_ID, (*iter)->_direction, (*iter)->_x, (*iter)->_y, (*iter)->_hp);
 			EnqueueUnicast(pPlayer->_pSession->_sendSPacket.GetReadPtr(), createOtherRet, pPlayer->_pSession);
+
+			if((*iter)->_move)
+			{
+				pPlayer->_pSession->_sendSPacket.Clear();
+				int moveRet = SetSCPacket_MOVE_START(&pPlayer->_pSession->_sendSPacket,
+					(*iter)->_ID, (*iter)->_moveDirection, (*iter)->_x, (*iter)->_y);
+				EnqueueUnicast(pPlayer->_pSession->_sendSPacket.GetReadPtr(), moveRet, pPlayer->_pSession);
+			}
 		}
 	}
 
@@ -1105,6 +1138,15 @@ void CServer::CreatePlayer(Session* pSession)
 			int createOtherRet = SetSCPacket_CREATE_OTHER_CHAR(&pPlayer->_pSession->_sendSPacket,
 				(*iter)->_ID, (*iter)->_direction, (*iter)->_x, (*iter)->_y, (*iter)->_hp);
 			EnqueueUnicast(pPlayer->_pSession->_sendSPacket.GetReadPtr(), createOtherRet, pPlayer->_pSession);
+			
+			if ((*iter)->_move)
+			{
+				pPlayer->_pSession->_sendSPacket.Clear();
+				int moveRet = SetSCPacket_MOVE_START(&pPlayer->_pSession->_sendSPacket,
+					(*iter)->_ID, (*iter)->_moveDirection, (*iter)->_x, (*iter)->_y);
+				EnqueueUnicast(pPlayer->_pSession->_sendSPacket.GetReadPtr(), moveRet, pPlayer->_pSession);
+			}
+		
 		}
 	}
 }
@@ -2790,8 +2832,8 @@ inline CServer::Player::Player(Session* pSession, int ID)
 	: _pSession(pSession), _pSector(nullptr), _ID(ID), _hp(dfMAX_HP),
 	_move(false), _direction(dfMOVE_DIR_LL), _moveDirection(dfMOVE_DIR_LL)
 {
-	_x = rand() % dfRANGE_MOVE_RIGHT;
-	_y = rand() % dfRANGE_MOVE_BOTTOM;
+	_x = rand() % dfRANGE_MOVE_RIGHT; 
+	_y = rand() % dfRANGE_MOVE_BOTTOM; 
 }
 
 inline CServer::Player::Player()

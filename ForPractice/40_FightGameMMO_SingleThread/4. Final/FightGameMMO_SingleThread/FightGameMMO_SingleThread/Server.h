@@ -15,6 +15,11 @@
 #pragma comment(lib, "ws2_32")
 using namespace std;
 
+// TO-DO
+// 1. 시간 제대로 찍히게 하기
+// 2. 성능 좀 떨어지더라도 더미처럼 로그 남기기
+// 3. 젠장할~~~~~
+
 class CServer
 {
 public:
@@ -25,25 +30,54 @@ public:
 	void NetworkUpdate();
 	void ContentUpdate();
 
+#define dfMONITOR_MAX 1024
 	inline void MonitorUpdate()
 	{
 		if (GetTickCount64() - _oldTick > 1000)
 		{
 			int connected = _sessionIDs - _usableCnt;
+			_syncTotal += _syncCnt;
 
-			::wprintf(L"[%s %s]\n\n", _T(__DATE__), _T(__TIME__));
-			::wprintf(L"Connected Session: %d\n", connected);
-			::wprintf(L"Sync/1sec: %d\n", _syncCnt);
-			::wprintf(L"Accept/1sec: %d\n", _acceptCnt);
-			::wprintf(L"Disconnect/1sec: %d\n", _disconnectMonitorCnt);
-			::wprintf(L" - Dead: %d\n", _deadCnt);
-			::wprintf(L" - Timeout: %d\n", _timeoutCnt);
-			::wprintf(L" - Connect End: %d\n\n", _connectEndCnt);
+			SYSTEMTIME stTime;
+			GetLocalTime(&stTime);
+			WCHAR text[dfMONITOR_MAX];
+			swprintf_s(text, dfMONITOR_MAX, 
+				L"[%s %02d:%02d:%02d]----------------------------------\n\nConnected Session: %d\nTotal Sync: %d\nSync/1sec: %d\nAccept/1sec: %d\nDisconnect/1sec: %d\n - Dead: %d\n - Timeout: %d\n - Connect End: %d\n\n", 
+				_T(__DATE__), stTime.wHour, stTime.wMinute, stTime.wSecond, connected, _syncTotal, _syncCnt, _acceptCnt, _disconnectMonitorCnt, _deadCnt, _timeoutCnt, _connectEndCnt);
+			::wprintf(L"%s", text);
 
+			FILE* file;
+			errno_t openRet = _wfopen_s(&file, L"MonitorLog.txt", L"a+");
+			if (openRet != 0)
+			{
+				LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+					L"%s[%d]: Fail to open %s : %d\n",
+					_T(__FUNCTION__), __LINE__, L"MonitorLog.txt", openRet);
+
+				::wprintf(L"%s[%d]: Fail to open %s : %d\n",
+					_T(__FUNCTION__), __LINE__, L"MonitorLog.txt", openRet);
+			}
+
+			if (file != nullptr)
+			{
+				fwprintf(file, text);
+				fclose(file);
+			}
+			else
+			{
+				LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+					L"%s[%d]: Fileptr is nullptr %s\n",
+					_T(__FUNCTION__), __LINE__, L"MonitorLog.txt");
+
+				::wprintf(L"%s[%d]: Fileptr is nullptr %s\n",
+					_T(__FUNCTION__), __LINE__, L"MonitorLog.txt");
+			}
+
+			/*
 			// ProcessCPUTime.PrintCpuData();
 			// ProcessorCPUTime.PrintCpuData();
-
-			PRO_PRINT();
+			
+			PRO_PRINT();		
 			if (_checkPointsIdx < dfMONITOR_CHECKPOINT &&
 				_checkPoints[_checkPointsIdx] < connected)
 			{
@@ -52,8 +86,8 @@ public:
 				PRO_SAVE(titleBuf);
 				_checkPointsIdx++;
 			}
-
 			PRO_RESET();
+			*/
 
 			_syncCnt = 0;
 			_acceptCnt = 0;
@@ -226,6 +260,7 @@ private:
 	int _timeoutCnt = 0;
 	int _connectEndCnt = 0;
 	int _disconnectMonitorCnt = 0;
+	int _syncTotal = 0;
 
 	int _checkPointsIdx = 0;
 	int _checkPoints[dfMONITOR_CHECKPOINT]
