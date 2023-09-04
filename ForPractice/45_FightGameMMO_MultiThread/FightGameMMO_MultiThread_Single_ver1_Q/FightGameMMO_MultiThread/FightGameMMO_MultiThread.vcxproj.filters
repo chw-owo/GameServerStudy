@@ -1,0 +1,130 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="리소스 파일">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Main">
+      <UniqueIdentifier>{e8a73a0c-37fa-4b62-8a7d-d436fa60fc72}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib">
+      <UniqueIdentifier>{0b4bde61-b27e-42cd-ae61-b50ce9bce574}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GameServer">
+      <UniqueIdentifier>{9b42eafc-9b46-40ca-b50b-b3d67d197f1a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\NetUtils">
+      <UniqueIdentifier>{be5b6a26-faa2-47de-bcfe-e5eefa13874c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Monitor">
+      <UniqueIdentifier>{82053b33-df33-4d11-9254-172c95efe678}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Commons">
+      <UniqueIdentifier>{69be670c-db0a-4e04-a45f-898729b0ba85}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GameServer\Content">
+      <UniqueIdentifier>{12ecf48e-e681-4c88-9745-6d79d80c5516}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Commons\Resource">
+      <UniqueIdentifier>{1214997a-5e47-41e4-b35d-4deed1a387f5}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Commons\Utils">
+      <UniqueIdentifier>{3bf73169-1d20-41e3-9621-240c52296cc1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GameServer\Utils">
+      <UniqueIdentifier>{510b4691-4e8a-4911-8111-71e97ed3257c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Session">
+      <UniqueIdentifier>{93f192d9-22f5-410c-a59a-ec86752288c9}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Main.cpp">
+      <Filter>Main</Filter>
+    </ClCompile>
+    <ClCompile Include="CLanServer.cpp">
+      <Filter>NetLib</Filter>
+    </ClCompile>
+    <ClCompile Include="CGameServer.cpp">
+      <Filter>GameServer</Filter>
+    </ClCompile>
+    <ClCompile Include="CProcessCpu.cpp">
+      <Filter>Monitor</Filter>
+    </ClCompile>
+    <ClCompile Include="CProcessorCpu.cpp">
+      <Filter>Monitor</Filter>
+    </ClCompile>
+    <ClCompile Include="CProfiler.cpp">
+      <Filter>Monitor</Filter>
+    </ClCompile>
+    <ClCompile Include="CSystemLog.cpp">
+      <Filter>Monitor</Filter>
+    </ClCompile>
+    <ClCompile Include="CObjectPool.cpp">
+      <Filter>Commons\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="CPacket.cpp">
+      <Filter>NetLib\NetUtils</Filter>
+    </ClCompile>
+    <ClCompile Include="CSession.cpp">
+      <Filter>NetLib\Session</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Main.h">
+      <Filter>Main</Filter>
+    </ClInclude>
+    <ClInclude Include="CLanServer.h">
+      <Filter>NetLib</Filter>
+    </ClInclude>
+    <ClInclude Include="CPacket.h">
+      <Filter>NetLib\NetUtils</Filter>
+    </ClInclude>
+    <ClInclude Include="CRingBuffer.h">
+      <Filter>NetLib\NetUtils</Filter>
+    </ClInclude>
+    <ClInclude Include="CGameServer.h">
+      <Filter>GameServer</Filter>
+    </ClInclude>
+    <ClInclude Include="CProcessCpu.h">
+      <Filter>Monitor</Filter>
+    </ClInclude>
+    <ClInclude Include="CProcessorCpu.h">
+      <Filter>Monitor</Filter>
+    </ClInclude>
+    <ClInclude Include="CProfiler.h">
+      <Filter>Monitor</Filter>
+    </ClInclude>
+    <ClInclude Include="CCrashDump.h">
+      <Filter>Monitor</Filter>
+    </ClInclude>
+    <ClInclude Include="CSystemLog.h">
+      <Filter>Monitor</Filter>
+    </ClInclude>
+    <ClInclude Include="CObjectPool.h">
+      <Filter>Commons\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="CPlayer.h">
+      <Filter>GameServer\Content</Filter>
+    </ClInclude>
+    <ClInclude Include="CSector.h">
+      <Filter>GameServer\Content</Filter>
+    </ClInclude>
+    <ClInclude Include="CSessionMap.h">
+      <Filter>Commons\Resource</Filter>
+    </ClInclude>
+    <ClInclude Include="CJobQueue.h">
+      <Filter>Commons\Resource</Filter>
+    </ClInclude>
+    <ClInclude Include="CJob.h">
+      <Filter>GameServer\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Protocol.h">
+      <Filter>GameServer</Filter>
+    </ClInclude>
+    <ClInclude Include="CSession.h">
+      <Filter>NetLib\Session</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
