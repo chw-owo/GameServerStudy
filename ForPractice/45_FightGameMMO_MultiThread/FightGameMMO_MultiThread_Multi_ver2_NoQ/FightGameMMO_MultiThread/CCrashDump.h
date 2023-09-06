@@ -70,7 +70,7 @@ public:
 
 	static void Crash(void)
 	{
-		__debugbreak;
+		__debugbreak();
 	}
 
 	static void SetHandlerDump()

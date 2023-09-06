@@ -23,7 +23,7 @@ public:
 		_yPosMin = (yIndex - 2) * dfSECTOR_SIZE_Y;
 		_xPosMax = (xIndex - 1) * dfSECTOR_SIZE_X;
 		_yPosMax = (yIndex - 1) * dfSECTOR_SIZE_Y;
-		_players.reserve(dfDEFAULT_PLAYERS_PER_SECTOR);	
+		_players.reserve(dfPLAYERS_PER_SECTOR_DEFAULT);	
 	}
 
 public:

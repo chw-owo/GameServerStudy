@@ -13,13 +13,13 @@
 #define dfSERVER_PORT 20000
 #define dfMONITOR_CHECKPOINT 11
 
-#define dfSESSION_MAX					7000
-#define dfPLAYER_MAX					7000
-#define dfPACKET_MAX					100000
-#define dfDEFAULT_PLAYERS_PER_SECTOR	1024
+#define dfPACKET_DEFAULT				100000
+#define dfSESSION_DEFAULT				70000
+#define dfPLAYERS_PER_SECTOR_DEFAULT	1024
 
+#define dfPLAYER_MAX					10000
 #define dfLOGIC_THREAD_NUM				10
-#define dfLOGIC_PLAYER_NUM				700
+#define dfLOGIC_PLAYER_NUM				1000
 
 #pragma pack (push, 1)
 struct st_PACKET_HEADER

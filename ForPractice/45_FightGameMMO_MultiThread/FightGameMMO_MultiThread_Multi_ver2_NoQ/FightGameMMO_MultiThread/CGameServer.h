@@ -29,6 +29,8 @@ private:
 	void OnSend(__int64 sessionID, int sendSize);
 	void OnError(int errorCode, wchar_t* errorMsg);
 
+	void ForDebug(__int64 sessionID);
+
 private:
 	static unsigned int WINAPI UpdateThread(void* arg);
 	static unsigned int WINAPI MonitorThread(void* arg);
@@ -45,11 +47,8 @@ private:
 private:
 	inline bool CheckMovable(short x, short y);
 	inline void UpdatePlayerMove(CPlayer* pPlayer);
-	
 	inline void SetPlayerDead(CPlayer* pPlayer, bool timeout);
-	inline void DeleteDeadPlayer(CPlayer* pPlayer);
 
-	inline void SetSector(CPlayer* pPlayer);
 	inline void UpdateSector(CPlayer* pPlayer, short direction);
 	inline void SetSectorsAroundInfo();
 
@@ -62,12 +61,12 @@ private:
 	inline void HandleRecv(__int64 sessionID, CPacket* packet);
 
 	// Handle CS Packet
-	inline bool HandleCSPacket_MOVE_START(CPacket* recvPacket, CPlayer* pPlayer);
-	inline bool HandleCSPacket_MOVE_STOP(CPacket* recvPacket, CPlayer* pPlayer);
-	inline bool HandleCSPacket_ATTACK1(CPacket* recvPacket, CPlayer* pPlayer);
-	inline bool HandleCSPacket_ATTACK2(CPacket* recvPacket, CPlayer* pPlayer);
-	inline bool HandleCSPacket_ATTACK3(CPacket* recvPacket, CPlayer* pPlayer);
-	inline bool HandleCSPacket_ECHO(CPacket* recvPacket, CPlayer* pPlayer);
+	inline void HandleCSPacket_MOVE_START(CPacket* recvPacket, CPlayer* pPlayer);
+	inline void HandleCSPacket_MOVE_STOP(CPacket* recvPacket, CPlayer* pPlayer);
+	inline void HandleCSPacket_ATTACK1(CPacket* recvPacket, CPlayer* pPlayer);
+	inline void HandleCSPacket_ATTACK2(CPacket* recvPacket, CPlayer* pPlayer);
+	inline void HandleCSPacket_ATTACK3(CPacket* recvPacket, CPlayer* pPlayer);
+	inline void HandleCSPacket_ECHO(CPacket* recvPacket, CPlayer* pPlayer);
 
 	// Get Data from CS Packet
 	inline void GetCSPacket_MOVE_START(CPacket* pPacket, unsigned char& moveDirection, short& x, short& y);
@@ -120,18 +119,23 @@ private:
 					  dfVERT_SECTOR_NUM, dfDIAG_SECTOR_NUM,
 					  dfVERT_SECTOR_NUM, dfDIAG_SECTOR_NUM };
 
-	__int64 _playerID = 0;
-	unordered_map<__int64, CPlayer*> _playerSessionID;
-	CPlayer* _logicPlayers[dfLOGIC_THREAD_NUM][dfLOGIC_PLAYER_NUM];
-	queue<int> _usablePlayerIdx;
+private:
+	CPlayer* _playersArray[dfLOGIC_THREAD_NUM][dfLOGIC_PLAYER_NUM];
 
-	SRWLOCK _playerMapLock;
-	SRWLOCK _playerIdxLock;
+	unordered_map<__int64, CPlayer*> _playersMap;
+	SRWLOCK _playersMapLock;
+	__int64 _playerIDGenerator = 0;
+	SRWLOCK _IDGeneratorLock;
+	queue<int> _usablePlayerIdx;
+	SRWLOCK _usableIdxLock;
+	
+private:
 	int _timeGap = 1000 / dfFPS;
 
 private:
 	// For Monitor
 	long _totalSyncCnt = 0;
+	long _totalAcceptCnt = 0;
 	volatile long _logicFPS = 0;
 	volatile long _syncCnt = 0;
 	volatile long _deadCnt = 0;
@@ -144,4 +148,6 @@ private:
 
 	CProcessCpu _processCPUTime;
 	CProcessorCpu _processorCPUTime;
+
+
 };

@@ -67,6 +67,9 @@
     <ClCompile Include="CSession.cpp">
       <Filter>NetLib\Session</Filter>
     </ClCompile>
+    <ClCompile Include="CRingBuffer.cpp">
+      <Filter>NetLib\NetUtils</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Main.h">

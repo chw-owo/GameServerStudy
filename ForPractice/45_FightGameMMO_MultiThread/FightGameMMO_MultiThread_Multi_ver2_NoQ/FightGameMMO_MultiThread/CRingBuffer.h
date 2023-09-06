@@ -5,6 +5,7 @@
 
 #define DEFAULT_BUF_SIZE 32768 
 #define MAX_BUF_SIZE 65536
+extern volatile long resizeCnt;
 
 /*====================================================================
 
@@ -251,7 +252,9 @@ public:
         LOG(L"FightGame", CSystemLog::DEBUG_LEVEL,
             L"%s[%d] Resize\n", _T(__FUNCTION__), __LINE__);
 
-        ::wprintf(L"%s[%d] Resize\n", _T(__FUNCTION__), __LINE__);
+        InterlockedIncrement(&resizeCnt);
+
+        //::wprintf(L"%s[%d] Resize\n", _T(__FUNCTION__), __LINE__);
 
         if (size > MAX_BUF_SIZE)
         {

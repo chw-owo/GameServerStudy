@@ -1,10 +1,14 @@
 #include "CGameServer.h"
-#include "Main.h"
 #include "Cjob.h"
+#include "Main.h"
 #include "CSystemLog.h"
 
 #define _MONITOR
 __declspec (thread) DWORD oldTick = timeGetTime();
+
+// TO-DO: AcquireSRWLockShared(&pPlayer->_lock); 안에서 pPlayer state 확인
+// TO-DO: 디버깅 용으로 덕지덕지 넣은 코드 깔끔하게 정리...
+// TO-DO: 그 뒤에 프로파일러, 로그도 멀티스레드에 맞게 재정리
 
 CGameServer::CGameServer()
 {
@@ -26,13 +30,15 @@ CGameServer::CGameServer()
 		for (int j = 0; j < dfLOGIC_PLAYER_NUM; j++)
 		{
 			CPlayer* pPlayer = new CPlayer(idx);
-			_logicPlayers[i][j] = pPlayer;
-			_usablePlayerIdx.push(pPlayer->_idx._num);
+			_playersArray[i][j] = pPlayer;
+			_usablePlayerIdx.push(idx);
 			idx++;
 		}
 	}
 
-	InitializeSRWLock(&_playerMapLock);
+	InitializeSRWLock(&_playersMapLock);
+	InitializeSRWLock(&_usableIdxLock);
+	InitializeSRWLock(&_IDGeneratorLock);
 
 #ifdef _MONITOR
 	CreateDirectory(L"Profile", NULL);
@@ -40,7 +46,7 @@ CGameServer::CGameServer()
 	if (_monitorThread == NULL)
 	{
 		::printf("Error! %s(%d)\n", __func__, __LINE__);
-		g_bShutdown = true;
+		__debugbreak();
 	}
 #endif
 
@@ -53,7 +59,7 @@ CGameServer::CGameServer()
 		if (_logicThreads[i] == NULL)
 		{
 			::printf("Error! %s(%d)\n", __func__, __LINE__);
-			g_bShutdown = true;
+			__debugbreak();
 			return;
 		}
 	}
@@ -64,8 +70,8 @@ CGameServer::CGameServer()
 	GetSystemInfo(&si);
 	int cpuCnt = (int)si.dwNumberOfProcessors / 2;
 
-	if (!NetworkStart(dfSERVER_IP, dfSERVER_PORT, cpuCnt, false, dfSESSION_MAX))
-		g_bShutdown = true;
+	if (!NetworkStart(dfSERVER_IP, dfSERVER_PORT, cpuCnt, false, dfSESSION_DEFAULT))
+		__debugbreak();
 }
 
 // TO-DO: 종료 처리
@@ -112,6 +118,25 @@ void CGameServer::OnError(int errorCode, wchar_t* errorMsg)
 
 }
 
+void CGameServer::ForDebug(__int64 sessionID)
+{
+	AcquireSRWLockExclusive(&_playersMapLock);
+	unordered_map<__int64, CPlayer*>::iterator iter = _playersMap.find(sessionID);
+	if (iter == _playersMap.end())
+	{
+		ReleaseSRWLockExclusive(&_playersMapLock);
+		::printf("%s[%d] No session\n", __func__, __LINE__);
+		return;
+	}
+	CPlayer* pPlayer = iter->second;
+
+	AcquireSRWLockExclusive(&pPlayer->_lock);
+	ReleaseSRWLockExclusive(&_playersMapLock);
+
+	//pPlayer->PrintStateForDebug();
+	ReleaseSRWLockExclusive(&pPlayer->_lock);
+}
+
 unsigned int __stdcall CGameServer::UpdateThread(void* arg)
 {
 	PRO_SET(pSTLSProfiler, GetCurrentThreadId());
@@ -138,31 +163,63 @@ unsigned int __stdcall CGameServer::MonitorThread(void* arg)
 	{
 		Sleep(1000);
 		pServer->UpdateMonitorData();
+		pServer->_totalAcceptCnt += pServer->GetAcceptTPS();
+		pServer->_totalSyncCnt += pServer->_syncCnt;
 
-		if (GetAsyncKeyState(VK_SPACE))
-		{
-			SYSTEMTIME stTime;
-			GetLocalTime(&stTime);
+		SYSTEMTIME stTime;
+		GetLocalTime(&stTime);
 
-			::wprintf(L"[%s %02d:%02d:%02d]\n\n", _T(__DATE__), stTime.wHour, stTime.wMinute, stTime.wSecond);
+		::wprintf(L"[%s %02d:%02d:%02d]\n\n", _T(__DATE__), stTime.wHour, stTime.wMinute, stTime.wSecond);
 
-			::wprintf(L"Logic FPS: %d\n", pServer->_logicFPS / dfLOGIC_THREAD_NUM);
-			::wprintf(L"Connected Session: %d\n", pServer->GetSessionCount());
-			::wprintf(L"Usable Player Num: %llu\n", pServer->_usablePlayerIdx.size());
-			::wprintf(L"Total Sync: %d\n\n", pServer->_totalSyncCnt);
+		::wprintf(L"Logic FPS: %d\n", pServer->_logicFPS / dfLOGIC_THREAD_NUM);
+		::wprintf(L"Connected Session: %d\n", pServer->GetSessionCount());
+		::wprintf(L"Usable Player Num: %llu\n", pServer->_usablePlayerIdx.size());
+		::wprintf(L"Total Sync: %d\n", pServer->_totalSyncCnt);
+		::wprintf(L"Disconnect/1sec: %d\n", pServer->GetDisconnectTPS());
+		::wprintf(L" - Timeout: %d\n", pServer->_timeoutCnt);
+		::wprintf(L" - 10054: %d\n\n", pServer->Get10054TPS());
 
-			::wprintf(L"Sync/1sec: %d\n", pServer->_syncCnt);
-			::wprintf(L"Accept/1sec: %d\n", pServer->GetAcceptTPS());
-			::wprintf(L"Disconnect/1sec: %d\n", pServer->GetDisconnectTPS());
-			::wprintf(L" - Dead: %d\n", pServer->_deadCnt);
-			::wprintf(L" - Timeout: %d\n", pServer->_timeoutCnt);
-			::wprintf(L" - Connect End: %d\n", pServer->_connectEndCnt);
+		/*
+		::wprintf(L"Resize/1sec: %d\n", resizeCnt);
+		::wprintf(L"Accept/1sec: %d\n\n", pServer->GetAcceptTPS());
 
-			::wprintf(L"\n=======================================\n\n");
-		}
+		::wprintf(L"Disconnect/1sec: %d\n\n", pServer->GetDisconnectTPS());
+
+		::wprintf(L" - Dead: %d\n", pServer->_deadCnt);
+		::wprintf(L" - Timeout: %d\n", pServer->_timeoutCnt);
+		::wprintf(L" - 10054: %d\n\n", pServer->Get10054TPS());
+
+		::wprintf(L" - Start: %d\n", pServer->GetDisconnectStartTPS());
+		::wprintf(L" - Complete: %d\n\n", pServer->GetDisconnectCompleteTPS());
+
+		::wprintf(L" - Request: %d\n", pServer->GetDisconnectReqTPS());
+		::wprintf(L" - IOCount 0: %d\n\n", pServer->GetIOCount0TPS());
+		
+		::wprintf(L"=======================================\n\n");
+		*/
+
+		//::wprintf(L"Total Accept: %d\n", pServer->_totalAcceptCnt);
+		//::wprintf(L"Sync/1sec: %d\n", pServer->_syncCnt);
 
 		// pServer->_processCPUTime.PrintCpuData();
 		// pServer->_processorCPUTime.PrintCpuData();
+
+				/*
+		for (int i = 0; i < pServer->_numOfWorkerThreads; i++)
+		{
+			if (pServer->_activeNetworkThreads[i] == true)
+			{
+				pServer->_activeNetworkThreads[i] = false;
+				::wprintf(L"|o");
+			}
+			else
+			{
+				::wprintf(L"| ");
+			}
+		}
+		::wprintf(L"|\n\n");
+		*/
+
 
 		PRO_PRINT_ADDUP();
 
@@ -179,7 +236,7 @@ unsigned int __stdcall CGameServer::MonitorThread(void* arg)
 
 		PRO_RESET();
 
-		pServer->_totalSyncCnt += pServer->_syncCnt;
+		InterlockedExchange(&resizeCnt, 0);
 		InterlockedExchange(&pServer->_logicFPS, 0);
 		InterlockedExchange(&pServer->_syncCnt, 0);
 		InterlockedExchange(&pServer->_deadCnt, 0);
@@ -203,14 +260,14 @@ void CGameServer::ReqSendOneSector(CPacket* packet, CSector* sector, CPlayer* pE
 		vector<CPlayer*>::iterator playerIter = sector->_players.begin();
 		for (; playerIter < sector->_players.end(); playerIter++)
 		{
-			
-			if((*playerIter)->_state != PLAYER_STATE::DISCONNECT)
-			{
-				SendPacket((*playerIter)->_sessionID, packet);
-			}
-			else
-			{
-				
+			AcquireSRWLockShared(&(*playerIter)->_lock);
+			PLAYER_STATE state = (*playerIter)->_state;
+			__int64 sessionID = (*playerIter)->_sessionID;
+			ReleaseSRWLockShared(&(*playerIter)->_lock);
+
+			if(state != PLAYER_STATE::DISCONNECT)
+			{	
+				SendPacket(sessionID, packet);
 			}
 		}
 		ReleaseSRWLockShared(&sector->_lock);
@@ -223,14 +280,14 @@ void CGameServer::ReqSendOneSector(CPacket* packet, CSector* sector, CPlayer* pE
 		{
 			if (*playerIter != pExpPlayer)
 			{
-				
-				if ((*playerIter)->_state != PLAYER_STATE::DISCONNECT)
+				AcquireSRWLockShared(&(*playerIter)->_lock);
+				PLAYER_STATE state = (*playerIter)->_state;
+				__int64 sessionID = (*playerIter)->_sessionID;
+				ReleaseSRWLockShared(&(*playerIter)->_lock);
+
+				if (state != PLAYER_STATE::DISCONNECT)
 				{
-					SendPacket((*playerIter)->_sessionID, packet);
-				}
-				else
-				{
-					
+					SendPacket(sessionID, packet);
 				}
 			}
 		}
@@ -244,19 +301,20 @@ void CGameServer::ReqSendAroundSector(CPacket* packet, CSector* centerSector, CP
 	{
 		for (int i = 0; i < dfAROUND_SECTOR_NUM; i++)
 		{
-			AcquireSRWLockShared(&centerSector->_around[i]->_lock);
-			vector<CPlayer*>::iterator playerIter
-				= centerSector->_around[i]->_players.begin();
+			// TO-DO: CenterSector is nullptr Error
+
+			AcquireSRWLockShared(&centerSector->_around[i]->_lock); 
+			vector<CPlayer*>::iterator playerIter = centerSector->_around[i]->_players.begin();
 			for (; playerIter < centerSector->_around[i]->_players.end(); playerIter++)
 			{
-				
-				if ((*playerIter)->_state != PLAYER_STATE::DISCONNECT)
-				{		
-					SendPacket((*playerIter)->_sessionID, packet);
-				}
-				else
+				AcquireSRWLockShared(&(*playerIter)->_lock);
+				PLAYER_STATE state = (*playerIter)->_state;
+				__int64 sessionID = (*playerIter)->_sessionID;
+				ReleaseSRWLockShared(&(*playerIter)->_lock);
+
+				if (state != PLAYER_STATE::DISCONNECT)
 				{
-					
+					SendPacket(sessionID, packet);
 				}
 			}
 			ReleaseSRWLockShared(&centerSector->_around[i]->_lock);
@@ -267,38 +325,36 @@ void CGameServer::ReqSendAroundSector(CPacket* packet, CSector* centerSector, CP
 		for (int i = 0; i < dfMOVE_DIR_MAX; i++)
 		{
 			AcquireSRWLockShared(&centerSector->_around[i]->_lock);
-			vector<CPlayer*>::iterator playerIter
-				= centerSector->_around[i]->_players.begin();
+			vector<CPlayer*>::iterator playerIter = centerSector->_around[i]->_players.begin();
 			for (; playerIter < centerSector->_around[i]->_players.end(); playerIter++)
 			{		
-				
-				if ((*playerIter)->_state != PLAYER_STATE::DISCONNECT)
+				AcquireSRWLockShared(&(*playerIter)->_lock);
+				PLAYER_STATE state = (*playerIter)->_state;
+				__int64 sessionID = (*playerIter)->_sessionID;
+				ReleaseSRWLockShared(&(*playerIter)->_lock);
+
+				if (state != PLAYER_STATE::DISCONNECT)
 				{
-					SendPacket((*playerIter)->_sessionID, packet);
-				}
-				else
-				{
-					
+					SendPacket(sessionID, packet);
 				}
 			}
 			ReleaseSRWLockShared(&centerSector->_around[i]->_lock);
 		}
 
 		AcquireSRWLockShared(&centerSector->_around[dfMOVE_DIR_INPLACE]->_lock);
-		vector<CPlayer*>::iterator playerIter
-			= centerSector->_around[dfMOVE_DIR_INPLACE]->_players.begin();
+		vector<CPlayer*>::iterator playerIter = centerSector->_around[dfMOVE_DIR_INPLACE]->_players.begin();
 		for (; playerIter < centerSector->_around[dfMOVE_DIR_INPLACE]->_players.end(); playerIter++)
 		{
 			if (*playerIter != pExpPlayer)
 			{
-				
-				if ((*playerIter)->_state != PLAYER_STATE::DISCONNECT)
-				{					
-					SendPacket((*playerIter)->_sessionID, packet);
-				}
-				else
+				AcquireSRWLockShared(&(*playerIter)->_lock);
+				PLAYER_STATE state = (*playerIter)->_state;
+				__int64 sessionID = (*playerIter)->_sessionID;
+				ReleaseSRWLockShared(&(*playerIter)->_lock);
+
+				if (state != PLAYER_STATE::DISCONNECT)
 				{
-					
+					SendPacket(sessionID, packet);
 				}
 			}
 		}
@@ -316,32 +372,32 @@ void CGameServer::SleepForFixedFrame()
 void CGameServer::LogicUpdate(int threadNum)
 {
 	InterlockedIncrement(&_logicFPS);
-
 	PRO_BEGIN(L"GS: LogicUpdate");
 
 	for (int i = 0; i < dfLOGIC_PLAYER_NUM; i++)
 	{
-		if (_logicPlayers[threadNum][i]->_state != PLAYER_STATE::ALIVE) 
-		{
-			continue;
-		}
+		AcquireSRWLockShared(&_playersArray[threadNum][i]->_lock);
+		PLAYER_STATE state = _playersArray[threadNum][i]->_state;
+		ReleaseSRWLockShared(&_playersArray[threadNum][i]->_lock);
 		
-		CPlayer* pPlayer = _logicPlayers[threadNum][i];
+		if (state != PLAYER_STATE::CONNECT) continue;
+		
+		AcquireSRWLockShared(&_playersArray[threadNum][i]->_lock);
+		CPlayer* pPlayer = _playersArray[threadNum][i];
+		DWORD recvTime = pPlayer->_lastRecvTime;
+		bool move = pPlayer->_move;
+		ReleaseSRWLockShared(&_playersArray[threadNum][i]->_lock);
 
-		if ((GetTickCount64() - pPlayer->_lastRecvTime) > dfNETWORK_PACKET_RECV_TIMEOUT)
+		if ((timeGetTime() - recvTime) > dfNETWORK_PACKET_RECV_TIMEOUT)
 		{
 			SetPlayerDead(pPlayer, true);
 			InterlockedIncrement(&_timeoutCnt);	
 			continue;
 		}
 
-		if (pPlayer->_move)
+		if (move)
 		{
 			UpdatePlayerMove(pPlayer);
-		}
-		else
-		{
-
 		}
 	}
 
@@ -359,15 +415,25 @@ bool CGameServer::CheckMovable(short x, short y)
 
 void CGameServer::UpdatePlayerMove(CPlayer* pPlayer)
 {
-	switch (pPlayer->_moveDirection)
+	AcquireSRWLockShared(&pPlayer->_lock);
+	short x = pPlayer->_x;
+	short y = pPlayer->_y;
+	unsigned char moveDir = pPlayer->_moveDirection;
+	CSector* pSector = pPlayer->_pSector;
+	ReleaseSRWLockShared(&pPlayer->_lock);
+
+	switch (moveDir)
 	{
 	case dfMOVE_DIR_LL:
 
-		if (CheckMovable(pPlayer->_x - dfSPEED_PLAYER_X, pPlayer->_y))
+		if (CheckMovable(x - dfSPEED_PLAYER_X, y))
 		{
+			AcquireSRWLockExclusive(&pPlayer->_lock);
 			pPlayer->_x -= dfSPEED_PLAYER_X;
+			x = pPlayer->_x;
+			ReleaseSRWLockExclusive(&pPlayer->_lock);
 
-			if (pPlayer->_x < pPlayer->_pSector->_xPosMin)
+			if (x < pSector->_xPosMin)
 				UpdateSector(pPlayer, dfMOVE_DIR_LL);
 		}
 
@@ -375,21 +441,24 @@ void CGameServer::UpdatePlayerMove(CPlayer* pPlayer)
 
 	case dfMOVE_DIR_LU:
 
-		if (CheckMovable(pPlayer->_x - dfSPEED_PLAYER_X, pPlayer->_y - dfSPEED_PLAYER_Y))
+		if (CheckMovable(x - dfSPEED_PLAYER_X, y - dfSPEED_PLAYER_Y))
 		{
+			AcquireSRWLockExclusive(&pPlayer->_lock);
 			pPlayer->_x -= dfSPEED_PLAYER_X;
 			pPlayer->_y -= dfSPEED_PLAYER_Y;
+			x = pPlayer->_x;
+			y = pPlayer->_y;
+			ReleaseSRWLockExclusive(&pPlayer->_lock);
 
-			if (pPlayer->_x < pPlayer->_pSector->_xPosMin &&
-				pPlayer->_y < pPlayer->_pSector->_yPosMin)
+			if (x < pSector->_xPosMin && y < pSector->_yPosMin)
 			{
 				UpdateSector(pPlayer, dfMOVE_DIR_LU);
 			}
-			else if (pPlayer->_x < pPlayer->_pSector->_xPosMin)
+			else if (x < pSector->_xPosMin)
 			{
 				UpdateSector(pPlayer, dfMOVE_DIR_LL);
 			}
-			else if (pPlayer->_y < pPlayer->_pSector->_yPosMin)
+			else if (y < pSector->_yPosMin)
 			{
 				UpdateSector(pPlayer, dfMOVE_DIR_UU);
 			}
@@ -399,11 +468,14 @@ void CGameServer::UpdatePlayerMove(CPlayer* pPlayer)
 
 	case dfMOVE_DIR_UU:
 
-		if (CheckMovable(pPlayer->_x, pPlayer->_y - dfSPEED_PLAYER_Y))
+		if (CheckMovable(x, y - dfSPEED_PLAYER_Y))
 		{
+			AcquireSRWLockExclusive(&pPlayer->_lock);
 			pPlayer->_y -= dfSPEED_PLAYER_Y;
+			y = pPlayer->_y;
+			ReleaseSRWLockExclusive(&pPlayer->_lock);
 
-			if (pPlayer->_y < pPlayer->_pSector->_yPosMin)
+			if (y < pSector->_yPosMin)
 				UpdateSector(pPlayer, dfMOVE_DIR_UU);
 		}
 
@@ -411,21 +483,24 @@ void CGameServer::UpdatePlayerMove(CPlayer* pPlayer)
 
 	case dfMOVE_DIR_RU:
 
-		if (CheckMovable(pPlayer->_x + dfSPEED_PLAYER_X, pPlayer->_y - dfSPEED_PLAYER_Y))
+		if (CheckMovable(x + dfSPEED_PLAYER_X, y - dfSPEED_PLAYER_Y))
 		{
+			AcquireSRWLockExclusive(&pPlayer->_lock);
 			pPlayer->_x += dfSPEED_PLAYER_X;
 			pPlayer->_y -= dfSPEED_PLAYER_Y;
+			x = pPlayer->_x;
+			y = pPlayer->_y;
+			ReleaseSRWLockExclusive(&pPlayer->_lock);
 
-			if (pPlayer->_x > pPlayer->_pSector->_xPosMax &&
-				pPlayer->_y < pPlayer->_pSector->_yPosMin)
+			if (x > pSector->_xPosMax && y <pSector->_yPosMin)
 			{
 				UpdateSector(pPlayer, dfMOVE_DIR_RU);
 			}
-			else if (pPlayer->_x > pPlayer->_pSector->_xPosMax)
+			else if (x > pSector->_xPosMax)
 			{
 				UpdateSector(pPlayer, dfMOVE_DIR_RR);
 			}
-			else if (pPlayer->_y < pPlayer->_pSector->_yPosMin)
+			else if (y < pSector->_yPosMin)
 			{
 				UpdateSector(pPlayer, dfMOVE_DIR_UU);
 			}
@@ -435,11 +510,14 @@ void CGameServer::UpdatePlayerMove(CPlayer* pPlayer)
 
 	case dfMOVE_DIR_RR:
 
-		if (CheckMovable(pPlayer->_x + dfSPEED_PLAYER_X, pPlayer->_y))
+		if (CheckMovable(x + dfSPEED_PLAYER_X, y))
 		{
+			AcquireSRWLockExclusive(&pPlayer->_lock);
 			pPlayer->_x += dfSPEED_PLAYER_X;
+			x = pPlayer->_x;
+			ReleaseSRWLockExclusive(&pPlayer->_lock);
 
-			if (pPlayer->_x > pPlayer->_pSector->_xPosMax)
+			if (x > pSector->_xPosMax)
 				UpdateSector(pPlayer, dfMOVE_DIR_RR);
 		}
 
@@ -449,19 +527,22 @@ void CGameServer::UpdatePlayerMove(CPlayer* pPlayer)
 
 		if (CheckMovable(pPlayer->_x + dfSPEED_PLAYER_X, pPlayer->_y + dfSPEED_PLAYER_Y))
 		{
+			AcquireSRWLockExclusive(&pPlayer->_lock);
 			pPlayer->_x += dfSPEED_PLAYER_X;
 			pPlayer->_y += dfSPEED_PLAYER_Y;
+			x = pPlayer->_x;
+			y = pPlayer->_y;
+			ReleaseSRWLockExclusive(&pPlayer->_lock);
 
-			if (pPlayer->_x > pPlayer->_pSector->_xPosMax &&
-				pPlayer->_y > pPlayer->_pSector->_yPosMax)
+			if (x > pSector->_xPosMax && y > pSector->_yPosMax)
 			{
 				UpdateSector(pPlayer, dfMOVE_DIR_RD);
 			}
-			else if (pPlayer->_x > pPlayer->_pSector->_xPosMax)
+			else if (x > pSector->_xPosMax)
 			{
 				UpdateSector(pPlayer, dfMOVE_DIR_RR);
 			}
-			else if (pPlayer->_y > pPlayer->_pSector->_yPosMax)
+			else if (y > pSector->_yPosMax)
 			{
 				UpdateSector(pPlayer, dfMOVE_DIR_DD);
 			}
@@ -470,11 +551,14 @@ void CGameServer::UpdatePlayerMove(CPlayer* pPlayer)
 
 	case dfMOVE_DIR_DD:
 
-		if (CheckMovable(pPlayer->_x, pPlayer->_y + dfSPEED_PLAYER_Y))
+		if (CheckMovable(x, y + dfSPEED_PLAYER_Y))
 		{
+			AcquireSRWLockExclusive(&pPlayer->_lock);
 			pPlayer->_y += dfSPEED_PLAYER_Y;
+			y = pPlayer->_y;
+			ReleaseSRWLockExclusive(&pPlayer->_lock);
 
-			if (pPlayer->_y > pPlayer->_pSector->_yPosMax)
+			if (y > pSector->_yPosMax)
 				UpdateSector(pPlayer, dfMOVE_DIR_DD);
 		}
 
@@ -482,40 +566,30 @@ void CGameServer::UpdatePlayerMove(CPlayer* pPlayer)
 
 	case dfMOVE_DIR_LD:
 
-		if (CheckMovable(pPlayer->_x - dfSPEED_PLAYER_X, pPlayer->_y + dfSPEED_PLAYER_Y))
+		if (CheckMovable(x - dfSPEED_PLAYER_X, y + dfSPEED_PLAYER_Y))
 		{
+			AcquireSRWLockExclusive(&pPlayer->_lock);
 			pPlayer->_x -= dfSPEED_PLAYER_X;
 			pPlayer->_y += dfSPEED_PLAYER_Y;
+			x = pPlayer->_x;
+			y = pPlayer->_y;
+			ReleaseSRWLockExclusive(&pPlayer->_lock);
 
-			if (pPlayer->_x < pPlayer->_pSector->_xPosMin &&
-				pPlayer->_y > pPlayer->_pSector->_yPosMax)
+			if (x < pSector->_xPosMin && y > pSector->_yPosMax)
 			{
 				UpdateSector(pPlayer, dfMOVE_DIR_LD);
 			}
-			else if (pPlayer->_x < pPlayer->_pSector->_xPosMin)
+			else if (x < pSector->_xPosMin)
 			{
 				UpdateSector(pPlayer, dfMOVE_DIR_LL);
 			}
-			else if (pPlayer->_y > pPlayer->_pSector->_yPosMax)
+			else if (y > pSector->_yPosMax)
 			{
 				UpdateSector(pPlayer, dfMOVE_DIR_DD);
 			}
 		}
 		break;
 	}
-
-}
-
-void CGameServer::SetSector(CPlayer* pPlayer)
-{
-	int x = (pPlayer->_x / dfSECTOR_SIZE_X) + 2;
-	int y = (pPlayer->_y / dfSECTOR_SIZE_Y) + 2;
-
-	AcquireSRWLockExclusive(&_sectors[y][x]._lock);
-	_sectors[y][x]._players.push_back(pPlayer);
-	ReleaseSRWLockExclusive(&_sectors[y][x]._lock);
-
-	pPlayer->_pSector = &_sectors[y][x];
 }
 
 void CGameServer::UpdateSector(CPlayer* pPlayer, short direction)
@@ -524,7 +598,17 @@ void CGameServer::UpdateSector(CPlayer* pPlayer, short direction)
 
 	int sectorCnt = _sectorCnt[direction];
 
+	AcquireSRWLockShared(&pPlayer->_lock);
 	CSector* oriSector = pPlayer->_pSector;
+	__int64 sessionID = pPlayer->_sessionID;
+	__int64 playerID = pPlayer->_playerID;
+	unsigned char dir = pPlayer->_direction;
+	unsigned char moveDir = pPlayer->_moveDirection;
+	short x = pPlayer->_x;
+	short y = pPlayer->_y;
+	char hp = pPlayer->_hp;
+	ReleaseSRWLockShared(&pPlayer->_lock);
+
 	CSector** inSector = oriSector->_new[direction];
 	CSector** outSector = oriSector->_old[direction];
 	CSector* newSector = oriSector->_around[direction];
@@ -533,23 +617,21 @@ void CGameServer::UpdateSector(CPlayer* pPlayer, short direction)
 
 	CPacket* createMeToOtherPacket = _pPacketPool->Alloc();
 	createMeToOtherPacket->Clear();
-	int createMeToOtherRet = SetSCPacket_CREATE_OTHER_CHAR(createMeToOtherPacket,
-		pPlayer->_playerID, pPlayer->_direction, pPlayer->_x, pPlayer->_y, pPlayer->_hp);
+	int createMeToOtherRet = SetSCPacket_CREATE_OTHER_CHAR(createMeToOtherPacket, playerID, dir, x, y, hp);
 	for (int i = 0; i < sectorCnt; i++)
 		ReqSendOneSector(createMeToOtherPacket, inSector[i], pPlayer);
 	_pPacketPool->Free(createMeToOtherPacket);
 	
 	CPacket* moveMeToOtherPacket = _pPacketPool->Alloc();
 	moveMeToOtherPacket->Clear();
-	int moveMeToOtherRet = SetSCPacket_MOVE_START(moveMeToOtherPacket,
-		pPlayer->_playerID, pPlayer->_moveDirection, pPlayer->_x, pPlayer->_y);
+	int moveMeToOtherRet = SetSCPacket_MOVE_START(moveMeToOtherPacket, playerID, moveDir, x, y);
 	for (int i = 0; i < sectorCnt; i++)
 		ReqSendOneSector(moveMeToOtherPacket, inSector[i], pPlayer);
 	_pPacketPool->Free(moveMeToOtherPacket);
 
 	CPacket* deleteMeToOtherPacket = _pPacketPool->Alloc();
 	deleteMeToOtherPacket->Clear();
-	int deleteMeToOtherRet = SetSCPacket_DELETE_CHAR(deleteMeToOtherPacket, pPlayer->_playerID);
+	int deleteMeToOtherRet = SetSCPacket_DELETE_CHAR(deleteMeToOtherPacket, playerID);
 	for (int i = 0; i < sectorCnt; i++)
 		ReqSendOneSector(deleteMeToOtherPacket, outSector[i], pPlayer);
 	_pPacketPool->Free(deleteMeToOtherPacket);
@@ -566,20 +648,27 @@ void CGameServer::UpdateSector(CPlayer* pPlayer, short direction)
 		{
 			if ((*iter) != pPlayer)
 			{
+				AcquireSRWLockShared(&(*iter)->_lock);
+				__int64 iterID = (*iter)->_playerID;
+				unsigned char iterDir = (*iter)->_direction;
+				unsigned char iterMoveDir = (*iter)->_moveDirection;
+				short iterX = (*iter)->_x;
+				short iterY = (*iter)->_y;
+				char iterHp = (*iter)->_hp;
+				ReleaseSRWLockShared(&(*iter)->_lock);
+
 				CPacket* createOtherPacket = _pPacketPool->Alloc();
 				createOtherPacket->Clear();
-				int createOtherRet = SetSCPacket_CREATE_OTHER_CHAR(createOtherPacket,
-					(*iter)->_playerID, (*iter)->_direction, (*iter)->_x, (*iter)->_y, (*iter)->_hp);
-				ReqSendUnicast(createOtherPacket, pPlayer->_sessionID);
+				int createOtherRet = SetSCPacket_CREATE_OTHER_CHAR(createOtherPacket, iterID, iterDir, iterX, iterY, iterHp);
+				ReqSendUnicast(createOtherPacket, playerID);
 				_pPacketPool->Free(createOtherPacket);
 
 				if ((*iter)->_move)
 				{
 					CPacket* moveOtherPacket = _pPacketPool->Alloc();
 					moveOtherPacket->Clear();
-					int moveOtherRet = SetSCPacket_MOVE_START(moveOtherPacket,
-						(*iter)->_playerID, (*iter)->_moveDirection, (*iter)->_x, (*iter)->_y);
-					ReqSendUnicast(moveOtherPacket, pPlayer->_sessionID);
+					int moveOtherRet = SetSCPacket_MOVE_START(moveOtherPacket, iterID, iterMoveDir, iterX, iterY);
+					ReqSendUnicast(moveOtherPacket, sessionID);
 					_pPacketPool->Free(moveOtherPacket);
 				}
 			}
@@ -592,10 +681,14 @@ void CGameServer::UpdateSector(CPlayer* pPlayer, short direction)
 		{
 			if((*iter) != pPlayer)
 			{
+				AcquireSRWLockShared(&(*iter)->_lock);
+				__int64 iterID = (*iter)->_playerID;
+				ReleaseSRWLockShared(&(*iter)->_lock);
+
 				CPacket* deleteOtherPacket = _pPacketPool->Alloc();
 				deleteOtherPacket->Clear();
-				int deleteOtherRet = SetSCPacket_DELETE_CHAR(deleteOtherPacket, (*iter)->_playerID);
-				ReqSendUnicast(deleteOtherPacket, pPlayer->_sessionID);
+				int deleteOtherRet = SetSCPacket_DELETE_CHAR(deleteOtherPacket, iterID);
+				ReqSendUnicast(deleteOtherPacket, sessionID);
 				_pPacketPool->Free(deleteOtherPacket);
 			}
 		}
@@ -639,160 +732,292 @@ void CGameServer::UpdateSector(CPlayer* pPlayer, short direction)
 		ReleaseSRWLockExclusive(&oriSector->_lock);
 	}
 
+	AcquireSRWLockExclusive(&pPlayer->_lock);
 	pPlayer->_pSector = newSector;
-}
-
-inline void CGameServer::HandleAccept(__int64 sessionID)
-{
-	AcquireSRWLockShared(&_playerIdxLock);
-	if (_usablePlayerIdx.empty())
-	{
-		ReleaseSRWLockShared(&_playerIdxLock);
-		::printf("%s[%d] player max\n", __func__, __LINE__);
-		Disconnect(sessionID);
-		return;
-	}
-	ReleaseSRWLockShared(&_playerIdxLock);
-
-	AcquireSRWLockExclusive(&_playerIdxLock);
-	int num = _usablePlayerIdx.front();
-	int threadNum = num / dfLOGIC_PLAYER_NUM;
-	int threadIdx = num % dfLOGIC_PLAYER_NUM;
-
-	CPlayer* pPlayer = _logicPlayers[threadNum][threadIdx];
-	if (pPlayer->_state != PLAYER_STATE::DISCONNECT)
-	{
-		::printf("%s[%d] Idx %d is Already Connect (%d != %d)\n",
-			__func__, __LINE__, num, PLAYER_STATE::DISCONNECT, pPlayer->_state);
-		ReleaseSRWLockExclusive(&_playerIdxLock);
-		return;
-	}
-	_usablePlayerIdx.pop();
-	pPlayer->Initialize(sessionID, _playerID++);
-	ReleaseSRWLockExclusive(&_playerIdxLock);
-
-	SetSector(pPlayer);
-	pPlayer->_state = PLAYER_STATE::CONNECT;
-
-	AcquireSRWLockExclusive(&_playerMapLock);
-	_playerSessionID.insert(make_pair(sessionID, pPlayer));
-	ReleaseSRWLockExclusive(&_playerMapLock);
-	
-	CPacket* createMePacket = _pPacketPool->Alloc();
-	createMePacket->Clear();
-	int createMeRet = SetSCPacket_CREATE_MY_CHAR(createMePacket,
-		pPlayer->_playerID, pPlayer->_direction, pPlayer->_x, pPlayer->_y, pPlayer->_hp);
-	ReqSendUnicast(createMePacket, pPlayer->_sessionID);
-	_pPacketPool->Free(createMePacket);
-
-	CPacket* createMeToOtherPacket = _pPacketPool->Alloc();
-	createMeToOtherPacket->Clear();
-	int createMeToOtherRet = SetSCPacket_CREATE_OTHER_CHAR(createMeToOtherPacket,
-		pPlayer->_playerID, pPlayer->_direction, pPlayer->_x, pPlayer->_y, pPlayer->_hp);
-	ReqSendAroundSector(createMeToOtherPacket, pPlayer->_pSector, pPlayer);
-	_pPacketPool->Free(createMeToOtherPacket);
-
-	for (int i = 0; i < dfMOVE_DIR_MAX; i++)
-	{
-		AcquireSRWLockShared(&pPlayer->_pSector->_around[i]->_lock);
-		vector<CPlayer*>::iterator iter
-			= pPlayer->_pSector->_around[i]->_players.begin();
-		for (; iter < pPlayer->_pSector->_around[i]->_players.end(); iter++)
-		{
-			CPacket* createOtherPacket = _pPacketPool->Alloc();
-			createOtherPacket->Clear();
-			int createOtherRet = SetSCPacket_CREATE_OTHER_CHAR(createOtherPacket,
-				(*iter)->_playerID, (*iter)->_direction, (*iter)->_x, (*iter)->_y, (*iter)->_hp);
-			ReqSendUnicast(createOtherPacket, pPlayer->_sessionID);
-			_pPacketPool->Free(createOtherPacket);
-
-		}
-		ReleaseSRWLockShared(&pPlayer->_pSector->_around[i]->_lock);
-	}
-
-	AcquireSRWLockShared(&pPlayer->_pSector->_around[dfMOVE_DIR_INPLACE]->_lock);
-	vector<CPlayer*>::iterator iter
-		= pPlayer->_pSector->_around[dfMOVE_DIR_INPLACE]->_players.begin();
-	for (; iter < pPlayer->_pSector->_around[dfMOVE_DIR_INPLACE]->_players.end(); iter++)
-	{
-		if ((*iter) != pPlayer)
-		{
-			CPacket* createOtherPacket = _pPacketPool->Alloc();
-			createOtherPacket->Clear();
-			int createOtherRet = SetSCPacket_CREATE_OTHER_CHAR(createOtherPacket,
-				(*iter)->_playerID, (*iter)->_direction, (*iter)->_x, (*iter)->_y, (*iter)->_hp);
-			ReqSendUnicast(createOtherPacket, pPlayer->_sessionID);
-			_pPacketPool->Free(createOtherPacket);
-		}
-	}
-	ReleaseSRWLockShared(&pPlayer->_pSector->_around[dfMOVE_DIR_INPLACE]->_lock);
-
-	pPlayer->_state = PLAYER_STATE::ALIVE;
+	ReleaseSRWLockExclusive(&pPlayer->_lock);
 }
 
 inline void CGameServer::HandleRelease(__int64 sessionID)
 {
-	AcquireSRWLockShared(&_playerMapLock);
-	unordered_map<__int64, CPlayer*>::iterator iter = _playerSessionID.find(sessionID);
-	if (iter == _playerSessionID.end()) 
+	AcquireSRWLockExclusive(&_playersMapLock);
+	unordered_map<__int64, CPlayer*>::iterator iter = _playersMap.find(sessionID);
+	if (iter == _playersMap.end()) 
 	{
-		::printf("%s[%d] No session\n", __func__, __LINE__);
-		ReleaseSRWLockShared(&_playerMapLock);
+		ReleaseSRWLockExclusive(&_playersMapLock);
+		::printf("%s[%d] No session\n", __func__, __LINE__); // TO-DO
 		return;
 	}
 	CPlayer* pPlayer = iter->second;
-	
-	ReleaseSRWLockShared(&_playerMapLock);
 
-	if (pPlayer->_state == PLAYER_STATE::DISCONNECT)
+	AcquireSRWLockExclusive(&pPlayer->_lock);
+
+	PLAYER_STATE state = pPlayer->_state;
+	
+	//pPlayer->PushStateForDebug(__LINE__);
+	int num = pPlayer->_idx._num;
+	if (state == PLAYER_STATE::DISCONNECT)
+	{
+		ReleaseSRWLockExclusive(&_playersMapLock);
+		ReleaseSRWLockExclusive(&pPlayer->_lock);
+
+		::printf("%s[%d] Idx %d is Already Disconnect (%d == %d)\n",
+			__func__, __LINE__, num, PLAYER_STATE::DISCONNECT, state);
+		return;
+	}
+	_playersMap.erase(iter);
+	ReleaseSRWLockExclusive(&_playersMapLock);
+
+	//pPlayer->PushStateForDebug(__LINE__);
+
+	if (state != PLAYER_STATE::DEAD)
+	{
+		//pPlayer->PushStateForDebug(__LINE__);
+		__int64 playerID = pPlayer->_playerID;
+		CSector* pSector = pPlayer->_pSector;
+		PLAYER_STATE state = pPlayer->_state;
+		int num = pPlayer->_idx._num;
+
+		if (state == PLAYER_STATE::DISCONNECT)
+		{
+			::printf("%s[%d] Idx %d is Already Disconnect (%d == %d)\n",
+				__func__, __LINE__, num, PLAYER_STATE::DISCONNECT, state);
+			ReleaseSRWLockExclusive(&pPlayer->_lock);
+			return;
+		}
+		pPlayer->CleanUp();
+		//pPlayer->PushStateForDebug(__LINE__);
+		ReleaseSRWLockExclusive(&pPlayer->_lock);
+
+		AcquireSRWLockExclusive(&pSector->_lock);
+		vector<CPlayer*>::iterator vectorIter = pSector->_players.begin();
+		for (; vectorIter < pSector->_players.end(); vectorIter++)
+		{
+			if ((*vectorIter)->_playerID == playerID)
+			{
+				pSector->_players.erase(vectorIter);
+				break;
+			}
+		}
+		ReleaseSRWLockExclusive(&pSector->_lock);
+
+		CPacket* deletePacket = _pPacketPool->Alloc();
+		deletePacket->Clear();
+		int deleteRet = SetSCPacket_DELETE_CHAR(deletePacket, playerID);
+		ReqSendAroundSector(deletePacket, pSector);
+		_pPacketPool->Free(deletePacket);
+		InterlockedIncrement(&_connectEndCnt);
+	}
+	else
+	{
+		pPlayer->CleanUp();
+		//pPlayer->PushStateForDebug(__LINE__);
+		ReleaseSRWLockExclusive(&pPlayer->_lock);
+	}
+
+	AcquireSRWLockExclusive(&_usableIdxLock);
+	_usablePlayerIdx.push(num);
+	ReleaseSRWLockExclusive(&_usableIdxLock);
+
+}
+
+void CGameServer::SetPlayerDead(CPlayer* pPlayer, bool timeout)
+{
+	AcquireSRWLockExclusive(&pPlayer->_lock);
+
+	__int64 sessionID = pPlayer->_sessionID;
+	__int64 playerID = pPlayer->_playerID;
+	CSector* pSector = pPlayer->_pSector;
+	PLAYER_STATE state = pPlayer->_state;
+	int num = pPlayer->_idx._num;
+
+	//pPlayer->PushStateForDebug(__LINE__);
+	if (state == PLAYER_STATE::DISCONNECT)
 	{
 		::printf("%s[%d] Idx %d is Already Disconnect (%d == %d)\n",
-			__func__, __LINE__, pPlayer->_idx._num, PLAYER_STATE::DISCONNECT, pPlayer->_state);
+			__func__, __LINE__, num, PLAYER_STATE::DISCONNECT, state);
+		ReleaseSRWLockExclusive(&pPlayer->_lock);
+		return;
+	}
+	pPlayer->_state = PLAYER_STATE::DEAD;
+	//pPlayer->PushStateForDebug(__LINE__);
+	ReleaseSRWLockExclusive(&pPlayer->_lock);
+
+	AcquireSRWLockExclusive(&pSector->_lock);
+	vector<CPlayer*>::iterator vectorIter = pSector->_players.begin();
+	for (; vectorIter < pSector->_players.end(); vectorIter++)
+	{
+		if ((*vectorIter)->_playerID == playerID)
+		{
+			pSector->_players.erase(vectorIter);
+			break;
+		}
+	}
+	ReleaseSRWLockExclusive(&pSector->_lock);
+
+	CPacket* deletePacket = _pPacketPool->Alloc();
+	deletePacket->Clear();
+	int deleteRet = SetSCPacket_DELETE_CHAR(deletePacket, playerID);
+	ReqSendAroundSector(deletePacket, pSector);
+	_pPacketPool->Free(deletePacket);
+
+	Disconnect(sessionID);
+}
+
+inline void CGameServer::HandleAccept(__int64 sessionID)
+{
+	AcquireSRWLockExclusive(&_usableIdxLock);
+	if (_usablePlayerIdx.empty())
+	{
+		ReleaseSRWLockExclusive(&_usableIdxLock);
+		::printf("%s[%d] player max\n", __func__, __LINE__); // TO-DO
+		Disconnect(sessionID);
 		return;
 	}
 
-	AcquireSRWLockExclusive(&_playerMapLock);
-	_playerSessionID.erase(iter);
-	ReleaseSRWLockExclusive(&_playerMapLock);
+	int num = _usablePlayerIdx.front();
+	int threadNum = num / dfLOGIC_PLAYER_NUM;
+	int threadIdx = num % dfLOGIC_PLAYER_NUM;
+	CPlayer* pPlayer = _playersArray[threadNum][threadIdx];
 
-	if (pPlayer->_state != PLAYER_STATE::DEAD)
+	AcquireSRWLockExclusive(&_playersMapLock);
+	_playersMap.insert(make_pair(sessionID, pPlayer));
+
+	AcquireSRWLockExclusive(&pPlayer->_lock);
+	ReleaseSRWLockExclusive(&_playersMapLock);
+
+	PLAYER_STATE state = pPlayer->_state;
+	if (state != PLAYER_STATE::DISCONNECT)
 	{
-		InterlockedIncrement(&_connectEndCnt);
-		// ::printf("%llu: Lan Server Disconnect\n", sessionID);
-		DeleteDeadPlayer(pPlayer);
+		ReleaseSRWLockExclusive(&pPlayer->_lock);
+		ReleaseSRWLockExclusive(&_usableIdxLock);
+		::printf("%s[%d] Idx %d is Already Connect (%d != %d)\n",
+			__func__, __LINE__, num, PLAYER_STATE::DISCONNECT, state);
+		return;
+	}
+	_usablePlayerIdx.pop();
+	ReleaseSRWLockExclusive(&_usableIdxLock);
+
+	AcquireSRWLockExclusive(&_IDGeneratorLock);
+	__int64 playerID = _playerIDGenerator++;
+	ReleaseSRWLockExclusive(&_IDGeneratorLock);
+
+	pPlayer->Initialize(sessionID, playerID);
+	//pPlayer->PushStateForDebug(__LINE__);
+	int sectorX = (pPlayer->_x / dfSECTOR_SIZE_X) + 2;
+	int sectorY = (pPlayer->_y / dfSECTOR_SIZE_Y) + 2;
+	pPlayer->_pSector = &_sectors[sectorY][sectorX];
+
+	CSector* pSector = pPlayer->_pSector;
+	unsigned char dir = pPlayer->_direction;
+	short x = pPlayer->_x;
+	short y = pPlayer->_y;
+	char hp = pPlayer->_hp;
+
+	ReleaseSRWLockExclusive(&pPlayer->_lock);
+
+	AcquireSRWLockExclusive(&_sectors[sectorY][sectorX]._lock);
+	_sectors[sectorY][sectorX]._players.push_back(pPlayer);
+	ReleaseSRWLockExclusive(&_sectors[sectorY][sectorX]._lock);
+
+	//===========================================================================
+
+	CPacket* createMePacket = _pPacketPool->Alloc();
+	createMePacket->Clear();
+	int createMeRet = SetSCPacket_CREATE_MY_CHAR(createMePacket, playerID, dir, x, y, hp);
+	ReqSendUnicast(createMePacket, sessionID);
+	_pPacketPool->Free(createMePacket);
+
+	CPacket* createMeToOtherPacket = _pPacketPool->Alloc();
+	createMeToOtherPacket->Clear();
+	int createMeToOtherRet = SetSCPacket_CREATE_OTHER_CHAR(createMeToOtherPacket, playerID, dir, x, y, hp);
+	ReqSendAroundSector(createMeToOtherPacket, pSector, pPlayer); 
+	_pPacketPool->Free(createMeToOtherPacket);
+
+	for (int i = 0; i < dfMOVE_DIR_MAX; i++)
+	{
+		AcquireSRWLockShared(&pSector->_around[i]->_lock);
+		vector<CPlayer*>::iterator iter
+			= pSector->_around[i]->_players.begin();
+		for (; iter < pSector->_around[i]->_players.end(); iter++)
+		{
+			AcquireSRWLockShared(&(*iter)->_lock);
+			__int64 iterID = (*iter)->_playerID;
+			unsigned char iterDir = (*iter)->_direction;
+			unsigned char iterMoveDir = (*iter)->_moveDirection;
+			short iterX = (*iter)->_x;
+			short iterY = (*iter)->_y;
+			char iterHp = (*iter)->_hp;
+			ReleaseSRWLockShared(&(*iter)->_lock);
+
+			CPacket* createOtherPacket = _pPacketPool->Alloc();
+			createOtherPacket->Clear();
+			int createOtherRet = SetSCPacket_CREATE_OTHER_CHAR(createOtherPacket, iterID, iterDir, iterX, iterY, iterHp);
+			ReqSendUnicast(createOtherPacket, sessionID);
+			_pPacketPool->Free(createOtherPacket);
+
+		}
+		ReleaseSRWLockShared(&pSector->_around[i]->_lock);
 	}
 
-	pPlayer->_state = PLAYER_STATE::DISCONNECT;
+	AcquireSRWLockShared(&pSector->_around[dfMOVE_DIR_INPLACE]->_lock);
+	vector<CPlayer*>::iterator iter
+		= pSector->_around[dfMOVE_DIR_INPLACE]->_players.begin();
+	for (; iter < pSector->_around[dfMOVE_DIR_INPLACE]->_players.end(); iter++)
+	{
+		if ((*iter) != pPlayer)
+		{
+			AcquireSRWLockShared(&(*iter)->_lock);
+			__int64 iterID = (*iter)->_playerID;
+			unsigned char iterDir = (*iter)->_direction;
+			unsigned char iterMoveDir = (*iter)->_moveDirection;
+			short iterX = (*iter)->_x;
+			short iterY = (*iter)->_y;
+			char iterHp = (*iter)->_hp;
+			ReleaseSRWLockShared(&(*iter)->_lock);
 
-	AcquireSRWLockExclusive(&_playerIdxLock);
-	_usablePlayerIdx.push(pPlayer->_idx._num);
-	ReleaseSRWLockExclusive(&_playerIdxLock);
+			CPacket* createOtherPacket = _pPacketPool->Alloc();
+			createOtherPacket->Clear();
+			int createOtherRet = SetSCPacket_CREATE_OTHER_CHAR(createOtherPacket, iterID, iterDir, iterX, iterY, iterHp);
+			ReqSendUnicast(createOtherPacket, sessionID);
+			_pPacketPool->Free(createOtherPacket);
+		}
+	}
+	ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_INPLACE]->_lock);
+
 }
 
 inline void CGameServer::HandleRecv(__int64 sessionID, CPacket* packet)
 {
-	AcquireSRWLockShared(&_playerMapLock);
-	unordered_map<__int64, CPlayer*>::iterator iter = _playerSessionID.find(sessionID);
-	if (iter == _playerSessionID.end()) 
+	AcquireSRWLockShared(&_playersMapLock);
+	unordered_map<__int64, CPlayer*>::iterator iter = _playersMap.find(sessionID);
+	if (iter == _playersMap.end()) 
 	{
-		::printf("%s[%d] No session\n", __func__, __LINE__);
-		ReleaseSRWLockShared(&_playerMapLock);
+		ReleaseSRWLockShared(&_playersMapLock);
+		::printf("%s[%d] No session\n", __func__, __LINE__);  // TO-DO
 		return;
 	}
 	CPlayer* pPlayer = iter->second;
-	ReleaseSRWLockShared(&_playerMapLock);
 
-	if (pPlayer->_state != PLAYER_STATE::ALIVE)
+	AcquireSRWLockExclusive(&pPlayer->_lock);
+	ReleaseSRWLockShared(&_playersMapLock);
+
+	PLAYER_STATE state = pPlayer->_state;
+	int num = pPlayer->_idx._num;
+
+	if (state != PLAYER_STATE::CONNECT)
 	{
-		::printf("%s[%d] Idx %d is Not Alive Session (%d != %d)\n",
-			__func__, __LINE__, pPlayer->_idx._num, PLAYER_STATE::ALIVE, pPlayer->_state);
+		ReleaseSRWLockExclusive(&pPlayer->_lock);
+		::printf("%s[%d] Idx %d is Invalid Session (%d)\n",
+			__func__, __LINE__, num, state);
 		return;
 	}
 
-	short msgType = -1;
-	pPlayer->_lastRecvTime = GetTickCount64();
-	*packet >> msgType;
+	pPlayer->_lastRecvTime = timeGetTime();
+	ReleaseSRWLockExclusive(&pPlayer->_lock);
 
+	short msgType = -1;
+	*packet >> msgType;
+	
 	switch (msgType)
 	{
 	case dfPACKET_CS_MOVE_START:
@@ -830,233 +1055,266 @@ inline void CGameServer::HandleRecv(__int64 sessionID, CPacket* packet)
 		break;
 	}
 }
-void CGameServer::SetPlayerDead(CPlayer* pPlayer, bool timeout)
-{
-	// if(timeout) ::printf("%llu: Timeout\n", pPlayer->_sessionID);
-	// else ::printf("%llu: Hp is 0\n", pPlayer->_sessionID);
-	
-	DeleteDeadPlayer(pPlayer);
-	Disconnect(pPlayer->_sessionID);
-}
 
-void CGameServer::DeleteDeadPlayer(CPlayer* pPlayer)
-{	
-	pPlayer->_state = PLAYER_STATE::DEAD;
-
-	// Remove from Sector
-	AcquireSRWLockExclusive(&pPlayer->_pSector->_lock);
-	vector<CPlayer*>::iterator vectorIter = pPlayer->_pSector->_players.begin();
-	for (; vectorIter < pPlayer->_pSector->_players.end(); vectorIter++)
-	{
-		if ((*vectorIter) == pPlayer)
-		{
-			pPlayer->_pSector->_players.erase(vectorIter);
-			break;
-		}
-	}
-	ReleaseSRWLockExclusive(&pPlayer->_pSector->_lock);
-
-	CPacket* deletePacket = _pPacketPool->Alloc();
-	deletePacket->Clear();
-	int deleteRet = SetSCPacket_DELETE_CHAR(deletePacket, pPlayer->_playerID);
-	ReqSendAroundSector(deletePacket, pPlayer->_pSector);
-	_pPacketPool->Free(deletePacket);
-}
-
-inline bool CGameServer::HandleCSPacket_MOVE_START(CPacket* recvPacket, CPlayer* pPlayer)
+inline void CGameServer::HandleCSPacket_MOVE_START(CPacket* recvPacket, CPlayer* pPlayer)
 {
 	unsigned char moveDirection;
 	short x;
 	short y;
 	GetCSPacket_MOVE_START(recvPacket, moveDirection, x, y);
 
-	if (abs(pPlayer->_x - x) > dfERROR_RANGE || abs(pPlayer->_y - y) > dfERROR_RANGE)
+	AcquireSRWLockShared(&pPlayer->_lock);
+	__int64 sessionID = pPlayer->_sessionID;
+	__int64 playerID = pPlayer->_playerID;
+	short playerX = pPlayer->_x;
+	short playerY = pPlayer->_y;
+	ReleaseSRWLockShared(&pPlayer->_lock);
+
+	if (abs(playerX - x) > dfERROR_RANGE || abs(playerY - y) > dfERROR_RANGE)
 	{
 		CPacket* syncPacket = _pPacketPool->Alloc();
 		syncPacket->Clear();
-		int setRet = SetSCPacket_SYNC(syncPacket, pPlayer->_playerID, pPlayer->_x, pPlayer->_y);
-		ReqSendUnicast(syncPacket, pPlayer->_sessionID);
+		int setRet = SetSCPacket_SYNC(syncPacket, playerID, playerX, playerY);
+		ReqSendUnicast(syncPacket, sessionID);
 		_pPacketPool->Free(syncPacket);
-		x = pPlayer->_x;
-		y = pPlayer->_y;
+		
+		x = playerX;
+		y = playerY;
 	}
-
+	
 	SetPlayerMoveStart(pPlayer, moveDirection, x, y);
+
+	AcquireSRWLockShared(&pPlayer->_lock);
+	CSector* pSector = pPlayer->_pSector;
+	unsigned char moveDir = pPlayer->_moveDirection;
+	playerX = pPlayer->_x;
+	playerY = pPlayer->_y;
+	ReleaseSRWLockShared(&pPlayer->_lock);
 
 	CPacket* movePacket = _pPacketPool->Alloc();
 	movePacket->Clear();
-	int setRet = SetSCPacket_MOVE_START(movePacket,
-		pPlayer->_playerID, pPlayer->_moveDirection, pPlayer->_x, pPlayer->_y);
-	ReqSendAroundSector(movePacket, pPlayer->_pSector, pPlayer);
-
+	int setRet = SetSCPacket_MOVE_START(movePacket, playerID, moveDir, playerX, playerY);
+	ReqSendAroundSector(movePacket, pSector, pPlayer);
 	_pPacketPool->Free(movePacket);
-	
-	return true;
 }
 
-inline bool CGameServer::HandleCSPacket_MOVE_STOP(CPacket* recvPacket, CPlayer* pPlayer)
+inline void CGameServer::HandleCSPacket_MOVE_STOP(CPacket* recvPacket, CPlayer* pPlayer)
 {
 	BYTE direction;
 	short x;
 	short y;
 	GetCSPacket_MOVE_STOP(recvPacket, direction, x, y);
 
-	if (abs(pPlayer->_x - x) > dfERROR_RANGE || abs(pPlayer->_y - y) > dfERROR_RANGE)
+	AcquireSRWLockShared(&pPlayer->_lock);
+	__int64 sessionID = pPlayer->_sessionID;
+	__int64 playerID = pPlayer->_playerID;
+	short playerX = pPlayer->_x;
+	short playerY = pPlayer->_y;
+	ReleaseSRWLockShared(&pPlayer->_lock);
+
+	if (abs(playerX - x) > dfERROR_RANGE || abs(playerY - y) > dfERROR_RANGE)
 	{
 		CPacket* syncPacket = _pPacketPool->Alloc();
 		syncPacket->Clear();
-		int setRet = SetSCPacket_SYNC(syncPacket, pPlayer->_playerID, pPlayer->_x, pPlayer->_y);
-		ReqSendUnicast(syncPacket, pPlayer->_sessionID);		 
+		int setRet = SetSCPacket_SYNC(syncPacket, playerID, playerX, playerY);
+		ReqSendUnicast(syncPacket, sessionID);
 		_pPacketPool->Free(syncPacket);
-		
-		x = pPlayer->_x;
-		y = pPlayer->_y;
+
+		x = playerX;
+		y = playerY;
 	}
 
 	SetPlayerMoveStop(pPlayer, direction, x, y);
 
+	AcquireSRWLockShared(&pPlayer->_lock);
+	CSector* pSector = pPlayer->_pSector;
+	unsigned char playerDir = pPlayer->_direction;
+	playerX = pPlayer->_x;
+	playerY = pPlayer->_y;
+	ReleaseSRWLockShared(&pPlayer->_lock);
+
 	CPacket* movePacket = _pPacketPool->Alloc();
 	movePacket->Clear();
-	int setRet = SetSCPacket_MOVE_STOP(movePacket,
-		pPlayer->_playerID, pPlayer->_direction, pPlayer->_x, pPlayer->_y);
-	ReqSendAroundSector(movePacket, pPlayer->_pSector, pPlayer);
+	int setRet = SetSCPacket_MOVE_STOP(movePacket, playerID, playerDir, playerX, playerY);
+	ReqSendAroundSector(movePacket, pSector, pPlayer);
 	_pPacketPool->Free(movePacket);
-
-	return true;
 }
 
-inline bool CGameServer::HandleCSPacket_ATTACK1(CPacket* recvPacket, CPlayer* pPlayer)
+inline void CGameServer::HandleCSPacket_ATTACK1(CPacket* recvPacket, CPlayer* pPlayer)
 {
 	BYTE direction;
 	short x;
 	short y;
 	GetCSPacket_ATTACK1(recvPacket, direction, x, y);
 
-	if (abs(pPlayer->_x - x) > dfERROR_RANGE || abs(pPlayer->_y - y) > dfERROR_RANGE)
+	AcquireSRWLockShared(&pPlayer->_lock);
+	__int64 sessionID = pPlayer->_sessionID;
+	__int64 attackPlayerID = pPlayer->_playerID;
+	short playerX = pPlayer->_x;
+	short playerY = pPlayer->_y;
+	ReleaseSRWLockShared(&pPlayer->_lock);
+
+	if (abs(playerX - x) > dfERROR_RANGE || abs(playerY - y) > dfERROR_RANGE)
 	{
 		CPacket* syncPacket = _pPacketPool->Alloc();
 		syncPacket->Clear();
-		int setRet = SetSCPacket_SYNC(syncPacket,
-			pPlayer->_playerID, pPlayer->_x, pPlayer->_y);
-		ReqSendUnicast(syncPacket, pPlayer->_sessionID);
+		int setRet = SetSCPacket_SYNC(syncPacket, attackPlayerID, playerX, playerY);
+		ReqSendUnicast(syncPacket, sessionID);
 		_pPacketPool->Free(syncPacket);
-		
-		x = pPlayer->_x;
-		y = pPlayer->_y;
+
+		x = playerX;
+		y = playerY;
 	}
 
 	CPlayer* damagedPlayer = nullptr;
 	SetPlayerAttack1(pPlayer, damagedPlayer, direction, x, y);
 
+	AcquireSRWLockShared(&pPlayer->_lock);
+	CSector* pAttackSector = pPlayer->_pSector;
+	unsigned char playerDir = pPlayer->_direction;
+	playerX = pPlayer->_x;
+	playerY = pPlayer->_y;
+	ReleaseSRWLockShared(&pPlayer->_lock);
+
 	CPacket* attackPacket = _pPacketPool->Alloc();
 	attackPacket->Clear();
-	int attackSetRet = SetSCPacket_ATTACK1(attackPacket,
-		pPlayer->_playerID, pPlayer->_direction, pPlayer->_x, pPlayer->_y);
-	ReqSendAroundSector(attackPacket, pPlayer->_pSector);
+	int attackSetRet = SetSCPacket_ATTACK1(attackPacket, attackPlayerID, playerDir, playerX, playerY);
+	ReqSendAroundSector(attackPacket, pAttackSector);
 	_pPacketPool->Free(attackPacket);
 
 	if (damagedPlayer != nullptr)
 	{
+		AcquireSRWLockShared(&damagedPlayer->_lock);
+		CSector* pDamagedSector = damagedPlayer->_pSector;
+		__int64 damagedID = damagedPlayer->_playerID;
+		char damagedHp = damagedPlayer->_hp;
+		ReleaseSRWLockShared(&damagedPlayer->_lock);
+
 		CPacket* damagePacket = _pPacketPool->Alloc();
-		damagePacket->Clear();
-		int damageSetRet = SetSCPacket_DAMAGE(damagePacket,
-			pPlayer->_playerID, damagedPlayer->_playerID, damagedPlayer->_hp);
-		ReqSendAroundSector(damagePacket, damagedPlayer->_pSector);	 
+		damagePacket->Clear();		
+		int damageSetRet = SetSCPacket_DAMAGE(damagePacket,	attackPlayerID, damagedID, damagedHp);
+		ReqSendAroundSector(damagePacket, pDamagedSector);
 		_pPacketPool->Free(damagePacket);
 	}
-
-	return true;
 }
 
-inline bool CGameServer::HandleCSPacket_ATTACK2(CPacket* recvPacket, CPlayer* pPlayer)
+inline void CGameServer::HandleCSPacket_ATTACK2(CPacket* recvPacket, CPlayer* pPlayer)
 {
 	BYTE direction;
 	short x;
 	short y;
 	GetCSPacket_ATTACK2(recvPacket, direction, x, y);
 
-	if (abs(pPlayer->_x - x) > dfERROR_RANGE || abs(pPlayer->_y - y) > dfERROR_RANGE)
+	AcquireSRWLockShared(&pPlayer->_lock);
+	__int64 sessionID = pPlayer->_sessionID;
+	__int64 attackPlayerID = pPlayer->_playerID;
+	short playerX = pPlayer->_x;
+	short playerY = pPlayer->_y;
+	ReleaseSRWLockShared(&pPlayer->_lock);
+
+	if (abs(playerX - x) > dfERROR_RANGE || abs(playerY - y) > dfERROR_RANGE)
 	{
 		CPacket* syncPacket = _pPacketPool->Alloc();
 		syncPacket->Clear();
-		int setRet = SetSCPacket_SYNC(syncPacket,
-			pPlayer->_playerID, pPlayer->_x, pPlayer->_y);
-		ReqSendUnicast(syncPacket, pPlayer->_sessionID);		 
+		int setRet = SetSCPacket_SYNC(syncPacket, attackPlayerID, playerX, playerY);
+		ReqSendUnicast(syncPacket, sessionID);
 		_pPacketPool->Free(syncPacket);
-		
-		x = pPlayer->_x;
-		y = pPlayer->_y;
+
+		x = playerX;
+		y = playerY;
 	}
 
 	CPlayer* damagedPlayer = nullptr;
 	SetPlayerAttack2(pPlayer, damagedPlayer, direction, x, y);
 
+	AcquireSRWLockShared(&pPlayer->_lock);
+	CSector* pAttackSector = pPlayer->_pSector;
+	unsigned char playerDir = pPlayer->_direction;
+	playerX = pPlayer->_x;
+	playerY = pPlayer->_y;
+	ReleaseSRWLockShared(&pPlayer->_lock);
+
 	CPacket* attackPacket = _pPacketPool->Alloc();
 	attackPacket->Clear();
-	int attackSetRet = SetSCPacket_ATTACK2(attackPacket,
-		pPlayer->_playerID, pPlayer->_direction, pPlayer->_x, pPlayer->_y);
-	ReqSendAroundSector(attackPacket, pPlayer->_pSector);	 
+	int attackSetRet = SetSCPacket_ATTACK2(attackPacket, attackPlayerID, playerDir, playerX, playerY);
+	ReqSendAroundSector(attackPacket, pAttackSector);
 	_pPacketPool->Free(attackPacket);
 	
 	if (damagedPlayer != nullptr)
 	{
+		AcquireSRWLockShared(&damagedPlayer->_lock);
+		CSector* pDamagedSector = damagedPlayer->_pSector;
+		__int64 damagedID = damagedPlayer->_playerID;
+		char damagedHp = damagedPlayer->_hp;
+		ReleaseSRWLockShared(&damagedPlayer->_lock);
+
 		CPacket* damagePacket = _pPacketPool->Alloc();
 		damagePacket->Clear();
-		int damageSetRet = SetSCPacket_DAMAGE(damagePacket,
-			pPlayer->_playerID, damagedPlayer->_playerID, damagedPlayer->_hp);
-		ReqSendAroundSector(damagePacket, damagedPlayer->_pSector);		 
+		int damageSetRet = SetSCPacket_DAMAGE(damagePacket, attackPlayerID, damagedID, damagedHp);
+		ReqSendAroundSector(damagePacket, pDamagedSector);
 		_pPacketPool->Free(damagePacket);
 	}
-
-	return true;
 }
 
-inline bool CGameServer::HandleCSPacket_ATTACK3(CPacket* recvPacket, CPlayer* pPlayer)
+inline void CGameServer::HandleCSPacket_ATTACK3(CPacket* recvPacket, CPlayer* pPlayer)
 {
 	BYTE direction;
 	short x;
 	short y;
 	GetCSPacket_ATTACK3(recvPacket, direction, x, y);
 
-	if (abs(pPlayer->_x - x) > dfERROR_RANGE || abs(pPlayer->_y - y) > dfERROR_RANGE)
+	AcquireSRWLockShared(&pPlayer->_lock);
+	__int64 sessionID = pPlayer->_sessionID;
+	__int64 attackPlayerID = pPlayer->_playerID;
+	short playerX = pPlayer->_x;
+	short playerY = pPlayer->_y;
+	ReleaseSRWLockShared(&pPlayer->_lock);
+
+	if (abs(playerX - x) > dfERROR_RANGE || abs(playerY - y) > dfERROR_RANGE)
 	{
 		CPacket* syncPacket = _pPacketPool->Alloc();
 		syncPacket->Clear();
-		int setRet = SetSCPacket_SYNC(syncPacket,
-			pPlayer->_playerID, pPlayer->_x, pPlayer->_y);
-		ReqSendUnicast(syncPacket, pPlayer->_sessionID);	 
+		int setRet = SetSCPacket_SYNC(syncPacket, attackPlayerID, playerX, playerY);
+		ReqSendUnicast(syncPacket, sessionID);
 		_pPacketPool->Free(syncPacket);
-		
-		x = pPlayer->_x;
-		y = pPlayer->_y;
+
+		x = playerX;
+		y = playerY;
 	}
 
 	CPlayer* damagedPlayer = nullptr;
 	SetPlayerAttack3(pPlayer, damagedPlayer, direction, x, y);
 
+	AcquireSRWLockShared(&pPlayer->_lock);
+	CSector* pAttackSector = pPlayer->_pSector;
+	unsigned char playerDir = pPlayer->_direction;
+	playerX = pPlayer->_x;
+	playerY = pPlayer->_y;
+	ReleaseSRWLockShared(&pPlayer->_lock);
+
 	CPacket* attackPacket = _pPacketPool->Alloc();
 	attackPacket->Clear();
-	int attackSetRet = SetSCPacket_ATTACK3(attackPacket,
-		pPlayer->_playerID, pPlayer->_direction, pPlayer->_x, pPlayer->_y);
-	ReqSendAroundSector(attackPacket, pPlayer->_pSector);	 
+	int attackSetRet = SetSCPacket_ATTACK3(attackPacket, attackPlayerID, playerDir, playerX, playerY);
+	ReqSendAroundSector(attackPacket, pAttackSector);
 	_pPacketPool->Free(attackPacket);
 	
-
 	if (damagedPlayer != nullptr)
 	{
+		AcquireSRWLockShared(&damagedPlayer->_lock);
+		CSector* pDamagedSector = damagedPlayer->_pSector;
+		__int64 damagedID = damagedPlayer->_playerID;
+		char damagedHp = damagedPlayer->_hp;
+		ReleaseSRWLockShared(&damagedPlayer->_lock);
+
 		CPacket* damagePacket = _pPacketPool->Alloc();
 		damagePacket->Clear();
-		int damageSetRet = SetSCPacket_DAMAGE(damagePacket,
-			pPlayer->_playerID, damagedPlayer->_playerID, damagedPlayer->_hp);
-		ReqSendAroundSector(damagePacket, damagedPlayer->_pSector);		 
+		int damageSetRet = SetSCPacket_DAMAGE(damagePacket, attackPlayerID, damagedID, damagedHp);
+		ReqSendAroundSector(damagePacket, pDamagedSector);
 		_pPacketPool->Free(damagePacket);
-		
 	}
-
-	return true;
 }
 
-inline bool CGameServer::HandleCSPacket_ECHO(CPacket* recvPacket, CPlayer* pPlayer)
+inline void CGameServer::HandleCSPacket_ECHO(CPacket* recvPacket, CPlayer* pPlayer)
 {
 	int time;
 	GetCSPacket_ECHO(recvPacket, time);
@@ -1064,10 +1322,13 @@ inline bool CGameServer::HandleCSPacket_ECHO(CPacket* recvPacket, CPlayer* pPlay
 	CPacket* echoPacket = _pPacketPool->Alloc();
 	echoPacket->Clear();
 	int setRet = SetSCPacket_ECHO(echoPacket, time);
-	ReqSendUnicast(echoPacket, pPlayer->_sessionID);	 
-	_pPacketPool->Free(echoPacket);
 
-	return true;
+	AcquireSRWLockShared(&pPlayer->_lock);
+	__int64 sessionID = pPlayer->_sessionID;
+	ReleaseSRWLockShared(&pPlayer->_lock);
+
+	ReqSendUnicast(echoPacket, sessionID);	 
+	_pPacketPool->Free(echoPacket);
 }
 
 inline void CGameServer::GetCSPacket_MOVE_START(CPacket* pPacket, unsigned char& moveDirection, short& x, short& y)
@@ -1112,6 +1373,7 @@ inline void CGameServer::GetCSPacket_ECHO(CPacket* pPacket, int& time)
 
 inline void CGameServer::SetPlayerMoveStart(CPlayer* pPlayer, unsigned char& moveDirection, short& x, short& y)
 {
+	AcquireSRWLockExclusive(&pPlayer->_lock);
 	pPlayer->_x = x;
 	pPlayer->_y = y;
 	pPlayer->_move = true;
@@ -1131,27 +1393,34 @@ inline void CGameServer::SetPlayerMoveStart(CPlayer* pPlayer, unsigned char& mov
 		pPlayer->_direction = dfMOVE_DIR_RR;
 		break;
 	}
+
+	ReleaseSRWLockExclusive(&pPlayer->_lock);
 }
 
 inline void CGameServer::SetPlayerMoveStop(CPlayer* pPlayer, unsigned char& direction, short& x, short& y)
 {
+	AcquireSRWLockExclusive(&pPlayer->_lock);
 	pPlayer->_x = x;
 	pPlayer->_y = y;
 	pPlayer->_move = false;
 	pPlayer->_direction = direction;
+	ReleaseSRWLockExclusive(&pPlayer->_lock);
 }
 
 inline void CGameServer::SetPlayerAttack1(CPlayer* pPlayer, CPlayer*& pDamagedPlayer, unsigned char& direction, short& x, short& y)
 {
+	AcquireSRWLockExclusive(&pPlayer->_lock);
 	pPlayer->_x = x;
 	pPlayer->_y = y;
 	pPlayer->_direction = direction;
+	short attackerX = pPlayer->_x;
+	short attackerY = pPlayer->_y;
+	CSector* pSector = pPlayer->_pSector;
+	ReleaseSRWLockExclusive(&pPlayer->_lock);
 
 	if (direction == dfMOVE_DIR_LL)
 	{
 		vector<CPlayer*>::iterator iter;
-		CSector* pSector = pPlayer->_pSector;
-
 		AcquireSRWLockShared(&pSector->_around[dfMOVE_DIR_INPLACE]->_lock);
 		iter = pSector->_around[dfMOVE_DIR_INPLACE]->_players.begin();
 
@@ -1159,73 +1428,105 @@ inline void CGameServer::SetPlayerAttack1(CPlayer* pPlayer, CPlayer*& pDamagedPl
 		{
 			if ((*iter) != pPlayer)
 			{
-				int dist = pPlayer->_x - (*iter)->_x;
+				AcquireSRWLockShared(&(*iter)->_lock);
+				PLAYER_STATE targetState = (*iter)->_state;
+				short targetX = (*iter)->_x;
+				short targetY = (*iter)->_y;
+				ReleaseSRWLockShared(&(*iter)->_lock);
 
+				int dist = attackerX - targetX;
 				if (dist >= 0 && dist <= dfATTACK1_RANGE_X &&
-					abs((*iter)->_y - pPlayer->_y) <= dfATTACK1_RANGE_Y &&
-					(*iter)->_state == PLAYER_STATE::ALIVE)
+					abs(targetY - attackerY) <= dfATTACK1_RANGE_Y &&
+					targetState == PLAYER_STATE::CONNECT)
 				{
+					AcquireSRWLockExclusive(&(*iter)->_lock);
+					(*iter)->_hp -= dfATTACK1_DAMAGE;
+					char targetHp = (*iter)->_hp;
+					pDamagedPlayer = (*iter);
+					ReleaseSRWLockExclusive(&(*iter)->_lock);
+
 					ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_INPLACE]->_lock);
 
-					pDamagedPlayer = (*iter);
-					pDamagedPlayer->_hp -= dfATTACK1_DAMAGE;
-
-					if (pDamagedPlayer->_hp <= 0)
+					if (targetHp <= 0)
 					{
 						InterlockedIncrement(&_deadCnt);
 						SetPlayerDead(pDamagedPlayer, false);
 					}
+
 					return;
 				}
 			}
 		}
 		ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_INPLACE]->_lock);
 
-		if (pPlayer->_x <= pSector->_xPosMin + dfATTACK1_RANGE_X)
+		if (attackerX <= pSector->_xPosMin + dfATTACK1_RANGE_X)
 		{
 			AcquireSRWLockShared(&pSector->_around[dfMOVE_DIR_LL]->_lock);
 			iter = pSector->_around[dfMOVE_DIR_LL]->_players.begin();
 			for (; iter < pSector->_around[dfMOVE_DIR_LL]->_players.end(); iter++)
 			{
-				int dist = pPlayer->_x - (*iter)->_x;
-				if (dist >= 0 && dist <= dfATTACK1_RANGE_X &&
-					abs((*iter)->_y - pPlayer->_y) <= dfATTACK1_RANGE_Y &&
-					(*iter)->_state == PLAYER_STATE::ALIVE)
-				{
-					ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_LL]->_lock);
-					pDamagedPlayer = (*iter);
-					pDamagedPlayer->_hp -= dfATTACK1_DAMAGE;
+				AcquireSRWLockShared(&(*iter)->_lock);
+				PLAYER_STATE targetState = (*iter)->_state;
+				short targetX = (*iter)->_x;
+				short targetY = (*iter)->_y;
+				ReleaseSRWLockShared(&(*iter)->_lock);
 
-					if (pDamagedPlayer->_hp <= 0)
+				int dist = attackerX - targetX;
+
+				if (dist >= 0 && dist <= dfATTACK1_RANGE_X &&
+					abs(targetY - attackerY) <= dfATTACK1_RANGE_Y &&
+					targetState == PLAYER_STATE::CONNECT)
+				{
+					AcquireSRWLockExclusive(&(*iter)->_lock);
+					(*iter)->_hp -= dfATTACK1_DAMAGE;
+					char targetHp = (*iter)->_hp;
+					pDamagedPlayer = (*iter);
+					ReleaseSRWLockExclusive(&(*iter)->_lock);
+
+					ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_LL]->_lock);
+
+					if (targetHp <= 0)
 					{
 						InterlockedIncrement(&_deadCnt);
 						SetPlayerDead(pDamagedPlayer, false);
 					}
+					
 					return;
 				}
 			}
 			ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_LL]->_lock);
 
-			if (pPlayer->_y <= pSector->_yPosMin + dfATTACK1_RANGE_Y)
+			if (attackerY <= pSector->_yPosMin + dfATTACK1_RANGE_Y)
 			{
 				AcquireSRWLockShared(&pSector->_around[dfMOVE_DIR_LD]->_lock);
 				iter = pSector->_around[dfMOVE_DIR_LD]->_players.begin();
 				for (; iter < pSector->_around[dfMOVE_DIR_LD]->_players.end(); iter++)
 				{
-					int dist = pPlayer->_x - (*iter)->_x;
-					if (dist >= 0 && dist <= dfATTACK1_RANGE_X &&
-						abs((*iter)->_y - pPlayer->_y) <= dfATTACK1_RANGE_Y &&
-						(*iter)->_state == PLAYER_STATE::ALIVE)
-					{
-						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_LD]->_lock);
-						pDamagedPlayer = (*iter);
-						pDamagedPlayer->_hp -= dfATTACK1_DAMAGE;
+					AcquireSRWLockShared(&(*iter)->_lock);
+					PLAYER_STATE targetState = (*iter)->_state;
+					short targetX = (*iter)->_x;
+					short targetY = (*iter)->_y;
+					ReleaseSRWLockShared(&(*iter)->_lock);
 
-						if (pDamagedPlayer->_hp <= 0)
+					int dist = attackerX - targetX;
+					if (dist >= 0 && dist <= dfATTACK1_RANGE_X &&
+						abs(targetY - attackerY) <= dfATTACK1_RANGE_Y &&
+						targetState == PLAYER_STATE::CONNECT)
+					{
+						AcquireSRWLockExclusive(&(*iter)->_lock);
+						(*iter)->_hp -= dfATTACK1_DAMAGE;
+						char targetHp = (*iter)->_hp;
+						pDamagedPlayer = (*iter);
+						ReleaseSRWLockExclusive(&(*iter)->_lock);
+
+						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_LD]->_lock);
+
+						if (targetHp <= 0)
 						{
 							InterlockedIncrement(&_deadCnt);
 							SetPlayerDead(pDamagedPlayer, false);						
 						}
+						
 						return;
 					}
 				}
@@ -1237,20 +1538,31 @@ inline void CGameServer::SetPlayerAttack1(CPlayer* pPlayer, CPlayer*& pDamagedPl
 				iter = pSector->_around[dfMOVE_DIR_LU]->_players.begin();
 				for (; iter < pSector->_around[dfMOVE_DIR_LU]->_players.end(); iter++)
 				{
-					int dist = pPlayer->_x - (*iter)->_x;
-					if (dist >= 0 && dist <= dfATTACK1_RANGE_X &&
-						abs((*iter)->_y - pPlayer->_y) <= dfATTACK1_RANGE_Y &&
-						(*iter)->_state == PLAYER_STATE::ALIVE)
-					{
-						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_LU]->_lock);
-						pDamagedPlayer = (*iter);
-						pDamagedPlayer->_hp -= dfATTACK1_DAMAGE;
+					AcquireSRWLockShared(&(*iter)->_lock);
+					PLAYER_STATE targetState = (*iter)->_state;
+					short targetX = (*iter)->_x;
+					short targetY = (*iter)->_y;
+					ReleaseSRWLockShared(&(*iter)->_lock);
 
-						if (pDamagedPlayer->_hp <= 0)
+					int dist = attackerX - targetX;
+					if (dist >= 0 && dist <= dfATTACK1_RANGE_X &&
+						abs(targetY - attackerY) <= dfATTACK1_RANGE_Y &&
+						targetState == PLAYER_STATE::CONNECT)
+					{
+						AcquireSRWLockExclusive(&(*iter)->_lock);
+						(*iter)->_hp -= dfATTACK1_DAMAGE;
+						char targetHp = (*iter)->_hp;
+						pDamagedPlayer = (*iter);
+						ReleaseSRWLockExclusive(&(*iter)->_lock);
+
+						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_LU]->_lock);
+
+						if (targetHp <= 0)
 						{
 							InterlockedIncrement(&_deadCnt);
 							SetPlayerDead(pDamagedPlayer, false);						
 						}
+
 						return;
 					}
 				}
@@ -1259,51 +1571,74 @@ inline void CGameServer::SetPlayerAttack1(CPlayer* pPlayer, CPlayer*& pDamagedPl
 		}
 		else
 		{
-			if (pPlayer->_y <= pSector->_yPosMin + dfATTACK1_RANGE_Y)
+			if (attackerY <= pSector->_yPosMin + dfATTACK1_RANGE_Y)
 			{
 				AcquireSRWLockShared(&pSector->_around[dfMOVE_DIR_DD]->_lock);
 				iter = pSector->_around[dfMOVE_DIR_DD]->_players.begin();
 				for (; iter < pSector->_around[dfMOVE_DIR_DD]->_players.end(); iter++)
 				{
-					int dist = pPlayer->_x - (*iter)->_x;
-					if (dist >= 0 && dist <= dfATTACK1_RANGE_X &&
-						abs((*iter)->_y - pPlayer->_y) <= dfATTACK1_RANGE_Y &&
-						(*iter)->_state == PLAYER_STATE::ALIVE)
-					{
-						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_DD]->_lock);
-						pDamagedPlayer = (*iter);
-						pDamagedPlayer->_hp -= dfATTACK1_DAMAGE;
+					AcquireSRWLockShared(&(*iter)->_lock);
+					PLAYER_STATE targetState = (*iter)->_state;
+					short targetX = (*iter)->_x;
+					short targetY = (*iter)->_y;
+					ReleaseSRWLockShared(&(*iter)->_lock);
 
-						if (pDamagedPlayer->_hp <= 0)
+					int dist = attackerX - targetX;
+					if (dist >= 0 && dist <= dfATTACK1_RANGE_X &&
+						abs(targetY - attackerY) <= dfATTACK1_RANGE_Y &&
+						targetState == PLAYER_STATE::CONNECT)
+					{
+						AcquireSRWLockExclusive(&(*iter)->_lock);
+						(*iter)->_hp -= dfATTACK1_DAMAGE;
+						char targetHp = (*iter)->_hp;
+						pDamagedPlayer = (*iter);
+						ReleaseSRWLockExclusive(&(*iter)->_lock);
+
+						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_DD]->_lock);
+
+						if (targetHp <= 0)
 						{
 							InterlockedIncrement(&_deadCnt);
 							SetPlayerDead(pDamagedPlayer, false);							
 						}
+						
 						return;
 					}
 				}
 				ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_DD]->_lock);
 			}
-			else if (pPlayer->_y >= pSector->_yPosMax - dfATTACK1_RANGE_Y)
+			else if (attackerY >= pSector->_yPosMax - dfATTACK1_RANGE_Y)
 			{
 				AcquireSRWLockShared(&pSector->_around[dfMOVE_DIR_UU]->_lock);
 				iter = pSector->_around[dfMOVE_DIR_UU]->_players.begin();
 				for (; iter < pSector->_around[dfMOVE_DIR_UU]->_players.end(); iter++)
 				{
-					int dist = pPlayer->_x - (*iter)->_x;
-					if (dist >= 0 && dist <= dfATTACK1_RANGE_X &&
-						abs((*iter)->_y - pPlayer->_y) <= dfATTACK1_RANGE_Y &&
-						(*iter)->_state == PLAYER_STATE::ALIVE)
-					{
-						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_UU]->_lock);
-						pDamagedPlayer = (*iter);
-						pDamagedPlayer->_hp -= dfATTACK1_DAMAGE;
+					AcquireSRWLockShared(&(*iter)->_lock);
+					PLAYER_STATE targetState = (*iter)->_state;
+					short targetX = (*iter)->_x;
+					short targetY = (*iter)->_y;
+					ReleaseSRWLockShared(&(*iter)->_lock);
 
-						if (pDamagedPlayer->_hp <= 0)
-						{
+					int dist = attackerX - targetX;
+					if (dist >= 0 && dist <= dfATTACK1_RANGE_X &&
+						abs(targetY - attackerY) <= dfATTACK1_RANGE_Y &&
+						targetState == PLAYER_STATE::CONNECT)
+					{
+						
+						AcquireSRWLockExclusive(&(*iter)->_lock);
+						(*iter)->_hp -= dfATTACK1_DAMAGE;
+						char targetHp = (*iter)->_hp;
+						pDamagedPlayer = (*iter);
+						ReleaseSRWLockExclusive(&(*iter)->_lock);
+
+						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_UU]->_lock);
+
+						if (targetHp <= 0)
+						{							
 							InterlockedIncrement(&_deadCnt);
 							SetPlayerDead(pDamagedPlayer, false);		
 						}
+
 						return;
 					}
 				}
@@ -1314,104 +1649,146 @@ inline void CGameServer::SetPlayerAttack1(CPlayer* pPlayer, CPlayer*& pDamagedPl
 	else if (direction == dfMOVE_DIR_RR)
 	{
 		vector<CPlayer*>::iterator iter;
-		CSector* pSector = pPlayer->_pSector;
-
 		AcquireSRWLockShared(&pSector->_around[dfMOVE_DIR_INPLACE]->_lock);
 		iter = pSector->_around[dfMOVE_DIR_INPLACE]->_players.begin();
 		for (; iter < pSector->_around[dfMOVE_DIR_INPLACE]->_players.end(); iter++)
 		{
 			if ((*iter) != pPlayer)
 			{
-				int dist = (*iter)->_x - pPlayer->_x;
-				if (dist >= 0 && dist <= dfATTACK1_RANGE_X &&
-					abs((*iter)->_y - pPlayer->_y) <= dfATTACK1_RANGE_Y &&
-					(*iter)->_state == PLAYER_STATE::ALIVE)
-				{
-					ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_INPLACE]->_lock);
-					pDamagedPlayer = (*iter);
-					pDamagedPlayer->_hp -= dfATTACK1_DAMAGE;
+				AcquireSRWLockShared(&(*iter)->_lock);
+				PLAYER_STATE targetState = (*iter)->_state;
+				short targetX = (*iter)->_x;
+				short targetY = (*iter)->_y;
+				ReleaseSRWLockShared(&(*iter)->_lock);
 
-					if (pDamagedPlayer->_hp <= 0)
-					{
+				int dist = targetX - attackerX;
+				if (dist >= 0 && dist <= dfATTACK1_RANGE_X &&
+					abs(targetY - attackerY) <= dfATTACK1_RANGE_Y &&
+					targetState == PLAYER_STATE::CONNECT)
+				{
+					AcquireSRWLockExclusive(&(*iter)->_lock);
+					(*iter)->_hp -= dfATTACK1_DAMAGE;
+					char targetHp = (*iter)->_hp;
+					pDamagedPlayer = (*iter);
+					ReleaseSRWLockExclusive(&(*iter)->_lock);
+
+					ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_INPLACE]->_lock);
+
+					if (targetHp <= 0)
+					{	
 						InterlockedIncrement(&_deadCnt);
 						SetPlayerDead(pDamagedPlayer, false);						
 					}
+
 					return;
 				}
 			}
 		}
 		ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_INPLACE]->_lock);
 
-		if (pPlayer->_x >= pSector->_xPosMax - dfATTACK1_RANGE_X)
+		if (attackerX >= pSector->_xPosMax - dfATTACK1_RANGE_X)
 		{
 			AcquireSRWLockShared(&pSector->_around[dfMOVE_DIR_RR]->_lock);
 			iter = pSector->_around[dfMOVE_DIR_RR]->_players.begin();
 			for (; iter < pSector->_around[dfMOVE_DIR_RR]->_players.end(); iter++)
 			{
-				int dist = (*iter)->_x - pPlayer->_x;
-				if (dist >= 0 && dist <= dfATTACK1_RANGE_X &&
-					abs((*iter)->_y - pPlayer->_y) <= dfATTACK1_RANGE_Y &&
-					(*iter)->_state == PLAYER_STATE::ALIVE)
-				{
-					ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_RR]->_lock);
-					pDamagedPlayer = (*iter);
-					pDamagedPlayer->_hp -= dfATTACK1_DAMAGE;
+				AcquireSRWLockShared(&(*iter)->_lock);
+				PLAYER_STATE targetState = (*iter)->_state;
+				short targetX = (*iter)->_x;
+				short targetY = (*iter)->_y;
+				ReleaseSRWLockShared(&(*iter)->_lock);
 
-					if (pDamagedPlayer->_hp <= 0)
+				int dist = targetX - attackerX;
+				if (dist >= 0 && dist <= dfATTACK1_RANGE_X &&
+					abs(targetY - attackerY) <= dfATTACK1_RANGE_Y &&
+					targetState == PLAYER_STATE::CONNECT)
+				{
+					AcquireSRWLockExclusive(&(*iter)->_lock);
+					(*iter)->_hp -= dfATTACK1_DAMAGE;
+					char targetHp = (*iter)->_hp;
+					pDamagedPlayer = (*iter);
+					ReleaseSRWLockExclusive(&(*iter)->_lock);
+
+					ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_RR]->_lock);
+
+					if (targetHp <= 0)
 					{
 						InterlockedIncrement(&_deadCnt);
 						SetPlayerDead(pDamagedPlayer, false);						
 					}
+
 					return;
 				}
 			}
 			ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_RR]->_lock);
 
-			if (pPlayer->_y >= pSector->_yPosMax - dfATTACK1_RANGE_Y)
+			if (attackerY >= pSector->_yPosMax - dfATTACK1_RANGE_Y)
 			{
 				AcquireSRWLockShared(&pSector->_around[dfMOVE_DIR_RU]->_lock);
 				iter = pSector->_around[dfMOVE_DIR_RU]->_players.begin();
 				for (; iter < pSector->_around[dfMOVE_DIR_RU]->_players.end(); iter++)
 				{
-					int dist = (*iter)->_x - pPlayer->_x;
-					if (dist >= 0 && dist <= dfATTACK1_RANGE_X &&
-						abs((*iter)->_y - pPlayer->_y) <= dfATTACK1_RANGE_Y &&
-						(*iter)->_state == PLAYER_STATE::ALIVE)
-					{
-						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_RU]->_lock);
-						pDamagedPlayer = (*iter);
-						pDamagedPlayer->_hp -= dfATTACK1_DAMAGE;
+					AcquireSRWLockShared(&(*iter)->_lock);
+					PLAYER_STATE targetState = (*iter)->_state;
+					short targetX = (*iter)->_x;
+					short targetY = (*iter)->_y;
+					ReleaseSRWLockShared(&(*iter)->_lock);
 
-						if (pDamagedPlayer->_hp <= 0)
-						{
+					int dist = targetX - attackerX;
+					if (dist >= 0 && dist <= dfATTACK1_RANGE_X &&
+						abs(targetY - attackerY) <= dfATTACK1_RANGE_Y &&
+						targetState == PLAYER_STATE::CONNECT)
+					{
+						AcquireSRWLockExclusive(&(*iter)->_lock);
+						(*iter)->_hp -= dfATTACK1_DAMAGE;
+						char targetHp = (*iter)->_hp;
+						pDamagedPlayer = (*iter);
+						ReleaseSRWLockExclusive(&(*iter)->_lock);
+
+						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_RU]->_lock);
+
+						if (targetHp <= 0)
+						{	
 							InterlockedIncrement(&_deadCnt);
 							SetPlayerDead(pDamagedPlayer, false);						
 						}
+
 						return;
 					}
 				}
 				ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_RU]->_lock);
 			}
-			else if (pPlayer->_y <= pSector->_yPosMin + dfATTACK1_RANGE_Y)
+			else if (attackerY <= pSector->_yPosMin + dfATTACK1_RANGE_Y)
 			{
 				AcquireSRWLockShared(&pSector->_around[dfMOVE_DIR_RD]->_lock);
 				iter = pSector->_around[dfMOVE_DIR_RD]->_players.begin();
 				for (; iter < pSector->_around[dfMOVE_DIR_RD]->_players.end(); iter++)
 				{
-					int dist = (*iter)->_x - pPlayer->_x;
-					if (dist >= 0 && dist <= dfATTACK1_RANGE_X &&
-						abs((*iter)->_y - pPlayer->_y) <= dfATTACK1_RANGE_Y &&
-						(*iter)->_state == PLAYER_STATE::ALIVE)
-					{
-						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_RD]->_lock);
-						pDamagedPlayer = (*iter);
-						pDamagedPlayer->_hp -= dfATTACK1_DAMAGE;
+					AcquireSRWLockShared(&(*iter)->_lock);
+					PLAYER_STATE targetState = (*iter)->_state;
+					short targetX = (*iter)->_x;
+					short targetY = (*iter)->_y;
+					ReleaseSRWLockShared(&(*iter)->_lock);
 
-						if (pDamagedPlayer->_hp <= 0)
+					int dist = targetX - attackerX;
+					if (dist >= 0 && dist <= dfATTACK1_RANGE_X &&
+						abs(targetY - attackerY) <= dfATTACK1_RANGE_Y &&
+						targetState == PLAYER_STATE::CONNECT)
+					{
+						AcquireSRWLockExclusive(&(*iter)->_lock);
+						(*iter)->_hp -= dfATTACK1_DAMAGE;
+						char targetHp = (*iter)->_hp;
+						pDamagedPlayer = (*iter);
+						ReleaseSRWLockExclusive(&(*iter)->_lock);
+
+						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_RD]->_lock);
+
+						if (targetHp <= 0)
 						{
 							InterlockedIncrement(&_deadCnt);
 							SetPlayerDead(pDamagedPlayer, false);						
 						}
+						
 						return;
 					}
 				}
@@ -1420,142 +1797,202 @@ inline void CGameServer::SetPlayerAttack1(CPlayer* pPlayer, CPlayer*& pDamagedPl
 		}
 		else
 		{
-			if (pPlayer->_y >= pSector->_yPosMax - dfATTACK1_RANGE_Y)
+			if (attackerY >= pSector->_yPosMax - dfATTACK1_RANGE_Y)
 			{
 				AcquireSRWLockShared(&pSector->_around[dfMOVE_DIR_UU]->_lock);
 				iter = pSector->_around[dfMOVE_DIR_UU]->_players.begin();
 				for (; iter < pSector->_around[dfMOVE_DIR_UU]->_players.end(); iter++)
 				{
-					int dist = (*iter)->_x - pPlayer->_x;
-					if (dist >= 0 && dist <= dfATTACK1_RANGE_X &&
-						abs((*iter)->_y - pPlayer->_y) <= dfATTACK1_RANGE_Y &&
-						(*iter)->_state == PLAYER_STATE::ALIVE)
-					{
-						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_UU]->_lock);
-						pDamagedPlayer = (*iter);
-						pDamagedPlayer->_hp -= dfATTACK1_DAMAGE;
+					AcquireSRWLockShared(&(*iter)->_lock);
+					PLAYER_STATE targetState = (*iter)->_state;
+					short targetX = (*iter)->_x;
+					short targetY = (*iter)->_y;
+					ReleaseSRWLockShared(&(*iter)->_lock);
 
-						if (pDamagedPlayer->_hp <= 0)
+					int dist = targetX - attackerX;
+					if (dist >= 0 && dist <= dfATTACK1_RANGE_X &&
+						abs(targetY - attackerY) <= dfATTACK1_RANGE_Y &&
+						targetState == PLAYER_STATE::CONNECT)
+					{
+						AcquireSRWLockExclusive(&(*iter)->_lock);
+						(*iter)->_hp -= dfATTACK1_DAMAGE;
+						char targetHp = (*iter)->_hp;
+						pDamagedPlayer = (*iter);
+						ReleaseSRWLockExclusive(&(*iter)->_lock);
+
+						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_UU]->_lock);
+
+						if (targetHp <= 0)
 						{
 							InterlockedIncrement(&_deadCnt);
 							SetPlayerDead(pDamagedPlayer, false);					
 						}
+
 						return;
 					}
 				}
 				ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_UU]->_lock);
 			}
-			else if (pPlayer->_y <= pSector->_yPosMin + dfATTACK1_RANGE_Y)
+			else if (attackerY <= pSector->_yPosMin + dfATTACK1_RANGE_Y)
 			{
 				AcquireSRWLockShared(&pSector->_around[dfMOVE_DIR_DD]->_lock);
 				iter = pSector->_around[dfMOVE_DIR_DD]->_players.begin();
 				for (; iter < pSector->_around[dfMOVE_DIR_DD]->_players.end(); iter++)
 				{
-					int dist = (*iter)->_x - pPlayer->_x;
-					if (dist >= 0 && dist <= dfATTACK1_RANGE_X &&
-						abs((*iter)->_y - pPlayer->_y) <= dfATTACK1_RANGE_Y &&
-						(*iter)->_state == PLAYER_STATE::ALIVE)
-					{
-						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_DD]->_lock);
-						pDamagedPlayer = (*iter);
-						pDamagedPlayer->_hp -= dfATTACK1_DAMAGE;
+					AcquireSRWLockShared(&(*iter)->_lock);
+					PLAYER_STATE targetState = (*iter)->_state;
+					short targetX = (*iter)->_x;
+					short targetY = (*iter)->_y;
+					ReleaseSRWLockShared(&(*iter)->_lock);
 
-						if (pDamagedPlayer->_hp <= 0)
+					int dist = targetX - attackerX;
+					if (dist >= 0 && dist <= dfATTACK1_RANGE_X &&
+						abs(targetY - attackerY) <= dfATTACK1_RANGE_Y &&
+						targetState == PLAYER_STATE::CONNECT)
+					{
+						AcquireSRWLockExclusive(&(*iter)->_lock);
+						(*iter)->_hp -= dfATTACK1_DAMAGE;
+						char targetHp = (*iter)->_hp;
+						pDamagedPlayer = (*iter);
+						ReleaseSRWLockExclusive(&(*iter)->_lock);
+
+						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_DD]->_lock);
+
+						if (targetHp <= 0)
 						{
 							InterlockedIncrement(&_deadCnt);
 							SetPlayerDead(pDamagedPlayer, false);	
 						}
+						
 						return;
 					}
 				}
 				ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_DD]->_lock);
 			}
 		}
-	}
+	}	
 }
 
 inline void CGameServer::SetPlayerAttack2(CPlayer* pPlayer, CPlayer*& pDamagedPlayer, unsigned char& direction, short& x, short& y)
 {
+	AcquireSRWLockExclusive(&pPlayer->_lock);
 	pPlayer->_x = x;
 	pPlayer->_y = y;
 	pPlayer->_direction = direction;
+	short attackerX = pPlayer->_x;
+	short attackerY = pPlayer->_y;
+	CSector* pSector = pPlayer->_pSector;
+	ReleaseSRWLockExclusive(&pPlayer->_lock);
 
 	if (direction == dfMOVE_DIR_LL)
 	{
 		vector<CPlayer*>::iterator iter;
-		CSector* pSector = pPlayer->_pSector;
-
 		AcquireSRWLockShared(&pSector->_around[dfMOVE_DIR_INPLACE]->_lock);
 		iter = pSector->_around[dfMOVE_DIR_INPLACE]->_players.begin();
+
 		for (; iter < pSector->_around[dfMOVE_DIR_INPLACE]->_players.end(); iter++)
 		{
 			if ((*iter) != pPlayer)
 			{
-				int dist = pPlayer->_x - (*iter)->_x;
-				if (dist >= 0 && dist <= dfATTACK2_RANGE_X &&
-					abs((*iter)->_y - pPlayer->_y) <= dfATTACK2_RANGE_Y &&
-					(*iter)->_state == PLAYER_STATE::ALIVE)
-				{
-					ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_INPLACE]->_lock);
-					pDamagedPlayer = (*iter);
-					pDamagedPlayer->_hp -= dfATTACK2_DAMAGE;
+				AcquireSRWLockShared(&(*iter)->_lock);
+				PLAYER_STATE targetState = (*iter)->_state;
+				short targetX = (*iter)->_x;
+				short targetY = (*iter)->_y;
+				ReleaseSRWLockShared(&(*iter)->_lock);
 
-					if (pDamagedPlayer->_hp <= 0)
+				int dist = attackerX - targetX;
+				if (dist >= 0 && dist <= dfATTACK2_RANGE_X &&
+					abs(targetY - attackerY) <= dfATTACK2_RANGE_Y &&
+					targetState == PLAYER_STATE::CONNECT)
+				{
+					AcquireSRWLockExclusive(&(*iter)->_lock);
+					(*iter)->_hp -= dfATTACK2_DAMAGE;
+					char targetHp = (*iter)->_hp;
+					pDamagedPlayer = (*iter);
+					ReleaseSRWLockExclusive(&(*iter)->_lock);
+
+					ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_INPLACE]->_lock);
+
+					if (targetHp <= 0)
 					{
 						InterlockedIncrement(&_deadCnt);
-						SetPlayerDead(pDamagedPlayer, false);						
+						SetPlayerDead(pDamagedPlayer, false);
 					}
+
 					return;
 				}
 			}
 		}
 		ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_INPLACE]->_lock);
 
-		if (pPlayer->_x <= pSector->_xPosMin + dfATTACK2_RANGE_X)
+		if (attackerX <= pSector->_xPosMin + dfATTACK2_RANGE_X)
 		{
 			AcquireSRWLockShared(&pSector->_around[dfMOVE_DIR_LL]->_lock);
 			iter = pSector->_around[dfMOVE_DIR_LL]->_players.begin();
 			for (; iter < pSector->_around[dfMOVE_DIR_LL]->_players.end(); iter++)
 			{
-				int dist = pPlayer->_x - (*iter)->_x;
-				if (dist >= 0 && dist <= dfATTACK2_RANGE_X &&
-					abs((*iter)->_y - pPlayer->_y) <= dfATTACK2_RANGE_Y &&
-					(*iter)->_state == PLAYER_STATE::ALIVE)
-				{
-					ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_LL]->_lock);
-					pDamagedPlayer = (*iter);
-					pDamagedPlayer->_hp -= dfATTACK2_DAMAGE;
+				AcquireSRWLockShared(&(*iter)->_lock);
+				PLAYER_STATE targetState = (*iter)->_state;
+				short targetX = (*iter)->_x;
+				short targetY = (*iter)->_y;
+				ReleaseSRWLockShared(&(*iter)->_lock);
 
-					if (pDamagedPlayer->_hp <= 0)
+				int dist = attackerX - targetX;
+
+				if (dist >= 0 && dist <= dfATTACK2_RANGE_X &&
+					abs(targetY - attackerY) <= dfATTACK2_RANGE_Y &&
+					targetState == PLAYER_STATE::CONNECT)
+				{
+					AcquireSRWLockExclusive(&(*iter)->_lock);
+					(*iter)->_hp -= dfATTACK2_DAMAGE;
+					char targetHp = (*iter)->_hp;
+					pDamagedPlayer = (*iter);
+					ReleaseSRWLockExclusive(&(*iter)->_lock);
+
+					ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_LL]->_lock);
+
+					if (targetHp <= 0)
 					{
 						InterlockedIncrement(&_deadCnt);
-						SetPlayerDead(pDamagedPlayer, false);	
+						SetPlayerDead(pDamagedPlayer, false);
 					}
+
 					return;
 				}
 			}
 			ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_LL]->_lock);
 
-			if (pPlayer->_y <= pSector->_yPosMin + dfATTACK2_RANGE_Y)
+			if (attackerY <= pSector->_yPosMin + dfATTACK2_RANGE_Y)
 			{
 				AcquireSRWLockShared(&pSector->_around[dfMOVE_DIR_LD]->_lock);
 				iter = pSector->_around[dfMOVE_DIR_LD]->_players.begin();
 				for (; iter < pSector->_around[dfMOVE_DIR_LD]->_players.end(); iter++)
 				{
-					int dist = pPlayer->_x - (*iter)->_x;
-					if (dist >= 0 && dist <= dfATTACK2_RANGE_X &&
-						abs((*iter)->_y - pPlayer->_y) <= dfATTACK2_RANGE_Y &&
-						(*iter)->_state == PLAYER_STATE::ALIVE)
-					{
-						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_LD]->_lock);
-						pDamagedPlayer = (*iter);
-						pDamagedPlayer->_hp -= dfATTACK2_DAMAGE;
+					AcquireSRWLockShared(&(*iter)->_lock);
+					PLAYER_STATE targetState = (*iter)->_state;
+					short targetX = (*iter)->_x;
+					short targetY = (*iter)->_y;
+					ReleaseSRWLockShared(&(*iter)->_lock);
 
-						if (pDamagedPlayer->_hp <= 0)
+					int dist = attackerX - targetX;
+					if (dist >= 0 && dist <= dfATTACK2_RANGE_X &&
+						abs(targetY - attackerY) <= dfATTACK2_RANGE_Y &&
+						targetState == PLAYER_STATE::CONNECT)
+					{
+						AcquireSRWLockExclusive(&(*iter)->_lock);
+						(*iter)->_hp -= dfATTACK2_DAMAGE;
+						char targetHp = (*iter)->_hp;
+						pDamagedPlayer = (*iter);
+						ReleaseSRWLockExclusive(&(*iter)->_lock);
+
+						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_LD]->_lock);
+
+						if (targetHp <= 0)
 						{
 							InterlockedIncrement(&_deadCnt);
-							SetPlayerDead(pDamagedPlayer, false);		
+							SetPlayerDead(pDamagedPlayer, false);
 						}
+
 						return;
 					}
 				}
@@ -1567,20 +2004,31 @@ inline void CGameServer::SetPlayerAttack2(CPlayer* pPlayer, CPlayer*& pDamagedPl
 				iter = pSector->_around[dfMOVE_DIR_LU]->_players.begin();
 				for (; iter < pSector->_around[dfMOVE_DIR_LU]->_players.end(); iter++)
 				{
-					int dist = pPlayer->_x - (*iter)->_x;
-					if (dist >= 0 && dist <= dfATTACK2_RANGE_X &&
-						abs((*iter)->_y - pPlayer->_y) <= dfATTACK2_RANGE_Y &&
-						(*iter)->_state == PLAYER_STATE::ALIVE)
-					{
-						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_LU]->_lock);
-						pDamagedPlayer = (*iter);
-						pDamagedPlayer->_hp -= dfATTACK2_DAMAGE;
+					AcquireSRWLockShared(&(*iter)->_lock);
+					PLAYER_STATE targetState = (*iter)->_state;
+					short targetX = (*iter)->_x;
+					short targetY = (*iter)->_y;
+					ReleaseSRWLockShared(&(*iter)->_lock);
 
-						if (pDamagedPlayer->_hp <= 0)
+					int dist = attackerX - targetX;
+					if (dist >= 0 && dist <= dfATTACK2_RANGE_X &&
+						abs(targetY - attackerY) <= dfATTACK2_RANGE_Y &&
+						targetState == PLAYER_STATE::CONNECT)
+					{
+						AcquireSRWLockExclusive(&(*iter)->_lock);
+						(*iter)->_hp -= dfATTACK2_DAMAGE;
+						char targetHp = (*iter)->_hp;
+						pDamagedPlayer = (*iter);
+						ReleaseSRWLockExclusive(&(*iter)->_lock);
+
+						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_LU]->_lock);
+
+						if (targetHp <= 0)
 						{
 							InterlockedIncrement(&_deadCnt);
-							SetPlayerDead(pDamagedPlayer, false);							
+							SetPlayerDead(pDamagedPlayer, false);
 						}
+
 						return;
 					}
 				}
@@ -1589,51 +2037,74 @@ inline void CGameServer::SetPlayerAttack2(CPlayer* pPlayer, CPlayer*& pDamagedPl
 		}
 		else
 		{
-			if (pPlayer->_y <= pSector->_yPosMin + dfATTACK2_RANGE_Y)
+			if (attackerY <= pSector->_yPosMin + dfATTACK2_RANGE_Y)
 			{
 				AcquireSRWLockShared(&pSector->_around[dfMOVE_DIR_DD]->_lock);
 				iter = pSector->_around[dfMOVE_DIR_DD]->_players.begin();
 				for (; iter < pSector->_around[dfMOVE_DIR_DD]->_players.end(); iter++)
 				{
-					int dist = pPlayer->_x - (*iter)->_x;
-					if (dist >= 0 && dist <= dfATTACK2_RANGE_X &&
-						abs((*iter)->_y - pPlayer->_y) <= dfATTACK2_RANGE_Y &&
-						(*iter)->_state == PLAYER_STATE::ALIVE)
-					{
-						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_DD]->_lock);
-						pDamagedPlayer = (*iter);
-						pDamagedPlayer->_hp -= dfATTACK2_DAMAGE;
+					AcquireSRWLockShared(&(*iter)->_lock);
+					PLAYER_STATE targetState = (*iter)->_state;
+					short targetX = (*iter)->_x;
+					short targetY = (*iter)->_y;
+					ReleaseSRWLockShared(&(*iter)->_lock);
 
-						if (pDamagedPlayer->_hp <= 0)
+					int dist = attackerX - targetX;
+					if (dist >= 0 && dist <= dfATTACK2_RANGE_X &&
+						abs(targetY - attackerY) <= dfATTACK2_RANGE_Y &&
+						targetState == PLAYER_STATE::CONNECT)
+					{
+						AcquireSRWLockExclusive(&(*iter)->_lock);
+						(*iter)->_hp -= dfATTACK2_DAMAGE;
+						char targetHp = (*iter)->_hp;
+						pDamagedPlayer = (*iter);
+						ReleaseSRWLockExclusive(&(*iter)->_lock);
+
+						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_DD]->_lock);
+
+						if (targetHp <= 0)
 						{
 							InterlockedIncrement(&_deadCnt);
-							SetPlayerDead(pDamagedPlayer, false);						
+							SetPlayerDead(pDamagedPlayer, false);
 						}
+
 						return;
 					}
 				}
 				ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_DD]->_lock);
 			}
-			else if (pPlayer->_y >= pSector->_yPosMax - dfATTACK2_RANGE_Y)
+			else if (attackerY >= pSector->_yPosMax - dfATTACK2_RANGE_Y)
 			{
 				AcquireSRWLockShared(&pSector->_around[dfMOVE_DIR_UU]->_lock);
 				iter = pSector->_around[dfMOVE_DIR_UU]->_players.begin();
 				for (; iter < pSector->_around[dfMOVE_DIR_UU]->_players.end(); iter++)
 				{
-					int dist = pPlayer->_x - (*iter)->_x;
-					if (dist >= 0 && dist <= dfATTACK2_RANGE_X &&
-						abs((*iter)->_y - pPlayer->_y) <= dfATTACK2_RANGE_Y &&
-						(*iter)->_state == PLAYER_STATE::ALIVE)
-					{
-						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_UU]->_lock);
-						pDamagedPlayer = (*iter);
-						pDamagedPlayer->_hp -= dfATTACK2_DAMAGE;
+					AcquireSRWLockShared(&(*iter)->_lock);
+					PLAYER_STATE targetState = (*iter)->_state;
+					short targetX = (*iter)->_x;
+					short targetY = (*iter)->_y;
+					ReleaseSRWLockShared(&(*iter)->_lock);
 
-						if (pDamagedPlayer->_hp <= 0)
+					int dist = attackerX - targetX;
+					if (dist >= 0 && dist <= dfATTACK2_RANGE_X &&
+						abs(targetY - attackerY) <= dfATTACK2_RANGE_Y &&
+						targetState == PLAYER_STATE::CONNECT)
+					{
+
+						AcquireSRWLockExclusive(&(*iter)->_lock);
+						(*iter)->_hp -= dfATTACK2_DAMAGE;
+						char targetHp = (*iter)->_hp;
+						pDamagedPlayer = (*iter);
+						ReleaseSRWLockExclusive(&(*iter)->_lock);
+
+						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_UU]->_lock);
+
+						if (targetHp <= 0)
 						{
 							InterlockedIncrement(&_deadCnt);
-							SetPlayerDead(pDamagedPlayer, false);							
+							SetPlayerDead(pDamagedPlayer, false);
 						}
+
 						return;
 					}
 				}
@@ -1644,104 +2115,146 @@ inline void CGameServer::SetPlayerAttack2(CPlayer* pPlayer, CPlayer*& pDamagedPl
 	else if (direction == dfMOVE_DIR_RR)
 	{
 		vector<CPlayer*>::iterator iter;
-		CSector* pSector = pPlayer->_pSector;
-
 		AcquireSRWLockShared(&pSector->_around[dfMOVE_DIR_INPLACE]->_lock);
 		iter = pSector->_around[dfMOVE_DIR_INPLACE]->_players.begin();
 		for (; iter < pSector->_around[dfMOVE_DIR_INPLACE]->_players.end(); iter++)
 		{
 			if ((*iter) != pPlayer)
 			{
-				int dist = (*iter)->_x - pPlayer->_x;
-				if (dist >= 0 && dist <= dfATTACK2_RANGE_X &&
-					abs((*iter)->_y - pPlayer->_y) <= dfATTACK2_RANGE_Y &&
-					(*iter)->_state == PLAYER_STATE::ALIVE)
-				{
-					ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_INPLACE]->_lock);
-					pDamagedPlayer = (*iter);
-					pDamagedPlayer->_hp -= dfATTACK2_DAMAGE;
+				AcquireSRWLockShared(&(*iter)->_lock);
+				PLAYER_STATE targetState = (*iter)->_state;
+				short targetX = (*iter)->_x;
+				short targetY = (*iter)->_y;
+				ReleaseSRWLockShared(&(*iter)->_lock);
 
-					if (pDamagedPlayer->_hp <= 0)
+				int dist = targetX - attackerX;
+				if (dist >= 0 && dist <= dfATTACK2_RANGE_X &&
+					abs(targetY - attackerY) <= dfATTACK2_RANGE_Y &&
+					targetState == PLAYER_STATE::CONNECT)
+				{
+					AcquireSRWLockExclusive(&(*iter)->_lock);
+					(*iter)->_hp -= dfATTACK2_DAMAGE;
+					char targetHp = (*iter)->_hp;
+					pDamagedPlayer = (*iter);
+					ReleaseSRWLockExclusive(&(*iter)->_lock);
+
+					ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_INPLACE]->_lock);
+
+					if (targetHp <= 0)
 					{
 						InterlockedIncrement(&_deadCnt);
-						SetPlayerDead(pDamagedPlayer, false);						
+						SetPlayerDead(pDamagedPlayer, false);
 					}
+
 					return;
 				}
 			}
 		}
 		ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_INPLACE]->_lock);
 
-		if (pPlayer->_x >= pSector->_xPosMax - dfATTACK2_RANGE_X)
+		if (attackerX >= pSector->_xPosMax - dfATTACK2_RANGE_X)
 		{
 			AcquireSRWLockShared(&pSector->_around[dfMOVE_DIR_RR]->_lock);
 			iter = pSector->_around[dfMOVE_DIR_RR]->_players.begin();
 			for (; iter < pSector->_around[dfMOVE_DIR_RR]->_players.end(); iter++)
 			{
-				int dist = (*iter)->_x - pPlayer->_x;
-				if (dist >= 0 && dist <= dfATTACK2_RANGE_X &&
-					abs((*iter)->_y - pPlayer->_y) <= dfATTACK2_RANGE_Y &&
-					(*iter)->_state == PLAYER_STATE::ALIVE)
-				{
-					ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_RR]->_lock);
-					pDamagedPlayer = (*iter);
-					pDamagedPlayer->_hp -= dfATTACK2_DAMAGE;
+				AcquireSRWLockShared(&(*iter)->_lock);
+				PLAYER_STATE targetState = (*iter)->_state;
+				short targetX = (*iter)->_x;
+				short targetY = (*iter)->_y;
+				ReleaseSRWLockShared(&(*iter)->_lock);
 
-					if (pDamagedPlayer->_hp <= 0)
+				int dist = targetX - attackerX;
+				if (dist >= 0 && dist <= dfATTACK2_RANGE_X &&
+					abs(targetY - attackerY) <= dfATTACK2_RANGE_Y &&
+					targetState == PLAYER_STATE::CONNECT)
+				{
+					AcquireSRWLockExclusive(&(*iter)->_lock);
+					(*iter)->_hp -= dfATTACK2_DAMAGE;
+					char targetHp = (*iter)->_hp;
+					pDamagedPlayer = (*iter);
+					ReleaseSRWLockExclusive(&(*iter)->_lock);
+
+					ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_RR]->_lock);
+
+					if (targetHp <= 0)
 					{
 						InterlockedIncrement(&_deadCnt);
-						SetPlayerDead(pDamagedPlayer, false);						
+						SetPlayerDead(pDamagedPlayer, false);
 					}
+
 					return;
 				}
 			}
 			ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_RR]->_lock);
 
-			if (pPlayer->_y >= pSector->_yPosMax - dfATTACK2_RANGE_Y)
+			if (attackerY >= pSector->_yPosMax - dfATTACK2_RANGE_Y)
 			{
 				AcquireSRWLockShared(&pSector->_around[dfMOVE_DIR_RU]->_lock);
 				iter = pSector->_around[dfMOVE_DIR_RU]->_players.begin();
 				for (; iter < pSector->_around[dfMOVE_DIR_RU]->_players.end(); iter++)
 				{
-					int dist = (*iter)->_x - pPlayer->_x;
-					if (dist >= 0 && dist <= dfATTACK2_RANGE_X &&
-						abs((*iter)->_y - pPlayer->_y) <= dfATTACK2_RANGE_Y &&
-						(*iter)->_state == PLAYER_STATE::ALIVE)
-					{
-						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_RU]->_lock);
-						pDamagedPlayer = (*iter);
-						pDamagedPlayer->_hp -= dfATTACK2_DAMAGE;
+					AcquireSRWLockShared(&(*iter)->_lock);
+					PLAYER_STATE targetState = (*iter)->_state;
+					short targetX = (*iter)->_x;
+					short targetY = (*iter)->_y;
+					ReleaseSRWLockShared(&(*iter)->_lock);
 
-						if (pDamagedPlayer->_hp <= 0)
+					int dist = targetX - attackerX;
+					if (dist >= 0 && dist <= dfATTACK2_RANGE_X &&
+						abs(targetY - attackerY) <= dfATTACK2_RANGE_Y &&
+						targetState == PLAYER_STATE::CONNECT)
+					{
+						AcquireSRWLockExclusive(&(*iter)->_lock);
+						(*iter)->_hp -= dfATTACK2_DAMAGE;
+						char targetHp = (*iter)->_hp;
+						pDamagedPlayer = (*iter);
+						ReleaseSRWLockExclusive(&(*iter)->_lock);
+
+						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_RU]->_lock);
+
+						if (targetHp <= 0)
 						{
 							InterlockedIncrement(&_deadCnt);
-							SetPlayerDead(pDamagedPlayer, false);							
+							SetPlayerDead(pDamagedPlayer, false);
 						}
+
 						return;
 					}
 				}
 				ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_RU]->_lock);
 			}
-			else if (pPlayer->_y <= pSector->_yPosMin + dfATTACK2_RANGE_Y)
+			else if (attackerY <= pSector->_yPosMin + dfATTACK2_RANGE_Y)
 			{
 				AcquireSRWLockShared(&pSector->_around[dfMOVE_DIR_RD]->_lock);
 				iter = pSector->_around[dfMOVE_DIR_RD]->_players.begin();
 				for (; iter < pSector->_around[dfMOVE_DIR_RD]->_players.end(); iter++)
 				{
-					int dist = (*iter)->_x - pPlayer->_x;
-					if (dist >= 0 && dist <= dfATTACK2_RANGE_X &&
-						abs((*iter)->_y - pPlayer->_y) <= dfATTACK2_RANGE_Y &&
-						(*iter)->_state == PLAYER_STATE::ALIVE)
-					{
-						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_RD]->_lock);
-						pDamagedPlayer = (*iter);
-						pDamagedPlayer->_hp -= dfATTACK2_DAMAGE;
+					AcquireSRWLockShared(&(*iter)->_lock);
+					PLAYER_STATE targetState = (*iter)->_state;
+					short targetX = (*iter)->_x;
+					short targetY = (*iter)->_y;
+					ReleaseSRWLockShared(&(*iter)->_lock);
 
-						if (pDamagedPlayer->_hp <= 0)
+					int dist = targetX - attackerX;
+					if (dist >= 0 && dist <= dfATTACK2_RANGE_X &&
+						abs(targetY - attackerY) <= dfATTACK2_RANGE_Y &&
+						targetState == PLAYER_STATE::CONNECT)
+					{
+						AcquireSRWLockExclusive(&(*iter)->_lock);
+						(*iter)->_hp -= dfATTACK2_DAMAGE;
+						char targetHp = (*iter)->_hp;
+						pDamagedPlayer = (*iter);
+						ReleaseSRWLockExclusive(&(*iter)->_lock);
+
+						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_RD]->_lock);
+
+						if (targetHp <= 0)
 						{
 							InterlockedIncrement(&_deadCnt);
-							SetPlayerDead(pDamagedPlayer, false);							
+							SetPlayerDead(pDamagedPlayer, false);
 						}
+
 						return;
 					}
 				}
@@ -1750,51 +2263,73 @@ inline void CGameServer::SetPlayerAttack2(CPlayer* pPlayer, CPlayer*& pDamagedPl
 		}
 		else
 		{
-			if (pPlayer->_y >= pSector->_yPosMax - dfATTACK2_RANGE_Y)
+			if (attackerY >= pSector->_yPosMax - dfATTACK2_RANGE_Y)
 			{
 				AcquireSRWLockShared(&pSector->_around[dfMOVE_DIR_UU]->_lock);
 				iter = pSector->_around[dfMOVE_DIR_UU]->_players.begin();
 				for (; iter < pSector->_around[dfMOVE_DIR_UU]->_players.end(); iter++)
 				{
-					int dist = (*iter)->_x - pPlayer->_x;
-					if (dist >= 0 && dist <= dfATTACK2_RANGE_X &&
-						abs((*iter)->_y - pPlayer->_y) <= dfATTACK2_RANGE_Y &&
-						(*iter)->_state == PLAYER_STATE::ALIVE)
-					{
-						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_UU]->_lock);
-						pDamagedPlayer = (*iter);
-						pDamagedPlayer->_hp -= dfATTACK2_DAMAGE;
+					AcquireSRWLockShared(&(*iter)->_lock);
+					PLAYER_STATE targetState = (*iter)->_state;
+					short targetX = (*iter)->_x;
+					short targetY = (*iter)->_y;
+					ReleaseSRWLockShared(&(*iter)->_lock);
 
-						if (pDamagedPlayer->_hp <= 0)
+					int dist = targetX - attackerX;
+					if (dist >= 0 && dist <= dfATTACK2_RANGE_X &&
+						abs(targetY - attackerY) <= dfATTACK2_RANGE_Y &&
+						targetState == PLAYER_STATE::CONNECT)
+					{
+						AcquireSRWLockExclusive(&(*iter)->_lock);
+						(*iter)->_hp -= dfATTACK2_DAMAGE;
+						char targetHp = (*iter)->_hp;
+						pDamagedPlayer = (*iter);
+						ReleaseSRWLockExclusive(&(*iter)->_lock);
+
+						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_UU]->_lock);
+
+						if (targetHp <= 0)
 						{
 							InterlockedIncrement(&_deadCnt);
-							SetPlayerDead(pDamagedPlayer, false);							
+							SetPlayerDead(pDamagedPlayer, false);
 						}
+
 						return;
 					}
 				}
 				ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_UU]->_lock);
 			}
-			else if (pPlayer->_y <= pSector->_yPosMin + dfATTACK2_RANGE_Y)
+			else if (attackerY <= pSector->_yPosMin + dfATTACK2_RANGE_Y)
 			{
 				AcquireSRWLockShared(&pSector->_around[dfMOVE_DIR_DD]->_lock);
 				iter = pSector->_around[dfMOVE_DIR_DD]->_players.begin();
 				for (; iter < pSector->_around[dfMOVE_DIR_DD]->_players.end(); iter++)
 				{
-					int dist = (*iter)->_x - pPlayer->_x;
-					if (dist >= 0 && dist <= dfATTACK2_RANGE_X &&
-						abs((*iter)->_y - pPlayer->_y) <= dfATTACK2_RANGE_Y &&
-						(*iter)->_state == PLAYER_STATE::ALIVE)
-					{
-						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_DD]->_lock);
-						pDamagedPlayer = (*iter);
-						pDamagedPlayer->_hp -= dfATTACK2_DAMAGE;
+					AcquireSRWLockShared(&(*iter)->_lock);
+					PLAYER_STATE targetState = (*iter)->_state;
+					short targetX = (*iter)->_x;
+					short targetY = (*iter)->_y;
+					ReleaseSRWLockShared(&(*iter)->_lock);
 
-						if (pDamagedPlayer->_hp <= 0)
+					int dist = targetX - attackerX;
+					if (dist >= 0 && dist <= dfATTACK2_RANGE_X &&
+						abs(targetY - attackerY) <= dfATTACK2_RANGE_Y &&
+						targetState == PLAYER_STATE::CONNECT)
+					{
+						AcquireSRWLockExclusive(&(*iter)->_lock);
+						(*iter)->_hp -= dfATTACK2_DAMAGE;
+						char targetHp = (*iter)->_hp;
+						pDamagedPlayer = (*iter);
+						ReleaseSRWLockExclusive(&(*iter)->_lock);
+
+						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_DD]->_lock);
+
+						if (targetHp <= 0)
 						{
 							InterlockedIncrement(&_deadCnt);
-							SetPlayerDead(pDamagedPlayer, false);							
+							SetPlayerDead(pDamagedPlayer, false);
 						}
+
 						return;
 					}
 				}
@@ -1806,86 +2341,124 @@ inline void CGameServer::SetPlayerAttack2(CPlayer* pPlayer, CPlayer*& pDamagedPl
 
 inline void CGameServer::SetPlayerAttack3(CPlayer* pPlayer, CPlayer*& pDamagedPlayer, unsigned char& direction, short& x, short& y)
 {
+	AcquireSRWLockExclusive(&pPlayer->_lock);
 	pPlayer->_x = x;
 	pPlayer->_y = y;
 	pPlayer->_direction = direction;
+	short attackerX = pPlayer->_x;
+	short attackerY = pPlayer->_y;
+	CSector* pSector = pPlayer->_pSector;
+	ReleaseSRWLockExclusive(&pPlayer->_lock);
 
 	if (direction == dfMOVE_DIR_LL)
 	{
 		vector<CPlayer*>::iterator iter;
-		CSector* pSector = pPlayer->_pSector;
-
 		AcquireSRWLockShared(&pSector->_around[dfMOVE_DIR_INPLACE]->_lock);
 		iter = pSector->_around[dfMOVE_DIR_INPLACE]->_players.begin();
+
 		for (; iter < pSector->_around[dfMOVE_DIR_INPLACE]->_players.end(); iter++)
 		{
 			if ((*iter) != pPlayer)
 			{
-				int dist = pPlayer->_x - (*iter)->_x;
-				if (dist >= 0 && dist <= dfATTACK3_RANGE_X &&
-					abs((*iter)->_y - pPlayer->_y) <= dfATTACK3_RANGE_Y &&
-					(*iter)->_state == PLAYER_STATE::ALIVE)
-				{
-					ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_INPLACE]->_lock);
-					pDamagedPlayer = (*iter);
-					pDamagedPlayer->_hp -= dfATTACK3_DAMAGE;
+				AcquireSRWLockShared(&(*iter)->_lock);
+				PLAYER_STATE targetState = (*iter)->_state;
+				short targetX = (*iter)->_x;
+				short targetY = (*iter)->_y;
+				ReleaseSRWLockShared(&(*iter)->_lock);
 
-					if (pDamagedPlayer->_hp <= 0)
+				int dist = attackerX - targetX;
+				if (dist >= 0 && dist <= dfATTACK3_RANGE_X &&
+					abs(targetY - attackerY) <= dfATTACK3_RANGE_Y &&
+					targetState == PLAYER_STATE::CONNECT)
+				{
+					AcquireSRWLockExclusive(&(*iter)->_lock);
+					(*iter)->_hp -= dfATTACK3_DAMAGE;
+					char targetHp = (*iter)->_hp;
+					pDamagedPlayer = (*iter);
+					ReleaseSRWLockExclusive(&(*iter)->_lock);
+
+					ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_INPLACE]->_lock);
+
+					if (targetHp <= 0)
 					{
 						InterlockedIncrement(&_deadCnt);
 						SetPlayerDead(pDamagedPlayer, false);
 					}
+
 					return;
 				}
 			}
 		}
 		ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_INPLACE]->_lock);
 
-		if (pPlayer->_x <= pSector->_xPosMin + dfATTACK3_RANGE_X)
+		if (attackerX <= pSector->_xPosMin + dfATTACK3_RANGE_X)
 		{
 			AcquireSRWLockShared(&pSector->_around[dfMOVE_DIR_LL]->_lock);
 			iter = pSector->_around[dfMOVE_DIR_LL]->_players.begin();
 			for (; iter < pSector->_around[dfMOVE_DIR_LL]->_players.end(); iter++)
 			{
-				int dist = pPlayer->_x - (*iter)->_x;
-				if (dist >= 0 && dist <= dfATTACK3_RANGE_X &&
-					abs((*iter)->_y - pPlayer->_y) <= dfATTACK3_RANGE_Y &&
-					(*iter)->_state == PLAYER_STATE::ALIVE)
-				{
-					ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_LL]->_lock);
-					pDamagedPlayer = (*iter);
-					pDamagedPlayer->_hp -= dfATTACK3_DAMAGE;
+				AcquireSRWLockShared(&(*iter)->_lock);
+				PLAYER_STATE targetState = (*iter)->_state;
+				short targetX = (*iter)->_x;
+				short targetY = (*iter)->_y;
+				ReleaseSRWLockShared(&(*iter)->_lock);
 
-					if (pDamagedPlayer->_hp <= 0)
+				int dist = attackerX - targetX;
+
+				if (dist >= 0 && dist <= dfATTACK3_RANGE_X &&
+					abs(targetY - attackerY) <= dfATTACK3_RANGE_Y &&
+					targetState == PLAYER_STATE::CONNECT)
+				{
+					AcquireSRWLockExclusive(&(*iter)->_lock);
+					(*iter)->_hp -= dfATTACK3_DAMAGE;
+					char targetHp = (*iter)->_hp;
+					pDamagedPlayer = (*iter);
+					ReleaseSRWLockExclusive(&(*iter)->_lock);
+
+					ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_LL]->_lock);
+
+					if (targetHp <= 0)
 					{
 						InterlockedIncrement(&_deadCnt);
-						SetPlayerDead(pDamagedPlayer, false);						
+						SetPlayerDead(pDamagedPlayer, false);
 					}
+
 					return;
 				}
 			}
 			ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_LL]->_lock);
 
-			if (pPlayer->_y <= pSector->_yPosMin + dfATTACK3_RANGE_Y)
+			if (attackerY <= pSector->_yPosMin + dfATTACK3_RANGE_Y)
 			{
 				AcquireSRWLockShared(&pSector->_around[dfMOVE_DIR_LD]->_lock);
 				iter = pSector->_around[dfMOVE_DIR_LD]->_players.begin();
 				for (; iter < pSector->_around[dfMOVE_DIR_LD]->_players.end(); iter++)
 				{
-					int dist = pPlayer->_x - (*iter)->_x;
-					if (dist >= 0 && dist <= dfATTACK3_RANGE_X &&
-						abs((*iter)->_y - pPlayer->_y) <= dfATTACK3_RANGE_Y &&
-						(*iter)->_state == PLAYER_STATE::ALIVE)
-					{
-						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_LD]->_lock);
-						pDamagedPlayer = (*iter);
-						pDamagedPlayer->_hp -= dfATTACK3_DAMAGE;
+					AcquireSRWLockShared(&(*iter)->_lock);
+					PLAYER_STATE targetState = (*iter)->_state;
+					short targetX = (*iter)->_x;
+					short targetY = (*iter)->_y;
+					ReleaseSRWLockShared(&(*iter)->_lock);
 
-						if (pDamagedPlayer->_hp <= 0)
+					int dist = attackerX - targetX;
+					if (dist >= 0 && dist <= dfATTACK3_RANGE_X &&
+						abs(targetY - attackerY) <= dfATTACK3_RANGE_Y &&
+						targetState == PLAYER_STATE::CONNECT)
+					{
+						AcquireSRWLockExclusive(&(*iter)->_lock);
+						(*iter)->_hp -= dfATTACK3_DAMAGE;
+						char targetHp = (*iter)->_hp;
+						pDamagedPlayer = (*iter);
+						ReleaseSRWLockExclusive(&(*iter)->_lock);
+
+						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_LD]->_lock);
+
+						if (targetHp <= 0)
 						{
 							InterlockedIncrement(&_deadCnt);
-							SetPlayerDead(pDamagedPlayer, false);							
+							SetPlayerDead(pDamagedPlayer, false);
 						}
+
 						return;
 					}
 				}
@@ -1897,20 +2470,31 @@ inline void CGameServer::SetPlayerAttack3(CPlayer* pPlayer, CPlayer*& pDamagedPl
 				iter = pSector->_around[dfMOVE_DIR_LU]->_players.begin();
 				for (; iter < pSector->_around[dfMOVE_DIR_LU]->_players.end(); iter++)
 				{
-					int dist = pPlayer->_x - (*iter)->_x;
-					if (dist >= 0 && dist <= dfATTACK3_RANGE_X &&
-						abs((*iter)->_y - pPlayer->_y) <= dfATTACK3_RANGE_Y &&
-						(*iter)->_state == PLAYER_STATE::ALIVE)
-					{
-						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_LU]->_lock);
-						pDamagedPlayer = (*iter);
-						pDamagedPlayer->_hp -= dfATTACK3_DAMAGE;
+					AcquireSRWLockShared(&(*iter)->_lock);
+					PLAYER_STATE targetState = (*iter)->_state;
+					short targetX = (*iter)->_x;
+					short targetY = (*iter)->_y;
+					ReleaseSRWLockShared(&(*iter)->_lock);
 
-						if (pDamagedPlayer->_hp <= 0)
+					int dist = attackerX - targetX;
+					if (dist >= 0 && dist <= dfATTACK3_RANGE_X &&
+						abs(targetY - attackerY) <= dfATTACK3_RANGE_Y &&
+						targetState == PLAYER_STATE::CONNECT)
+					{
+						AcquireSRWLockExclusive(&(*iter)->_lock);
+						(*iter)->_hp -= dfATTACK3_DAMAGE;
+						char targetHp = (*iter)->_hp;
+						pDamagedPlayer = (*iter);
+						ReleaseSRWLockExclusive(&(*iter)->_lock);
+
+						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_LU]->_lock);
+
+						if (targetHp <= 0)
 						{
 							InterlockedIncrement(&_deadCnt);
-							SetPlayerDead(pDamagedPlayer, false);							
+							SetPlayerDead(pDamagedPlayer, false);
 						}
+
 						return;
 					}
 				}
@@ -1919,51 +2503,74 @@ inline void CGameServer::SetPlayerAttack3(CPlayer* pPlayer, CPlayer*& pDamagedPl
 		}
 		else
 		{
-			if (pPlayer->_y <= pSector->_yPosMin + dfATTACK3_RANGE_Y)
+			if (attackerY <= pSector->_yPosMin + dfATTACK3_RANGE_Y)
 			{
 				AcquireSRWLockShared(&pSector->_around[dfMOVE_DIR_DD]->_lock);
 				iter = pSector->_around[dfMOVE_DIR_DD]->_players.begin();
 				for (; iter < pSector->_around[dfMOVE_DIR_DD]->_players.end(); iter++)
 				{
-					int dist = pPlayer->_x - (*iter)->_x;
-					if (dist >= 0 && dist <= dfATTACK3_RANGE_X &&
-						abs((*iter)->_y - pPlayer->_y) <= dfATTACK3_RANGE_Y &&
-						(*iter)->_state == PLAYER_STATE::ALIVE)
-					{
-						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_DD]->_lock);
-						pDamagedPlayer = (*iter);
-						pDamagedPlayer->_hp -= dfATTACK3_DAMAGE;
+					AcquireSRWLockShared(&(*iter)->_lock);
+					PLAYER_STATE targetState = (*iter)->_state;
+					short targetX = (*iter)->_x;
+					short targetY = (*iter)->_y;
+					ReleaseSRWLockShared(&(*iter)->_lock);
 
-						if (pDamagedPlayer->_hp <= 0)
+					int dist = attackerX - targetX;
+					if (dist >= 0 && dist <= dfATTACK3_RANGE_X &&
+						abs(targetY - attackerY) <= dfATTACK3_RANGE_Y &&
+						targetState == PLAYER_STATE::CONNECT)
+					{
+						AcquireSRWLockExclusive(&(*iter)->_lock);
+						(*iter)->_hp -= dfATTACK3_DAMAGE;
+						char targetHp = (*iter)->_hp;
+						pDamagedPlayer = (*iter);
+						ReleaseSRWLockExclusive(&(*iter)->_lock);
+
+						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_DD]->_lock);
+
+						if (targetHp <= 0)
 						{
 							InterlockedIncrement(&_deadCnt);
-							SetPlayerDead(pDamagedPlayer, false);							
+							SetPlayerDead(pDamagedPlayer, false);
 						}
+
 						return;
 					}
 				}
 				ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_DD]->_lock);
 			}
-			else if (pPlayer->_y >= pSector->_yPosMax - dfATTACK3_RANGE_Y)
+			else if (attackerY >= pSector->_yPosMax - dfATTACK3_RANGE_Y)
 			{
 				AcquireSRWLockShared(&pSector->_around[dfMOVE_DIR_UU]->_lock);
 				iter = pSector->_around[dfMOVE_DIR_UU]->_players.begin();
 				for (; iter < pSector->_around[dfMOVE_DIR_UU]->_players.end(); iter++)
 				{
-					int dist = pPlayer->_x - (*iter)->_x;
-					if (dist >= 0 && dist <= dfATTACK3_RANGE_X &&
-						abs((*iter)->_y - pPlayer->_y) <= dfATTACK3_RANGE_Y &&
-						(*iter)->_state == PLAYER_STATE::ALIVE)
-					{
-						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_UU]->_lock);
-						pDamagedPlayer = (*iter);
-						pDamagedPlayer->_hp -= dfATTACK3_DAMAGE;
+					AcquireSRWLockShared(&(*iter)->_lock);
+					PLAYER_STATE targetState = (*iter)->_state;
+					short targetX = (*iter)->_x;
+					short targetY = (*iter)->_y;
+					ReleaseSRWLockShared(&(*iter)->_lock);
 
-						if (pDamagedPlayer->_hp <= 0)
+					int dist = attackerX - targetX;
+					if (dist >= 0 && dist <= dfATTACK3_RANGE_X &&
+						abs(targetY - attackerY) <= dfATTACK3_RANGE_Y &&
+						targetState == PLAYER_STATE::CONNECT)
+					{
+
+						AcquireSRWLockExclusive(&(*iter)->_lock);
+						(*iter)->_hp -= dfATTACK3_DAMAGE;
+						char targetHp = (*iter)->_hp;
+						pDamagedPlayer = (*iter);
+						ReleaseSRWLockExclusive(&(*iter)->_lock);
+
+						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_UU]->_lock);
+
+						if (targetHp <= 0)
 						{
 							InterlockedIncrement(&_deadCnt);
-							SetPlayerDead(pDamagedPlayer, false);						
+							SetPlayerDead(pDamagedPlayer, false);
 						}
+
 						return;
 					}
 				}
@@ -1974,104 +2581,146 @@ inline void CGameServer::SetPlayerAttack3(CPlayer* pPlayer, CPlayer*& pDamagedPl
 	else if (direction == dfMOVE_DIR_RR)
 	{
 		vector<CPlayer*>::iterator iter;
-		CSector* pSector = pPlayer->_pSector;
-
 		AcquireSRWLockShared(&pSector->_around[dfMOVE_DIR_INPLACE]->_lock);
 		iter = pSector->_around[dfMOVE_DIR_INPLACE]->_players.begin();
 		for (; iter < pSector->_around[dfMOVE_DIR_INPLACE]->_players.end(); iter++)
 		{
 			if ((*iter) != pPlayer)
 			{
-				int dist = (*iter)->_x - pPlayer->_x;
-				if (dist >= 0 && dist <= dfATTACK3_RANGE_X &&
-					abs((*iter)->_y - pPlayer->_y) <= dfATTACK3_RANGE_Y &&
-					(*iter)->_state == PLAYER_STATE::ALIVE)
-				{
-					ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_INPLACE]->_lock);
-					pDamagedPlayer = (*iter);
-					pDamagedPlayer->_hp -= dfATTACK3_DAMAGE;
+				AcquireSRWLockShared(&(*iter)->_lock);
+				PLAYER_STATE targetState = (*iter)->_state;
+				short targetX = (*iter)->_x;
+				short targetY = (*iter)->_y;
+				ReleaseSRWLockShared(&(*iter)->_lock);
 
-					if (pDamagedPlayer->_hp <= 0)
+				int dist = targetX - attackerX;
+				if (dist >= 0 && dist <= dfATTACK3_RANGE_X &&
+					abs(targetY - attackerY) <= dfATTACK3_RANGE_Y &&
+					targetState == PLAYER_STATE::CONNECT)
+				{
+					AcquireSRWLockExclusive(&(*iter)->_lock);
+					(*iter)->_hp -= dfATTACK3_DAMAGE;
+					char targetHp = (*iter)->_hp;
+					pDamagedPlayer = (*iter);
+					ReleaseSRWLockExclusive(&(*iter)->_lock);
+
+					ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_INPLACE]->_lock);
+
+					if (targetHp <= 0)
 					{
 						InterlockedIncrement(&_deadCnt);
-						SetPlayerDead(pDamagedPlayer, false);					
+						SetPlayerDead(pDamagedPlayer, false);
 					}
+
 					return;
 				}
 			}
 		}
 		ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_INPLACE]->_lock);
 
-		if (pPlayer->_x >= pSector->_xPosMax - dfATTACK3_RANGE_X)
+		if (attackerX >= pSector->_xPosMax - dfATTACK3_RANGE_X)
 		{
 			AcquireSRWLockShared(&pSector->_around[dfMOVE_DIR_RR]->_lock);
 			iter = pSector->_around[dfMOVE_DIR_RR]->_players.begin();
 			for (; iter < pSector->_around[dfMOVE_DIR_RR]->_players.end(); iter++)
 			{
-				int dist = (*iter)->_x - pPlayer->_x;
-				if (dist >= 0 && dist <= dfATTACK3_RANGE_X &&
-					abs((*iter)->_y - pPlayer->_y) <= dfATTACK3_RANGE_Y &&
-					(*iter)->_state == PLAYER_STATE::ALIVE)
-				{
-					ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_RR]->_lock);
-					pDamagedPlayer = (*iter);
-					pDamagedPlayer->_hp -= dfATTACK3_DAMAGE;
+				AcquireSRWLockShared(&(*iter)->_lock);
+				PLAYER_STATE targetState = (*iter)->_state;
+				short targetX = (*iter)->_x;
+				short targetY = (*iter)->_y;
+				ReleaseSRWLockShared(&(*iter)->_lock);
 
-					if (pDamagedPlayer->_hp <= 0)
+				int dist = targetX - attackerX;
+				if (dist >= 0 && dist <= dfATTACK3_RANGE_X &&
+					abs(targetY - attackerY) <= dfATTACK3_RANGE_Y &&
+					targetState == PLAYER_STATE::CONNECT)
+				{
+					AcquireSRWLockExclusive(&(*iter)->_lock);
+					(*iter)->_hp -= dfATTACK3_DAMAGE;
+					char targetHp = (*iter)->_hp;
+					pDamagedPlayer = (*iter);
+					ReleaseSRWLockExclusive(&(*iter)->_lock);
+
+					ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_RR]->_lock);
+
+					if (targetHp <= 0)
 					{
 						InterlockedIncrement(&_deadCnt);
 						SetPlayerDead(pDamagedPlayer, false);
 					}
+
 					return;
 				}
 			}
 			ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_RR]->_lock);
 
-			if (pPlayer->_y >= pSector->_yPosMax - dfATTACK3_RANGE_Y)
+			if (attackerY >= pSector->_yPosMax - dfATTACK3_RANGE_Y)
 			{
 				AcquireSRWLockShared(&pSector->_around[dfMOVE_DIR_RU]->_lock);
 				iter = pSector->_around[dfMOVE_DIR_RU]->_players.begin();
 				for (; iter < pSector->_around[dfMOVE_DIR_RU]->_players.end(); iter++)
 				{
-					int dist = (*iter)->_x - pPlayer->_x;
-					if (dist >= 0 && dist <= dfATTACK3_RANGE_X &&
-						abs((*iter)->_y - pPlayer->_y) <= dfATTACK3_RANGE_Y &&
-						(*iter)->_state == PLAYER_STATE::ALIVE)
-					{
-						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_RU]->_lock);
-						pDamagedPlayer = (*iter);
-						pDamagedPlayer->_hp -= dfATTACK3_DAMAGE;
+					AcquireSRWLockShared(&(*iter)->_lock);
+					PLAYER_STATE targetState = (*iter)->_state;
+					short targetX = (*iter)->_x;
+					short targetY = (*iter)->_y;
+					ReleaseSRWLockShared(&(*iter)->_lock);
 
-						if (pDamagedPlayer->_hp <= 0)
+					int dist = targetX - attackerX;
+					if (dist >= 0 && dist <= dfATTACK3_RANGE_X &&
+						abs(targetY - attackerY) <= dfATTACK3_RANGE_Y &&
+						targetState == PLAYER_STATE::CONNECT)
+					{
+						AcquireSRWLockExclusive(&(*iter)->_lock);
+						(*iter)->_hp -= dfATTACK3_DAMAGE;
+						char targetHp = (*iter)->_hp;
+						pDamagedPlayer = (*iter);
+						ReleaseSRWLockExclusive(&(*iter)->_lock);
+
+						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_RU]->_lock);
+
+						if (targetHp <= 0)
 						{
 							InterlockedIncrement(&_deadCnt);
-							SetPlayerDead(pDamagedPlayer, false);							
+							SetPlayerDead(pDamagedPlayer, false);
 						}
+
 						return;
 					}
 				}
 				ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_RU]->_lock);
 			}
-			else if (pPlayer->_y <= pSector->_yPosMin + dfATTACK3_RANGE_Y)
+			else if (attackerY <= pSector->_yPosMin + dfATTACK3_RANGE_Y)
 			{
 				AcquireSRWLockShared(&pSector->_around[dfMOVE_DIR_RD]->_lock);
 				iter = pSector->_around[dfMOVE_DIR_RD]->_players.begin();
 				for (; iter < pSector->_around[dfMOVE_DIR_RD]->_players.end(); iter++)
 				{
-					int dist = (*iter)->_x - pPlayer->_x;
-					if (dist >= 0 && dist <= dfATTACK3_RANGE_X &&
-						abs((*iter)->_y - pPlayer->_y) <= dfATTACK3_RANGE_Y &&
-						(*iter)->_state == PLAYER_STATE::ALIVE)
-					{
-						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_RD]->_lock);
-						pDamagedPlayer = (*iter);
-						pDamagedPlayer->_hp -= dfATTACK3_DAMAGE;
+					AcquireSRWLockShared(&(*iter)->_lock);
+					PLAYER_STATE targetState = (*iter)->_state;
+					short targetX = (*iter)->_x;
+					short targetY = (*iter)->_y;
+					ReleaseSRWLockShared(&(*iter)->_lock);
 
-						if (pDamagedPlayer->_hp <= 0)
+					int dist = targetX - attackerX;
+					if (dist >= 0 && dist <= dfATTACK3_RANGE_X &&
+						abs(targetY - attackerY) <= dfATTACK3_RANGE_Y &&
+						targetState == PLAYER_STATE::CONNECT)
+					{
+						AcquireSRWLockExclusive(&(*iter)->_lock);
+						(*iter)->_hp -= dfATTACK3_DAMAGE;
+						char targetHp = (*iter)->_hp;
+						pDamagedPlayer = (*iter);
+						ReleaseSRWLockExclusive(&(*iter)->_lock);
+
+						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_RD]->_lock);
+
+						if (targetHp <= 0)
 						{
 							InterlockedIncrement(&_deadCnt);
-							SetPlayerDead(pDamagedPlayer, false);							
+							SetPlayerDead(pDamagedPlayer, false);
 						}
+
 						return;
 					}
 				}
@@ -2080,51 +2729,73 @@ inline void CGameServer::SetPlayerAttack3(CPlayer* pPlayer, CPlayer*& pDamagedPl
 		}
 		else
 		{
-			if (pPlayer->_y >= pSector->_yPosMax - dfATTACK3_RANGE_Y)
+			if (attackerY >= pSector->_yPosMax - dfATTACK3_RANGE_Y)
 			{
 				AcquireSRWLockShared(&pSector->_around[dfMOVE_DIR_UU]->_lock);
 				iter = pSector->_around[dfMOVE_DIR_UU]->_players.begin();
 				for (; iter < pSector->_around[dfMOVE_DIR_UU]->_players.end(); iter++)
 				{
-					int dist = (*iter)->_x - pPlayer->_x;
-					if (dist >= 0 && dist <= dfATTACK3_RANGE_X &&
-						abs((*iter)->_y - pPlayer->_y) <= dfATTACK3_RANGE_Y &&
-						(*iter)->_state == PLAYER_STATE::ALIVE)
-					{
-						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_UU]->_lock);
-						pDamagedPlayer = (*iter);
-						pDamagedPlayer->_hp -= dfATTACK3_DAMAGE;
+					AcquireSRWLockShared(&(*iter)->_lock);
+					PLAYER_STATE targetState = (*iter)->_state;
+					short targetX = (*iter)->_x;
+					short targetY = (*iter)->_y;
+					ReleaseSRWLockShared(&(*iter)->_lock);
 
-						if (pDamagedPlayer->_hp <= 0)
+					int dist = targetX - attackerX;
+					if (dist >= 0 && dist <= dfATTACK3_RANGE_X &&
+						abs(targetY - attackerY) <= dfATTACK3_RANGE_Y &&
+						targetState == PLAYER_STATE::CONNECT)
+					{
+						AcquireSRWLockExclusive(&(*iter)->_lock);
+						(*iter)->_hp -= dfATTACK3_DAMAGE;
+						char targetHp = (*iter)->_hp;
+						pDamagedPlayer = (*iter);
+						ReleaseSRWLockExclusive(&(*iter)->_lock);
+
+						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_UU]->_lock);
+
+						if (targetHp <= 0)
 						{
 							InterlockedIncrement(&_deadCnt);
-							SetPlayerDead(pDamagedPlayer, false);							
+							SetPlayerDead(pDamagedPlayer, false);
 						}
+
 						return;
 					}
 				}
 				ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_UU]->_lock);
 			}
-			else if (pPlayer->_y <= pSector->_yPosMin + dfATTACK3_RANGE_Y)
+			else if (attackerY <= pSector->_yPosMin + dfATTACK3_RANGE_Y)
 			{
 				AcquireSRWLockShared(&pSector->_around[dfMOVE_DIR_DD]->_lock);
 				iter = pSector->_around[dfMOVE_DIR_DD]->_players.begin();
 				for (; iter < pSector->_around[dfMOVE_DIR_DD]->_players.end(); iter++)
 				{
-					int dist = (*iter)->_x - pPlayer->_x;
-					if (dist >= 0 && dist <= dfATTACK3_RANGE_X &&
-						abs((*iter)->_y - pPlayer->_y) <= dfATTACK3_RANGE_Y &&
-						(*iter)->_state == PLAYER_STATE::ALIVE)
-					{
-						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_DD]->_lock);
-						pDamagedPlayer = (*iter);
-						pDamagedPlayer->_hp -= dfATTACK3_DAMAGE;
+					AcquireSRWLockShared(&(*iter)->_lock);
+					PLAYER_STATE targetState = (*iter)->_state;
+					short targetX = (*iter)->_x;
+					short targetY = (*iter)->_y;
+					ReleaseSRWLockShared(&(*iter)->_lock);
 
-						if (pDamagedPlayer->_hp <= 0)
+					int dist = targetX - attackerX;
+					if (dist >= 0 && dist <= dfATTACK3_RANGE_X &&
+						abs(targetY - attackerY) <= dfATTACK3_RANGE_Y &&
+						targetState == PLAYER_STATE::CONNECT)
+					{
+						AcquireSRWLockExclusive(&(*iter)->_lock);
+						(*iter)->_hp -= dfATTACK3_DAMAGE;
+						char targetHp = (*iter)->_hp;
+						pDamagedPlayer = (*iter);
+						ReleaseSRWLockExclusive(&(*iter)->_lock);
+
+						ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_DD]->_lock);
+
+						if (targetHp <= 0)
 						{
 							InterlockedIncrement(&_deadCnt);
-							SetPlayerDead(pDamagedPlayer, false);							
+							SetPlayerDead(pDamagedPlayer, false);
 						}
+
 						return;
 					}
 				}
@@ -2133,6 +2804,7 @@ inline void CGameServer::SetPlayerAttack3(CPlayer* pPlayer, CPlayer*& pDamagedPl
 		}
 	}
 }
+
 
 inline int CGameServer::SetSCPacket_CREATE_MY_CHAR(CPacket* pPacket, int ID, unsigned char direction, short x, short y, unsigned char hp)
 {

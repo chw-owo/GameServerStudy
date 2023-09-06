@@ -36,6 +36,8 @@ protected:
 	virtual void OnSend(__int64 sessionID, int sendSize) = 0;
 	virtual void OnError(int errorCode, wchar_t* errorMsg) = 0;
 
+	virtual void ForDebug(__int64 sessionID) = 0;
+
 protected:
 	void UpdateMonitorData();
 	inline int GetAcceptTotal() { return _acceptTotal; }
@@ -53,44 +55,81 @@ protected:
 private:
 	static unsigned int WINAPI AcceptThread(void* arg);
 	static unsigned int WINAPI NetworkThread(void* arg);
-	static unsigned int WINAPI ReleaseThread(void* arg);
+	void ReleaseSession(__int64 sessionID);
 
 private:
-	void HandleRecvCP(__int64 sessionID, int recvBytes);
-	void HandleSendCP(__int64 sessionID, int sendBytes);
+	void HandleRecvCP(CSession* pSession, int recvBytes);
+	void HandleSendCP(CSession* pSession, int sendBytes);
 	void RecvPost(CSession* pSession);
 	void SendPost(CSession* pSession);
 
 private:
 	wchar_t _IP[10];
 	short _port;
-	int _numOfWorkerThreads;
 	bool _nagle;
 	int _sessionMax;
 
 private:
 	bool _alive = false;
-	volatile long _sessionCnt = 0;
+	__int64 _IDGenerator = 0;
 	SOCKET _listenSock;
 	CSessionMap* _sessionMap;
-	CObjectPool<CSession>* _pSessionPool;
+	//CObjectPool<CSession>* _pSessionPool;
 
 private:
 	int _acceptTotal = 0;
 	int _disconnectTotal = 0;
+
 	int _acceptTPS = 0;
 	int _disconnectTPS = 0;
 	int _recvMsgTPS = 0;
 	int _sendMsgTPS = 0;
+
 	int _acceptCnt = 0;
 	int _disconnectCnt = 0;
 	int _recvMsgCnt = 0;
 	int _sendMsgCnt = 0;
 
+	// For Debug
+protected:
+	inline int Get10054TPS() { return _10054TPS; }
+	inline int GetDisconnectStartTPS() { return _disconnectStartTPS; }
+	inline int GetDisconnectCompleteTPS() { return _disconnectCompleteTPS; }
+	inline int GetDisconnectReqTPS() { return _disconnectReqTPS; }
+	inline int GetIOCount0TPS() { return _IOCount0TPS; }
+
+private:
+	int _10054TPS = 0;
+	int _disconnectStartTPS = 0;
+	int _disconnectCompleteTPS = 0;
+	int _disconnectReqTPS = 0;
+	int _IOCount0TPS = 0;
+
+	int _10054Cnt = 0;
+	int _disconnectStartCnt = 0;
+	int _disconnectCompleteCnt = 0;
+	int _disconnectReqCnt = 0;
+	int _IOCount0Cnt = 0;
+
+private:
+	// For Debug
+	class ThreadArg
+	{
+	public:
+		ThreadArg(CLanServer* pServer, int num)
+			:_pServer(pServer), _num(num) {};
+	public:
+		CLanServer* _pServer;
+		int _num;
+	};
+
+protected:
+	// For Debug
+	bool* _activeNetworkThreads;
+	int _numOfWorkerThreads;
+
 private:
 	HANDLE _acceptThread;
-	HANDLE _releaseThread;
 	HANDLE* _networkThreads;
-	HANDLE _hReleaseCP;
 	HANDLE _hNetworkCP;
 };

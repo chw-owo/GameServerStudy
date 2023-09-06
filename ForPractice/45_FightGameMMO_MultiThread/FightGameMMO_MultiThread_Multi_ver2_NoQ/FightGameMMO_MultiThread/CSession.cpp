@@ -1,5 +1,6 @@
 #include "CSession.h"
 
+/*
 void CSession::Initialize(__int64 ID, SOCKET sock, SOCKADDR_IN addr)
 {
 	_ID = ID;
@@ -14,3 +15,4 @@ void CSession::Initialize(__int64 ID, SOCKET sock, SOCKADDR_IN addr)
 	ZeroMemory(&_recvOvl._ovl, sizeof(_recvOvl._ovl));
 	ZeroMemory(&_sendOvl._ovl, sizeof(_sendOvl._ovl));
 }
+*/

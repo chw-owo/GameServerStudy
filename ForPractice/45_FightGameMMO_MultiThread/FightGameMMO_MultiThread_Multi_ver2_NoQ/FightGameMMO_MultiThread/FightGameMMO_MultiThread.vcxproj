@@ -139,6 +139,7 @@
     <ClCompile Include="CProcessCpu.cpp" />
     <ClCompile Include="CProcessorCpu.cpp" />
     <ClCompile Include="CProfiler.cpp" />
+    <ClCompile Include="CRingBuffer.cpp" />
     <ClCompile Include="CSession.cpp" />
     <ClCompile Include="CSystemLog.cpp" />
     <ClCompile Include="Main.cpp" />
