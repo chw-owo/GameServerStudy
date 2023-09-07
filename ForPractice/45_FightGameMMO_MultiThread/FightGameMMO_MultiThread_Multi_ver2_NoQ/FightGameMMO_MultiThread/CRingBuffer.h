@@ -3,8 +3,8 @@
 #include <tchar.h>
 #include "CSystemLog.h"
 
-#define DEFAULT_BUF_SIZE 32768 
-#define MAX_BUF_SIZE 65536
+#define DEFAULT_BUF_SIZE 32768
+#define MAX_BUF_SIZE 100000
 extern volatile long resizeCnt;
 
 /*====================================================================
@@ -82,9 +82,9 @@ public:
         if (size > MAX_BUF_SIZE)
         {
             LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
-                L"%s[%d] req %d, max %d",
+                L"%s[%d] req %d, max %d\n",
                 _T(__FUNCTION__), __LINE__, size, MAX_BUF_SIZE);
-            ::wprintf(L"%s[%d] req %d, max %d",
+            ::wprintf(L"%s[%d] req %d, max %d\n",
                 _T(__FUNCTION__), __LINE__, size, MAX_BUF_SIZE);
 
             return -1;
@@ -94,10 +94,10 @@ public:
             if (!Resize(_bufferSize + (int)(size * 1.5f)))
             {
                 LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
-                    L"%s[%d] Fail to Resize",
+                    L"%s[%d] Fail to Resize\n",
                     _T(__FUNCTION__), __LINE__);
-                ::wprintf(L"%s[%d] Fail to Resize",
-                    _T(__FUNCTION__), __LINE__);
+               //::wprintf(L"%s[%d] Fail to Resize\n",
+                    //_T(__FUNCTION__), __LINE__);
 
                 return -1;
             }
@@ -183,9 +183,9 @@ public:
         if (size > MAX_BUF_SIZE)
         {
             LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
-                L"%s[%d] req %d, max %d",
+                L"%s[%d] req %d, max %d\n",
                 _T(__FUNCTION__), __LINE__, size, MAX_BUF_SIZE);
-            ::wprintf(L"%s[%d] req %d, max %d",
+            ::wprintf(L"%s[%d] req %d, max %d\n",
                 _T(__FUNCTION__), __LINE__, size, MAX_BUF_SIZE);
 
             return -1;
@@ -195,9 +195,9 @@ public:
             if (!Resize(_bufferSize + (int)(size * 1.5f)))
             {
                 LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
-                    L"%s[%d] Fail to Resize",
+                    L"%s[%d] Fail to Resize\n",
                     _T(__FUNCTION__), __LINE__, size, MAX_BUF_SIZE);
-                ::wprintf(L"%s[%d] Fail to Resize",
+                ::wprintf(L"%s[%d] Fail to Resize\n",
                     _T(__FUNCTION__), __LINE__, size, MAX_BUF_SIZE);
 
                 return -1;
@@ -234,7 +234,7 @@ public:
     }
 
     // For Debug
-    inline void GetBufferDataForDebug()
+    inline void PrintBufferDataForDebug()
     {
         ::wprintf(L"\n");
         ::wprintf(L"Buffer Size: %d\n", _bufferSize);
@@ -262,8 +262,8 @@ public:
                 L"%s[%d]: req %d, max %d\n",
                 _T(__FUNCTION__), __LINE__, size, MAX_BUF_SIZE);
 
-            ::wprintf(L"%s[%d]: req %d, max %d\n",
-                _T(__FUNCTION__), __LINE__, size, MAX_BUF_SIZE);
+            //::wprintf(L"%s[%d]: req %d, max %d\n",
+            //    _T(__FUNCTION__), __LINE__, size, MAX_BUF_SIZE);
 
             return false;
         }

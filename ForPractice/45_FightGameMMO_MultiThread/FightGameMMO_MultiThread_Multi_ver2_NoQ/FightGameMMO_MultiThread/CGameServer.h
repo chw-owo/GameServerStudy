@@ -77,11 +77,11 @@ private:
 	inline void GetCSPacket_ECHO(CPacket* pPacket, int& time);
 
 	// Set Game Data from Packet Data
-	inline void SetPlayerMoveStart(CPlayer* pPlayer, unsigned char& moveDirection, short& x, short& y);
-	inline void SetPlayerMoveStop(CPlayer* pPlayer, unsigned char& direction, short& x, short& y);
-	inline void SetPlayerAttack1(CPlayer* pPlayer, CPlayer*& pDamagedPlayer, unsigned char& direction, short& x, short& y);
-	inline void SetPlayerAttack2(CPlayer* pPlayer, CPlayer*& pDamagedPlayer, unsigned char& direction, short& x, short& y);
-	inline void SetPlayerAttack3(CPlayer* pPlayer, CPlayer*& pDamagedPlayer, unsigned char& direction, short& x, short& y);
+	inline bool SetPlayerMoveStart(CPlayer* pPlayer, unsigned char& moveDirection, short& x, short& y);
+	inline bool SetPlayerMoveStop(CPlayer* pPlayer, unsigned char& direction, short& x, short& y);
+	inline bool SetPlayerAttack1(CPlayer* pPlayer, CPlayer*& pDamagedPlayer, unsigned char& direction, short& x, short& y);
+	inline bool SetPlayerAttack2(CPlayer* pPlayer, CPlayer*& pDamagedPlayer, unsigned char& direction, short& x, short& y);
+	inline bool SetPlayerAttack3(CPlayer* pPlayer, CPlayer*& pDamagedPlayer, unsigned char& direction, short& x, short& y);
 
 	// Set Data on SC Packet
 	inline int SetSCPacket_CREATE_MY_CHAR(CPacket* pPacket, int ID, unsigned char direction, short x, short y, unsigned char hp);

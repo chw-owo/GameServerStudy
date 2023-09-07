@@ -11,7 +11,6 @@ enum class PLAYER_STATE
 {
 	DISCONNECT,
 	CONNECT,
-	//ALIVE,
 	DEAD
 };
 
@@ -38,10 +37,14 @@ public:
 		_x(-1), _y(-1), _sessionID(-1), _playerID(-1), _pSector(nullptr),
 		_move(false), _hp(-1), _direction(-1), _moveDirection(-1), _lastRecvTime(-1)
 	{
-		_debugLineQ.reserve(50);
-		_debugStateQ.reserve(50);
-		_debugPlayerIDQ.reserve(50);
-		_debugThreadIDQ.reserve(50);
+		/*
+		_debugLineQ.reserve(100);
+		_debugStateQ.reserve(100);
+		_debugPlayerIDQ.reserve(100);
+		_debugThreadIDQ.reserve(100);
+		_debugMinQ.reserve(100);
+		_debugSecQ.reserve(100);
+		*/
 		InitializeSRWLock(&_lock);
 	}
 
@@ -104,48 +107,49 @@ public:
 	DWORD _lastRecvTime;
 
 public:
+	/*
 	vector<int> _debugLineQ;
 	vector<int> _debugStateQ;
 	vector<__int64> _debugPlayerIDQ;
 	vector<int> _debugThreadIDQ;
-
+	vector<int> _debugMinQ;
+	vector<int> _debugSecQ;
 	SRWLOCK _debugQLock;
+	*/
 
 	void PushStateForDebug(int line)
 	{
+		/*
 		AcquireSRWLockExclusive(&_debugQLock);
+		SYSTEMTIME stTime;
+		GetLocalTime(&stTime);
 		_debugLineQ.push_back(line);
 		_debugStateQ.push_back((int)_state);
 		_debugPlayerIDQ.push_back(_playerID);
 		_debugThreadIDQ.push_back(GetCurrentThreadId());
+		_debugMinQ.push_back(stTime.wMinute);
+		_debugSecQ.push_back(stTime.wSecond);
 		ReleaseSRWLockExclusive(&_debugQLock);
+		*/
 	}
 
 	void PrintStateForDebug()
 	{
+		/*
 		AcquireSRWLockExclusive(&_debugQLock);
 		
-		::printf("<%lld: %lld, %lld (%lld)>\n", 
-			_debugLineQ.size(), _debugPlayerIDQ.size(), _debugStateQ.size(), _debugThreadIDQ.size());
+		::printf("\n<%lld>\n", _debugLineQ.size());
 		
-		int i = 0;
-		for (; i < _debugThreadIDQ.size(); i++)
+		
+		for (int i = 0; i < _debugThreadIDQ.size(); i++)
 		{
-			::printf("%d: %lld, %d (%d)\n", _debugLineQ[i], _debugPlayerIDQ[i], _debugStateQ[i], _debugThreadIDQ[i]);
-		}
-		for (; i < _debugPlayerIDQ.size(); i++)
-		{
-			::printf("%d: %lld, %d\n", _debugLineQ[i], _debugPlayerIDQ[i], _debugStateQ[i]);
-		}
-		for(; i < _debugStateQ.size(); i++)
-		{
-			::printf("%d: %d\n", _debugLineQ[i], _debugStateQ[i]);
-		}
-		for (; i < _debugLineQ.size(); i++)
-		{
-			::printf("%d: \n", _debugLineQ[i]);
+			::printf("%d: %lld, %d (%d - %02d:%02d)\n", 
+				_debugLineQ[i], _debugPlayerIDQ[i], 
+				_debugStateQ[i], _debugThreadIDQ[i],
+				_debugMinQ[i], _debugSecQ[i]);
 		}
 
 		ReleaseSRWLockExclusive(&_debugQLock);
+		*/
 	}
 };

@@ -10,16 +10,16 @@
 #include <windows.h>
 
 #define dfSERVER_IP L"0.0.0.0"
-#define dfSERVER_PORT 20000
+#define dfSERVER_PORT 11650
 #define dfMONITOR_CHECKPOINT 11
 
 #define dfPACKET_DEFAULT				100000
 #define dfSESSION_DEFAULT				70000
 #define dfPLAYERS_PER_SECTOR_DEFAULT	1024
 
-#define dfPLAYER_MAX					10000
-#define dfLOGIC_THREAD_NUM				10
-#define dfLOGIC_PLAYER_NUM				1000
+#define dfPLAYER_MAX					8000
+#define dfLOGIC_THREAD_NUM				4
+#define dfLOGIC_PLAYER_NUM				2000
 
 #pragma pack (push, 1)
 struct st_PACKET_HEADER

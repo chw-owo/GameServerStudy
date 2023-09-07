@@ -58,8 +58,8 @@ private:
 	void ReleaseSession(__int64 sessionID);
 
 private:
-	void HandleRecvCP(CSession* pSession, int recvBytes);
-	void HandleSendCP(CSession* pSession, int sendBytes);
+	void HandleRecvCP(__int64 sessionID, int recvBytes);
+	void HandleSendCP(__int64 sessionID, int sendBytes);
 	void RecvPost(CSession* pSession);
 	void SendPost(CSession* pSession);
 
@@ -93,23 +93,13 @@ private:
 	// For Debug
 protected:
 	inline int Get10054TPS() { return _10054TPS; }
-	inline int GetDisconnectStartTPS() { return _disconnectStartTPS; }
-	inline int GetDisconnectCompleteTPS() { return _disconnectCompleteTPS; }
-	inline int GetDisconnectReqTPS() { return _disconnectReqTPS; }
-	inline int GetIOCount0TPS() { return _IOCount0TPS; }
 
 private:
 	int _10054TPS = 0;
-	int _disconnectStartTPS = 0;
-	int _disconnectCompleteTPS = 0;
-	int _disconnectReqTPS = 0;
-	int _IOCount0TPS = 0;
-
 	int _10054Cnt = 0;
-	int _disconnectStartCnt = 0;
-	int _disconnectCompleteCnt = 0;
-	int _disconnectReqCnt = 0;
-	int _IOCount0Cnt = 0;
+
+protected:
+	int _NoSendIOCP = 0;
 
 private:
 	// For Debug
@@ -126,6 +116,7 @@ private:
 protected:
 	// For Debug
 	bool* _activeNetworkThreads;
+	int _activeThreadNum;
 	int _numOfWorkerThreads;
 
 private:

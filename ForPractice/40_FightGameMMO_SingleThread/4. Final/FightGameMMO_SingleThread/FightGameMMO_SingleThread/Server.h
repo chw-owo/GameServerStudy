@@ -15,11 +15,6 @@
 #pragma comment(lib, "ws2_32")
 using namespace std;
 
-// TO-DO
-// 1. 시간 제대로 찍히게 하기
-// 2. 성능 좀 떨어지더라도 더미처럼 로그 남기기
-// 3. 젠장할~~~~~
-
 class CServer
 {
 public:
@@ -40,6 +35,7 @@ public:
 
 			SYSTEMTIME stTime;
 			GetLocalTime(&stTime);
+
 			WCHAR text[dfMONITOR_MAX];
 			swprintf_s(text, dfMONITOR_MAX, 
 				L"[%s %02d:%02d:%02d]----------------------------------\n\nConnected Session: %d\nTotal Sync: %d\nSync/1sec: %d\nAccept/1sec: %d\nDisconnect/1sec: %d\n - Dead: %d\n - Timeout: %d\n - Connect End: %d\n\n", 
@@ -74,9 +70,6 @@ public:
 			}
 
 			/*
-			// ProcessCPUTime.PrintCpuData();
-			// ProcessorCPUTime.PrintCpuData();
-			
 			PRO_PRINT();		
 			if (_checkPointsIdx < dfMONITOR_CHECKPOINT &&
 				_checkPoints[_checkPointsIdx] < connected)

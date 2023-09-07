@@ -39,11 +39,15 @@ public:
 		_releaseOvl._type = NET_TYPE::RELEASE;
 		ZeroMemory(&_releaseOvl._ovl, sizeof(_releaseOvl._ovl));
 
-		_debugLineQ.reserve(500);
-		_debugIOCountQ.reserve(500);
-		_debugFlagQ.reserve(500);
-		_debugUseSizeQ.reserve(500);
-		_debugThreadIDQ.reserve(500);
+		/*
+		_debugLineQ.reserve(10000);
+		_debugIOCountQ.reserve(10000);
+		_debugFlagQ.reserve(10000);
+		_debugUseSizeQ.reserve(10000);
+		_debugThreadIDQ.reserve(10000);
+		_debugMinQ.reserve(10000);
+		_debugSecQ.reserve(10000);
+		*/
 
 		InitializeCriticalSection(&_cs);
 	}
@@ -78,57 +82,52 @@ public:
 	volatile long _IOCount;
 	volatile long _sendFlag;
 
+	
 public:
+	/*
 	vector<int> _debugLineQ;
 	vector<int> _debugIOCountQ;
 	vector<int> _debugFlagQ;
 	vector<int> _debugUseSizeQ;
 	vector<int> _debugThreadIDQ;
+	vector<int> _debugMinQ;
+	vector<int> _debugSecQ;
 	SRWLOCK _debugQLock;
-
+	*/
 	void PushStateForDebug(int line)
 	{
+		/*
 		AcquireSRWLockExclusive(&_debugQLock);
+		SYSTEMTIME stTime;
+		GetLocalTime(&stTime);
 		_debugLineQ.push_back(line);
 		_debugIOCountQ.push_back(_IOCount);
 		_debugFlagQ.push_back(_sendFlag);
 		_debugUseSizeQ.push_back(_sendBuf.GetUseSize());
 		_debugThreadIDQ.push_back(GetCurrentThreadId());
+		_debugMinQ.push_back(stTime.wMinute);
+		_debugSecQ.push_back(stTime.wSecond);
 		ReleaseSRWLockExclusive(&_debugQLock);
+		*/
 	}
 
 	void PrintStateForDebug()
 	{
+		/*
 		AcquireSRWLockExclusive(&_debugQLock);
 
-		::printf("<%lld: %lld, %lld, %lld, (%lld)>\n",
-			_debugLineQ.size(), _debugIOCountQ.size(), _debugFlagQ.size(), _debugUseSizeQ.size(), _debugThreadIDQ.size());
+		::printf("\n<%lld>\n",_debugLineQ.size());
 
-		int i = 0;
-		for (; i < _debugThreadIDQ.size(); i++)
+		for (int i = 0; i < _debugThreadIDQ.size(); i++)
 		{
-			::printf("%d: %d, %d, %d (%d)\n", _debugLineQ[i], _debugIOCountQ[i], _debugFlagQ[i], _debugUseSizeQ[i], _debugThreadIDQ[i]);
-		}
-		for (; i < _debugUseSizeQ.size(); i++)
-		{
-			::printf("%d: %d, %d, %d \n", _debugLineQ[i], _debugIOCountQ[i], _debugFlagQ[i], _debugUseSizeQ[i]);
-		}
-		for (; i < _debugFlagQ.size(); i++)
-		{
-			::printf("%d: %d, %d\n", _debugLineQ[i], _debugIOCountQ[i], _debugFlagQ[i]);
-		}
-		for (; i < _debugIOCountQ.size(); i++)
-		{
-			::printf("%d: %d\n", _debugLineQ[i], _debugIOCountQ[i]);
-		}
-		for (; i < _debugLineQ.size(); i++)
-		{
-			::printf("%d: \n", _debugLineQ[i]);
+			::printf("%d: %d, %d, %d (%d - %02d:%02d)\n", 
+				_debugLineQ[i], _debugIOCountQ[i], _debugFlagQ[i], 
+				_debugUseSizeQ[i], _debugThreadIDQ[i], _debugMinQ[i], _debugSecQ[i]);
 		}
 
 		ReleaseSRWLockExclusive(&_debugQLock);
+		*/
 	}
+	
 };
-
-
 
