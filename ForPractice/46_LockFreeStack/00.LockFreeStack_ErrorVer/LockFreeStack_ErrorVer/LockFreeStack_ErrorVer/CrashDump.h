@@ -33,6 +33,7 @@ public:
 		__in PEXCEPTION_POINTERS pExceptionPointer)
 	{
 		long dumpCount = InterlockedIncrement(&_dumpCount);
+		if (dumpCount != 1) return -1;
 
 		SYSTEMTIME stTime;
 		WCHAR filename[MAX_PATH];

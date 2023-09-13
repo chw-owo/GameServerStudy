@@ -3,6 +3,8 @@
 #ifndef __CRASH_DUMP__
 #define __CRASH_DUMP__
 
+#include "DebugQ.h"
+
 #include <stdio.h>
 #include <crtdbg.h>
 #include <windows.h>
@@ -32,7 +34,11 @@ public:
 	static LONG WINAPI CustomExceptionFilter(
 		__in PEXCEPTION_POINTERS pExceptionPointer)
 	{
+		system_clock::time_point now = system_clock::now();
 		long dumpCount = InterlockedIncrement(&_dumpCount);
+		if (dumpCount != 1) return -1;
+
+		_debugQManager.SaveLog(((nanoseconds)(now - g_Start)).count());
 
 		SYSTEMTIME stTime;
 		WCHAR filename[MAX_PATH];

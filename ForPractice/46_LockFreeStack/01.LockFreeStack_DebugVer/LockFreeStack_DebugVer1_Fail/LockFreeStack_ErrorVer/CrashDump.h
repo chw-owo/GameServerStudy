@@ -3,10 +3,13 @@
 #ifndef __CRASH_DUMP__
 #define __CRASH_DUMP__
 
+#include "DebugQ.h"
+
 #include <stdio.h>
 #include <crtdbg.h>
 #include <windows.h>
 #include <minidumpapiset.h>
+using namespace std;
 
 #pragma comment(lib, "Dbghelp.lib")
 
@@ -32,18 +35,26 @@ public:
 	static LONG WINAPI CustomExceptionFilter(
 		__in PEXCEPTION_POINTERS pExceptionPointer)
 	{
-		long dumpCount = InterlockedIncrement(&_dumpCount);
+		system_clock::time_point now = system_clock::now();
 
+		long dumpCount = InterlockedIncrement(&_dumpCount);
+		if (dumpCount != 1) return -1;
+
+		// Save Stack Log File
+		DebugQManager::GetInstance()->SaveDebugLog(((nanoseconds)(now - g_Start)).count());
+
+		// Save Dump File
 		SYSTEMTIME stTime;
 		WCHAR filename[MAX_PATH];
 		GetLocalTime(&stTime);
-		wsprintf(filename, L"Dump_%d%02d%02d_%02d.%02d.%02d_%d.dmp",
+		
+		::wsprintf(filename, L"Dump_%d%02d%02d_%02d.%02d.%02d_%d.dmp",
 			stTime.wYear, stTime.wMonth, stTime.wDay,
 			stTime.wHour, stTime.wMinute, stTime.wSecond, dumpCount);
-		wprintf(L"\n\n\n Crash Error!!! %d.%d.%d/%d:%d:%d\n",
+		::wprintf(L"\n\n\n Crash Error!!! %d.%d.%d/%d:%d:%d\n",
 			stTime.wYear, stTime.wMonth, stTime.wDay,
 			stTime.wHour, stTime.wMinute, stTime.wSecond);
-		wprintf(L"Now Save Dump File...\n");
+		::wprintf(L"Now Save Dump File...\n");
 
 		HANDLE hDumpFile = ::CreateFile(
 			filename, GENERIC_WRITE, FILE_SHARE_WRITE, NULL,
@@ -60,11 +71,9 @@ public:
 				GetCurrentProcess(), GetCurrentProcessId(), hDumpFile,
 				MiniDumpWithFullMemory, &MinidumpExceptionInformation, NULL, NULL);
 			CloseHandle(hDumpFile);
-			wprintf(L"CrashDump Save Finish!\n");
+			::wprintf(L"CrashDump Save Finish!\n");
 		}
-
-		printf("Hey~~");
-		for (;;);
+		
 		return EXCEPTION_EXECUTE_HANDLER;
 	}
 
