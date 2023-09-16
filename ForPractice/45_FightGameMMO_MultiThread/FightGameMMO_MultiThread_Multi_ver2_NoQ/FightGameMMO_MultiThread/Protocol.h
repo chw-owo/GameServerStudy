@@ -17,9 +17,9 @@
 #define dfSESSION_DEFAULT				70000
 #define dfPLAYERS_PER_SECTOR_DEFAULT	1024
 
-#define dfPLAYER_MAX					8000
-#define dfLOGIC_THREAD_NUM				4
-#define dfLOGIC_PLAYER_NUM				2000
+#define dfPLAYER_MAX					7000
+#define dfLOGIC_THREAD_NUM				7
+#define dfLOGIC_PLAYER_NUM				1000
 
 #pragma pack (push, 1)
 struct st_PACKET_HEADER

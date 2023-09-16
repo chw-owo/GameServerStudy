@@ -26,7 +26,7 @@ public:
 	CSession() {}
 	CSession(__int64 ID, SOCKET sock, SOCKADDR_IN addr)
 	{
-		_alive = true;
+		_socketAlive = true;
 		
 		_ID = ID;
 		_sock = sock;
@@ -39,22 +39,14 @@ public:
 		_releaseOvl._type = NET_TYPE::RELEASE;
 		ZeroMemory(&_releaseOvl._ovl, sizeof(_releaseOvl._ovl));
 
-		/*
-		_debugLineQ.reserve(10000);
-		_debugIOCountQ.reserve(10000);
-		_debugFlagQ.reserve(10000);
-		_debugUseSizeQ.reserve(10000);
-		_debugThreadIDQ.reserve(10000);
-		_debugMinQ.reserve(10000);
-		_debugSecQ.reserve(10000);
-		*/
-
 		InitializeCriticalSection(&_cs);
+		InitializeCriticalSection(&_csDebug);
+		// _debugDataArray.reserve(1000);
 	}
 
 	~CSession()
 	{
-		_alive = false;
+		_socketAlive = false;
 		_ID = -1;
 		_IOCount = -1;
 		_sendFlag = -1;
@@ -64,7 +56,7 @@ public:
 	//void Initialize(__int64 ID, SOCKET sock, SOCKADDR_IN addr);
 
 public:
-	bool _alive;
+	bool _socketAlive;
 	__int64 _ID;
 	SOCKET _sock;
 	SOCKADDR_IN _addr;
@@ -81,51 +73,66 @@ public:
 	CRITICAL_SECTION _cs;
 	volatile long _IOCount;
 	volatile long _sendFlag;
-
 	
+private:
+	class CSessionDebugData
+	{
+		friend CSession;
+
+	private:
+		CSessionDebugData() :
+			_line(-1), _IOCount(-1), _flag(-1), 
+			_sendUseSize(-1), _threadID(-1), _min(-1), _sec(-1){}
+
+		CSessionDebugData(int line, int IOCount, int flag,
+			int sendUseSize, int threadID, int min, int sec, bool recv0, bool send0)
+			: _line(line), _IOCount(IOCount), _flag(flag),
+			_sendUseSize(sendUseSize), _threadID(threadID), _min(min), _sec(sec) {}
+
+	private:
+		int _line;
+		int _IOCount;
+		int _flag;
+		int _sendUseSize;
+		int _threadID;
+		int _min;
+		int _sec;
+	};
+
+private:
+	CRITICAL_SECTION _csDebug;
+	vector<CSessionDebugData*> _debugDataArray;
+
 public:
-	/*
-	vector<int> _debugLineQ;
-	vector<int> _debugIOCountQ;
-	vector<int> _debugFlagQ;
-	vector<int> _debugUseSizeQ;
-	vector<int> _debugThreadIDQ;
-	vector<int> _debugMinQ;
-	vector<int> _debugSecQ;
-	SRWLOCK _debugQLock;
-	*/
 	void PushStateForDebug(int line)
 	{
 		/*
-		AcquireSRWLockExclusive(&_debugQLock);
+		EnterCriticalSection(&_csDebug);
 		SYSTEMTIME stTime;
 		GetLocalTime(&stTime);
-		_debugLineQ.push_back(line);
-		_debugIOCountQ.push_back(_IOCount);
-		_debugFlagQ.push_back(_sendFlag);
-		_debugUseSizeQ.push_back(_sendBuf.GetUseSize());
-		_debugThreadIDQ.push_back(GetCurrentThreadId());
-		_debugMinQ.push_back(stTime.wMinute);
-		_debugSecQ.push_back(stTime.wSecond);
-		ReleaseSRWLockExclusive(&_debugQLock);
+		
+		CSessionDebugData* data = new CSessionDebugData(
+			line, _IOCount, _sendFlag ,_sendBuf.GetUseSize(), GetCurrentThreadId(), 
+			stTime.wMinute, stTime.wSecond);
+		_debugDataArray.push_back(data);
+
+		LeaveCriticalSection(&_csDebug);
 		*/
 	}
 
 	void PrintStateForDebug()
 	{
 		/*
-		AcquireSRWLockExclusive(&_debugQLock);
-
-		::printf("\n<%lld>\n",_debugLineQ.size());
-
-		for (int i = 0; i < _debugThreadIDQ.size(); i++)
+		EnterCriticalSection(&_csDebug);
+		::wprintf(L"\n<%lld>\n", _debugDataArray.size());
+		for (int i = 0; i < _debugDataArray.size(); i++)
 		{
-			::printf("%d: %d, %d, %d (%d - %02d:%02d)\n", 
-				_debugLineQ[i], _debugIOCountQ[i], _debugFlagQ[i], 
-				_debugUseSizeQ[i], _debugThreadIDQ[i], _debugMinQ[i], _debugSecQ[i]);
+			::wprintf(L"%d: %d, %d, %d (%d - %02d:%02d)\n", 
+				_debugDataArray[i]->_line, _debugDataArray[i]->_IOCount, 
+				_debugDataArray[i]->_flag, _debugDataArray[i]->_sendUseSize,
+				_debugDataArray[i]->_threadID, _debugDataArray[i]->_min, _debugDataArray[i]->_sec);
 		}
-
-		ReleaseSRWLockExclusive(&_debugQLock);
+		LeaveCriticalSection(&_csDebug);
 		*/
 	}
 	

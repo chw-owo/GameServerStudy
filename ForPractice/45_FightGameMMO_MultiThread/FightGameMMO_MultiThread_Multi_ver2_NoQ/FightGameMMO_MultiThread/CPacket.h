@@ -6,9 +6,11 @@
 #define _WINSOCKAPI_
 #endif
 
-#include <windows.h>
 #include "Protocol.h"
+#include "CSystemLog.h"
+#include <windows.h>
 #include <stdio.h>
+#include <tchar.h>
 
 class CPacket
 {
@@ -62,7 +64,12 @@ public:
 	{
 		if (iBufferSize > eBUFFER_MAX)
 		{
-			::printf("Requested Resize Size is too Big!! %d -> %d\n", _iBufferSize, iBufferSize);
+			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+				L"%s[%d] req %d, max %d\n",
+				_T(__FUNCTION__), __LINE__, iBufferSize, eBUFFER_MAX);
+			::wprintf(L"%s[%d] req %d, max %d\n",
+				_T(__FUNCTION__), __LINE__, iBufferSize, eBUFFER_MAX);
+
 			return -1;
 		}
 
@@ -71,7 +78,6 @@ public:
 		delete[] _chpBuffer;
 
 		_chpBuffer = chpNewBuffer;
-		::printf("Resize!! %d -> %d\n", _iBufferSize, iBufferSize);
 		_iBufferSize = iBufferSize;
 
 		return _iBufferSize;
@@ -90,15 +96,23 @@ public:
 	{
 		if (iSize < 0)
 		{
-			::printf("Error! Func %s Line %d (req size - %d)\n",
-				__func__, __LINE__, iSize);
+			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+				L"%s[%d] req %d < 0\n",
+				_T(__FUNCTION__), __LINE__, iSize);
+			::wprintf(L"%s[%d] req %d < 0\n",
+				_T(__FUNCTION__), __LINE__, iSize);
+
 			return -1;
 		}
 
 		if (_iPayloadReadPos + iSize > _iBufferSize)
 		{
-			::printf("Error! Func %s Line %d (read pos - %d, req size - %d)\n",
-				__func__, __LINE__, _iPayloadReadPos, iSize);
+			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+				L"%s[%d] read pos + req %d, buffer size %d\n",
+				_T(__FUNCTION__), __LINE__, _iPayloadReadPos + iSize, _iBufferSize);
+			::wprintf(L"%s[%d] read pos + req %d, buffer size %d\n",
+				_T(__FUNCTION__), __LINE__, _iPayloadReadPos + iSize, _iBufferSize);
+
 			return -1;
 		}
 
@@ -111,15 +125,23 @@ public:
 	{
 		if (iSize < 0)
 		{
-			::printf("Error! Func %s Line %d (req size - %d)\n",
-				__func__, __LINE__, iSize);
+			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+				L"%s[%d] req %d < 0\n",
+				_T(__FUNCTION__), __LINE__, iSize);
+			::wprintf(L"%s[%d] req %d < 0\n",
+				_T(__FUNCTION__), __LINE__, iSize);
+
 			return -1;
 		}
 
 		if (_iPayloadWritePos + iSize > _iBufferSize)
 		{
-			::printf("Error! Func %s Line %d (write pos - %d, req size - %d)\n",
-				__func__, __LINE__, _iPayloadWritePos, iSize);
+			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+				L"%s[%d] write pos + req %d, buffer size %d\n",
+				_T(__FUNCTION__), __LINE__, _iPayloadReadPos + iSize, _iBufferSize);
+			::wprintf(L"%s[%d] write pos + req %d, buffer size %d\n",
+				_T(__FUNCTION__), __LINE__, _iPayloadReadPos + iSize, _iBufferSize);
+
 			return -1;
 		}
 
@@ -137,19 +159,27 @@ public:
 	{
 		if (iSize < 0)
 		{
-			::printf("Error! Func %s Line %d (req size - %d)\n",
-				__func__, __LINE__, iSize);
+			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+				L"%s[%d] req %d < 0\n",
+				_T(__FUNCTION__), __LINE__, iSize);
+			::wprintf(L"%s[%d] req %d < 0\n",
+				_T(__FUNCTION__), __LINE__, iSize);
+
+			return -1;
+		}
+
+		if (_iHeaderReadPos + iSize > _iHeaderSize)
+		{
+			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+				L"%s[%d] read pos + req %d, buffer size %d\n",
+				_T(__FUNCTION__), __LINE__, _iHeaderReadPos + iSize, _iHeaderSize);
+			::wprintf(L"%s[%d] read pos + req %d, buffer size %d\n",
+				_T(__FUNCTION__), __LINE__, _iHeaderReadPos + iSize, _iHeaderSize);
+
 			return -1;
 		}
 
 		_iHeaderReadPos += iSize;
-
-		if (_iHeaderReadPos > _iHeaderSize)
-		{
-			::printf("Error! Func %s Line %d (read pos - %d, req size - %d)\n",
-				__func__, __LINE__, _iHeaderReadPos, iSize);
-			return -1;
-		}
 
 		return iSize;
 	}
@@ -158,19 +188,27 @@ public:
 	{
 		if (iSize < 0)
 		{
-			::printf("Error! Func %s Line %d (req size - %d)\n",
-				__func__, __LINE__, iSize);
+			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+				L"%s[%d] req %d < 0\n",
+				_T(__FUNCTION__), __LINE__, iSize);
+			::wprintf(L"%s[%d] req %d < 0\n",
+				_T(__FUNCTION__), __LINE__, iSize);
+
+			return -1;
+		}
+
+		if (_iHeaderWritePos + iSize > _iHeaderSize)
+		{
+			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+				L"%s[%d] write pos + req %d, buffer size %d\n",
+				_T(__FUNCTION__), __LINE__, _iHeaderWritePos + iSize, _iHeaderSize);
+			::wprintf(L"%s[%d] write pos + req %d, buffer size %d\n",
+				_T(__FUNCTION__), __LINE__, _iHeaderWritePos + iSize, _iHeaderSize);
+
 			return -1;
 		}
 
 		_iHeaderWritePos += iSize;
-
-		if (_iHeaderWritePos > _iHeaderSize)
-		{
-			::printf("Error! Func %s Line %d (write pos - %d, req size - %d)\n",
-				__func__, __LINE__, _iHeaderWritePos, iSize);
-			return -1;
-		}
 
 		return iSize;
 	}
@@ -214,8 +252,13 @@ public:
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(float))
 		{
-			::printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n",
-				_iPayloadWritePos - _iPayloadReadPos, sizeof(float), __func__, __LINE__);
+			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+				L"%s[%d]: used size %d, req size %lld\n", _T(__FUNCTION__), __LINE__,
+				_iPayloadWritePos - _iPayloadReadPos, sizeof(float));
+
+			::wprintf(L"%s[%d]: used size %d, req size %lld\n", _T(__FUNCTION__), __LINE__,
+				_iPayloadWritePos - _iPayloadReadPos, sizeof(float));
+
 			return *this;
 		}
 
@@ -230,8 +273,13 @@ public:
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(double))
 		{
-			::printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n",
-				_iPayloadWritePos - _iPayloadReadPos, sizeof(double), __func__, __LINE__);
+			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+				L"%s[%d]: used size %d, req size %lld\n", _T(__FUNCTION__), __LINE__, 
+				_iPayloadWritePos - _iPayloadReadPos, sizeof(double));
+
+			::wprintf(L"%s[%d]: used size %d, req size %lld\n", _T(__FUNCTION__), __LINE__,
+				_iPayloadWritePos - _iPayloadReadPos, sizeof(double));
+
 			return *this;
 		}
 
@@ -337,8 +385,13 @@ public:
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(char))
 		{
-			::printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n",
-				_iPayloadWritePos - _iPayloadReadPos, sizeof(char), __func__, __LINE__);
+			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+				L"%s[%d]: used size %d, req size %lld\n", _T(__FUNCTION__), __LINE__,
+				_iPayloadWritePos - _iPayloadReadPos, sizeof(char));
+
+			::wprintf(L"%s[%d]: used size %d, req size %lld\n", _T(__FUNCTION__), __LINE__,
+				_iPayloadWritePos - _iPayloadReadPos, sizeof(char));
+
 			return *this;
 		}
 
@@ -353,8 +406,13 @@ public:
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(BYTE))
 		{
-			::printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n",
-				_iPayloadWritePos - _iPayloadReadPos, sizeof(BYTE), __func__, __LINE__);
+			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+				L"%s[%d]: used size %d, req size %lld\n", _T(__FUNCTION__), __LINE__,
+				_iPayloadWritePos - _iPayloadReadPos, sizeof(BYTE));
+
+			::wprintf(L"%s[%d]: used size %d, req size %lld\n", _T(__FUNCTION__), __LINE__,
+				_iPayloadWritePos - _iPayloadReadPos, sizeof(BYTE));
+
 			return *this;
 		}
 
@@ -369,8 +427,12 @@ public:
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(wchar_t))
 		{
-			::printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n",
-				_iPayloadWritePos - _iPayloadReadPos, sizeof(wchar_t), __func__, __LINE__);
+			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+				L"%s[%d]: used size %d, req size %lld\n", _T(__FUNCTION__), __LINE__,
+				_iPayloadWritePos - _iPayloadReadPos, sizeof(wchar_t));
+
+			::wprintf(L"%s[%d]: used size %d, req size %lld\n", _T(__FUNCTION__), __LINE__,
+				_iPayloadWritePos - _iPayloadReadPos, sizeof(wchar_t));
 			return *this;
 		}
 
@@ -385,8 +447,12 @@ public:
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(short))
 		{
-			::printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n",
-				_iPayloadWritePos - _iPayloadReadPos, sizeof(short), __func__, __LINE__);
+			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+				L"%s[%d]: used size %d, req size %lld\n", _T(__FUNCTION__), __LINE__,
+				_iPayloadWritePos - _iPayloadReadPos, sizeof(short));
+
+			::wprintf(L"%s[%d]: used size %d, req size %lld\n", _T(__FUNCTION__), __LINE__,
+				_iPayloadWritePos - _iPayloadReadPos, sizeof(short));
 			return *this;
 		}
 
@@ -401,8 +467,12 @@ public:
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(WORD))
 		{
-			::printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n",
-				_iPayloadWritePos - _iPayloadReadPos, sizeof(WORD), __func__, __LINE__);
+			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+				L"%s[%d]: used size %d, req size %lld\n", _T(__FUNCTION__), __LINE__,
+				_iPayloadWritePos - _iPayloadReadPos, sizeof(WORD));
+
+			::wprintf(L"%s[%d]: used size %d, req size %lld\n", _T(__FUNCTION__), __LINE__,
+				_iPayloadWritePos - _iPayloadReadPos, sizeof(WORD));
 			return *this;
 		}
 
@@ -417,8 +487,12 @@ public:
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(int))
 		{
-			::printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n",
-				_iPayloadWritePos - _iPayloadReadPos, sizeof(int), __func__, __LINE__);
+			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+				L"%s[%d]: used size %d, req size %lld\n", _T(__FUNCTION__), __LINE__,
+				_iPayloadWritePos - _iPayloadReadPos, sizeof(int));
+
+			::wprintf(L"%s[%d]: used size %d, req size %lld\n", _T(__FUNCTION__), __LINE__,
+				_iPayloadWritePos - _iPayloadReadPos, sizeof(int));
 			return *this;
 		}
 
@@ -433,8 +507,12 @@ public:
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(DWORD))
 		{
-			::printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n",
-				_iPayloadWritePos - _iPayloadReadPos, sizeof(DWORD), __func__, __LINE__);
+			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+				L"%s[%d]: used size %d, req size %lld\n", _T(__FUNCTION__), __LINE__,
+				_iPayloadWritePos - _iPayloadReadPos, sizeof(DWORD));
+
+			::wprintf(L"%s[%d]: used size %d, req size %lld\n", _T(__FUNCTION__), __LINE__,
+				_iPayloadWritePos - _iPayloadReadPos, sizeof(DWORD));
 			return *this;
 		}
 
@@ -449,8 +527,12 @@ public:
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(__int64))
 		{
-			::printf("Used Size(%d) < Requested Size(%llu)!: %s %d\n",
-				_iPayloadWritePos - _iPayloadReadPos, sizeof(__int64), __func__, __LINE__);
+			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+				L"%s[%d]: used size %d, req size %lld\n", _T(__FUNCTION__), __LINE__,
+				_iPayloadWritePos - _iPayloadReadPos, sizeof(__int64));
+
+			::wprintf(L"%s[%d]: used size %d, req size %lld\n", _T(__FUNCTION__), __LINE__,
+				_iPayloadWritePos - _iPayloadReadPos, sizeof(__int64));
 			return *this;
 		}
 
@@ -465,7 +547,11 @@ public:
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < iSize)
 		{
-			::printf("Used Size(%d) is small than Requested Size(%d)!\n",
+			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+				L"%s[%d]: used size %d, req size %lld\n", _T(__FUNCTION__), __LINE__,
+				_iPayloadWritePos - _iPayloadReadPos, iSize);
+
+			::wprintf(L"%s[%d]: used size %d, req size %lld\n", _T(__FUNCTION__), __LINE__,
 				_iPayloadWritePos - _iPayloadReadPos, iSize);
 			return -1;
 		}
@@ -480,7 +566,11 @@ public:
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < iSize)
 		{
-			::printf("Used Size(%d) is small than Requested Size(%d)!\n",
+			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+				L"%s[%d]: used size %d, req size %lld\n", _T(__FUNCTION__), __LINE__,
+				_iPayloadWritePos - _iPayloadReadPos, iSize);
+
+			::wprintf(L"%s[%d]: used size %d, req size %lld\n", _T(__FUNCTION__), __LINE__,
 				_iPayloadWritePos - _iPayloadReadPos, iSize);
 			return -1;
 		}
@@ -506,15 +596,23 @@ public:
 	{
 		if (_iHeaderSize < iSize)
 		{
-			::printf("Header(%d) is small than Requested Size(%d)! (read: %d)\n",
-				_iHeaderSize, iSize, _iHeaderReadPos);
+			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+				L"%s[%d]: header max size %d, req size %lld\n", 
+				_T(__FUNCTION__), __LINE__, _iHeaderSize, iSize);
+
+			::wprintf(L"%s[%d]: header max size %d, req size %lld\n",
+				_T(__FUNCTION__), __LINE__, _iHeaderSize, iSize);
 			return -1;
 		}
 
 		if (_iHeaderWritePos - _iHeaderReadPos < iSize)
 		{
-			::printf("Header(%d) is small than Requested Size(%d)! (read: %d)\n",
-				_iHeaderSize, iSize, _iHeaderReadPos);
+			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+				L"%s[%d]: header use size %d, req size %lld\n",
+				_T(__FUNCTION__), __LINE__, _iHeaderWritePos - _iHeaderReadPos, iSize);
+
+			::wprintf(L"%s[%d]: header use size %d, req size %lld\n",
+				_T(__FUNCTION__), __LINE__, _iHeaderWritePos - _iHeaderReadPos, iSize);
 			return -1;
 		}
 
@@ -526,10 +624,25 @@ public:
 
 	inline int	PeekHeaderData(char* chpDest, int iSize)
 	{
+		if (_iHeaderSize < iSize)
+		{
+			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+				L"%s[%d]: header max size %d, req size %lld\n",
+				_T(__FUNCTION__), __LINE__, _iHeaderSize, iSize);
+
+			::wprintf(L"%s[%d]: header max size %d, req size %lld\n",
+				_T(__FUNCTION__), __LINE__, _iHeaderSize, iSize);
+			return -1;
+		}
+
 		if (_iHeaderWritePos - _iHeaderReadPos < iSize)
 		{
-			::printf("Usable Size(%d) is small than Requested Size(%d)! (header read pos: %d)\n",
-				_iHeaderWritePos - _iHeaderReadPos, iSize, _iHeaderReadPos);
+			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+				L"%s[%d]: header use size %d, req size %lld\n",
+				_T(__FUNCTION__), __LINE__, _iHeaderWritePos - _iHeaderReadPos, iSize);
+
+			::wprintf(L"%s[%d]: header use size %d, req size %lld\n",
+				_T(__FUNCTION__), __LINE__, _iHeaderWritePos - _iHeaderReadPos, iSize);
 			return -1;
 		}
 
@@ -541,8 +654,12 @@ public:
 	{
 		if (_iHeaderSize < _iHeaderWritePos + iSrcSize)
 		{
-			::printf("Usable size(%d) is small than Requested Size(%d)! (header write pos: %d)\n",
-				_iHeaderSize - _iHeaderWritePos, iSrcSize, _iHeaderWritePos);
+			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+				L"%s[%d]: header max size %d, write pos + req size %lld\n",
+				_T(__FUNCTION__), __LINE__, _iHeaderSize, _iHeaderWritePos + iSrcSize);
+
+			::wprintf(L"%s[%d]: header max size %d, write pos + req size %lld\n",
+				_T(__FUNCTION__), __LINE__, _iHeaderSize, _iHeaderWritePos + iSrcSize);
 			return -1;
 		}
 

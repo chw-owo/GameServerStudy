@@ -1,2 +1,2 @@
 #pragma once
-extern bool g_bShutdown;
+extern bool g_bShutdown; // now not used 

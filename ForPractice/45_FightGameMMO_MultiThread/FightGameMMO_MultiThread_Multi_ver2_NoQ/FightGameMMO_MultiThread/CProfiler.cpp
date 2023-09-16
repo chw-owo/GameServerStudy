@@ -214,7 +214,7 @@ void CProfilerManager::PrintResult(void)
 	{
 		CProfiler* pf = *iter;
 
-		::printf(
+		wprintf(
 			"\n<Thread ID: %d>\n"
 			"----------------------------------------------\n"
 			"| Name | Average | Min | Max | Call | Total |\n"

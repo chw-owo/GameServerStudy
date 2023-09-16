@@ -9,6 +9,8 @@
 __declspec (thread) CProfiler* pSTLSProfiler = new CProfiler;
 #endif
 
+// TO-DO: Send IOCP가 돌아오지 않는다~~
+
 bool CLanServer::NetworkStart(const wchar_t* IP, short port,
 	int numOfWorkerThreads, bool nagle, int sessionMax)
 {
@@ -24,14 +26,20 @@ bool CLanServer::NetworkStart(const wchar_t* IP, short port,
 
 	//_pSessionPool = new CObjectPool<CSession>(dfSESSION_DEFAULT, true);
 	_pPacketPool = new CObjectPool<CPacket>(dfPACKET_DEFAULT, false);
-	_activeNetworkThreads = new bool[_numOfWorkerThreads];
 
 	// Initialize Winsock
 	WSADATA wsa;
 	int startRet = WSAStartup(MAKEWORD(2, 2), &wsa);
 	if (startRet != 0)
 	{
-		::printf("Error! %s(%d)\n", __func__, __LINE__);
+		LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+			L"%s[%d]: WSAStartup Error\n",
+			_T(__FUNCTION__), __LINE__);
+
+		::wprintf(L"%s[%d]: WSAStartup Error\n",
+			_T(__FUNCTION__), __LINE__);
+
+		__debugbreak();
 		return false;
 	}
 
@@ -39,7 +47,16 @@ bool CLanServer::NetworkStart(const wchar_t* IP, short port,
 	_listenSock = socket(AF_INET, SOCK_STREAM, 0);
 	if (_listenSock == INVALID_SOCKET)
 	{
-		::printf("Error! %s(%d)\n", __func__, __LINE__);
+		int err = WSAGetLastError();
+
+		LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+			L"%s[%d]: listen sock is INVALIED, %d\n",
+			_T(__FUNCTION__), __LINE__, err);
+
+		::wprintf(L"%s[%d]: listen sock is INVALIED, %d\n",
+			_T(__FUNCTION__), __LINE__, err);
+
+		__debugbreak();
 		return false;
 	}
 
@@ -50,7 +67,16 @@ bool CLanServer::NetworkStart(const wchar_t* IP, short port,
 		(char*)&optval, sizeof(optval));
 	if (optRet == SOCKET_ERROR)
 	{
-		::printf("Error! %s(%d)\n", __func__, __LINE__);
+		int err = WSAGetLastError();
+
+		LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+			L"%s[%d]: bind Error, %d\n",
+			_T(__FUNCTION__), __LINE__, err);
+
+		::wprintf(L"%s[%d]: bind Error, %d\n",
+			_T(__FUNCTION__), __LINE__, err);
+		
+		__debugbreak();
 		return false;
 	}
 
@@ -64,7 +90,14 @@ bool CLanServer::NetworkStart(const wchar_t* IP, short port,
 	if (bindRet == SOCKET_ERROR)
 	{
 		int err = WSAGetLastError();
-		::printf("Error! %s(%d): %d\n", __func__, __LINE__, err);
+		LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+			L"%s[%d]: bind Error, %d\n",
+			_T(__FUNCTION__), __LINE__, err);
+
+		::wprintf(L"%s[%d]: bind Error, %d\n",
+			_T(__FUNCTION__), __LINE__, err);
+
+		__debugbreak();
 		return false;
 	}
 
@@ -72,7 +105,14 @@ bool CLanServer::NetworkStart(const wchar_t* IP, short port,
 	if (listenRet == SOCKET_ERROR)
 	{
 		int err = WSAGetLastError();
-		::printf("Error! %s(%d): %d\n", __func__, __LINE__, err);
+		LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+			L"%s[%d]: listen Error, %d\n",
+			_T(__FUNCTION__), __LINE__, err);
+
+		::wprintf(L"%s[%d]: listen Error, %d\n",
+			_T(__FUNCTION__), __LINE__, err);
+
+		__debugbreak();
 		return false;
 	}
 
@@ -86,7 +126,14 @@ bool CLanServer::NetworkStart(const wchar_t* IP, short port,
 	_acceptThread = (HANDLE)_beginthreadex(NULL, 0, AcceptThread, pLanServer, 0, nullptr);
 	if (_acceptThread == NULL)
 	{
-		::printf("Error! %s(%d)\n", __func__, __LINE__);
+		LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+			L"%s[%d]: Begin Accept Thread Error\n",
+			_T(__FUNCTION__), __LINE__ );
+
+		::wprintf(L"%s[%d]: Begin Accept Thread Error\n",
+			_T(__FUNCTION__), __LINE__);
+
+		__debugbreak();
 		return false;
 	}
 
@@ -94,7 +141,14 @@ bool CLanServer::NetworkStart(const wchar_t* IP, short port,
 	_hNetworkCP = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
 	if (_hNetworkCP == NULL)
 	{
-		::printf("Error! %s(%d)\n", __func__, __LINE__);
+		LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+			L"%s[%d]: Create IOCP Error\n",
+			_T(__FUNCTION__), __LINE__);
+
+		::wprintf(L"%s[%d]: Create IOCP Error\n",
+			_T(__FUNCTION__), __LINE__);
+
+		__debugbreak();
 		return false;
 	}
 
@@ -102,18 +156,23 @@ bool CLanServer::NetworkStart(const wchar_t* IP, short port,
 	_networkThreads = new HANDLE[_numOfWorkerThreads];
 	for (int i = 0; i < _numOfWorkerThreads; i++)
 	{
-		ThreadArg* arg = new ThreadArg(this, i);
-		_networkThreads[i] = (HANDLE)_beginthreadex(
-			NULL, 0, NetworkThread, arg, 0, nullptr);
-
+		_networkThreads[i] = (HANDLE)_beginthreadex(NULL, 0, NetworkThread, this, 0, nullptr);
 		if (_networkThreads[i] == NULL)
 		{
-			::printf("Error! %s(%d)\n", __func__, __LINE__);
+			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+				L"%s[%d]: Begin Network Thread Error\n",
+				_T(__FUNCTION__), __LINE__);
+
+			::wprintf(L"%s[%d]: Begin Network Thread Error\n",
+				_T(__FUNCTION__), __LINE__);
+
+			__debugbreak();
 			return false;
 		}
 	}
 
-	::printf("Network Setting Complete\n");
+	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Network Setting Complete\n");
+	::wprintf(L"Network Setting Complete\n");
 	return true;
 }
 
@@ -121,7 +180,13 @@ void CLanServer::NetworkTerminate()
 {
 	if (!_alive)
 	{
-		::printf("Invalid Request. It's already stopped\n");
+		LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+			L"%s[%d]: Invalid Request. It's already stopped\n",
+			_T(__FUNCTION__), __LINE__);
+
+		::wprintf(L"%s[%d]: Invalid Request. It's already stopped\n",
+			_T(__FUNCTION__), __LINE__);
+
 		return;
 	}
 
@@ -143,7 +208,14 @@ void CLanServer::NetworkTerminate()
 	if (socktmp == INVALID_SOCKET)
 	{
 		int err = ::WSAGetLastError();
-		::printf("Error! Line %d: %d", __LINE__, err);
+		LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+			L"%s[%d]: socket Error, %d\n",
+			_T(__FUNCTION__), __LINE__, err);
+
+		::wprintf(L"%s[%d]: socket Error, %d\n",
+			_T(__FUNCTION__), __LINE__, err);
+
+		__debugbreak();
 		return;
 	}
 
@@ -151,7 +223,14 @@ void CLanServer::NetworkTerminate()
 	if (connectRet == SOCKET_ERROR)
 	{
 		int err = ::WSAGetLastError();
-		::printf("Error! Line %d: %d", __LINE__, err);
+		LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+			L"%s[%d]: connect Error, %d\n",
+			_T(__FUNCTION__), __LINE__, err);
+
+		::wprintf(L"%s[%d]: connect Error, %d\n",
+			_T(__FUNCTION__), __LINE__, err);
+
+		__debugbreak();
 		return;
 	}
 	WaitForSingleObject(_acceptThread, INFINITE);
@@ -167,7 +246,7 @@ void CLanServer::NetworkTerminate()
 		__int64 ID = pSession->_ID;
 		delete pSession;
 		//_pSessionPool->Free(pSession);
-		//::printf("Disconnect Client(ID: % llu)\n", ID);
+		//::wprintf("Disconnect Client(ID: % llu)\n", ID);
 		iter = _sessionMap->_map.erase(iter);
 	}
 
@@ -178,7 +257,8 @@ void CLanServer::NetworkTerminate()
 		CloseHandle(_networkThreads[i]);
 	delete[] _networkThreads;
 
-	::printf("\nNetwork Stop\n");
+	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Network Terminate.\n");
+	::wprintf(L"Network Terminate.\n");
 }
 
 bool CLanServer::Disconnect(__int64 sessionID)
@@ -195,11 +275,14 @@ bool CLanServer::Disconnect(__int64 sessionID)
 	EnterCriticalSection(&pSession->_cs);
 	ReleaseSRWLockShared(&_sessionMap->_lock);
 
-	//pSession->PushStateForDebug(__LINE__);
+	// pSession->PushStateForDebug(__LINE__); 
 
-	pSession->_alive = false;
-	PostQueuedCompletionStatus(_hNetworkCP, 1,
-		(ULONG_PTR)pSession->_ID, (LPOVERLAPPED)&pSession->_releaseOvl);
+	if(pSession->_socketAlive)
+	{
+		_serverDisconnCnt++;
+		pSession->_socketAlive = false;
+		closesocket(pSession->_sock);
+	}
 
 	LeaveCriticalSection(&pSession->_cs);
 
@@ -220,7 +303,7 @@ bool CLanServer::SendPacket(__int64 sessionID, CPacket* packet)
 	EnterCriticalSection(&pSession->_cs);
 	ReleaseSRWLockShared(&_sessionMap->_lock);
 
-	if (!pSession->_alive)
+	if (!pSession->_socketAlive)
 	{
 		LeaveCriticalSection(&pSession->_cs);
 		return false;
@@ -235,7 +318,13 @@ bool CLanServer::SendPacket(__int64 sessionID, CPacket* packet)
 		int putRet = packet->PutHeaderData((char*)&header, dfHEADER_LEN);
 		if (putRet != dfHEADER_LEN)
 		{
-			::printf("Error! Func %s Line %d\n", __func__, __LINE__);
+			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+				L"%s[%d]: Packet Return Error\n",
+				_T(__FUNCTION__), __LINE__);
+
+			::wprintf(L"%s[%d]: Packet Return Error\n",
+				_T(__FUNCTION__), __LINE__);
+
 			__debugbreak();
 			LeaveCriticalSection(&pSession->_cs);
 			return false;
@@ -247,23 +336,14 @@ bool CLanServer::SendPacket(__int64 sessionID, CPacket* packet)
 
 	if (enqueueRet != packetSize)
 	{
-		/*
-		::printf("Error! Func %s Line %d\n", __func__, __LINE__);
-		pSession->PushStateForDebug(__LINE__);
-		pSession->PrintStateForDebug();
-		ForDebug(pSession->_ID);
-		__debugbreak();
-		*/
+		LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+			L"%s[%d]: Packet Return Error\n",
+			_T(__FUNCTION__), __LINE__);
 
-		//::printf("%lld: buffer is full\n", pSession->_ID);
-		//pSession->_sendBuf.PrintBufferDataForDebug();
+		::wprintf(L"%s[%d]: Packet Return Error\n",
+			_T(__FUNCTION__), __LINE__);
 
-		_NoSendIOCP++;
-		pSession->_alive = false;
-		PostQueuedCompletionStatus(_hNetworkCP, 1,
-			(ULONG_PTR)pSession->_ID, (LPOVERLAPPED)&pSession->_releaseOvl);
 		LeaveCriticalSection(&pSession->_cs);
-
 		return false;
 	}
 
@@ -287,14 +367,20 @@ unsigned int __stdcall CLanServer::AcceptThread(void* arg)
 		SOCKET client_sock = accept(pLanServer->_listenSock, (SOCKADDR*)&clientaddr, &addrlen);
 		if (client_sock == INVALID_SOCKET)
 		{
-			::printf("Error! %s(%d)\n", __func__, __LINE__);
+			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+				L"%s[%d]: accept Error\n",
+				_T(__FUNCTION__), __LINE__);
+
+			::wprintf(L"%s[%d]: accept Error\n",
+				_T(__FUNCTION__), __LINE__);
+
 			__debugbreak();
 			break;
 		}
 
 		if (g_bShutdown) break;
 		if (!pLanServer->_alive) break;
-		if (!pLanServer->OnConnectRequest()) continue;
+		// if (!pLanServer->OnConnectRequest()) continue;
 
 		if (pLanServer->GetSessionCount() >= pLanServer->_sessionMax)
 		{     
@@ -304,21 +390,26 @@ unsigned int __stdcall CLanServer::AcceptThread(void* arg)
 
 		PRO_BEGIN(L"LS: AcceptThread");
 
-		CSession* pSession = new CSession(pLanServer->_IDGenerator++, client_sock, clientaddr);
-		//pSession->PushStateForDebug(__LINE__);
+		CSession* pSession = new CSession(
+			pLanServer->_IDGenerator++, client_sock, clientaddr);
 
-		//CSession* pSession = pLanServer->_pSessionPool->Alloc(
-		//	pLanServer->_IDGenerator++, client_sock, clientaddr);
-		//pSession->Initialize(sessionID++, client_sock, clientaddr);
 		if (pSession == nullptr)
 		{
-			::printf("Error! %s(%d)\n", __func__, __LINE__);
+			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+				L"%s[%d]: new Session Error\n",
+				_T(__FUNCTION__), __LINE__);
+
+			::wprintf(L"%s[%d]: new Session Error\n",
+				_T(__FUNCTION__), __LINE__);
+
 			__debugbreak();
 			break;
 		}
 
 		AcquireSRWLockExclusive(&pLanServer->_sessionMap->_lock);
 		pLanServer->_sessionMap->_map.insert(make_pair(pSession->_ID, pSession));
+		
+		EnterCriticalSection(&pSession->_cs);
 		ReleaseSRWLockExclusive(&pLanServer->_sessionMap->_lock);
 		
 		//::printf("Accept New Session (ID: %llu)\n", pSession->_ID);
@@ -330,14 +421,17 @@ unsigned int __stdcall CLanServer::AcceptThread(void* arg)
 
 		PRO_END(L"LS: AcceptThread");
 
-		EnterCriticalSection(&pSession->_cs);
 		pLanServer->RecvPost(pSession);
 		LeaveCriticalSection(&pSession->_cs);
 
 		pLanServer->OnAcceptClient(pSession->_ID);		
 	}
 
-	::printf("Accept Thread Terminate (thread: %d)\n", GetCurrentThreadId());
+
+	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, 
+		L"Accept Thread Terminate (thread: %d)\n", GetCurrentThreadId());
+	::wprintf(L"Accept Thread Terminate (thread: %d)\n", GetCurrentThreadId());
+
 	return 0;
 }
 
@@ -345,9 +439,7 @@ unsigned int __stdcall CLanServer::NetworkThread(void* arg)
 {
 	PRO_SET(pSTLSProfiler, GetCurrentThreadId());
 
-	ThreadArg* threadArg = (ThreadArg*)arg;
-	CLanServer* pLanServer = threadArg->_pServer;
-	int num = threadArg->_num;
+	CLanServer* pLanServer = (CLanServer*)arg;
 
 	int threadID = GetCurrentThreadId();
 
@@ -359,14 +451,11 @@ unsigned int __stdcall CLanServer::NetworkThread(void* arg)
 		int GQCSRet = GetQueuedCompletionStatus(pLanServer->_hNetworkCP,
 			&cbTransferred, (PULONG_PTR)&sessionID, (LPOVERLAPPED*)&pNetOvl, INFINITE);
 
-		if (pLanServer->_activeNetworkThreads[num] == false)
-			pLanServer->_activeNetworkThreads[num] = true;
-
 		if (g_bShutdown) break;
 		if (!pLanServer->_alive) break;
 		if (pNetOvl->_type == NET_TYPE::RELEASE)
 		{
-			pLanServer->ReleaseSession(sessionID);
+			pLanServer->ReleaseSession(pLanServer, sessionID);
 			continue;
 		}
 
@@ -375,7 +464,6 @@ unsigned int __stdcall CLanServer::NetworkThread(void* arg)
 		// Check Exception		
 		if (GQCSRet == 0 || cbTransferred == 0)
 		{
-			//pSession->PushStateForDebug(__LINE__);
 			AcquireSRWLockShared(&pLanServer->_sessionMap->_lock);
 			unordered_map<__int64, CSession*>::iterator iter = pLanServer->_sessionMap->_map.find(sessionID);
 			if (iter == pLanServer->_sessionMap->_map.end())
@@ -393,23 +481,17 @@ unsigned int __stdcall CLanServer::NetworkThread(void* arg)
 				DWORD arg1, arg2;
 				WSAGetOverlappedResult(pSession->_sock, (LPOVERLAPPED)pNetOvl, &arg1, FALSE, &arg2);
 				int err = WSAGetLastError();
-				if (err == WSAECONNRESET)
+				if (err != WSAECONNRESET && err != WSAECONNABORTED && err != WSAENOTSOCK)
 				{
-					pLanServer->_10054Cnt++;
-				}
-				else
-				{
-					::printf("Error! %s(%d): %d\n", __func__, __LINE__, err);
+					LOG(L"FightGame", CSystemLog::DEBUG_LEVEL,
+						L"%s[%d]: Connecton End, %d\n",
+						_T(__FUNCTION__), __LINE__, err);
+
+					::wprintf(L"%s[%d]: Connecton End, %d\n",
+						_T(__FUNCTION__), __LINE__, err);
 				}
 			}
-
-			pSession->_alive = false;
-			PostQueuedCompletionStatus(pLanServer->_hNetworkCP, 1,
-				(ULONG_PTR)pSession->_ID, (LPOVERLAPPED)&pSession->_releaseOvl);
 			LeaveCriticalSection(&pSession->_cs);
-
-			continue;
-
 		}
 		else if (pNetOvl->_type == NET_TYPE::RECV)
 		{
@@ -425,7 +507,6 @@ unsigned int __stdcall CLanServer::NetworkThread(void* arg)
 			pLanServer->_sendMsgCnt++;
 		}
 
-		//pSession->PushStateForDebug(__LINE__);
 		AcquireSRWLockShared(&pLanServer->_sessionMap->_lock);
 		unordered_map<__int64, CSession*>::iterator iter = pLanServer->_sessionMap->_map.find(sessionID);
 		if (iter == pLanServer->_sessionMap->_map.end())
@@ -440,21 +521,24 @@ unsigned int __stdcall CLanServer::NetworkThread(void* arg)
 
 		if (InterlockedDecrement(&pSession->_IOCount) == 0)
 		{
-			//pSession->PushStateForDebug(__LINE__);
 			PostQueuedCompletionStatus(pLanServer->_hNetworkCP, 1,
 				(ULONG_PTR)pSession->_ID, (LPOVERLAPPED)&pSession->_releaseOvl);
 		}
 
-		LeaveCriticalSection(&pSession->_cs);
+		// pSession->PushStateForDebug(__LINE__);
 
+		LeaveCriticalSection(&pSession->_cs);
 		PRO_END(L"LS: NetworkThread");
 	}
 
-	::printf("Worker Thread Terminate (thread: %d)\n", threadID);
+	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL,
+		L"Worker Thread Terminate (thread: %d)\n", GetCurrentThreadId());
+	::wprintf(L"Worker Thread Terminate (thread: %d)\n", GetCurrentThreadId());
+
 	return 0;
 }
 
-void CLanServer::ReleaseSession(__int64 sessionID)
+void CLanServer::ReleaseSession(CLanServer* pLanServer, __int64 sessionID)
 {
 	AcquireSRWLockExclusive(&_sessionMap->_lock);
 	unordered_map<__int64, CSession*>::iterator iter = _sessionMap->_map.find(sessionID);
@@ -470,8 +554,13 @@ void CLanServer::ReleaseSession(__int64 sessionID)
 	ReleaseSRWLockExclusive(&_sessionMap->_lock);
 	LeaveCriticalSection(&pSession->_cs);
 
-	//pSession->PushStateForDebug(__LINE__);
-	closesocket(pSession->_sock);
+	// pSession->PushStateForDebug(__LINE__); 
+	if(pSession->_socketAlive) 
+	{
+		pLanServer->_clientDisconnCnt++;
+		pSession->_socketAlive = false;
+		closesocket(pSession->_sock);
+	}
 	delete pSession;
 
 	//::printf("%llu: Disconnect Client\n", ID);
@@ -485,25 +574,17 @@ void CLanServer::UpdateMonitorData()
 	_disconnectTPS = _disconnectCnt;
 	_recvMsgTPS = _recvMsgCnt;
 	_sendMsgTPS = _sendMsgCnt;
-
-	_10054TPS = _10054Cnt;
+	_clientDisconnTPS = _clientDisconnCnt;
+	_serverDisconnTPS = _serverDisconnCnt;
 	_acceptTotal += _acceptTPS;
 	_disconnectTotal += _disconnectTPS;
 
-	_activeThreadNum = 0;
-	for (int i = 0; i < _numOfWorkerThreads; i++)
-	{
-		if (_activeNetworkThreads[i] == true)
-		{
-			_activeThreadNum++;
-			_activeNetworkThreads[i] = false;
-		}
-	}
 	_acceptCnt = 0;
 	_disconnectCnt = 0;
 	_recvMsgCnt = 0;
 	_sendMsgCnt = 0;
-	_10054Cnt = 0;
+	_clientDisconnCnt = 0;
+	_serverDisconnCnt = 0;
 }
 
 void CLanServer::HandleRecvCP(__int64 sessionID, int recvBytes)
@@ -521,7 +602,7 @@ void CLanServer::HandleRecvCP(__int64 sessionID, int recvBytes)
 	EnterCriticalSection(&pSession->_cs);
 	ReleaseSRWLockShared(&_sessionMap->_lock);
 
-	if (!pSession->_alive)
+	if (!pSession->_socketAlive)
 	{
 		LeaveCriticalSection(&pSession->_cs);
 		return;
@@ -530,13 +611,19 @@ void CLanServer::HandleRecvCP(__int64 sessionID, int recvBytes)
 	int moveReadRet = pSession->_recvBuf.MoveWritePos(recvBytes);
 	if (moveReadRet != recvBytes)
 	{
-		::printf("Error! Func %s Line %d\n", __func__, __LINE__);
+		LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+			L"%s[%d]: recv buffer Return Error\n",
+			_T(__FUNCTION__), __LINE__);
+
+		::wprintf(L"%s[%d]: recv buffer Return Error\n",
+			_T(__FUNCTION__), __LINE__);
+
 		__debugbreak();
 		LeaveCriticalSection(&pSession->_cs);
 		return;
 	}
 
-	pSession->PushStateForDebug(__LINE__); 
+	// pSession->PushStateForDebug(__LINE__); 
 	int useSize = pSession->_recvBuf.GetUseSize();
 
 	for(;;)
@@ -551,7 +638,13 @@ void CLanServer::HandleRecvCP(__int64 sessionID, int recvBytes)
 		int peekRet = pSession->_recvBuf.Peek((char*)&header, dfHEADER_LEN);
 		if (peekRet != dfHEADER_LEN)
 		{
-			::printf("Error! Func %s Line %d\n", __func__, __LINE__);
+			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+				L"%s[%d]: recv buffer Return Error\n",
+				_T(__FUNCTION__), __LINE__);
+
+			::wprintf(L"%s[%d]: recv buffer Return Error\n",
+				_T(__FUNCTION__), __LINE__);
+
 			__debugbreak();
 			LeaveCriticalSection(&pSession->_cs);
 			break;
@@ -566,7 +659,13 @@ void CLanServer::HandleRecvCP(__int64 sessionID, int recvBytes)
 		int moveReadRet = pSession->_recvBuf.MoveReadPos(dfHEADER_LEN);
 		if (moveReadRet != dfHEADER_LEN)
 		{
-			::printf("Error! Func %s Line %d\n", __func__, __LINE__);
+			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+				L"%s[%d]: recv buffer Return Error\n",
+				_T(__FUNCTION__), __LINE__);
+
+			::wprintf(L"%s[%d]: recv buffer Return Error\n",
+				_T(__FUNCTION__), __LINE__);
+
 			__debugbreak();
 			LeaveCriticalSection(&pSession->_cs);
 			break;
@@ -577,7 +676,13 @@ void CLanServer::HandleRecvCP(__int64 sessionID, int recvBytes)
 		int dequeueRet = pSession->_recvBuf.Dequeue(packet->GetPayloadWritePtr(), header.Len);
 		if (dequeueRet != header.Len)
 		{
-			::printf("Error! Func %s Line %d\n", __func__, __LINE__);
+			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+				L"%s[%d]: recv buffer Return Error\n",
+				_T(__FUNCTION__), __LINE__);
+
+			::wprintf(L"%s[%d]: recv buffer Return Error\n",
+				_T(__FUNCTION__), __LINE__);
+
 			__debugbreak();
 			LeaveCriticalSection(&pSession->_cs);
 			break;
@@ -586,7 +691,6 @@ void CLanServer::HandleRecvCP(__int64 sessionID, int recvBytes)
 		packet->MovePayloadWritePos(dequeueRet);
 		LeaveCriticalSection(&pSession->_cs);
 
-		pSession->PushStateForDebug(__LINE__);
 		OnRecv(pSession->_ID, packet); 
 		
 		AcquireSRWLockShared(&_sessionMap->_lock);
@@ -601,15 +705,13 @@ void CLanServer::HandleRecvCP(__int64 sessionID, int recvBytes)
 		EnterCriticalSection(&pSession->_cs);
 		ReleaseSRWLockShared(&_sessionMap->_lock);
 
-		if (!pSession->_alive)
+		if (!pSession->_socketAlive)
 		{
 			LeaveCriticalSection(&pSession->_cs);
 			break;
 		}
 		useSize = pSession->_recvBuf.GetUseSize();
-	}
-
-	pSession->PushStateForDebug(__LINE__);
+	} 
 
 	AcquireSRWLockShared(&_sessionMap->_lock);
 	iter = _sessionMap->_map.find(sessionID);
@@ -642,20 +744,25 @@ void CLanServer::HandleSendCP(__int64 sessionID, int sendBytes)
 	EnterCriticalSection(&pSession->_cs);
 	ReleaseSRWLockShared(&_sessionMap->_lock);
 
-	if (!pSession->_alive)
+	if (!pSession->_socketAlive)
 	{
 		LeaveCriticalSection(&pSession->_cs);
 		return;
 	}
 
-	pSession->PushStateForDebug(__LINE__);
-
+	// pSession->PushStateForDebug(__LINE__); 
 	int moveReadRet = pSession->_sendBuf.MoveReadPos(sendBytes);
 	if (moveReadRet != sendBytes)
 	{
-		::printf("Error! Func %s Line %d\n", __func__, __LINE__);		
-		LeaveCriticalSection(&pSession->_cs);
+		LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+			L"%s[%d]: send buffer Return Error\n",
+			_T(__FUNCTION__), __LINE__);
+
+		::wprintf(L"%s[%d]: send buffer Return Error\n",
+			_T(__FUNCTION__), __LINE__);
+
 		__debugbreak();
+		LeaveCriticalSection(&pSession->_cs);
 		return;
 	}
 
@@ -667,8 +774,6 @@ void CLanServer::HandleSendCP(__int64 sessionID, int sendBytes)
 
 void CLanServer::RecvPost(CSession* pSession)
 {
-	if (!pSession->_alive) return;
-
 	DWORD flags = 0;
 	DWORD recvBytes = 0;
 
@@ -679,8 +784,9 @@ void CLanServer::RecvPost(CSession* pSession)
 	pSession->_wsaRecvbuf[1].len = freeSize - pSession->_wsaRecvbuf[0].len;
 
 	ZeroMemory(&pSession->_recvOvl._ovl, sizeof(pSession->_recvOvl._ovl));
+	
 	InterlockedIncrement(&pSession->_IOCount);
-	//pSession->PushStateForDebug(__LINE__);
+	// pSession->PushStateForDebug(__LINE__); 
 
 	int recvRet = WSARecv(pSession->_sock, pSession->_wsaRecvbuf,
 		2, &recvBytes, &flags, (LPOVERLAPPED)&pSession->_recvOvl, NULL);
@@ -692,10 +798,22 @@ void CLanServer::RecvPost(CSession* pSession)
 		int err = WSAGetLastError();
 		if (err != ERROR_IO_PENDING)
 		{
-			if (err != WSAECONNRESET)
+			if (err != WSAECONNRESET && err != WSAECONNABORTED)
 			{
-				::printf("Error! %s(%d): %d\n", __func__, __LINE__, err);
+				LOG(L"FightGame", CSystemLog::DEBUG_LEVEL,
+					L"%s[%d]: Connection End, %d\n",
+					_T(__FUNCTION__), __LINE__, err);
+
+				::wprintf(L"%s[%d]: Connection End, %d\n",
+					_T(__FUNCTION__), __LINE__, err);
 			}
+
+			if (InterlockedDecrement(&pSession->_IOCount) == 0)
+			{
+				PostQueuedCompletionStatus(_hNetworkCP, 1,
+					(ULONG_PTR)pSession->_ID, (LPOVERLAPPED)&pSession->_releaseOvl);
+			}
+
 			return;
 		}
 	}
@@ -703,7 +821,6 @@ void CLanServer::RecvPost(CSession* pSession)
 
 void CLanServer::SendPost(CSession* pSession)
 {
-	if (!pSession->_alive) return;
 	if (pSession->_sendBuf.GetUseSize() == 0)  return;
 	if (InterlockedExchange(&pSession->_sendFlag, 1) == 1) return;
 	if (pSession->_sendBuf.GetUseSize() == 0)
@@ -721,7 +838,7 @@ void CLanServer::SendPost(CSession* pSession)
 
 	ZeroMemory(&pSession->_sendOvl._ovl, sizeof(pSession->_sendOvl._ovl));
 	InterlockedIncrement(&pSession->_IOCount);
-	pSession->PushStateForDebug(__LINE__);
+	// pSession->PushStateForDebug(__LINE__); 
 
 	int sendRet = WSASend(pSession->_sock, pSession->_wsaSendbuf,
 		2, &sendBytes, 0, (LPOVERLAPPED)&pSession->_sendOvl, NULL);
@@ -733,11 +850,21 @@ void CLanServer::SendPost(CSession* pSession)
 		int err = WSAGetLastError();
 		if (err != ERROR_IO_PENDING)
 		{
-			if (err != WSAECONNRESET)
+			if (err != WSAECONNRESET && err != WSAECONNABORTED)
 			{
-				::printf("Error! %s(%d): %d\n", __func__, __LINE__, err);
+				LOG(L"FightGame", CSystemLog::DEBUG_LEVEL,
+					L"%s[%d]: Connection End, %d\n",
+					_T(__FUNCTION__), __LINE__, err);
+
+				::wprintf(L"%s[%d]: Connection End, %d\n",
+					_T(__FUNCTION__), __LINE__, err);
 			}
-			return;
+
+			if (InterlockedDecrement(&pSession->_IOCount) == 0)
+			{
+				PostQueuedCompletionStatus(_hNetworkCP, 1,
+					(ULONG_PTR)pSession->_ID, (LPOVERLAPPED)&pSession->_releaseOvl);
+			}
 		}
 	}
 }

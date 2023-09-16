@@ -3,14 +3,13 @@
 #ifndef __CRASH_DUMP__
 #define __CRASH_DUMP__
 
-#ifndef _WINSOCKAPI_
-#define _WINSOCKAPI_
-#endif
+#include "DebugQ.h"
 
 #include <stdio.h>
 #include <crtdbg.h>
 #include <windows.h>
 #include <minidumpapiset.h>
+
 #pragma comment(lib, "Dbghelp.lib")
 
 class CCrashDump
@@ -35,15 +34,18 @@ public:
 	static LONG WINAPI CustomExceptionFilter(
 		__in PEXCEPTION_POINTERS pExceptionPointer)
 	{
+		system_clock::time_point now = system_clock::now();
 		long dumpCount = InterlockedIncrement(&_dumpCount);
 		if (dumpCount != 1) return -1;
+
+		_debugQManager.SaveLog(((nanoseconds)(now - g_Start)).count());
 
 		SYSTEMTIME stTime;
 		WCHAR filename[MAX_PATH];
 		GetLocalTime(&stTime);
-		wsprintf(filename, L"Dump_%d%02d%02d_%02d.%02d.%02d.dmp",
+		wsprintf(filename, L"Dump_%d%02d%02d_%02d.%02d.%02d_%d.dmp",
 			stTime.wYear, stTime.wMonth, stTime.wDay,
-			stTime.wHour, stTime.wMinute, stTime.wSecond);
+			stTime.wHour, stTime.wMinute, stTime.wSecond, dumpCount);
 		wprintf(L"\n\n\n Crash Error!!! %d.%d.%d/%d:%d:%d\n",
 			stTime.wYear, stTime.wMonth, stTime.wDay,
 			stTime.wHour, stTime.wMinute, stTime.wSecond);
@@ -67,6 +69,8 @@ public:
 			wprintf(L"CrashDump Save Finish!\n");
 		}
 
+		printf("Hey~~");
+		for (;;);
 		return EXCEPTION_EXECUTE_HANDLER;
 	}
 
@@ -100,6 +104,7 @@ public:
 
 	static long _dumpCount;
 };
+
 long CCrashDump::_dumpCount = 0;
 
 #endif __CRASH_DUMP__

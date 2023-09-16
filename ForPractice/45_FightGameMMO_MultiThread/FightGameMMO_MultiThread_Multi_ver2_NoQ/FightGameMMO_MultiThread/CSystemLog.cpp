@@ -10,7 +10,7 @@ CSystemLog* g_pSystemLog = CSystemLog::GetInstance();
 CSystemLog::CSystemLog() : _dir(nullptr), _logLevel(ERROR_LEVEL), _logCount(0)
 {
 #ifdef  __SYSTEM_LOG_MULTITHREAD
-	InitializeSRWLock(&_lock);
+	InitializeCriticalSection(&_cs);
 #endif
 }
 
@@ -50,7 +50,7 @@ void CSystemLog::LogHex(const wchar_t* type, LOG_LEVEL logLevel, const wchar_t* 
 	if (logLevel < _logLevel) return;
 
 #ifdef  __SYSTEM_LOG_MULTITHREAD
-	AcquireSRWLockExclusive(&_lock);
+	EnterCriticalSection(&_cs);
 #endif
 
 	time_t baseTimer = time(NULL);
@@ -68,7 +68,7 @@ void CSystemLog::LogHex(const wchar_t* type, LOG_LEVEL logLevel, const wchar_t* 
 			titleRet, _T(__FUNCTION__), __LINE__);
 
 #ifdef  __SYSTEM_LOG_MULTITHREAD
-		ReleaseSRWLockExclusive(&_lock);
+		LeaveCriticalSection(&_cs);
 #endif
 		return;
 	}
@@ -87,7 +87,7 @@ void CSystemLog::LogHex(const wchar_t* type, LOG_LEVEL logLevel, const wchar_t* 
 			InfoRet, _T(__FUNCTION__), __LINE__);
 
 #ifdef  __SYSTEM_LOG_MULTITHREAD
-		ReleaseSRWLockExclusive(&_lock);
+		LeaveCriticalSection(&_cs);
 #endif
 		return;
 	}
@@ -100,7 +100,7 @@ void CSystemLog::LogHex(const wchar_t* type, LOG_LEVEL logLevel, const wchar_t* 
 			copyRet, _T(__FUNCTION__), __LINE__);
 
 #ifdef  __SYSTEM_LOG_MULTITHREAD
-		ReleaseSRWLockExclusive(&_lock);
+		LeaveCriticalSection(&_cs);
 #endif
 		return;
 	}
@@ -112,7 +112,7 @@ void CSystemLog::LogHex(const wchar_t* type, LOG_LEVEL logLevel, const wchar_t* 
 			concatRet1, _T(__FUNCTION__), __LINE__);
 
 #ifdef  __SYSTEM_LOG_MULTITHREAD
-		ReleaseSRWLockExclusive(&_lock);
+		LeaveCriticalSection(&_cs);
 #endif
 		return;
 	}
@@ -127,7 +127,7 @@ void CSystemLog::LogHex(const wchar_t* type, LOG_LEVEL logLevel, const wchar_t* 
 				printRet, _T(__FUNCTION__), __LINE__);
 
 #ifdef  __SYSTEM_LOG_MULTITHREAD
-			ReleaseSRWLockExclusive(&_lock);
+			LeaveCriticalSection(&_cs);
 #endif
 			return;
 		}
@@ -139,7 +139,7 @@ void CSystemLog::LogHex(const wchar_t* type, LOG_LEVEL logLevel, const wchar_t* 
 				concatRet2, _T(__FUNCTION__), __LINE__);
 
 #ifdef  __SYSTEM_LOG_MULTITHREAD
-			ReleaseSRWLockExclusive(&_lock);
+			LeaveCriticalSection(&_cs);
 #endif
 			return;
 		}
@@ -155,7 +155,7 @@ void CSystemLog::LogHex(const wchar_t* type, LOG_LEVEL logLevel, const wchar_t* 
 			logTitle, openRet, _T(__FUNCTION__), __LINE__);
 
 #ifdef  __SYSTEM_LOG_MULTITHREAD
-		ReleaseSRWLockExclusive(&_lock);
+		LeaveCriticalSection(&_cs);
 #endif
 		return;
 	}
@@ -172,13 +172,13 @@ void CSystemLog::LogHex(const wchar_t* type, LOG_LEVEL logLevel, const wchar_t* 
 			logTitle, _T(__FUNCTION__), __LINE__);
 
 #ifdef  __SYSTEM_LOG_MULTITHREAD
-		ReleaseSRWLockExclusive(&_lock);
+		LeaveCriticalSection(&_cs);
 #endif
 		return;
 	}
 
 #ifdef  __SYSTEM_LOG_MULTITHREAD
-	ReleaseSRWLockExclusive(&_lock);
+	LeaveCriticalSection(&_cs);
 #endif
 }
 
@@ -187,7 +187,7 @@ void CSystemLog::Log(const wchar_t* type, LOG_LEVEL logLevel, const wchar_t* str
 	if (logLevel < _logLevel) return;
 
 #ifdef  __SYSTEM_LOG_MULTITHREAD
-	AcquireSRWLockExclusive(&_lock);
+	EnterCriticalSection(&_cs);
 #endif
 
 	time_t baseTimer = time(NULL);
@@ -205,7 +205,7 @@ void CSystemLog::Log(const wchar_t* type, LOG_LEVEL logLevel, const wchar_t* str
 			titleRet, _T(__FUNCTION__), __LINE__);
 
 #ifdef  __SYSTEM_LOG_MULTITHREAD
-		ReleaseSRWLockExclusive(&_lock);
+		LeaveCriticalSection(&_cs);
 #endif
 		return;
 	}
@@ -224,7 +224,7 @@ void CSystemLog::Log(const wchar_t* type, LOG_LEVEL logLevel, const wchar_t* str
 			InfoRet, _T(__FUNCTION__), __LINE__);
 
 #ifdef  __SYSTEM_LOG_MULTITHREAD
-		ReleaseSRWLockExclusive(&_lock);
+		LeaveCriticalSection(&_cs);
 #endif
 		return;
 	}
@@ -242,7 +242,7 @@ void CSystemLog::Log(const wchar_t* type, LOG_LEVEL logLevel, const wchar_t* str
 			dataRet, _T(__FUNCTION__), __LINE__);
 
 #ifdef  __SYSTEM_LOG_MULTITHREAD
-		ReleaseSRWLockExclusive(&_lock);
+		LeaveCriticalSection(&_cs);
 #endif
 		return;
 	}
@@ -255,7 +255,7 @@ void CSystemLog::Log(const wchar_t* type, LOG_LEVEL logLevel, const wchar_t* str
 			logTitle, openRet, _T(__FUNCTION__), __LINE__);
 
 #ifdef  __SYSTEM_LOG_MULTITHREAD
-		ReleaseSRWLockExclusive(&_lock);
+		LeaveCriticalSection(&_cs);
 #endif
 		return;
 	}
@@ -272,13 +272,13 @@ void CSystemLog::Log(const wchar_t* type, LOG_LEVEL logLevel, const wchar_t* str
 			logTitle, _T(__FUNCTION__), __LINE__);
 
 #ifdef  __SYSTEM_LOG_MULTITHREAD
-		ReleaseSRWLockExclusive(&_lock);
+		LeaveCriticalSection(&_cs);
 #endif
 		return;
 	}
 
 #ifdef  __SYSTEM_LOG_MULTITHREAD
-	ReleaseSRWLockExclusive(&_lock);
+	LeaveCriticalSection(&_cs);
 #endif
 }
 #endif

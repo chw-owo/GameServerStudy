@@ -42,11 +42,14 @@ protected:
 	void UpdateMonitorData();
 	inline int GetAcceptTotal() { return _acceptTotal; }
 	inline int GetDisconnectTotal() { return _disconnectTotal; }
+	inline long GetSessionCount() { return _sessionMap->_map.size(); }
+
 	inline int GetAcceptTPS() { return _acceptTPS; }
 	inline int GetDisconnectTPS() { return _disconnectTPS; }
 	inline int GetRecvMsgTPS() { return _recvMsgTPS; }
 	inline int GetSendMsgTPS() { return _sendMsgTPS; }
-	inline long GetSessionCount() { return _sessionMap->_map.size(); }
+	inline int GetClientDisconnTPS() { return _clientDisconnTPS; }
+	inline int GetServerDisconnTPS() { return _serverDisconnTPS; }
 
 protected:
 	CObjectPool<CPacket>* _pPacketPool;
@@ -55,7 +58,7 @@ protected:
 private:
 	static unsigned int WINAPI AcceptThread(void* arg);
 	static unsigned int WINAPI NetworkThread(void* arg);
-	void ReleaseSession(__int64 sessionID);
+	void ReleaseSession(CLanServer* pLanServer, __int64 sessionID);
 
 private:
 	void HandleRecvCP(__int64 sessionID, int recvBytes);
@@ -68,6 +71,7 @@ private:
 	short _port;
 	bool _nagle;
 	int _sessionMax;
+	int _numOfWorkerThreads;
 
 private:
 	bool _alive = false;
@@ -84,40 +88,15 @@ private:
 	int _disconnectTPS = 0;
 	int _recvMsgTPS = 0;
 	int _sendMsgTPS = 0;
+	int  _clientDisconnTPS = 0;
+	int  _serverDisconnTPS = 0;
 
 	int _acceptCnt = 0;
 	int _disconnectCnt = 0;
 	int _recvMsgCnt = 0;
 	int _sendMsgCnt = 0;
-
-	// For Debug
-protected:
-	inline int Get10054TPS() { return _10054TPS; }
-
-private:
-	int _10054TPS = 0;
-	int _10054Cnt = 0;
-
-protected:
-	int _NoSendIOCP = 0;
-
-private:
-	// For Debug
-	class ThreadArg
-	{
-	public:
-		ThreadArg(CLanServer* pServer, int num)
-			:_pServer(pServer), _num(num) {};
-	public:
-		CLanServer* _pServer;
-		int _num;
-	};
-
-protected:
-	// For Debug
-	bool* _activeNetworkThreads;
-	int _activeThreadNum;
-	int _numOfWorkerThreads;
+	int _clientDisconnCnt = 0;
+	int _serverDisconnCnt = 0;
 
 private:
 	HANDLE _acceptThread;

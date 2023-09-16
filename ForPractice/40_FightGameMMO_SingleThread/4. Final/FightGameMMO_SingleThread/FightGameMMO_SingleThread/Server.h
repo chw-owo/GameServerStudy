@@ -304,3 +304,20 @@ private:
 
 };
 
+
+
+//==========================================
+CCrashDump g_Dump;
+
+void tmp()
+{
+	int err = WSAGetLastError();
+	LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+		L"%s[%d]: bind Error, %d\n",
+		_T(__FUNCTION__), __LINE__, err);
+
+	::wprintf(L"%s[%d]: bind Error, %d\n",
+		_T(__FUNCTION__), __LINE__, err);
+
+	g_Dump.Crash();
+}

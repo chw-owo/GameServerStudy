@@ -12,6 +12,9 @@
 #pragma comment(lib, "Synchronization.lib")
 using namespace std;
 
+// TO-DO
+// 멀티스레드에서 동작시 너무 느려짐 개선 필요
+
 /*=============================================================
 
 <How to use>

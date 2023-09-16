@@ -13,9 +13,9 @@ void CProcessorCpu::PrintCpuData(void)
 {
 	UpdateCpuTime();
 
-	wprintf(L"Processor: %f\n", GetTotalTime());
-	wprintf(L"ProcessorKernel: %f\n", GetKernelTime());
-	wprintf(L"ProcessorUser: %f\n\n", GetUserTime());
+	::wprintf(L"Processor: %f\n", GetTotalTime());
+	::wprintf(L"ProcessorKernel: %f\n", GetKernelTime());
+	::wprintf(L"ProcessorUser: %f\n\n", GetUserTime());
 
 }
 

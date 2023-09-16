@@ -4,7 +4,7 @@
 void CSession::Initialize(__int64 ID, SOCKET sock, SOCKADDR_IN addr)
 {
 	_ID = ID;
-	_alive = true;
+	_socketAlive = true;
 	_sock = sock;
 	_addr = addr;  
 	_IOCount = 0;

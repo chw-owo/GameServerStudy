@@ -1,7 +1,7 @@
 #pragma once
+#include "CSystemLog.h"
 #include <iostream>
 #include <tchar.h>
-#include "CSystemLog.h"
 
 #define DEFAULT_BUF_SIZE 32768
 #define MAX_BUF_SIZE 100000
@@ -96,8 +96,8 @@ public:
                 LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
                     L"%s[%d] Fail to Resize\n",
                     _T(__FUNCTION__), __LINE__);
-               //::wprintf(L"%s[%d] Fail to Resize\n",
-                    //_T(__FUNCTION__), __LINE__);
+               ::wprintf(L"%s[%d] Fail to Resize\n",
+                    _T(__FUNCTION__), __LINE__);
 
                 return -1;
             }
@@ -195,9 +195,9 @@ public:
             if (!Resize(_bufferSize + (int)(size * 1.5f)))
             {
                 LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
-                    L"%s[%d] Fail to Resize\n",
+                    L"%s[%d] Fail to Resize, req %d > max %d\n",
                     _T(__FUNCTION__), __LINE__, size, MAX_BUF_SIZE);
-                ::wprintf(L"%s[%d] Fail to Resize\n",
+                ::wprintf(L"%s[%d] Fail to Resize, req %d > max %d\n",
                     _T(__FUNCTION__), __LINE__, size, MAX_BUF_SIZE);
 
                 return -1;
@@ -250,11 +250,12 @@ public:
     inline bool Resize(int size)
     {
         LOG(L"FightGame", CSystemLog::DEBUG_LEVEL,
-            L"%s[%d] Resize\n", _T(__FUNCTION__), __LINE__);
+            L"%s[%d] Resize from %d to %d\n", 
+            _T(__FUNCTION__), __LINE__, _bufferSize, size);
+        ::wprintf(L"%s[%d] Resize from %d to %d\n", 
+            _T(__FUNCTION__), __LINE__, _bufferSize, size);
 
         InterlockedIncrement(&resizeCnt);
-
-        //::wprintf(L"%s[%d] Resize\n", _T(__FUNCTION__), __LINE__);
 
         if (size > MAX_BUF_SIZE)
         {
@@ -262,8 +263,8 @@ public:
                 L"%s[%d]: req %d, max %d\n",
                 _T(__FUNCTION__), __LINE__, size, MAX_BUF_SIZE);
 
-            //::wprintf(L"%s[%d]: req %d, max %d\n",
-            //    _T(__FUNCTION__), __LINE__, size, MAX_BUF_SIZE);
+            ::wprintf(L"%s[%d]: req %d, max %d\n",
+                _T(__FUNCTION__), __LINE__, size, MAX_BUF_SIZE);
 
             return false;
         }

@@ -6,9 +6,6 @@
 #define _MONITOR
 __declspec (thread) DWORD oldTick = timeGetTime();
 
-// TO-DO: 디버깅 용으로 덕지덕지 넣은 코드 깔끔하게 정리...
-// TO-DO: 그 뒤에 프로파일러, 로그도 멀티스레드에 맞게 재정리
-
 CGameServer::CGameServer()
 {
 	srand(0);
@@ -40,12 +37,19 @@ CGameServer::CGameServer()
 	InitializeSRWLock(&_IDGeneratorLock);
 
 #ifdef _MONITOR
-	CreateDirectory(L"Profile", NULL);
+	// CreateDirectory(L"Profile", NULL);
 	_monitorThread = (HANDLE)_beginthreadex(NULL, 0, MonitorThread, this, 0, nullptr);
 	if (_monitorThread == NULL)
 	{
-		::printf("Error! %s(%d)\n", __func__, __LINE__);
+		LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+			L"%s[%d]: Begin Monitor Thread Error\n",
+			_T(__FUNCTION__), __LINE__);
+
+		::wprintf(L"%s[%d]: Begin Monitor Thread Error\n",
+			_T(__FUNCTION__), __LINE__);
+
 		__debugbreak();
+		return;
 	}
 #endif
 
@@ -57,17 +61,24 @@ CGameServer::CGameServer()
 		_logicThreads[i] = (HANDLE)_beginthreadex(NULL, 0, UpdateThread, arg, 0, nullptr);
 		if (_logicThreads[i] == NULL)
 		{
-			::printf("Error! %s(%d)\n", __func__, __LINE__);
+			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+				L"%s[%d]: Begin Logic Thread Error\n",
+				_T(__FUNCTION__), __LINE__);
+
+			::wprintf(L"%s[%d]: Begin Logic Thread Error\n",
+				_T(__FUNCTION__), __LINE__);
+
 			__debugbreak();
 			return;
 		}
 	}
 
-	::printf("Content Setting Complete\n");
+	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Content Setting Complete\n");
+	::wprintf(L"Content Setting Complete\n");
 
 	SYSTEM_INFO si;
 	GetSystemInfo(&si);
-	int threadCnt = (int)si.dwNumberOfProcessors;
+	int threadCnt = (int)si.dwNumberOfProcessors / 2;
 
 	if (!NetworkStart(dfSERVER_IP, dfSERVER_PORT, threadCnt, false, dfSESSION_DEFAULT))
 		__debugbreak();
@@ -78,7 +89,10 @@ CGameServer::~CGameServer()
 {
 	NetworkTerminate();
 	WaitForMultipleObjects(dfLOGIC_THREAD_NUM, _logicThreads, true, INFINITE);
-	printf("\nAll Thread Terminate!\n");
+
+	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, 
+		L"GameServer's All Thread Terminate. Content Terminate.\n");
+	::wprintf(L"GameServer's All Thread Terminate. Content Terminate.\n");
 }
 
 CGameServer* CGameServer::GetInstance()
@@ -124,7 +138,11 @@ void CGameServer::ForDebug(__int64 sessionID)
 	if (iter == _playersMap.end())
 	{
 		ReleaseSRWLockExclusive(&_playersMapLock);
-		::printf("%s[%d] No session\n", __func__, __LINE__);
+
+		LOG(L"FightGame", CSystemLog::DEBUG_LEVEL,
+			L"%s[%d]: No Session\n", _T(__FUNCTION__), __LINE__);
+		::wprintf(L"%s[%d]: No Session\n", _T(__FUNCTION__), __LINE__);
+
 		return;
 	}
 	CPlayer* pPlayer = iter->second;
@@ -157,6 +175,7 @@ unsigned int __stdcall CGameServer::UpdateThread(void* arg)
 unsigned int __stdcall CGameServer::MonitorThread(void* arg)
 {
 	CGameServer* pServer = (CGameServer*)arg;
+	CreateDirectory(L"MonitorLog", NULL);
 
 	while (!g_bShutdown)
 	{
@@ -170,26 +189,26 @@ unsigned int __stdcall CGameServer::MonitorThread(void* arg)
 
 		WCHAR text[dfMONITOR_MAX];
 		swprintf_s(text, dfMONITOR_MAX,
-			L"[%s %02d:%02d:%02d]\n\nLogic FPS: %d\nTotal Accept: %d\nConnected Session: %d\nUsable Player Num: %llu\nTotal Sync: %d\nNo Send IOCP: %d\nActive Thread: %d/%d\nDisconnect/1sec: %d\n - Dead: %d\n - Timeout: %d\n - 10054: %d\n\n",
+			L"[%s %02d:%02d:%02d]\n\nLogic FPS: %d\nTotal Accept: %d\nConnected Session: %d\nUsable Player Num: %llu\nTotal Sync: %d\nDisconnect/1sec: %d\n - from client: %d\n - from server: %d\n\n",
 			_T(__DATE__), stTime.wHour, stTime.wMinute, stTime.wSecond, 
 			pServer->_logicFPS / dfLOGIC_THREAD_NUM, 
 			pServer->_totalAcceptCnt, pServer->GetSessionCount(),
 			pServer->_usablePlayerIdx.size(), pServer->_totalSyncCnt,
-			pServer->_NoSendIOCP, pServer->_activeThreadNum, pServer->_numOfWorkerThreads,
-			pServer->GetDisconnectTPS(), pServer->_deadCnt, pServer->_timeoutCnt, pServer->Get10054TPS());
+			pServer->GetDisconnectTPS(), pServer->GetClientDisconnTPS(),
+			pServer->GetServerDisconnTPS());
 
 		::wprintf(L"%s", text);
 
 		FILE* file;
-		errno_t openRet = _wfopen_s(&file, L"MonitorLog.txt", L"a+");
+		errno_t openRet = _wfopen_s(&file, L"MonitorLog/MonitorLog.txt", L"a+");
 		if (openRet != 0)
 		{
 			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
 				L"%s[%d]: Fail to open %s : %d\n",
-				_T(__FUNCTION__), __LINE__, L"MonitorLog.txt", openRet);
+				_T(__FUNCTION__), __LINE__, L"MonitorLog/MonitorLog.txt", openRet);
 
 			::wprintf(L"%s[%d]: Fail to open %s : %d\n",
-				_T(__FUNCTION__), __LINE__, L"MonitorLog.txt", openRet);
+				_T(__FUNCTION__), __LINE__, L"MonitorLog/MonitorLog.txt", openRet);
 		}
 
 		if (file != nullptr)
@@ -201,10 +220,10 @@ unsigned int __stdcall CGameServer::MonitorThread(void* arg)
 		{
 			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
 				L"%s[%d]: Fileptr is nullptr %s\n",
-				_T(__FUNCTION__), __LINE__, L"MonitorLog.txt");
+				_T(__FUNCTION__), __LINE__, L"MonitorLog/MonitorLog.txt");
 
 			::wprintf(L"%s[%d]: Fileptr is nullptr %s\n",
-				_T(__FUNCTION__), __LINE__, L"MonitorLog.txt");
+				_T(__FUNCTION__), __LINE__, L"MonitorLog/MonitorLog.txt");
 		}
 
 		/*
@@ -371,7 +390,7 @@ void CGameServer::LogicUpdate(int threadNum)
 		
 		if ((timeGetTime() - recvTime) > dfNETWORK_PACKET_RECV_TIMEOUT)
 		{
-			pPlayer->PushStateForDebug(__LINE__);
+			// pPlayer->PushStateForDebug(__LINE__);
 			SetPlayerDead(pPlayer, true);
 			InterlockedIncrement(&_timeoutCnt);	
 			continue;
@@ -793,7 +812,9 @@ inline void CGameServer::HandleRelease(__int64 sessionID)
 	if (iter == _playersMap.end()) 
 	{
 		ReleaseSRWLockExclusive(&_playersMapLock);
-		::printf("%s[%d] No session\n", __func__, __LINE__); 
+		LOG(L"FightGame", CSystemLog::DEBUG_LEVEL,
+			L"%s[%d]: No Session\n", _T(__FUNCTION__), __LINE__);
+		::wprintf(L"%s[%d]: No Session\n", _T(__FUNCTION__), __LINE__);
 		return;
 	}
 	CPlayer* pPlayer = iter->second;
@@ -802,25 +823,30 @@ inline void CGameServer::HandleRelease(__int64 sessionID)
 
 	PLAYER_STATE state = pPlayer->_state;
 	
-	pPlayer->PushStateForDebug(__LINE__);
+	// pPlayer->PushStateForDebug(__LINE__);
 	int num = pPlayer->_idx._num;
 	if (state == PLAYER_STATE::DISCONNECT)
 	{
 		ReleaseSRWLockExclusive(&_playersMapLock);
 		ReleaseSRWLockExclusive(&pPlayer->_lock);
 
-		::printf("%s[%d] Idx %d is Already Disconnect (%d == %d)\n",
+		LOG(L"FightGame", CSystemLog::DEBUG_LEVEL,
+			L"%s[%d] Idx %d is Already Disconnect (%d == %d)\n",
 			__func__, __LINE__, num, PLAYER_STATE::DISCONNECT, state);
+
+		::wprintf(L"%s[%d] Idx %d is Already Disconnect (%d == %d)\n",
+			__func__, __LINE__, num, PLAYER_STATE::DISCONNECT, state);
+
 		return;
 	}
 	_playersMap.erase(iter);
 	ReleaseSRWLockExclusive(&_playersMapLock);
 
-	pPlayer->PushStateForDebug(__LINE__);
+	// pPlayer->PushStateForDebug(__LINE__);
 
 	if (state != PLAYER_STATE::DEAD)
 	{
-		pPlayer->PushStateForDebug(__LINE__);
+		// pPlayer->PushStateForDebug(__LINE__);
 		__int64 playerID = pPlayer->_playerID;
 		CSector* pSector = pPlayer->_pSector;
 		PLAYER_STATE state = pPlayer->_state;
@@ -828,13 +854,18 @@ inline void CGameServer::HandleRelease(__int64 sessionID)
 
 		if (state == PLAYER_STATE::DISCONNECT)
 		{
-			::printf("%s[%d] Idx %d is Already Disconnect (%d == %d)\n",
+			LOG(L"FightGame", CSystemLog::DEBUG_LEVEL,
+				L"%s[%d] Idx %d is Already Disconnect (%d == %d)\n",
 				__func__, __LINE__, num, PLAYER_STATE::DISCONNECT, state);
+
+			::wprintf(L"%s[%d] Idx %d is Already Disconnect (%d == %d)\n",
+				__func__, __LINE__, num, PLAYER_STATE::DISCONNECT, state);
+
 			ReleaseSRWLockExclusive(&pPlayer->_lock);
 			return;
 		}
 		pPlayer->CleanUp();
-		pPlayer->PushStateForDebug(__LINE__);
+		// pPlayer->PushStateForDebug(__LINE__);
 		ReleaseSRWLockExclusive(&pPlayer->_lock);
 
 		AcquireSRWLockExclusive(&pSector->_lock);
@@ -859,7 +890,7 @@ inline void CGameServer::HandleRelease(__int64 sessionID)
 	else
 	{
 		pPlayer->CleanUp();
-		pPlayer->PushStateForDebug(__LINE__);
+		// pPlayer->PushStateForDebug(__LINE__);
 		ReleaseSRWLockExclusive(&pPlayer->_lock);
 	}
 
@@ -879,16 +910,21 @@ void CGameServer::SetPlayerDead(CPlayer* pPlayer, bool timeout)
 	PLAYER_STATE state = pPlayer->_state;
 	int num = pPlayer->_idx._num;
 
-	pPlayer->PushStateForDebug(__LINE__);
+	// pPlayer->PushStateForDebug(__LINE__);
 	if (state == PLAYER_STATE::DISCONNECT)
 	{
-		::printf("%s[%d] Idx %d is Already Disconnect (%d == %d)\n",
+		LOG(L"FightGame", CSystemLog::DEBUG_LEVEL,
+			L"%s[%d] Idx %d is Already Disconnect (%d == %d)\n",
 			__func__, __LINE__, num, PLAYER_STATE::DISCONNECT, state);
+
+		::wprintf(L"%s[%d] Idx %d is Already Disconnect (%d == %d)\n",
+			__func__, __LINE__, num, PLAYER_STATE::DISCONNECT, state);
+
 		ReleaseSRWLockExclusive(&pPlayer->_lock);
 		return;
 	}
 	pPlayer->_state = PLAYER_STATE::DEAD;
-	pPlayer->PushStateForDebug(__LINE__);
+	// pPlayer->PushStateForDebug(__LINE__);
 	ReleaseSRWLockExclusive(&pPlayer->_lock);
 
 	AcquireSRWLockExclusive(&pSector->_lock);
@@ -918,7 +954,11 @@ inline void CGameServer::HandleAccept(__int64 sessionID)
 	if (_usablePlayerIdx.empty())
 	{
 		ReleaseSRWLockExclusive(&_usableIdxLock);
-		::printf("%s[%d] player max\n", __func__, __LINE__); 
+		LOG(L"FightGame", CSystemLog::DEBUG_LEVEL,
+			L"%s[%d] player max\n", __func__, __LINE__);
+
+		::wprintf(L"%s[%d] player max\n", __func__, __LINE__);
+
 		Disconnect(sessionID);
 		return;
 	}
@@ -939,8 +979,14 @@ inline void CGameServer::HandleAccept(__int64 sessionID)
 	{
 		ReleaseSRWLockExclusive(&pPlayer->_lock);
 		ReleaseSRWLockExclusive(&_usableIdxLock);
-		::printf("%s[%d] Idx %d is Already Connect (%d != %d)\n",
+
+		LOG(L"FightGame", CSystemLog::DEBUG_LEVEL,
+			L"%s[%d] Idx %d is Already Connect (%d != %d)\n",
 			__func__, __LINE__, num, PLAYER_STATE::DISCONNECT, state);
+
+		::wprintf(L"%s[%d] Idx %d is Already Connect (%d != %d)\n",
+			__func__, __LINE__, num, PLAYER_STATE::DISCONNECT, state);
+
 		return;
 	}
 	_usablePlayerIdx.pop();
@@ -951,7 +997,7 @@ inline void CGameServer::HandleAccept(__int64 sessionID)
 	ReleaseSRWLockExclusive(&_IDGeneratorLock);
 
 	pPlayer->Initialize(sessionID, playerID);
-	pPlayer->PushStateForDebug(__LINE__);
+	// pPlayer->PushStateForDebug(__LINE__);
 	int sectorX = (pPlayer->_x / dfSECTOR_SIZE_X) + 2;
 	int sectorY = (pPlayer->_y / dfSECTOR_SIZE_Y) + 2;
 	pPlayer->_pSector = &_sectors[sectorY][sectorX];
@@ -1054,7 +1100,10 @@ inline void CGameServer::HandleRecv(__int64 sessionID, CPacket* packet)
 	if (iter == _playersMap.end()) 
 	{
 		ReleaseSRWLockShared(&_playersMapLock);
-		::printf("%s[%d] No session\n", __func__, __LINE__); 
+		LOG(L"FightGame", CSystemLog::DEBUG_LEVEL,
+			L"%s[%d]: No Session\n", _T(__FUNCTION__), __LINE__);
+
+		::wprintf(L"%s[%d]: No Session\n", _T(__FUNCTION__), __LINE__);
 		return;
 	}
 	CPlayer* pPlayer = iter->second;
@@ -1064,9 +1113,13 @@ inline void CGameServer::HandleRecv(__int64 sessionID, CPacket* packet)
 
 	if (pPlayer->_state != PLAYER_STATE::CONNECT)
 	{
-		ReleaseSRWLockExclusive(&pPlayer->_lock);
-		::printf("%s[%d] Idx %d is Invalid Session (%d)\n",
+		LOG(L"FightGame", CSystemLog::DEBUG_LEVEL,
+			L"%s[%d] Idx %d is Invalid Session (%d)\n",
 			__func__, __LINE__, pPlayer->_idx._num, pPlayer->_state);
+
+		::wprintf(L"%s[%d] Idx %d is Invalid Session (%d)\n",
+			__func__, __LINE__, pPlayer->_idx._num, pPlayer->_state);
+		ReleaseSRWLockExclusive(&pPlayer->_lock);
 		return;
 	}
 	
@@ -1079,43 +1132,45 @@ inline void CGameServer::HandleRecv(__int64 sessionID, CPacket* packet)
 	switch (msgType)
 	{
 	case dfPACKET_CS_MOVE_START:
-		pPlayer->PushStateForDebug(__LINE__);
+		// pPlayer->PushStateForDebug(__LINE__);
 		HandleCSPacket_MOVE_START(packet, pPlayer);
 		_pPacketPool->Free(packet);
 		break;
 
 	case dfPACKET_CS_MOVE_STOP:
-		pPlayer->PushStateForDebug(__LINE__);
+		// pPlayer->PushStateForDebug(__LINE__);
 		HandleCSPacket_MOVE_STOP(packet, pPlayer);
 		_pPacketPool->Free(packet);
 		break;
 
 	case dfPACKET_CS_ATTACK1:
-		pPlayer->PushStateForDebug(__LINE__);
+		// pPlayer->PushStateForDebug(__LINE__);
 		HandleCSPacket_ATTACK1(packet, pPlayer);
 		_pPacketPool->Free(packet);
 		break;
 
 	case dfPACKET_CS_ATTACK2:
-		pPlayer->PushStateForDebug(__LINE__);
+		// pPlayer->PushStateForDebug(__LINE__);
 		HandleCSPacket_ATTACK2(packet, pPlayer);
 		_pPacketPool->Free(packet);
 		break;
 
 	case dfPACKET_CS_ATTACK3:
-		pPlayer->PushStateForDebug(__LINE__);
+		// pPlayer->PushStateForDebug(__LINE__);
 		HandleCSPacket_ATTACK3(packet, pPlayer);
 		_pPacketPool->Free(packet);
 		break;
 
 	case dfPACKET_CS_ECHO:
-		pPlayer->PushStateForDebug(__LINE__);
+		// pPlayer->PushStateForDebug(__LINE__);
 		HandleCSPacket_ECHO(packet, pPlayer);
 		_pPacketPool->Free(packet);
 		break;
 
 	default:
-		::printf(" ------- Undefined Message: %d -------- \n", msgType);
+		LOG(L"FightGame", CSystemLog::DEBUG_LEVEL,
+			L"%s[%d] Undefined Message, %d\n", __func__, __LINE__, msgType);
+		::wprintf(L"%s[%d] Undefined Message, %d\n",__func__, __LINE__, msgType);
 		break;
 	}
 }
@@ -1141,7 +1196,7 @@ inline void CGameServer::HandleCSPacket_MOVE_START(CPacket* recvPacket, CPlayer*
 
 	if (abs(playerX - x) > dfERROR_RANGE || abs(playerY - y) > dfERROR_RANGE)
 	{
-		pPlayer->PushStateForDebug(__LINE__);
+		// pPlayer->PushStateForDebug(__LINE__);
 		CPacket* syncPacket = _pPacketPool->Alloc();
 		syncPacket->Clear();
 		int setRet = SetSCPacket_SYNC(syncPacket, playerID, playerX, playerY);
@@ -1195,7 +1250,7 @@ inline void CGameServer::HandleCSPacket_MOVE_STOP(CPacket* recvPacket, CPlayer* 
 
 	if (abs(playerX - x) > dfERROR_RANGE || abs(playerY - y) > dfERROR_RANGE)
 	{
-		pPlayer->PushStateForDebug(__LINE__);
+		// pPlayer->PushStateForDebug(__LINE__);
 		CPacket* syncPacket = _pPacketPool->Alloc();
 		syncPacket->Clear();
 		int setRet = SetSCPacket_SYNC(syncPacket, playerID, playerX, playerY);
@@ -1248,7 +1303,7 @@ inline void CGameServer::HandleCSPacket_ATTACK1(CPacket* recvPacket, CPlayer* pP
 
 	if (abs(playerX - x) > dfERROR_RANGE || abs(playerY - y) > dfERROR_RANGE)
 	{
-		pPlayer->PushStateForDebug(__LINE__);
+		// pPlayer->PushStateForDebug(__LINE__);
 		CPacket* syncPacket = _pPacketPool->Alloc();
 		syncPacket->Clear();
 		int setRet = SetSCPacket_SYNC(syncPacket, attackPlayerID, playerX, playerY);
@@ -1322,7 +1377,7 @@ inline void CGameServer::HandleCSPacket_ATTACK2(CPacket* recvPacket, CPlayer* pP
 
 	if (abs(playerX - x) > dfERROR_RANGE || abs(playerY - y) > dfERROR_RANGE)
 	{
-		pPlayer->PushStateForDebug(__LINE__);
+		// pPlayer->PushStateForDebug(__LINE__);
 		CPacket* syncPacket = _pPacketPool->Alloc();
 		syncPacket->Clear();
 		int setRet = SetSCPacket_SYNC(syncPacket, attackPlayerID, playerX, playerY);
@@ -1396,7 +1451,7 @@ inline void CGameServer::HandleCSPacket_ATTACK3(CPacket* recvPacket, CPlayer* pP
 
 	if (abs(playerX - x) > dfERROR_RANGE || abs(playerY - y) > dfERROR_RANGE)
 	{
-		pPlayer->PushStateForDebug(__LINE__);
+		// pPlayer->PushStateForDebug(__LINE__);
 		CPacket* syncPacket = _pPacketPool->Alloc();
 		syncPacket->Clear();
 		int setRet = SetSCPacket_SYNC(syncPacket, attackPlayerID, playerX, playerY);

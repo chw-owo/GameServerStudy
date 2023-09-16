@@ -9,9 +9,9 @@
 #define dfTITLE_LEN 256
 #define dfHEXDATA_LEN 32
 
-// #define __SYSTEM_LOG
-
+#define __SYSTEM_LOG
 #ifdef __SYSTEM_LOG
+
 #define __SYSTEM_LOG_MULTITHREAD
 
 class CSystemLog
@@ -45,14 +45,14 @@ private:
 	__int64 _logCount;
 
 #ifdef  __SYSTEM_LOG_MULTITHREAD
-	SRWLOCK _lock;
+	CRITICAL_SECTION _cs;
 #endif
 };
 
 extern CSystemLog* g_pSystemLog;
 #endif
 
-#ifdef SYSTEM_LOG
+#ifdef __SYSTEM_LOG
 #define SYSLOG_DIRECTORY(dirName)						g_pSystemLog->SetSysLogDir(dirName)
 #define SYSLOG_LEVEL(logLevel)							g_pSystemLog->SetSysLogLevel(logLevel)
 #define LOG(logType, logLevel, format, ...)				g_pSystemLog->Log(logType, logLevel, format, ##__VA_ARGS__)

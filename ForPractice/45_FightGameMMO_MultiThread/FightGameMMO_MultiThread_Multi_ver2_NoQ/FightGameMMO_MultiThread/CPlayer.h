@@ -37,15 +37,9 @@ public:
 		_x(-1), _y(-1), _sessionID(-1), _playerID(-1), _pSector(nullptr),
 		_move(false), _hp(-1), _direction(-1), _moveDirection(-1), _lastRecvTime(-1)
 	{
-		/*
-		_debugLineQ.reserve(100);
-		_debugStateQ.reserve(100);
-		_debugPlayerIDQ.reserve(100);
-		_debugThreadIDQ.reserve(100);
-		_debugMinQ.reserve(100);
-		_debugSecQ.reserve(100);
-		*/
 		InitializeSRWLock(&_lock);
+		InitializeCriticalSection(&_csDebug);
+		// _debugDataArray.reserve(1000);
 	}
 
 	inline CPlayer()
@@ -106,50 +100,64 @@ public:
 	CSector* _pSector;
 	DWORD _lastRecvTime;
 
-public:
-	/*
-	vector<int> _debugLineQ;
-	vector<int> _debugStateQ;
-	vector<__int64> _debugPlayerIDQ;
-	vector<int> _debugThreadIDQ;
-	vector<int> _debugMinQ;
-	vector<int> _debugSecQ;
-	SRWLOCK _debugQLock;
-	*/
+private:
+	class CPlayerDebugData
+	{
+		friend CPlayer;
 
+	private:
+		CPlayerDebugData() :
+			_line(-1), _state(-1), _playerID(-1),
+			_threadID(-1), _min(-1), _sec(-1) {}
+
+		CPlayerDebugData(int line, int state, __int64 playerID ,
+			int threadID, int min, int sec)
+			: _line(line), _state(state), _playerID(playerID),
+			_threadID(-1), _min(-1), _sec(-1) {}
+
+	private:
+		int _line;
+		int _state;
+		__int64 _playerID;
+		int _threadID;
+		int _min;
+		int _sec;
+	};
+
+private:
+	CRITICAL_SECTION _csDebug;
+	vector<CPlayerDebugData*> _debugDataArray;
+
+public:
 	void PushStateForDebug(int line)
 	{
 		/*
-		AcquireSRWLockExclusive(&_debugQLock);
+		EnterCriticalSection(&_csDebug);
 		SYSTEMTIME stTime;
 		GetLocalTime(&stTime);
-		_debugLineQ.push_back(line);
-		_debugStateQ.push_back((int)_state);
-		_debugPlayerIDQ.push_back(_playerID);
-		_debugThreadIDQ.push_back(GetCurrentThreadId());
-		_debugMinQ.push_back(stTime.wMinute);
-		_debugSecQ.push_back(stTime.wSecond);
-		ReleaseSRWLockExclusive(&_debugQLock);
+
+		CPlayerDebugData* data = new CPlayerDebugData(
+			line, (int)_state, _playerID, GetCurrentThreadId(), 
+			stTime.wMinute, stTime.wSecond);
+		_debugDataArray.push_back(data);
+
+		LeaveCriticalSection(&_csDebug);
 		*/
 	}
 
 	void PrintStateForDebug()
 	{
 		/*
-		AcquireSRWLockExclusive(&_debugQLock);
-		
-		::printf("\n<%lld>\n", _debugLineQ.size());
-		
-		
-		for (int i = 0; i < _debugThreadIDQ.size(); i++)
+		EnterCriticalSection(&_csDebug);	
+		::wprintf(L"\n<%lld>\n", _debugDataArray.size());		
+		for (int i = 0; i < _debugDataArray.size(); i++)
 		{
-			::printf("%d: %lld, %d (%d - %02d:%02d)\n", 
-				_debugLineQ[i], _debugPlayerIDQ[i], 
-				_debugStateQ[i], _debugThreadIDQ[i],
-				_debugMinQ[i], _debugSecQ[i]);
+			::wprintf(L"%d: %lld, %d (%d - %02d:%02d)\n", 
+				_debugDataArray[i]->_line, _debugDataArray[i]->_playerID,
+				_debugDataArray[i]->_state, _debugDataArray[i]->_threadID,
+				_debugDataArray[i]->_min, _debugDataArray[i]->_sec);
 		}
-
-		ReleaseSRWLockExclusive(&_debugQLock);
+		LeaveCriticalSection(&_csDebug);
 		*/
 	}
 };
