@@ -48,7 +48,7 @@ public:
 			StackNode* pTopLocal = _pTop;
 			pNew->_next = pTopLocal;
 			
-			DATA compVal;
+			DATA compVal = -1;
 			DATA exchVal = data;
 			if (pTopLocal != nullptr) compVal = pTopLocal->_data;
 			
@@ -68,7 +68,7 @@ public:
 			StackNode* pTopLocal = _pTop;
 			StackNode* pNext = pTopLocal->_next;
 
-			DATA exchVal;
+			DATA exchVal = -1;
 			DATA compVal = pTopLocal->_data; // 지금 테스트 환경에서는 pTop이 늘 존재
 			if (pNext != nullptr) exchVal = pNext->_data;
 
@@ -96,10 +96,10 @@ private:
 			_idx = idx;
 			_threadID = threadID;
 			_line = line;
-			_exchange = exchange;
-			_comperand = comperand;
 			_exchVal = exchVal;
 			_compVal = compVal;
+			_exchange = exchange;
+			_comperand = comperand;
 		}
 
 	private:
@@ -121,15 +121,26 @@ private:
 		_stackDebugArray[idx % dfSTACK_DEBUG_MAX].SetData(
 			idx, GetCurrentThreadId(), line, exchange, comperand, exchVal, compVal);
 
-		// TO-DO... 값이 분명 같은데 다르다고 나옴 왜!!!!
-		if ((_stackDebugArray[(idx - 1) % dfSTACK_DEBUG_MAX]._exchVal != compVal) &&
-			(_stackDebugArray[(idx - 1) % dfSTACK_DEBUG_MAX]._exchange == comperand))
+		int checkIdx1 = (idx - 100) % dfSTACK_DEBUG_MAX;
+		int checkIdx2 = (idx - 99) % dfSTACK_DEBUG_MAX;
+		
+		if (checkIdx1 < 0)
 		{
-			::printf("Stack[%d]: %d != %d\n", idx % dfSTACK_DEBUG_MAX,
-				_stackDebugArray[(idx - 1) % dfSTACK_DEBUG_MAX]._exchVal, compVal);
+			checkIdx1 += dfSTACK_DEBUG_MAX;
+			if (checkIdx2 < 0) checkIdx2 += dfSTACK_DEBUG_MAX;
+		}
+		
+		DATA val1 = _stackDebugArray[checkIdx1]._exchVal;
+		DATA val2 = _stackDebugArray[checkIdx2]._compVal;
+		__int64 addr1 = _stackDebugArray[checkIdx1]._exchange;
+		__int64 addr2 = _stackDebugArray[checkIdx2]._comperand;
+
+		if ((val1 != val2) && (addr1 == addr2))
+		{
+			::printf("Stack[%d]: %d != %d, %lld == %lld\n", 
+				checkIdx2, val1, val2, addr1, addr2);
 			__debugbreak();
 		}
-
 	}
 
 private: 

@@ -73,10 +73,10 @@ private:
 			_idx = idx;
 			_threadID = threadID;
 			_line = line;
-			_exchange = exchange;
-			_comperand = comperand;
 			_exchVal = exchVal;
 			_compVal = compVal;
+			_exchange = exchange;
+			_comperand = comperand;
 		}
 
 	private:
@@ -98,11 +98,24 @@ private:
 		_poolDebugArray[idx % dfPOOL_DEBUG_MAX].SetData(
 			idx, GetCurrentThreadId(), line, exchange, comperand, exchVal, compVal);
 
-		if ((_poolDebugArray[(idx - 1) % dfPOOL_DEBUG_MAX]._exchVal != compVal) &&
-			(_poolDebugArray[(idx - 1) % dfPOOL_DEBUG_MAX]._exchange == comperand))
+		int checkIdx1 = (idx - 100) % dfPOOL_DEBUG_MAX;
+		int checkIdx2 = (idx - 99) % dfPOOL_DEBUG_MAX;
+
+		if (checkIdx1 < 0)
 		{
-			::printf("Pool[%d]: %d != %d\n", idx % dfPOOL_DEBUG_MAX, 
-				_poolDebugArray[(idx - 1) % dfPOOL_DEBUG_MAX]._exchVal, compVal);
+			checkIdx1 += dfPOOL_DEBUG_MAX;
+			if (checkIdx2 < 0) checkIdx2 += dfPOOL_DEBUG_MAX;
+		}
+
+		DATA val1 = _poolDebugArray[checkIdx1]._exchVal;
+		DATA val2 = _poolDebugArray[checkIdx2]._compVal;
+		__int64 addr1 = _poolDebugArray[checkIdx1]._exchange;
+		__int64 addr2 = _poolDebugArray[checkIdx2]._comperand;
+
+		if ((val1 != val2) && (addr1 == addr2))
+		{
+			::printf("Pool[%d]: %lld != %lld, %lld == %lld\n", 
+				checkIdx2, val1, val2, addr1, addr2);
 			__debugbreak();
 		}
 	}
@@ -250,7 +263,7 @@ DATA* CLockFreePool<DATA>::Alloc(Types... args) // Pop
 			if (InterlockedCompareExchange64((LONG64*)&_pFreeNode, 
 				(LONG64)pNext, (LONG64)pTopLocal) == (LONG64)pTopLocal)
 			{
-				LeaveLog(0, (LONG64)pNext, (LONG64)pTopLocal, exchVal, compVal);
+				LeaveLog(1, (LONG64)pNext, (LONG64)pTopLocal, exchVal, compVal);
 				new (&(pTopLocal->_data)) DATA(args...);
 
 #ifdef __OBJECT_POOL_DEBUG__
@@ -303,7 +316,7 @@ DATA* CLockFreePool<DATA>::Alloc(Types... args) // Pop
 			if (InterlockedCompareExchange64((LONG64*)&_pFreeNode, 
 				(LONG64)pNext, (LONG64)pTopLocal) == (LONG64)pTopLocal)
 			{
-				LeaveLog(0, (LONG64)pNext, (LONG64)pTopLocal, exchVal, compVal);
+				LeaveLog(1, (LONG64)pNext, (LONG64)pTopLocal, exchVal, compVal);
 
 #ifdef __OBJECT_POOL_DEBUG__
 				_useCount++;
@@ -372,7 +385,7 @@ bool CLockFreePool<DATA>::Free(DATA* pData) // Push
 			if (InterlockedCompareExchange64((LONG64*)&_pFreeNode, 
 				(LONG64)pData, (LONG64)pTopLocal) == (LONG64)pTopLocal)
 			{
-				LeaveLog(1, (LONG64)pData, (LONG64)pTopLocal, exchVal, compVal);
+				LeaveLog(0, (LONG64)pData, (LONG64)pTopLocal, exchVal, compVal);
 				return true;
 			}
 		}
@@ -422,7 +435,7 @@ bool CLockFreePool<DATA>::Free(DATA* pData) // Push
 			if (InterlockedCompareExchange64((LONG64*)&_pFreeNode, 
 				(LONG64)pData, (LONG64)pTopLocal) == (LONG64)pTopLocal)
 			{
-				LeaveLog(1, (LONG64)pData, (LONG64)pTopLocal, exchVal, compVal);
+				LeaveLog(0, (LONG64)pData, (LONG64)pTopLocal, exchVal, compVal);
 				return true;
 			}
 		}

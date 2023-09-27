@@ -19,7 +19,7 @@ int main()
 
 	SYSTEM_INFO si;
 	GetSystemInfo(&si);
-	int threadCnt = (int)si.dwNumberOfProcessors - 2; 
+	int threadCnt = (int)si.dwNumberOfProcessors / 2;
 	HANDLE* threads = new HANDLE[threadCnt];
 
 	for (int i = 0; i < threadCnt; i++)
