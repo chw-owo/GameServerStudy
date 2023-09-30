@@ -138,6 +138,8 @@
   <ItemGroup>
     <ClInclude Include="LockFreePool.h" />
     <ClInclude Include="LockFreeQueue.h" />
+    <ClInclude Include="LockFreeQueueTester.h" />
+    <ClInclude Include="TestData.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -1,16 +1,17 @@
 #pragma once
 #include "LockFreePool.h"
+#include "TestData.h"
 
 #define ENQ_CAS1 0
 #define ENQ_CAS2 1
-#define DEQ_CAS  2
+#define ENQ_CAS3 2
+#define DEQ_CAS  3
+#define ENQ_CAS2_FAIL 9999
 
-#define ENQ_CAS_FAIL  5
-#define ENQ_NEXT_NOT_NULL  6
-#define DEQ_CAS_FAIL  5
-#define DEQ_NEXT_NULL  6
+#define ENQ_CAS3_FAIL 100
+#define DEQ_CAS_FAIL 101
+#define DEQ_NEXT_NULL 102
 
-template<typename DATA>
 class CLockFreeQueue
 {
 public:
@@ -42,29 +43,15 @@ private:
     class QueueNode
     {
         friend CLockFreeQueue;
-
-    public:
-        QueueNode()
-        {
-            _data = 0;
-            _next = 0;
-        }
-
-        ~QueueNode()
-        {
-            _data = 0;
-            _next = 0;
-        }
-
     public:
         bool operator != (const QueueNode& other)
         {
-            return _data != other._data;
+            return _data->_value != other._data->_value;
         }
 
     private:
-        DATA _data;
-        __int64 _next;
+        TestData* _data = nullptr;
+        __int64 _next = 0;
     };
 
     __int64 _head;
@@ -81,7 +68,7 @@ private: // For protect ABA
     volatile __int64 _key = 0;
 
 public:
-    void Enqueue(DATA data)
+    void Enqueue(TestData* data)
     {
         QueueNode* node = _pPool->Alloc();
         node->_data = data;
@@ -96,111 +83,99 @@ public:
 
         while (true)
         {
+            int size = _size;
             __int64 tail = _tail;
             QueueNode* tailNode = (QueueNode*)(tail & _addressMask);
-            DATA tailVal = tailNode->_data;
-            __int64 next = tailNode->_next;
+            __int64 next = tailNode->_next;   
 
-            if (next == NULL)
+            if (next != NULL)
             {
-                __int64 result1 = InterlockedCompareExchange64(&tailNode->_next, newNode, next);
-                if (result1 == next)
-                {
-                    int size = InterlockedExchangeAdd(&_size, 1);
-                    LeaveLog(ENQ_CAS1, size, (unsigned __int64)newNode, data, (unsigned __int64)next, 0, 0, 0);
-
-                    __int64 result2 = InterlockedCompareExchange64(&_tail, newNode, tail);
-                    
-                    if (result2 != tail)
-                    {
-                        size = InterlockedExchangeAdd(&_size, -1);
-                        InterlockedCompareExchange64(&tailNode->_next, node->_next, newNode);
-                    }
-
-                    LeaveLog(ENQ_CAS2, size, (unsigned __int64)newNode, data, (unsigned __int64)tail, tailVal,
-                        (unsigned __int64)result2, ((QueueNode*)(result2 & _addressMask))->_data);
-                    
-                    break;
-                }
-                else if (_casFailFlag)
-                {
-                    LeaveLog(ENQ_CAS_FAIL, -1, (unsigned __int64)newNode, data, (unsigned __int64)next, 0,
-                        (unsigned __int64)result1, ((QueueNode*)(result1 & _addressMask))->_data);
-                }
-            }
-            else if (_casFailFlag)
-            {
-                LeaveLog(ENQ_NEXT_NOT_NULL, -1, (unsigned __int64)newNode, data, 
-                    (unsigned __int64)next, ((QueueNode*)(next & _addressMask))->_data, 0, 0);
-            }
-        }
-    }
-
-    int Dequeue()
-    {
-        if (_size == 0)
-            return -1;
-
-        while (true)
-        {
-            __int64 head = _head;
-            QueueNode* headNode = (QueueNode*)(head & _addressMask);
-            DATA headVal = headNode->_data;
-
-            __int64 next = headNode->_next;
-            QueueNode* nextNode = (QueueNode*)(next & _addressMask);
-
-            if (nextNode != nullptr)
-            {
-                DATA nextVal = nextNode->_data;
-                __int64 result = InterlockedCompareExchange64(&_head, next, head);
-                if (result == head)
-                {
-                    int size = InterlockedExchangeAdd(&_size, -1);
-                    LeaveLog(DEQ_CAS, size, (unsigned __int64)next, nextVal, (unsigned __int64)head, headVal, 0, 0);
-                    _pPool->Free(headNode);
-                    break;
-                }
-                else if (_casFailFlag)
-                {
-                    LeaveLog(DEQ_CAS_FAIL, -1, (unsigned __int64)next, nextVal, (unsigned __int64)head, headVal, 
-                        (unsigned __int64)result, ((QueueNode*)(result & _addressMask))->_data);
-                }
+                __int64 result = InterlockedCompareExchange64(&_tail, next, tail);             
+                if (result == tail)
+                    LeaveLog(ENQ_CAS3, size, (unsigned __int64)next, ((QueueNode*)(next & _addressMask))->_data, (unsigned __int64)tail, tailNode->_data, result);
+                else
+                    LeaveLog(ENQ_CAS3_FAIL, size, (unsigned __int64)next, ((QueueNode*)(next & _addressMask))->_data, (unsigned __int64)tail, tailNode->_data, result);
             }
             else
             {
-                if (_casFailFlag) LeaveLog(DEQ_NEXT_NULL, -1, (unsigned __int64)next, 0, 
-                    (unsigned __int64)head, headVal, 0, 0);
-                return -1;
+                if (InterlockedCompareExchange64(&tailNode->_next, newNode, next) == next)
+                {
+                    LeaveLog(ENQ_CAS1, size, (unsigned __int64)newNode, data, (unsigned __int64)tail, tailNode->_data, 0);
+
+                    __int64 result = InterlockedCompareExchange64(&_tail, newNode, tail);
+                    if (result == tail)
+                        LeaveLog(ENQ_CAS2, size, (unsigned __int64)newNode, data, (unsigned __int64)tail, tailNode->_data, result);
+                    else
+                        LeaveLog(ENQ_CAS2_FAIL, size, (unsigned __int64)newNode, data, (unsigned __int64)tail, tailNode->_data, result);
+
+                    break;
+                }
+            }           
+        }
+
+        InterlockedExchangeAdd(&_size, 1);
+    }
+
+    TestData* Dequeue()
+    {
+        TestData* data = nullptr;
+        if (_size == 0) return data;
+
+        while (true)
+        {
+            int size = _size;
+            __int64 tail = _tail;
+            __int64 head = _head;
+            QueueNode* headNode = (QueueNode*)(head & _addressMask);
+            __int64 next = headNode->_next;
+
+            if(next == NULL) 
+            {
+                LeaveLog(DEQ_NEXT_NULL, size, (unsigned __int64)next, 0, (unsigned __int64)head, 0, 0);
+                return data;
+            }
+
+            if (head != tail)
+            {
+                __int64 result = InterlockedCompareExchange64(&_head, next, head);
+                if (result == head)
+                {
+                    LeaveLog(DEQ_CAS, size, (unsigned __int64)next, ((QueueNode*)(next & _addressMask))->_data, (unsigned __int64)head, data, result);
+                    data = headNode->_data;              
+                    _pPool->Free(headNode);
+                    break;
+                }
+                else
+                {
+                    LeaveLog(DEQ_CAS_FAIL, size, (unsigned __int64)next, ((QueueNode*)(next & _addressMask))->_data, (unsigned __int64)head, data, result);
+                }
             }
         }
 
-        return 0;
+        InterlockedExchangeAdd(&_size, -1);
+        return data;
     }
 
-private:
+private: // For Log
     class QueueDebugData
     {
         friend CLockFreeQueue;
 
     private:
-        QueueDebugData() : _idx(-1), _threadID(-1), _line(-1),
-            _compKey(-1), _exchKey(-1), _compAddress(-1), _exchAddress(-1) {}
+        QueueDebugData() : _idx(-1), _threadID(-1), _line(-1), _size(-1), _compKey(-1), _exchKey(-1), _realKey(-1), 
+            _compAddress(-1), _exchAddress(-1), _realAddress(-1), _compData(nullptr), _exchData(nullptr) {}
 
-        void SetData(int idx, int threadID, int line, int size,
-            int exchKey, __int64 exchAddress, DATA exchVal,
-            int compKey, __int64 compAddress, DATA compVal,
-            int realKey, __int64 realAddress, DATA realVal)
+        void SetData(int idx, int threadID, int line, int size, int exchKey, __int64 exchAddress, TestData* exchData,
+            int compKey, __int64 compAddress, TestData* compData, int realKey, __int64 realAddress)
         {
-            _exchVal = exchVal;
             _exchKey = exchKey;
             _exchAddress = exchAddress;
+            _exchData = exchData;
 
-            _compVal = compVal;
             _compKey = compKey;
             _compAddress = compAddress;
+            _compData = compData;
 
-            _realVal = realVal;
             _realKey = realKey;
             _realAddress = realAddress;
 
@@ -208,8 +183,6 @@ private:
             _threadID = threadID;
             _line = line;
             _size = size;
-
-            __faststorefence();
         }
 
     private:
@@ -220,36 +193,22 @@ private:
 
         int _compKey;
         __int64 _compAddress;
-        DATA _compVal;
+        TestData* _compData;
 
         int _exchKey;
         __int64 _exchAddress;
-        DATA _exchVal;
+        TestData* _exchData;
 
         int _realKey;
         __int64 _realAddress;
-        DATA _realVal;
     };
+    
+private: 
+#define dfQUEUE_DEBUG_MAX 2000000
+#define dfSAVE_IDX_MAX 1000
 
-private:
-#define dfQUEUE_DEBUG_MAX 100000
-    QueueDebugData _queueDebugArray[dfQUEUE_DEBUG_MAX];
-    volatile long _queueDebugIdx = -1;
-
-#define dfSAVE_IDX_MAX 100
-    QueueDebugData* _sizeZeroArray[dfSAVE_IDX_MAX];
-    QueueDebugData* _casFailArray[dfSAVE_IDX_MAX];
-    volatile long _sizeZeroIdx = -1;
-    volatile long _casFailIdx = -1;
-
-private:
-    bool _casFailFlag = false;
-
-private:
-    inline void LeaveLog(int line, int size,
-        unsigned __int64 exchange, DATA exchVal,
-        unsigned __int64 comperand, DATA compVal,
-        unsigned __int64 real, DATA realVal)
+    inline void LeaveLog(int line, int size, unsigned __int64 exchange, TestData* exchData, 
+        unsigned __int64 comperand, TestData* compData, unsigned __int64 real)
     {
         LONG idx = InterlockedIncrement(&_queueDebugIdx);
         if (idx >= dfQUEUE_DEBUG_MAX) __debugbreak();
@@ -261,29 +220,18 @@ private:
         __int64 compAddress = comperand & _addressMask;
         __int64 realAddress = real & _addressMask;
 
-        _queueDebugArray[idx % dfQUEUE_DEBUG_MAX].SetData(
-            idx, GetCurrentThreadId(), line, size,
-            exchKey, exchAddress, exchVal,
-            compKey, compAddress, compVal,
-            realKey, realAddress, realVal);
-
-        if (_head == _tail)
-        {
-            LONG sizeZeroIdx = InterlockedIncrement(&_sizeZeroIdx);
-            _sizeZeroArray[sizeZeroIdx % dfSAVE_IDX_MAX] = &_queueDebugArray[idx % dfQUEUE_DEBUG_MAX];
-
-            //::printf("Size %d: %d (%d)\n", size, idx, idx % dfQUEUE_DEBUG_MAX);
-        }
-
-        if (line == ENQ_CAS2 && comperand != real)
+        _queueDebugArray[idx % dfQUEUE_DEBUG_MAX].SetData(idx, GetCurrentThreadId(), line, size,
+            exchKey, exchAddress, exchData, compKey, compAddress, compData, realKey, realAddress);
+        if (line == ENQ_CAS2_FAIL)
         {
             LONG casFailIdx = InterlockedIncrement(&_casFailIdx);
             _casFailArray[casFailIdx % dfSAVE_IDX_MAX] = &_queueDebugArray[idx % dfQUEUE_DEBUG_MAX];
-            _casFailFlag = true;
-
-            ::printf("CAS2 fail: %d (%d)\n", idx, idx % dfQUEUE_DEBUG_MAX);          
-            //__debugbreak();
         }
     }
+
+    QueueDebugData _queueDebugArray[dfQUEUE_DEBUG_MAX];
+    volatile long _queueDebugIdx = -1;
+    QueueDebugData* _casFailArray[dfSAVE_IDX_MAX] = { nullptr, };
+    volatile long _casFailIdx = -1;
 };
 

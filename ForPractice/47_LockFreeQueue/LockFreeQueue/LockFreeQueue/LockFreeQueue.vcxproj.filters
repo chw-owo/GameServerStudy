@@ -14,6 +14,9 @@
     <Filter Include="LockFreeQueue">
       <UniqueIdentifier>{b12b36be-fded-40a7-abc8-d8c5bc7eb3d9}</UniqueIdentifier>
     </Filter>
+    <Filter Include="LockFreeQueueTester">
+      <UniqueIdentifier>{f8579f63-2ce3-42d9-a5a0-7aad087e5328}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -26,6 +29,12 @@
     </ClInclude>
     <ClInclude Include="LockFreePool.h">
       <Filter>LockFreePool</Filter>
+    </ClInclude>
+    <ClInclude Include="LockFreeQueueTester.h">
+      <Filter>LockFreeQueue</Filter>
+    </ClInclude>
+    <ClInclude Include="TestData.h">
+      <Filter>LockFreeQueue</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
