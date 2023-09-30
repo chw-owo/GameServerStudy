@@ -7,11 +7,6 @@
 #include <stdio.h>
 #pragma comment(lib, "winmm.lib")
 
-// Test 
-// 1. 잘못된 데이터가 반환되는 상황
-// 2. 데이터가 있는데 반환이 안되는 상황
-// 3. 넣은 데이터의 개수와 다른 상황
-
 class CLockFreeQueueTester
 {
 private:
