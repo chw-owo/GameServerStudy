@@ -129,27 +129,26 @@ public:
             QueueNode* headNode = (QueueNode*)(head & _addressMask);
             __int64 next = headNode->_next;
 
-            if(next == NULL) 
+            if(next == NULL || head == tail)
             {
                 LeaveLog(DEQ_NEXT_NULL, size, (unsigned __int64)next, 0, (unsigned __int64)head, 0, 0);
                 return data;
             }
 
-            if (head != tail)
+            
+            __int64 result = InterlockedCompareExchange64(&_head, next, head);
+            if (result == head)
             {
-                __int64 result = InterlockedCompareExchange64(&_head, next, head);
-                if (result == head)
-                {
-                    LeaveLog(DEQ_CAS, size, (unsigned __int64)next, ((QueueNode*)(next & _addressMask))->_data, (unsigned __int64)head, data, result);
-                    data = headNode->_data;              
-                    _pPool->Free(headNode);
-                    break;
-                }
-                else
-                {
-                    LeaveLog(DEQ_CAS_FAIL, size, (unsigned __int64)next, ((QueueNode*)(next & _addressMask))->_data, (unsigned __int64)head, data, result);
-                }
+                LeaveLog(DEQ_CAS, size, (unsigned __int64)next, ((QueueNode*)(next & _addressMask))->_data, (unsigned __int64)head, data, result);
+                data = headNode->_data;              
+                _pPool->Free(headNode);
+                break;
             }
+            else
+            {
+                LeaveLog(DEQ_CAS_FAIL, size, (unsigned __int64)next, ((QueueNode*)(next & _addressMask))->_data, (unsigned __int64)head, data, result);
+            }
+            
         }
 
         InterlockedExchangeAdd(&_size, -1);
