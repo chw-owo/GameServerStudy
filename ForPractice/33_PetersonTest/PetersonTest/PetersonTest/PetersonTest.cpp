@@ -17,17 +17,10 @@ unsigned WINAPI Lock0(void* arg)
 	{
 		flag[0] = true;
 		turn = 0;
-		while (flag[1] && turn == 0)
-		{
-			if (debug == 0xff)
-			{
-				printf("%s: flag[%d, %d], turn - %d\n",
-					__func__, flag[0], flag[1], turn);
-				__debugbreak();
-			}
-			debug |= 0x0f;
-		}
-		debug &= 0xf0;
+
+		__faststorefence();
+		while (flag[1] && turn == 0);
+
 		cnt++;
 		flag[0] = false;
 	}
@@ -40,17 +33,10 @@ unsigned WINAPI Lock1(void* arg)
 	{
 		flag[1] = true;
 		turn = 1;
-		while (flag[0] && turn == 1)
-		{
-			if (debug == 0xff)
-			{
-				printf("%s: flag[%d, %d], turn - %d\n",
-					__func__, flag[0], flag[1], turn);
-				__debugbreak();
-			}
-			debug |= 0xf0;
-		}
-		debug &= 0x0f;
+
+		__faststorefence();
+		while (flag[0] && turn == 1);
+
 		cnt++;
 		flag[1] = false;
 	}
