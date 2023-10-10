@@ -334,11 +334,11 @@ private: // For Log
 
     private:
         QueueDebugData() : _idx(-1), _threadID(-1), _line(-1), _size(-1), _compKey(-1), _exchKey(-1), _realKey(-1),
-            _compAddress(-1), _exchAddress(-1), _realAddress(-1), _compData(nullptr), _exchData(nullptr) {}
+            _compAddress(-1), _exchAddress(-1), _realAddress(-1), _compData(-1), _exchData(-1) {}
 
         void SetData(int idx, int threadID, int line, int size,
-            int exchKey, __int64 exchAddress, SerializePacket* exchData,
-            int compKey, __int64 compAddress, SerializePacket* compData,
+            int exchKey, __int64 exchAddress, int exchData,
+            int compKey, __int64 compAddress, int compData,
             int realKey, __int64 realAddress)
         {
             _exchKey = exchKey;
@@ -366,11 +366,11 @@ private: // For Log
 
         int _compKey;
         __int64 _compAddress;
-        SerializePacket* _compData;
+        int _compData;
 
         int _exchKey;
         __int64 _exchAddress;
-        SerializePacket* _exchData;
+        int _exchData;
 
         int _realKey;
         __int64 _realAddress;
@@ -381,8 +381,8 @@ private:
 #define dfSAVE_IDX_MAX 1000
 
     inline void LeaveLog(int line, int size,
-        unsigned __int64 exchange, SerializePacket* exchData,
-        unsigned __int64 comperand, SerializePacket* compData,
+        unsigned __int64 exchange, int exchData,
+        unsigned __int64 comperand, int compData,
         unsigned __int64 real)
     {
         LONG idx = InterlockedIncrement(&_queueDebugIdx);

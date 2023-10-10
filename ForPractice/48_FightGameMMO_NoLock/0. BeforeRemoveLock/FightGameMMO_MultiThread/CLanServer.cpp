@@ -9,8 +9,6 @@
 __declspec (thread) CProfiler* pSTLSProfiler = new CProfiler;
 #endif
 
-// TO-DO: Send IOCP가 돌아오지 않는다~~
-
 bool CLanServer::NetworkStart(const wchar_t* IP, short port,
 	int numOfWorkerThreads, bool nagle, int sessionMax)
 {
@@ -60,22 +58,40 @@ bool CLanServer::NetworkStart(const wchar_t* IP, short port,
 		return false;
 	}
 
+	int optRet;
 	LINGER optval;
 	optval.l_onoff = 1;
 	optval.l_linger = 0;
-	int optRet = setsockopt(_listenSock, SOL_SOCKET, SO_LINGER,
-		(char*)&optval, sizeof(optval));
+	optRet = setsockopt(_listenSock, SOL_SOCKET, SO_LINGER, (char*)&optval, sizeof(optval));
 	if (optRet == SOCKET_ERROR)
 	{
 		int err = WSAGetLastError();
 
 		LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
-			L"%s[%d]: bind Error, %d\n",
+			L"%s[%d]: sockopt linger Error, %d\n",
 			_T(__FUNCTION__), __LINE__, err);
 
-		::wprintf(L"%s[%d]: bind Error, %d\n",
+		::wprintf(L"%s[%d]: sockopt linger Error, %d\n",
 			_T(__FUNCTION__), __LINE__, err);
 		
+		__debugbreak();
+		return false;
+	}
+
+	int sndBufSize = 0;
+	optRet = setsockopt(_listenSock, SOL_SOCKET, SO_SNDBUF,
+		(char*)&sndBufSize, sizeof(sndBufSize));
+	if (optRet == SOCKET_ERROR)
+	{
+		int err = WSAGetLastError();
+
+		LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+			L"%s[%d]: sockopt sndbuf 0 Error, %d\n",
+			_T(__FUNCTION__), __LINE__, err);
+
+		::wprintf(L"%s[%d]: sockopt sndbuf 0 Error, %d\n",
+			_T(__FUNCTION__), __LINE__, err);
+
 		__debugbreak();
 		return false;
 	}
@@ -331,23 +347,9 @@ bool CLanServer::SendPacket(__int64 sessionID, CPacket* packet)
 		}
 	}
 
-	int packetSize = packet->GetPacketSize();
-	int enqueueRet = pSession->_sendBuf.Enqueue(packet->GetPacketReadPtr(), packetSize);
-
-	if (enqueueRet != packetSize)
-	{
-		LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
-			L"%s[%d]: Packet Return Error\n",
-			_T(__FUNCTION__), __LINE__);
-
-		::wprintf(L"%s[%d]: Packet Return Error\n",
-			_T(__FUNCTION__), __LINE__);
-
-		LeaveCriticalSection(&pSession->_cs);
-		return false;
-	}
-
+	pSession->_sendBuf.Enqueue(packet);
 	SendPost(pSession);
+
 	LeaveCriticalSection(&pSession->_cs);
 
 	return true;
@@ -692,7 +694,8 @@ void CLanServer::HandleRecvCP(__int64 sessionID, int recvBytes)
 		LeaveCriticalSection(&pSession->_cs);
 
 		OnRecv(pSession->_ID, packet); 
-		
+		_pPacketPool->Free(packet);
+
 		AcquireSRWLockShared(&_sessionMap->_lock);
 		iter = _sessionMap->_map.find(sessionID);
 		if (iter == _sessionMap->_map.end())
@@ -751,19 +754,15 @@ void CLanServer::HandleSendCP(__int64 sessionID, int sendBytes)
 	}
 
 	// pSession->PushStateForDebug(__LINE__); 
-	int moveReadRet = pSession->_sendBuf.MoveReadPos(sendBytes);
-	if (moveReadRet != sendBytes)
+
+	for (int i = 0; i < pSession->_sendCnt; i++)
 	{
-		LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
-			L"%s[%d]: send buffer Return Error\n",
-			_T(__FUNCTION__), __LINE__);
+		CPacket* packet = pSession->_tempBuf.Dequeue();
+		if (packet == nullptr) break;
 
-		::wprintf(L"%s[%d]: send buffer Return Error\n",
-			_T(__FUNCTION__), __LINE__);
-
-		__debugbreak();
-		LeaveCriticalSection(&pSession->_cs);
-		return;
+		// usage count 감소, 0이면 Free
+		if (InterlockedDecrement(&packet->_usageCount) == 0)
+			_pPacketPool->Free(packet);
 	}
 
 	OnSend(pSession->_ID, sendBytes);
@@ -829,19 +828,29 @@ void CLanServer::SendPost(CSession* pSession)
 		return;
 	}
 
-	DWORD sendBytes;
+	int idx = 0;
 	int useSize = pSession->_sendBuf.GetUseSize();
-	pSession->_wsaSendbuf[0].buf = pSession->_sendBuf.GetReadPtr();
-	pSession->_wsaSendbuf[0].len = pSession->_sendBuf.DirectDequeueSize();
-	pSession->_wsaSendbuf[1].buf = pSession->_sendBuf.GetFrontPtr();
-	pSession->_wsaSendbuf[1].len = useSize - pSession->_wsaSendbuf[0].len;
+
+	for (; idx < useSize; idx++)
+	{
+		if (idx == WSA_SNDBUF_MAX) break;
+		CPacket* packet = pSession->_sendBuf.Dequeue();
+
+		if (packet == nullptr) break;
+		pSession->_wsaSendbuf[idx].buf = packet->GetPacketReadPtr();
+		pSession->_wsaSendbuf[idx].len = packet->GetPacketSize();
+		pSession->_tempBuf.Enqueue(packet);
+	}
+
+	pSession->_sendCnt = idx;
 
 	ZeroMemory(&pSession->_sendOvl._ovl, sizeof(pSession->_sendOvl._ovl));
 	InterlockedIncrement(&pSession->_IOCount);
 	// pSession->PushStateForDebug(__LINE__); 
 
+	DWORD sendBytes;
 	int sendRet = WSASend(pSession->_sock, pSession->_wsaSendbuf,
-		2, &sendBytes, 0, (LPOVERLAPPED)&pSession->_sendOvl, NULL);
+		idx, &sendBytes, 0, (LPOVERLAPPED)&pSession->_sendOvl, NULL);
 	
 	//::printf("%d: %llu Request Send %d bytes\n", GetCurrentThreadId(), pSession->_ID , useSize);
 

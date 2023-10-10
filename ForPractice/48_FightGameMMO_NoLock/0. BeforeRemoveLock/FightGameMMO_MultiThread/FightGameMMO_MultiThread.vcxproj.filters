@@ -70,6 +70,9 @@
     <ClCompile Include="CRingBuffer.cpp">
       <Filter>NetLib\NetUtils</Filter>
     </ClCompile>
+    <ClCompile Include="CPacketBuffer.cpp">
+      <Filter>NetLib\NetUtils</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Main.h">
@@ -125,6 +128,15 @@
     </ClInclude>
     <ClInclude Include="CSession.h">
       <Filter>NetLib\Session</Filter>
+    </ClInclude>
+    <ClInclude Include="CPacketBuffer.h">
+      <Filter>NetLib\NetUtils</Filter>
+    </ClInclude>
+    <ClInclude Include="CLockFreePool.h">
+      <Filter>NetLib\NetUtils</Filter>
+    </ClInclude>
+    <ClInclude Include="CLockFreeQueue.h">
+      <Filter>NetLib\NetUtils</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

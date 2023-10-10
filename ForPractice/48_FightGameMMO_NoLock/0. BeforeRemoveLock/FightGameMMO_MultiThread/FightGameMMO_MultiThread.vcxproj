@@ -147,12 +147,15 @@
     <ClCompile Include="CSession.cpp" />
     <ClCompile Include="CSystemLog.cpp" />
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="CPacketBuffer.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CGameServer.h" />
     <ClInclude Include="CJob.h" />
     <ClInclude Include="CLanServer.h" />
     <ClInclude Include="CCrashDump.h" />
+    <ClInclude Include="CLockFreePool.h" />
+    <ClInclude Include="CLockFreeQueue.h" />
     <ClInclude Include="CObjectPool.h" />
     <ClInclude Include="CPacket.h" />
     <ClInclude Include="CPlayer.h" />
@@ -165,6 +168,7 @@
     <ClInclude Include="CSystemLog.h" />
     <ClInclude Include="CJobQueue.h" />
     <ClInclude Include="Main.h" />
+    <ClInclude Include="CPacketBuffer.h" />
     <ClInclude Include="Protocol.h" />
     <ClInclude Include="CSessionMap.h" />
   </ItemGroup>

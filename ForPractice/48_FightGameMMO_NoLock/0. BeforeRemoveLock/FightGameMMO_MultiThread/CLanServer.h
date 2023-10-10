@@ -2,6 +2,7 @@
 #include "CSession.h"
 #include "CSessionMap.h"
 #include "CObjectPool.h"
+#include "CLockFreeQueue.h"
 #include "CProfiler.h"
 #include "Protocol.h"
 

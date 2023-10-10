@@ -1,11 +1,15 @@
 #pragma once
 #include "CPacket.h"
 #include "CRingBuffer.h"
+#include "CLockFreeQueue.h"
 #include <ws2tcpip.h>
 #include <synchapi.h>
 #include <vector>
 #pragma comment(lib, "ws2_32.lib")
 using namespace std;
+
+#define WSA_RCVBUF_MAX 2
+#define WSA_SNDBUF_MAX 100
 
 enum class NET_TYPE
 {
@@ -33,6 +37,7 @@ public:
 		_addr = addr;
 		_IOCount = 0;
 		_sendFlag = 0;
+		_sendCnt = 0; 
 	
 		_recvOvl._type = NET_TYPE::RECV;
 		_sendOvl._type = NET_TYPE::SEND;
@@ -62,9 +67,12 @@ public:
 	SOCKADDR_IN _addr;
 
 	CRingBuffer _recvBuf;
-	CRingBuffer _sendBuf;
-	WSABUF _wsaRecvbuf[2];
-	WSABUF _wsaSendbuf[2];
+	CLockFreeQueue_Packet _sendBuf;
+	CLockFreeQueue_Packet _tempBuf;
+	int _sendCnt;
+	WSABUF _wsaRecvbuf[WSA_RCVBUF_MAX];
+	WSABUF _wsaSendbuf[WSA_SNDBUF_MAX];
+
 	NetworkOverlapped _recvOvl;
 	NetworkOverlapped _sendOvl;
 	NetworkOverlapped _releaseOvl;

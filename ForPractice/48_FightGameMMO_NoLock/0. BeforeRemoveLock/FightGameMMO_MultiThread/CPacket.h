@@ -15,7 +15,6 @@
 class CPacket
 {
 public:
-
 	enum en_BUFFER
 	{
 		// 패킷의 기본 버퍼 사이즈.
@@ -445,14 +444,17 @@ public:
 
 	inline CPacket& operator >> (short& shValue)
 	{
-		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(short))
+		int payload = _iPayloadWritePos - _iPayloadReadPos;
+		if (payload < sizeof(short))
 		{
 			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
-				L"%s[%d]: used size %d, req size %lld\n", _T(__FUNCTION__), __LINE__,
-				_iPayloadWritePos - _iPayloadReadPos, sizeof(short));
+				L"%s[%d]: used size %d, req size %lld\n", 
+				_T(__FUNCTION__), __LINE__,
+				payload, sizeof(short));
 
-			::wprintf(L"%s[%d]: used size %d, req size %lld\n", _T(__FUNCTION__), __LINE__,
-				_iPayloadWritePos - _iPayloadReadPos, sizeof(short));
+			::wprintf(L"%s[%d]: used size %d, req size %lld\n", 
+				_T(__FUNCTION__), __LINE__,
+				payload, sizeof(short));
 			return *this;
 		}
 
@@ -655,11 +657,11 @@ public:
 		if (_iHeaderSize < _iHeaderWritePos + iSrcSize)
 		{
 			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
-				L"%s[%d]: header max size %d, write pos + req size %lld\n",
-				_T(__FUNCTION__), __LINE__, _iHeaderSize, _iHeaderWritePos + iSrcSize);
+				L"%s[%d]: header max size %d, write pos %d, req size %lld\n",
+				_T(__FUNCTION__), __LINE__, _iHeaderSize, _iHeaderWritePos, iSrcSize);
 
-			::wprintf(L"%s[%d]: header max size %d, write pos + req size %lld\n",
-				_T(__FUNCTION__), __LINE__, _iHeaderSize, _iHeaderWritePos + iSrcSize);
+			::wprintf(L"%s[%d]: header max size %d, write pos %d, req size %lld\n",
+				_T(__FUNCTION__), __LINE__, _iHeaderSize, _iHeaderWritePos, iSrcSize);
 			return -1;
 		}
 
@@ -682,6 +684,9 @@ private:
 	int _iPayloadWritePos;
 	int _iHeaderReadPos;
 	int _iHeaderWritePos;
+
+public:
+	volatile long _usageCount = 0;
 };
 
 #endif

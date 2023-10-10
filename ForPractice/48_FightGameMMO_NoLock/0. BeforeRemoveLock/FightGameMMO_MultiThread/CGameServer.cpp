@@ -252,6 +252,7 @@ unsigned int __stdcall CGameServer::MonitorThread(void* arg)
 
 void CGameServer::ReqSendUnicast(CPacket* packet, __int64 sessionID)
 {
+	InterlockedIncrement(&packet->_usageCount);
 	SendPacket(sessionID, packet);
 }
 
@@ -270,6 +271,7 @@ void CGameServer::ReqSendOneSector(CPacket* packet, CSector* sector, CPlayer* pE
 
 			if(state == PLAYER_STATE::CONNECT)
 			{	
+				InterlockedIncrement(&packet->_usageCount);
 				SendPacket(sessionID, packet);
 			}
 		}
@@ -290,6 +292,7 @@ void CGameServer::ReqSendOneSector(CPacket* packet, CSector* sector, CPlayer* pE
 
 				if (state == PLAYER_STATE::CONNECT)
 				{
+					InterlockedIncrement(&packet->_usageCount);
 					SendPacket(sessionID, packet);
 				}
 			}
@@ -315,6 +318,7 @@ void CGameServer::ReqSendAroundSector(CPacket* packet, CSector* centerSector, CP
 
 				if (state == PLAYER_STATE::CONNECT)
 				{
+					InterlockedIncrement(&packet->_usageCount);
 					SendPacket(sessionID, packet);
 				}
 			}
@@ -336,6 +340,7 @@ void CGameServer::ReqSendAroundSector(CPacket* packet, CSector* centerSector, CP
 
 				if (state == PLAYER_STATE::CONNECT)
 				{
+					InterlockedIncrement(&packet->_usageCount);
 					SendPacket(sessionID, packet);
 				}
 			}
@@ -355,6 +360,7 @@ void CGameServer::ReqSendAroundSector(CPacket* packet, CSector* centerSector, CP
 
 				if (state == PLAYER_STATE::CONNECT)
 				{
+					InterlockedIncrement(&packet->_usageCount);
 					SendPacket(sessionID, packet);
 				}
 			}
@@ -673,21 +679,21 @@ void CGameServer::UpdateSector(CPlayer* pPlayer, short direction)
 	int createMeToOtherRet = SetSCPacket_CREATE_OTHER_CHAR(createMeToOtherPacket, playerID, dir, x, y, hp);
 	for (int i = 0; i < sectorCnt; i++)
 		ReqSendOneSector(createMeToOtherPacket, inSector[i], pPlayer);
-	_pPacketPool->Free(createMeToOtherPacket);
+	// _pPacketPool->Free(createMeToOtherPacket);
 	
 	CPacket* moveMeToOtherPacket = _pPacketPool->Alloc();
 	moveMeToOtherPacket->Clear();
 	int moveMeToOtherRet = SetSCPacket_MOVE_START(moveMeToOtherPacket, playerID, moveDir, x, y);
 	for (int i = 0; i < sectorCnt; i++)
 		ReqSendOneSector(moveMeToOtherPacket, inSector[i], pPlayer);
-	_pPacketPool->Free(moveMeToOtherPacket);
+	// _pPacketPool->Free(moveMeToOtherPacket);
 
 	CPacket* deleteMeToOtherPacket = _pPacketPool->Alloc();
 	deleteMeToOtherPacket->Clear();
 	int deleteMeToOtherRet = SetSCPacket_DELETE_CHAR(deleteMeToOtherPacket, playerID);
 	for (int i = 0; i < sectorCnt; i++)
 		ReqSendOneSector(deleteMeToOtherPacket, outSector[i], pPlayer);
-	_pPacketPool->Free(deleteMeToOtherPacket);
+	// _pPacketPool->Free(deleteMeToOtherPacket);
 	
 	// Send Data About Other Player ==============================================
 
@@ -719,7 +725,7 @@ void CGameServer::UpdateSector(CPlayer* pPlayer, short direction)
 				createOtherPacket->Clear();
 				int createOtherRet = SetSCPacket_CREATE_OTHER_CHAR(createOtherPacket, iterID, iterDir, iterX, iterY, iterHp);
 				ReqSendUnicast(createOtherPacket, playerID);
-				_pPacketPool->Free(createOtherPacket);
+				// _pPacketPool->Free(createOtherPacket);
 
 				if ((*iter)->_move)
 				{
@@ -727,7 +733,7 @@ void CGameServer::UpdateSector(CPlayer* pPlayer, short direction)
 					moveOtherPacket->Clear();
 					int moveOtherRet = SetSCPacket_MOVE_START(moveOtherPacket, iterID, iterMoveDir, iterX, iterY);
 					ReqSendUnicast(moveOtherPacket, sessionID);
-					_pPacketPool->Free(moveOtherPacket);
+					// _pPacketPool->Free(moveOtherPacket);
 				}
 			}
 		}
@@ -752,7 +758,7 @@ void CGameServer::UpdateSector(CPlayer* pPlayer, short direction)
 				deleteOtherPacket->Clear();
 				int deleteOtherRet = SetSCPacket_DELETE_CHAR(deleteOtherPacket, iterID);
 				ReqSendUnicast(deleteOtherPacket, sessionID);
-				_pPacketPool->Free(deleteOtherPacket);
+				// _pPacketPool->Free(deleteOtherPacket);
 			}
 		}
 		ReleaseSRWLockShared(&outSector[i]->_lock);
@@ -884,7 +890,7 @@ inline void CGameServer::HandleRelease(__int64 sessionID)
 		deletePacket->Clear();
 		int deleteRet = SetSCPacket_DELETE_CHAR(deletePacket, playerID);
 		ReqSendAroundSector(deletePacket, pSector);
-		_pPacketPool->Free(deletePacket);
+		// _pPacketPool->Free(deletePacket);
 		InterlockedIncrement(&_connectEndCnt);
 	}
 	else
@@ -943,7 +949,7 @@ void CGameServer::SetPlayerDead(CPlayer* pPlayer, bool timeout)
 	deletePacket->Clear();
 	int deleteRet = SetSCPacket_DELETE_CHAR(deletePacket, playerID);
 	ReqSendAroundSector(deletePacket, pSector);
-	_pPacketPool->Free(deletePacket);
+	// _pPacketPool->Free(deletePacket);
 
 	Disconnect(sessionID);
 }
@@ -1020,13 +1026,13 @@ inline void CGameServer::HandleAccept(__int64 sessionID)
 	createMePacket->Clear();
 	int createMeRet = SetSCPacket_CREATE_MY_CHAR(createMePacket, playerID, dir, x, y, hp);
 	ReqSendUnicast(createMePacket, sessionID);
-	_pPacketPool->Free(createMePacket);
+	// _pPacketPool->Free(createMePacket);
 
 	CPacket* createMeToOtherPacket = _pPacketPool->Alloc();
 	createMeToOtherPacket->Clear();
 	int createMeToOtherRet = SetSCPacket_CREATE_OTHER_CHAR(createMeToOtherPacket, playerID, dir, x, y, hp);
 	ReqSendAroundSector(createMeToOtherPacket, pSector, pPlayer); 
-	_pPacketPool->Free(createMeToOtherPacket);
+	// _pPacketPool->Free(createMeToOtherPacket);
 
 	for (int i = 0; i < dfMOVE_DIR_MAX; i++)
 	{
@@ -1053,7 +1059,7 @@ inline void CGameServer::HandleAccept(__int64 sessionID)
 			createOtherPacket->Clear();
 			int createOtherRet = SetSCPacket_CREATE_OTHER_CHAR(createOtherPacket, iterID, iterDir, iterX, iterY, iterHp);
 			ReqSendUnicast(createOtherPacket, sessionID);
-			_pPacketPool->Free(createOtherPacket);
+			// _pPacketPool->Free(createOtherPacket);
 
 		}
 		ReleaseSRWLockShared(&pSector->_around[i]->_lock);
@@ -1086,7 +1092,7 @@ inline void CGameServer::HandleAccept(__int64 sessionID)
 			createOtherPacket->Clear();
 			int createOtherRet = SetSCPacket_CREATE_OTHER_CHAR(createOtherPacket, iterID, iterDir, iterX, iterY, iterHp);
 			ReqSendUnicast(createOtherPacket, sessionID);
-			_pPacketPool->Free(createOtherPacket);
+			// _pPacketPool->Free(createOtherPacket);
 		}
 	}
 	ReleaseSRWLockShared(&pSector->_around[dfMOVE_DIR_INPLACE]->_lock);
@@ -1134,37 +1140,31 @@ inline void CGameServer::HandleRecv(__int64 sessionID, CPacket* packet)
 	case dfPACKET_CS_MOVE_START:
 		// pPlayer->PushStateForDebug(__LINE__);
 		HandleCSPacket_MOVE_START(packet, pPlayer);
-		_pPacketPool->Free(packet);
 		break;
 
 	case dfPACKET_CS_MOVE_STOP:
 		// pPlayer->PushStateForDebug(__LINE__);
 		HandleCSPacket_MOVE_STOP(packet, pPlayer);
-		_pPacketPool->Free(packet);
 		break;
 
 	case dfPACKET_CS_ATTACK1:
 		// pPlayer->PushStateForDebug(__LINE__);
 		HandleCSPacket_ATTACK1(packet, pPlayer);
-		_pPacketPool->Free(packet);
 		break;
 
 	case dfPACKET_CS_ATTACK2:
 		// pPlayer->PushStateForDebug(__LINE__);
 		HandleCSPacket_ATTACK2(packet, pPlayer);
-		_pPacketPool->Free(packet);
 		break;
 
 	case dfPACKET_CS_ATTACK3:
 		// pPlayer->PushStateForDebug(__LINE__);
 		HandleCSPacket_ATTACK3(packet, pPlayer);
-		_pPacketPool->Free(packet);
 		break;
 
 	case dfPACKET_CS_ECHO:
 		// pPlayer->PushStateForDebug(__LINE__);
 		HandleCSPacket_ECHO(packet, pPlayer);
-		_pPacketPool->Free(packet);
 		break;
 
 	default:
@@ -1201,7 +1201,7 @@ inline void CGameServer::HandleCSPacket_MOVE_START(CPacket* recvPacket, CPlayer*
 		syncPacket->Clear();
 		int setRet = SetSCPacket_SYNC(syncPacket, playerID, playerX, playerY);
 		ReqSendUnicast(syncPacket, sessionID);
-		_pPacketPool->Free(syncPacket);
+		// _pPacketPool->Free(syncPacket);
 		
 		x = playerX;
 		y = playerY;
@@ -1226,7 +1226,7 @@ inline void CGameServer::HandleCSPacket_MOVE_START(CPacket* recvPacket, CPlayer*
 	movePacket->Clear();
 	int setRet = SetSCPacket_MOVE_START(movePacket, playerID, moveDir, playerX, playerY);
 	ReqSendAroundSector(movePacket, pSector, pPlayer);
-	_pPacketPool->Free(movePacket);
+	// _pPacketPool->Free(movePacket);
 }
 
 inline void CGameServer::HandleCSPacket_MOVE_STOP(CPacket* recvPacket, CPlayer* pPlayer)
@@ -1255,7 +1255,7 @@ inline void CGameServer::HandleCSPacket_MOVE_STOP(CPacket* recvPacket, CPlayer* 
 		syncPacket->Clear();
 		int setRet = SetSCPacket_SYNC(syncPacket, playerID, playerX, playerY);
 		ReqSendUnicast(syncPacket, sessionID);
-		_pPacketPool->Free(syncPacket);
+		// _pPacketPool->Free(syncPacket);
 
 		x = playerX;
 		y = playerY;
@@ -1279,7 +1279,7 @@ inline void CGameServer::HandleCSPacket_MOVE_STOP(CPacket* recvPacket, CPlayer* 
 	movePacket->Clear();
 	int setRet = SetSCPacket_MOVE_STOP(movePacket, playerID, playerDir, playerX, playerY);
 	ReqSendAroundSector(movePacket, pSector, pPlayer);
-	_pPacketPool->Free(movePacket);
+	// _pPacketPool->Free(movePacket);
 }
 
 inline void CGameServer::HandleCSPacket_ATTACK1(CPacket* recvPacket, CPlayer* pPlayer)
@@ -1308,7 +1308,7 @@ inline void CGameServer::HandleCSPacket_ATTACK1(CPacket* recvPacket, CPlayer* pP
 		syncPacket->Clear();
 		int setRet = SetSCPacket_SYNC(syncPacket, attackPlayerID, playerX, playerY);
 		ReqSendUnicast(syncPacket, sessionID);
-		_pPacketPool->Free(syncPacket);
+		// _pPacketPool->Free(syncPacket);
 
 		x = playerX;
 		y = playerY;
@@ -1333,7 +1333,7 @@ inline void CGameServer::HandleCSPacket_ATTACK1(CPacket* recvPacket, CPlayer* pP
 	attackPacket->Clear();
 	int attackSetRet = SetSCPacket_ATTACK1(attackPacket, attackPlayerID, playerDir, playerX, playerY);
 	ReqSendAroundSector(attackPacket, pAttackSector);
-	_pPacketPool->Free(attackPacket);
+	// _pPacketPool->Free(attackPacket);
 
 	if (damagedPlayer != nullptr)
 	{
@@ -1352,7 +1352,7 @@ inline void CGameServer::HandleCSPacket_ATTACK1(CPacket* recvPacket, CPlayer* pP
 		damagePacket->Clear();		
 		int damageSetRet = SetSCPacket_DAMAGE(damagePacket,	attackPlayerID, damagedID, damagedHp);
 		ReqSendAroundSector(damagePacket, pDamagedSector);
-		_pPacketPool->Free(damagePacket);
+		// _pPacketPool->Free(damagePacket);
 	}
 }
 
@@ -1382,7 +1382,7 @@ inline void CGameServer::HandleCSPacket_ATTACK2(CPacket* recvPacket, CPlayer* pP
 		syncPacket->Clear();
 		int setRet = SetSCPacket_SYNC(syncPacket, attackPlayerID, playerX, playerY);
 		ReqSendUnicast(syncPacket, sessionID);
-		_pPacketPool->Free(syncPacket);
+		// _pPacketPool->Free(syncPacket);
 
 		x = playerX;
 		y = playerY;
@@ -1407,7 +1407,7 @@ inline void CGameServer::HandleCSPacket_ATTACK2(CPacket* recvPacket, CPlayer* pP
 	attackPacket->Clear();
 	int attackSetRet = SetSCPacket_ATTACK2(attackPacket, attackPlayerID, playerDir, playerX, playerY);
 	ReqSendAroundSector(attackPacket, pAttackSector);
-	_pPacketPool->Free(attackPacket);
+	// _pPacketPool->Free(attackPacket);
 	
 	if (damagedPlayer != nullptr)
 	{
@@ -1426,7 +1426,7 @@ inline void CGameServer::HandleCSPacket_ATTACK2(CPacket* recvPacket, CPlayer* pP
 		damagePacket->Clear();
 		int damageSetRet = SetSCPacket_DAMAGE(damagePacket, attackPlayerID, damagedID, damagedHp);
 		ReqSendAroundSector(damagePacket, pDamagedSector);
-		_pPacketPool->Free(damagePacket);
+		// _pPacketPool->Free(damagePacket);
 	}
 }
 
@@ -1456,7 +1456,7 @@ inline void CGameServer::HandleCSPacket_ATTACK3(CPacket* recvPacket, CPlayer* pP
 		syncPacket->Clear();
 		int setRet = SetSCPacket_SYNC(syncPacket, attackPlayerID, playerX, playerY);
 		ReqSendUnicast(syncPacket, sessionID);
-		_pPacketPool->Free(syncPacket);
+		// _pPacketPool->Free(syncPacket);
 
 		x = playerX;
 		y = playerY;
@@ -1481,7 +1481,7 @@ inline void CGameServer::HandleCSPacket_ATTACK3(CPacket* recvPacket, CPlayer* pP
 	attackPacket->Clear();
 	int attackSetRet = SetSCPacket_ATTACK3(attackPacket, attackPlayerID, playerDir, playerX, playerY);
 	ReqSendAroundSector(attackPacket, pAttackSector);
-	_pPacketPool->Free(attackPacket);
+	// _pPacketPool->Free(attackPacket);
 	
 	if (damagedPlayer != nullptr)
 	{
@@ -1500,7 +1500,7 @@ inline void CGameServer::HandleCSPacket_ATTACK3(CPacket* recvPacket, CPlayer* pP
 		damagePacket->Clear();
 		int damageSetRet = SetSCPacket_DAMAGE(damagePacket, attackPlayerID, damagedID, damagedHp);
 		ReqSendAroundSector(damagePacket, pDamagedSector);
-		_pPacketPool->Free(damagePacket);
+		// _pPacketPool->Free(damagePacket);
 	}
 }
 
@@ -1518,7 +1518,7 @@ inline void CGameServer::HandleCSPacket_ECHO(CPacket* recvPacket, CPlayer* pPlay
 	ReleaseSRWLockShared(&pPlayer->_lock);
 
 	ReqSendUnicast(echoPacket, sessionID);	 
-	_pPacketPool->Free(echoPacket);
+	// _pPacketPool->Free(echoPacket);
 }
 
 inline void CGameServer::GetCSPacket_MOVE_START(CPacket* pPacket, unsigned char& moveDirection, short& x, short& y)
