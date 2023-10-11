@@ -12,8 +12,7 @@
 #pragma comment(lib, "Synchronization.lib")
 using namespace std;
 
-// TO-DO
-// 멀티스레드에서 동작시 너무 느려짐 개선 필요
+// TO-DO: 동적 TLS를 사용하도록 수정 (지금은 고치다 말아서 동작하지 않는 코드!!)
 
 /*=============================================================
 
@@ -21,9 +20,8 @@ using namespace std;
 
 1.	PRO_SAVE, PRO_SAVE_ADDUP 호출 시 확장자 이름은 포함하지 않는다.
 
-2.	정적 TLS 사용 시 #define USE_STLS,
-	동적 TLS 사용 시 #define USE_DTLS,
-	싱글 스레드 사용시 #define SINGLE_THREAD
+2.	멀티 스레드 사용 시 #define MULTI_THREAD,
+	싱글 스레드 사용 시 #define SINGLE_THREAD
 
 3.	microsec 단위 출력 시 #define USE_MS_UNIT,
 	nanosec 단위 출력 시 #define USE_NS_UNIT
@@ -31,12 +29,10 @@ using namespace std;
 ==============================================================*/
 
 //#define PROFILE
-//#define USE_STLS
-//#define USE_DTLS
-//#define SINGLE_THREAD
-
 #ifdef PROFILE
 
+#define MULTI_THREAD
+//#define SINGLE_THREAD
 #define USE_MS_UNIT
 //#define USE_NS_UNIT
 
@@ -126,37 +122,25 @@ public:
 extern CProfilerManager* g_pManager;
 
 #define PRO_SET(profiler, threadID)		g_pManager->SetProfiler(profiler, threadID)
+#define PRO_BEGIN(TagName)				pProfiler->ProfileBegin(TagName)
+#define PRO_END(TagName)				pProfiler->ProfileEnd(TagName)
 #define PRO_SAVE(FileName)				g_pManager->SaveResult(FileName)
-#define PRO_PRINT()						g_pManager->PrintResult()
 #define PRO_SAVE_ADDUP(FileName)		g_pManager->SaveResultAddup(FileName)
+#define PRO_PRINT()						g_pManager->PrintResult()
 #define PRO_PRINT_ADDUP()				g_pManager->PrintResultAddup()
 #define PRO_RESET()						g_pManager->ProfileReset()
 
-#ifdef USE_STLS
-#define PRO_BEGIN(TagName)		pSTLSProfiler->ProfileBegin(TagName)
-#define PRO_END(TagName)		pSTLSProfiler->ProfileEnd(TagName)
-#endif
-
-#ifdef USE_DTLS
-#define PRO_BEGIN(TagName)		pProfiler->ProfileBegin(TagName)
-#define PRO_END(TagName)		pProfiler->ProfileEnd(TagName)
-#endif
-
-#ifdef SINGLE_THREAD
-#define PRO_BEGIN(TagName)		pProfiler->ProfileBegin(TagName)
-#define PRO_END(TagName)		pProfiler->ProfileEnd(TagName)
-#endif
-
 #else
-#define PRO_INIT()	
-#define PRO_SET(profiler, threadID)
-#define PRO_BEGIN(TagName)
-#define PRO_END(TagName)
-#define PRO_RESET()
-#define PRO_SAVE(FileName)			
-#define PRO_PRINT()					
-#define PRO_SAVE_ADDUP(FileName)	
-#define PRO_PRINT_ADDUP()			
+
+#define PRO_SET(profiler, threadID)		
+#define PRO_BEGIN(TagName)				
+#define PRO_END(TagName)				
+#define PRO_SAVE(FileName)				
+#define PRO_SAVE_ADDUP(FileName)		
+#define PRO_PRINT()						
+#define PRO_PRINT_ADDUP()				
+#define PRO_RESET()						
+
 #endif
 
 

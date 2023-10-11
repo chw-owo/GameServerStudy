@@ -1,9 +1,6 @@
 #pragma once
 #include "CSession.h"
-#include "CSessionMap.h"
-#include "CObjectPool.h"
-#include "CLockFreeQueue.h"
-#include "CProfiler.h"
+#include "CLockFreePool.h"
 #include "Protocol.h"
 
 #include <ws2tcpip.h>
@@ -12,17 +9,10 @@
 #pragma comment(lib, "ws2_32.lib")
 using namespace std;
 
-#ifdef USE_STLS
-extern __declspec (thread) CProfiler* pSTLSProfiler;
-#endif
-
 class CLanServer
 {
-	// Called in Content
 protected:
-	bool NetworkStart(const wchar_t* IP, short port,
-		int numOfWorkerThreads, bool nagle, int sessionMax);
-public:
+	bool NetworkStart(const wchar_t* IP, short port, int numOfThreads, bool nagle, int sessionMax);
 	void NetworkTerminate();
 
 protected:
@@ -37,10 +27,9 @@ protected:
 	virtual void OnSend(__int64 sessionID, int sendSize) = 0;
 	virtual void OnError(int errorCode, wchar_t* errorMsg) = 0;
 
-	virtual void ForDebug(__int64 sessionID) = 0;
-
 protected:
 	void UpdateMonitorData();
+
 	inline int GetAcceptTotal() { return _acceptTotal; }
 	inline int GetDisconnectTotal() { return _disconnectTotal; }
 	inline long GetSessionCount() { return _sessionMap->_map.size(); }
@@ -53,7 +42,7 @@ protected:
 	inline int GetServerDisconnTPS() { return _serverDisconnTPS; }
 
 protected:
-	CObjectPool<CPacket>* _pPacketPool;
+	CLockFreePool<CPacket>* _pPacketPool;
 
 	// Called in Network Library
 private:
@@ -72,14 +61,18 @@ private:
 	short _port;
 	bool _nagle;
 	int _sessionMax;
-	int _numOfWorkerThreads;
+	int _numOfThreads;
 
 private:
-	bool _alive = false;
-	__int64 _IDGenerator = 0;
+	HANDLE _acceptThread;
+	HANDLE* _networkThreads;
+	HANDLE _hNetworkCP;
+
+private:
 	SOCKET _listenSock;
-	CSessionMap* _sessionMap;
-	//CObjectPool<CSession>* _pSessionPool;
+	bool _serverAlive = false;
+	__int64 _sessionID = 0;
+	CSession* _sessions[dfSESSION_MAX] = { nullptr, };
 
 private:
 	int _acceptTotal = 0;
@@ -98,9 +91,4 @@ private:
 	int _sendMsgCnt = 0;
 	int _clientDisconnCnt = 0;
 	int _serverDisconnCnt = 0;
-
-private:
-	HANDLE _acceptThread;
-	HANDLE* _networkThreads;
-	HANDLE _hNetworkCP;
 };

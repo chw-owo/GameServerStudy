@@ -21,8 +21,8 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{9853d61b-8aa4-4fea-bf26-e6bfc1c06ae7}</ProjectGuid>
-    <RootNamespace>FightGameMMOMultiThread</RootNamespace>
+    <ProjectGuid>{8068291b-669c-49da-a289-481a658708cd}</ProjectGuid>
+    <RootNamespace>FightGameMMONoLock</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -76,8 +76,6 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -92,9 +90,6 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <Optimization>Disabled</Optimization>
-      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -109,8 +104,6 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -127,7 +120,6 @@
       <ConformanceMode>true</ConformanceMode>
       <Optimization>Disabled</Optimization>
       <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -139,38 +131,30 @@
   <ItemGroup>
     <ClCompile Include="CGameServer.cpp" />
     <ClCompile Include="CLanServer.cpp" />
-    <ClCompile Include="CObjectPool.cpp" />
-    <ClCompile Include="CProcessCpu.cpp" />
-    <ClCompile Include="CProcessorCpu.cpp" />
+    <ClCompile Include="CNetServer.cpp" />
+    <ClCompile Include="CPacket.cpp" />
     <ClCompile Include="CProfiler.cpp" />
     <ClCompile Include="CRingBuffer.cpp" />
-    <ClCompile Include="CSession.cpp" />
     <ClCompile Include="CSystemLog.cpp" />
     <ClCompile Include="Main.cpp" />
-    <ClCompile Include="CPacketBuffer.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="CGameServer.h" />
-    <ClInclude Include="CJob.h" />
-    <ClInclude Include="CLanServer.h" />
     <ClInclude Include="CCrashDump.h" />
-    <ClInclude Include="CLockFreePool.h" />
+    <ClInclude Include="CGameServer.h" />
+    <ClInclude Include="CLanServer.h" />
     <ClInclude Include="CLockFreeQueue.h" />
-    <ClInclude Include="CObjectPool.h" />
+    <ClInclude Include="CLockFreeStack.h" />
+    <ClInclude Include="CNetServer.h" />
+    <ClInclude Include="Config.h" />
     <ClInclude Include="CPacket.h" />
     <ClInclude Include="CPlayer.h" />
-    <ClInclude Include="CProcessCpu.h" />
-    <ClInclude Include="CProcessorCpu.h" />
     <ClInclude Include="CProfiler.h" />
     <ClInclude Include="CRingBuffer.h" />
     <ClInclude Include="CSector.h" />
     <ClInclude Include="CSession.h" />
     <ClInclude Include="CSystemLog.h" />
-    <ClInclude Include="CJobQueue.h" />
-    <ClInclude Include="Main.h" />
-    <ClInclude Include="CPacketBuffer.h" />
+    <ClInclude Include="CLockFreePool.h" />
     <ClInclude Include="Protocol.h" />
-    <ClInclude Include="CSessionMap.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

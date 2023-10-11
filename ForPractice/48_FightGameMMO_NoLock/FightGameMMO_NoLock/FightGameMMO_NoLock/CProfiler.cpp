@@ -134,7 +134,7 @@ void CProfiler::ProfileEnd(wstring _szName)
 void CProfilerManager::ProfileReset(void)
 {
 	vector<CProfiler*>::iterator iter = _profilers.begin();
-	for(; iter != _profilers.end(); iter++)
+	for (; iter != _profilers.end(); iter++)
 	{
 		for (int i = 0; i < PROFILE_CNT; i++)
 		{
@@ -200,11 +200,8 @@ CProfilerManager* CProfilerManager::GetInstance()
 
 void CProfilerManager::SetProfiler(CProfiler* pProfiler, DWORD threadID)
 {
-#ifdef USE_STLS
 	pProfiler->_threadID = threadID;
 	_profilers.push_back(pProfiler);
-
-#endif
 }
 
 void CProfilerManager::PrintResult(void)
@@ -364,7 +361,7 @@ void CProfilerManager::PrintResultAddup(void)
 			idx++;
 		}
 	}
-	/*	
+	/*
 	::printf(
 		"\n----------------------------------------------\n"
 		"| Name | Average | Min | Max | Call | Total |\n"
