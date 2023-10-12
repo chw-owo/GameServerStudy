@@ -30,11 +30,11 @@
     <ClInclude Include="LockFreePool.h">
       <Filter>LockFreePool</Filter>
     </ClInclude>
-    <ClInclude Include="LockFreeQueueTester.h">
-      <Filter>LockFreeQueue</Filter>
-    </ClInclude>
     <ClInclude Include="TestData.h">
       <Filter>LockFreeQueue</Filter>
+    </ClInclude>
+    <ClInclude Include="LockFreeQueueTester.h">
+      <Filter>LockFreeQueueTester</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
