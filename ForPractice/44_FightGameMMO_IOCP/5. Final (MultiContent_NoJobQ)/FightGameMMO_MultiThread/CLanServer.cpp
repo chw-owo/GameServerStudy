@@ -438,7 +438,6 @@ unsigned int __stdcall CLanServer::NetworkThread(void* arg)
 	PRO_SET(pSTLSProfiler, GetCurrentThreadId());
 
 	CLanServer* pLanServer = (CLanServer*)arg;
-
 	int threadID = GetCurrentThreadId();
 
 	for (;;)

@@ -21,10 +21,9 @@ struct NetworkOverlapped
 class CSession
 {
 public:
-	CSession() {}
-	CSession(__int64 ID, SOCKET sock, SOCKADDR_IN addr)
+	void Initialize(__int64 ID, SOCKET sock, SOCKADDR_IN addr)
 	{
-		_socketAlive = true;
+		_socketAlive = 0;
 
 		_ID = ID;
 		_sock = sock;
@@ -41,16 +40,8 @@ public:
 		ZeroMemory(&_releaseOvl._ovl, sizeof(_releaseOvl._ovl));
 	}
 
-	~CSession()
-	{
-		_socketAlive = false;
-		_ID = -1;
-		_IOCount = -1;
-		_sendFlag = -1;
-	}
-
 public:
-	bool _socketAlive;
+	volatile long _socketAlive = 0;
 	__int64 _ID;
 	SOCKET _sock;
 	SOCKADDR_IN _addr;

@@ -1,6 +1,5 @@
 #pragma once
-#ifndef  __OBJECT_POOL__
-#define  __OBJECT_POOL__
+
 #include <new.h>
 #include <stdlib.h>
 #include <tchar.h>
@@ -9,30 +8,28 @@
 #include <vector>
 using namespace std;
 
-#ifdef __OBJECTPOOL_DEBUG__
-#endif
+#define  __OBJECT_POOL__
+// #define __OBJECTPOOL_DEBUG__
 
-#define __LOCKFREEPOOL_DEBUG__
-
-template <class DATA>
+template <class T>
 class CLockFreePool
 {
 private:
 
 #ifdef __OBJECTPOOL_DEBUG__
-	unsigned char _objectPoolID = 0;
 
+	unsigned char _objectPoolID = 0;
 	struct PoolNode
 	{
 		__int64 head;
-		DATA _data;
+		T _data;
 		__int64 _next;
 	};
 
 #else
 	struct PoolNode
 	{
-		DATA _data;
+		T _data;
 		__int64 _next = NULL;
 	};
 #endif
@@ -50,8 +47,8 @@ public:
 
 public:
 	template<typename... Types>
-	inline DATA* Alloc(Types... args);
-	inline bool Free(DATA* pData);
+	inline T* Alloc(Types... args);
+	inline bool Free(T* pData);
 
 private:
 	bool _placementNew;
@@ -69,7 +66,6 @@ private:
 	unsigned char _poolID;
 #endif
 
-#ifdef __LOCKFREEPOOL_DEBUG__
 private:
 	class PoolDebugData
 	{
@@ -79,22 +75,17 @@ private:
 		PoolDebugData() : _idx(-1), _threadID(-1), _line(-1),
 			_compKey(-1), _exchKey(-1), _compAddress(-1), _exchAddress(-1) {}
 
-		void SetData(int idx, int threadID, int line, int exchKey, int compKey,
-			__int64 exchAddress, __int64 compAddress, DATA exchVal, DATA compVal)
+		void SetData(int idx, int threadID, int line, int exchKey, int compKey, __int64 exchAddress, __int64 compAddress)
 		{
-			_exchVal = exchVal;
 			_exchKey = exchKey;
 			_exchAddress = exchAddress;
 
-			_compVal = compVal;
 			_compKey = compKey;
 			_compAddress = compAddress;
 
 			_idx = idx;
 			_threadID = threadID;
 			_line = line;
-
-			__faststorefence();
 		}
 
 	private:
@@ -105,18 +96,15 @@ private:
 		int _exchKey;
 		__int64 _compAddress;
 		__int64 _exchAddress;
-		DATA _compVal;
-		DATA _exchVal;
 	};
 
-#define dfPOOL_DEBUG_MAX 10000
 private:
+#define dfPOOL_DEBUG_MAX 1000
 	PoolDebugData _poolDebugArray[dfPOOL_DEBUG_MAX];
 	volatile long _poolDebugIdx = -1;
 
 private:
-#define __BREAK_IN_POOLLOG__
-	inline void LeaveLog(int line, unsigned __int64 exchange, unsigned __int64 comperand, DATA exchVal, DATA compVal)
+	inline void LeaveLog(int line, unsigned __int64 exchange, unsigned __int64 comperand)
 	{
 		LONG idx = InterlockedIncrement(&_poolDebugIdx);
 
@@ -126,51 +114,13 @@ private:
 		__int64 compAddress = comperand & _addressMask;
 
 		_poolDebugArray[idx % dfPOOL_DEBUG_MAX].SetData(
-			idx, GetCurrentThreadId(), line, exchKey, compKey,
-			exchAddress, compAddress, exchVal, compVal);
-
-#ifdef __BREAK_IN_POOLLOG__
-
-		if (idx < 200) return;
-		int checkIdx1 = (idx - 200) % dfPOOL_DEBUG_MAX;
-		int checkIdx2 = (idx - 199) % dfPOOL_DEBUG_MAX;
-
-		__int64 addr2 = _poolDebugArray[checkIdx2]._compAddress;
-		int key2 = _poolDebugArray[checkIdx2]._compKey;
-		DATA val2 = _poolDebugArray[checkIdx2]._compVal;
-
-		__int64 addr1 = _poolDebugArray[checkIdx1]._exchAddress;
-		int key1 = _poolDebugArray[checkIdx1]._exchKey;
-		DATA val1 = _poolDebugArray[checkIdx1]._exchVal;
-		
-		if ((val1 != val2) && (key1 == key2) && (addr1 == addr2))
-		{
-			::printf("Pool[%d]: %lld != %lld, %d == %d, %lld == %lld\n",
-				checkIdx2, val1, val2, key1, key2, addr1, addr2);
- 			__debugbreak();
-		}
-#endif
+			idx, GetCurrentThreadId(), line, exchKey, compKey, exchAddress, compAddress);
 	}
-
-private:
-#define dfKEY_MAX 131071
-#define dfVALUE_MAX 100
-	struct KeyDebugData
-	{
-		long _idx = 0;
-		unsigned __int64 _address = 0;
-		unsigned __int64 _realAddress = 0;
-		DATA _data;
-	};
-
-	KeyDebugData _keyDebugArray[dfKEY_MAX][dfVALUE_MAX];
-	volatile long _keyDebugIdx[dfKEY_MAX] = { 0, };
-#endif
 };
 
-template<class DATA>
+template<class T>
 template<typename... Types>
-CLockFreePool<DATA>::CLockFreePool(int blockNum, bool placementNew, Types... args)
+CLockFreePool<T>::CLockFreePool(int blockNum, bool placementNew, Types... args)
 	:_placementNew(placementNew), _blockNum(blockNum), _pTop(NULL)
 {
 	_keyMask = 0b11111111111111111;
@@ -227,33 +177,18 @@ CLockFreePool<DATA>::CLockFreePool(int blockNum, bool placementNew, Types... arg
 
 		for (int i = 1; i < _blockNum; i++)
 		{
-			new (&(((PoolNode*)_pTop)->_data)) DATA(args...);
+			new (&(((PoolNode*)_pTop)->_data)) T(args...);
 			PoolNode* p = (PoolNode*)malloc(sizeof(PoolNode));
 			p->_next = _pTop;
 			_pTop = (__int64)p;
 		}
-		new (&(((PoolNode*)_pTop)->_data)) DATA(args...);
+		new (&(((PoolNode*)_pTop)->_data)) T(args...);
 	}
 }
 
-template<class DATA>
-CLockFreePool<DATA>::~CLockFreePool()
+template<class T>
+CLockFreePool<T>::~CLockFreePool()
 {
-#ifdef __OBJECTPOOL_DEBUG__
-
-	if (_useCount != 0)
-	{
-		LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
-			L"%s[%d]: There is Unfree Data\n",
-			_T(__FUNCTION__), __LINE__);
-
-		::wprintf(L"ERROR", CSystemLog::ERROR_LEVEL,
-			L"%s[%d]: There is Unfree Data\n",
-			_T(__FUNCTION__), __LINE__);
-	}
-
-#endif
-
 	if (_pTop == NULL)
 		return;
 
@@ -275,37 +210,30 @@ CLockFreePool<DATA>::~CLockFreePool()
 		while (((PoolNode*)(_pTop & _addressMask))->_next != NULL)
 		{
 			__int64 next = ((PoolNode*)(_pTop & _addressMask))->_next;
-			(((PoolNode*)(_pTop & _addressMask))->_data).~DATA();
+			(((PoolNode*)(_pTop & _addressMask))->_data).~T();
 			free(((PoolNode*)(_pTop & _addressMask)));
 			_pTop = next;
 		}
-		(((PoolNode*)(_pTop & _addressMask))->_data).~DATA();
+		(((PoolNode*)(_pTop & _addressMask))->_data).~T();
 		free(((PoolNode*)(_pTop & _addressMask)));
 	}
 }
 
-template<class DATA>
+template<class T>
 template<typename... Types>
-DATA* CLockFreePool<DATA>::Alloc(Types... args) // Pop
+T* CLockFreePool<T>::Alloc(Types... args) // Pop
 {
 	if (_placementNew)
 	{
 		// 비어있는 노드가 있다면 가져온 후 Data의 생성자를 호출한다
 		for (;;)
 		{
-			DATA compVal;
-			DATA exchVal;
 			__int64 pPrevTop = _pTop;
-
-			if (pPrevTop != NULL)
-			{
-				compVal = ((PoolNode*)(pPrevTop & _addressMask))->_data;
-			}
-			else
-			{
+			if (pPrevTop == NULL)
+			{				
 				// 비어있는 노드가 없다면 생성한 후 Data의 생성자를 호출한다 (최초 생성)
 				PoolNode* pNewNode = (PoolNode*)malloc(sizeof(PoolNode));
-				new (&(pNewNode->_data)) DATA(args...);
+				new (&(pNewNode->_data)) T(args...);
 
 #ifdef __OBJECTPOOL_DEBUG__
 
@@ -323,34 +251,11 @@ DATA* CLockFreePool<DATA>::Alloc(Types... args) // Pop
 				return &(pNewNode->_data);
 			}
 
-#ifdef __LOCKFREEPOOL_DEBUG__
-
 			__int64 pNextTop = ((PoolNode*)(pPrevTop & _addressMask))->_next;
-			if (pNextTop != NULL) exchVal = ((PoolNode*)(pNextTop & _addressMask))->_data;
-
-			if (InterlockedCompareExchange64(&_pTop, pNextTop, pPrevTop) == pPrevTop)
-			{
-				LeaveLog(1, (unsigned __int64)pNextTop, (unsigned __int64)pPrevTop, exchVal, compVal);
-				new (&(((PoolNode*)(pPrevTop & _addressMask))->_data)) DATA(args...);
-
-#ifdef __OBJECTPOOL_DEBUG__
-				_useCount++;
-				__int64 code = 0;
-				code |= (__int64)_poolID << (3 * 3);
-				code |= 0777 & (__int64)(&(((PoolNode*)(pPrevTop & _addressMask))->_data));
-
-				((PoolNode*)(pPrevTop & _addressMask))->head = code;
-				((PoolNode*)(pPrevTop & _addressMask))->_next = code;
-#endif
-				return &(((PoolNode*)(pPrevTop & _addressMask))->_data);
-			}
-
-#else
-			__int64 pNextTop = ((PoolNode*)(pPrevTop & _addressMask))->_next;
-
 			if (InterlockedCompareExchange64(&_pTop, pNext, pPrevTop) == pPrevTop)
 			{
-				new (&(((PoolNode*)(pPrevTop & _addressMask))->_data)) DATA(args...);
+				LeaveLog(1, (unsigned __int64)pNextTop, (unsigned __int64)pPrevTop);
+				new (&(((PoolNode*)(pPrevTop & _addressMask))->_data)) T(args...);
 
 #ifdef __OBJECTPOOL_DEBUG__
 				_useCount++;
@@ -363,8 +268,6 @@ DATA* CLockFreePool<DATA>::Alloc(Types... args) // Pop
 #endif
 				return &(((PoolNode*)(pPrevTop & _addressMask))->_data);
 			}
-
-#endif
 		}
 	}
 	else
@@ -372,20 +275,11 @@ DATA* CLockFreePool<DATA>::Alloc(Types... args) // Pop
 		// 비어있는 노드가 있다면 가져온 후 Data의 생성자를 호출하지 않는다
 		for (;;)
 		{
-			DATA compVal;
-			DATA exchVal;
-
 			__int64 pPrevTop = _pTop;
-
-			if (pPrevTop != NULL)
-			{
-				compVal = ((PoolNode*)(pPrevTop & _addressMask))->_data;
-			}
-			else
+			if (pPrevTop == NULL)
 			{
 				// 비어있는 노드가 없다면 생성한 후 Data의 생성자를 호출한다 (최초 생성)
 				PoolNode* pNewNode = (PoolNode*)malloc(sizeof(PoolNode));
-
 #ifdef __OBJECTPOOL_DEBUG__
 
 				_capacity++;
@@ -401,33 +295,11 @@ DATA* CLockFreePool<DATA>::Alloc(Types... args) // Pop
 #endif
 				return &(pNewNode->_data);
 			}
-
-#ifdef __LOCKFREEPOOL_DEBUG__
-		
+			
 			__int64 pNextTop = ((PoolNode*)(pPrevTop & _addressMask))->_next;
-			if (pNextTop != NULL) exchVal = ((PoolNode*)(pNextTop & _addressMask))->_data;
-
-			if (InterlockedCompareExchange64(&_pTop, pNextTop, pPrevTop) == pPrevTop)
-			{
-				LeaveLog(1, (unsigned __int64)pNextTop, (unsigned __int64)pPrevTop, exchVal, compVal);
-
-#ifdef __OBJECTPOOL_DEBUG__
-				_useCount++;
-				__int64 code = 0;
-				code |= (__int64)_poolID << (3 * 3);
-				code |= 0777 & (__int64)(&(((PoolNode*)(pPrevTop & _addressMask))->_data));
-
-				((PoolNode*)(pPrevTop& _addressMask))->head = code;
-				((PoolNode*)(pPrevTop& _addressMask))->_next = code;
-#endif
-				return &(((PoolNode*)(pPrevTop & _addressMask))->_data);
-			}
-
-#else
-			__int64 pNextTop = ((PoolNode*)(pPrevTop & _addressMask))->_next;
-
 			if (InterlockedCompareExchange64(&_pTop, pNext, pPrevTop) == pPrevTop)
 			{
+				LeaveLog(1, (unsigned __int64)pNextTop, (unsigned __int64)pPrevTop, exchVal, compVal);
 #ifdef __OBJECTPOOL_DEBUG__
 				_useCount++;
 				__int64 code = 0;
@@ -439,14 +311,13 @@ DATA* CLockFreePool<DATA>::Alloc(Types... args) // Pop
 #endif
 				return &(((PoolNode*)(pPrevTop & _addressMask))->_data);
 			}
-#endif
 		}
 	}
 	return nullptr;
 }
 
-template<class DATA>
-bool CLockFreePool<DATA>::Free(DATA* pData) // Push
+template<class T>
+bool CLockFreePool<T>::Free(T* pData) // Push
 {
 	// For Protect ABA
 	unsigned __int64 key = (unsigned __int64)InterlockedIncrement64(&_key);
@@ -455,12 +326,6 @@ bool CLockFreePool<DATA>::Free(DATA* pData) // Push
 	pNewTop &= _addressMask;
 	unsigned __int64 tmp = pNewTop;
 	pNewTop |= key;
-
-	unsigned int keyIdx = (key >> __USESIZE_64BIT__);
-	long valueIdx = InterlockedIncrement(&_keyDebugIdx[keyIdx]);
-	_keyDebugArray[keyIdx][(valueIdx % dfVALUE_MAX)]._idx = valueIdx;
-	_keyDebugArray[keyIdx][(valueIdx % dfVALUE_MAX)]._address = tmp;
-	_keyDebugArray[keyIdx][(valueIdx % dfVALUE_MAX)]._data = *pData;
 
 	if (_placementNew)
 	{
@@ -479,53 +344,23 @@ bool CLockFreePool<DATA>::Free(DATA* pData) // Push
 
 		if (pNode->head != code || pNode->_next != code)
 		{
-			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
-				L"%s[%d]: Code is Diffrent. code %o, head %o, _next %o\n",
-				_T(__FUNCTION__), __LINE__, code, pNode->head, pNode->_next);
-
-			::wprintf(L"%s[%d]: Code is Diffrent. code %o, head %o, _next %o\n",
-				_T(__FUNCTION__), __LINE__, code, pNode->head, pNode->_next);
-
 			return false;
 		}
 
-		pData->~DATA();
-		pNode->_next = (__int64)_pTop;
-		_pTop = pNode;
-		return true;
-
-#else
-		pData->~DATA();
+#endif
+		pData->~T();
 
 		for (;;)
 		{
-#ifdef __LOCKFREEPOOL_DEBUG__
-			
-			DATA compVal;
-			DATA exchVal;
-
-			__int64 pPrevTop = _pTop;
-			if (pPrevTop != NULL) compVal = ((PoolNode*)(pPrevTop & _addressMask))->_data;
-
-			((PoolNode*)pData)->_next = pPrevTop;
-			exchVal = ((PoolNode*)pData)->_data;
-			
-			if (InterlockedCompareExchange64(&_pTop, pNewTop, pPrevTop) == pPrevTop)
-			{
-				LeaveLog(0, (unsigned __int64)pNewTop, (unsigned __int64)pPrevTop, exchVal, compVal);
-				return true;
-			}
-#else
 			__int64 pPrevTop = _pTop;
 			((PoolNode*)pData)->_next = pPrevTop;
 
 			if (InterlockedCompareExchange64(&_pTop, pData, pPrevTop) == pPrevTop)
 			{
+				LeaveLog(0, (unsigned __int64)pNewTop, (unsigned __int64)pPrevTop);
 				return true;
 			}
-#endif
 		}
-#endif
 	}
 	else
 	{
@@ -544,53 +379,23 @@ bool CLockFreePool<DATA>::Free(DATA* pData) // Push
 
 		if (pNode->head != code || pNode->_next != code)
 		{
-			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
-				L"%s[%d]: Code is Different. code %o, head %o, _next %o\n",
-				_T(__FUNCTION__), __LINE__, code, pNode->head, pNode->_next);
-
-			::wprintf(L"%s[%d]: Code is Different. code %o, head %o, _next %o\n",
-				_T(__FUNCTION__), __LINE__, code, pNode->head, pNode->_next);
-
 			return false;
 		}
 
-		pNode->_next = _pTop;
-		_pTop = pNode;
-
-		return true;
-#else
+#endif
 		for (;;)
 		{
-#ifdef __LOCKFREEPOOL_DEBUG__
-
-			DATA compVal;
-			DATA exchVal;
-
-			__int64 pPrevTop = _pTop;
-			if (pPrevTop != NULL) compVal = ((PoolNode*)(pPrevTop & _addressMask))->_data;
-
-			((PoolNode*)pData)->_next = pPrevTop;
-			exchVal = ((PoolNode*)pData)->_data;
-			
-			if (InterlockedCompareExchange64(&_pTop, pNewTop, pPrevTop) == pPrevTop)
-			{
-				LeaveLog(0, (unsigned __int64)pNewTop, (unsigned __int64)pPrevTop, exchVal, compVal);
-				return true;
-			}
-#else
 			__int64 pPrevTop = _pTop;
 			((PoolNode*)pData)->_next = pPrevTop;
 
 			if (InterlockedCompareExchange64(&_pTop, pNewTop, pPrevTop) == pPrevTop)
 			{
+				LeaveLog(0, (unsigned __int64)pNewTop, (unsigned __int64)pPrevTop);
 				return true;
 			}
-#endif
 		}
-#endif
 	}
 	return false;
 }
 
-#endif
 
