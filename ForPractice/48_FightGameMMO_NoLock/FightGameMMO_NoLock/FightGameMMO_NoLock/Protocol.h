@@ -9,17 +9,14 @@
 
 #include <windows.h>
 
+#define dfSERVER_IP L"0.0.0.0"
+#define dfSERVER_PORT 11650
 
-#define dfSERVER_IP							L"0.0.0.0"
-#define dfSERVER_PORT						11650
-#define dfLOGIC_THREAD_NUM					1
+#define dfSESSION_MAX					40000
+#define dfPLAYER_MAX					10000
+#define dfPLAYERS_PER_SECTOR			1024
 
-#define dfPLAYER_MAX						10000
-#define dfPLAYER_PER_THREAD					10000
-#define dfPLAYER_PER_SECTOR					1024
-
-#define dfMONITOR_TEXT_LEN					1024
-#define	dfPACKET_SC_CREATE_MY_CHARACTER		0
+#define	dfPACKET_SC_CREATE_MY_CHARACTER			0
 //---------------------------------------------------------------
 // 클라이언트 자신의 캐릭터 할당		Server -> Client
 //

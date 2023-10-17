@@ -1,0 +1,40 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="리소스 파일">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="ObjectPool">
+      <UniqueIdentifier>{b0e8dac8-1009-4b5e-a8ad-7ec0c2f87653}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ObjectPoolTester">
+      <UniqueIdentifier>{60ee6144-fc13-4ff8-83b3-556aa0a310a7}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Main">
+      <UniqueIdentifier>{d1cde921-2cbc-4bc5-a474-1cd3e33510c4}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Main.cpp">
+      <Filter>Main</Filter>
+    </ClCompile>
+    <ClCompile Include="CObjectPoolTester.cpp">
+      <Filter>ObjectPoolTester</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="CObjectPoolTester.h">
+      <Filter>ObjectPoolTester</Filter>
+    </ClInclude>
+    <ClInclude Include="CObjectPool_BasicLock.h">
+      <Filter>ObjectPool</Filter>
+    </ClInclude>
+    <ClInclude Include="CObjectPool_MinLock.h">
+      <Filter>ObjectPool</Filter>
+    </ClInclude>
+    <ClInclude Include="CLockFreePool.h">
+      <Filter>ObjectPool</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

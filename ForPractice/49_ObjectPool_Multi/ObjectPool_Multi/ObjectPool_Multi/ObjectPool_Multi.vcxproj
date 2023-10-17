@@ -21,8 +21,8 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{f4536075-4e14-40f0-9285-1e05f1d79761}</ProjectGuid>
-    <RootNamespace>LockFreeQueue</RootNamespace>
+    <ProjectGuid>{3f9c6ddb-a890-4872-b509-efde47e4974f}</ProjectGuid>
+    <RootNamespace>ObjectPoolMulti</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -133,13 +133,14 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="CObjectPoolTester.cpp" />
     <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="LockFreePool.h" />
-    <ClInclude Include="LockFreeQueue.h" />
-    <ClInclude Include="LockFreeQueueTester.h" />
-    <ClInclude Include="TestData.h" />
+    <ClInclude Include="CLockFreePool.h" />
+    <ClInclude Include="CObjectPoolTester.h" />
+    <ClInclude Include="CObjectPool_BasicLock.h" />
+    <ClInclude Include="CObjectPool_MinLock.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
