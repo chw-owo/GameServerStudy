@@ -4,6 +4,7 @@
 #define _WINSOCKAPI_
 #endif
 
+#include "ErrorCode.h"
 #include "Config.h"
 #include <windows.h>
 
@@ -183,7 +184,8 @@ public:
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(float))
 		{
-			// TO-DO: 외부로 전달
+			_errCode = ERR_GET_FLOAT_OVER;
+			throw (int)ERR_PACKET;
 			return *this;
 		}
 
@@ -197,7 +199,8 @@ public:
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(double))
 		{
-			// TO-DO: 외부로 전달
+			_errCode = ERR_GET_DOUBLE_OVER;
+			throw (int)ERR_PACKET;
 			return *this;
 		}
 
@@ -211,7 +214,8 @@ public:
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(char))
 		{
-			// TO-DO: 외부로 전달
+			_errCode = ERR_GET_CHAR_OVER;
+			throw (int)ERR_PACKET;
 			return *this;
 		}
 
@@ -225,7 +229,8 @@ public:
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(BYTE))
 		{
-			// TO-DO: 외부로 전달
+			_errCode = ERR_GET_BYTE_OVER;
+			throw (int)ERR_PACKET;
 			return *this;
 		}
 
@@ -239,7 +244,8 @@ public:
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(wchar_t))
 		{
-			// TO-DO: 외부로 전달
+			_errCode = ERR_GET_WCHAR_OVER;
+			throw (int)ERR_PACKET;
 			return *this;
 		}
 
@@ -253,7 +259,8 @@ public:
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(short))
 		{
-			// TO-DO: 외부로 전달
+			_errCode = ERR_GET_SHORT_OVER;
+			throw (int)ERR_PACKET;
 			return *this;
 		}
 
@@ -267,7 +274,8 @@ public:
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(WORD))
 		{
-			// TO-DO: 외부로 전달
+			_errCode = ERR_GET_WORD_OVER;
+			throw (int)ERR_PACKET;
 			return *this;
 		}
 
@@ -281,7 +289,8 @@ public:
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(int))
 		{
-			// TO-DO: 외부로 전달
+			_errCode = ERR_GET_INT_OVER;
+			throw (int)ERR_PACKET;
 			return *this;
 		}
 
@@ -295,7 +304,8 @@ public:
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(DWORD))
 		{
-			// TO-DO: 외부로 전달
+			_errCode = ERR_GET_DWORD_OVER;
+			throw (int)ERR_PACKET;
 			return *this;
 		}
 
@@ -309,7 +319,8 @@ public:
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(__int64))
 		{
-			// TO-DO: 외부로 전달
+			_errCode = ERR_GET_INT64_OVER;
+			throw (int)ERR_PACKET;
 			return *this;
 		}
 
@@ -324,8 +335,8 @@ public:
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < iSize)
 		{
-			// TO-DO: 외부로 전달
-			return -1;
+			_errCode = ERR_GET_PAYLOAD_OVER;
+			return ERR_PACKET;
 		}
 
 		memcpy_s(chpDest, iSize, &_chpBuffer[_iPayloadReadPos], iSize);
@@ -337,8 +348,8 @@ public:
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < iSize)
 		{
-			// TO-DO: 외부로 전달
-			return -1;
+			_errCode = ERR_PEEK_PAYLOAD_OVER;
+			return ERR_PACKET;
 		}
 
 		memcpy_s(chpDest, iSize, &_chpBuffer[_iPayloadReadPos], iSize);
@@ -361,14 +372,14 @@ public:
 	{
 		if (_iHeaderSize < iSize)
 		{
-			// TO-DO: 외부로 전달
-			return -1;
+			_errCode = ERR_GET_HEADER_OVER_MAX;
+			return ERR_PACKET;
 		}
 
 		if (_iHeaderWritePos - _iHeaderReadPos < iSize)
 		{
-			// TO-DO: 외부로 전달
-			return -1;
+			_errCode = ERR_GET_HEADER_OVER_EMPTY;
+			return ERR_PACKET;
 		}
 
 		memcpy_s(chpDest, iSize, &_chpBuffer[_iHeaderReadPos], iSize);
@@ -380,14 +391,14 @@ public:
 	{
 		if (_iHeaderSize < iSize)
 		{
-			// TO-DO: 외부로 전달
-			return -1;
+			_errCode = ERR_PEEK_HEADER_OVER_MAX;
+			return ERR_PACKET;
 		}
 
 		if (_iHeaderWritePos - _iHeaderReadPos < iSize)
 		{
-			// TO-DO: 외부로 전달
-			return -1;
+			_errCode = ERR_PEEK_HEADER_OVER_EMPTY;
+			return ERR_PACKET;
 		}
 
 		memcpy_s(chpDest, iSize, &_chpBuffer[_iHeaderReadPos], iSize);
@@ -397,8 +408,8 @@ public:
 	{
 		if (_iHeaderSize < _iHeaderWritePos + iSrcSize)
 		{
-			// TO-DO: 외부로 전달
-			return -1;
+			_errCode = ERR_PUT_HEADER_OVER;
+			return ERR_PACKET;
 		}
 
 		memcpy_s(&_chpBuffer[_iHeaderWritePos],
@@ -420,4 +431,7 @@ private:
 	int _iPayloadWritePos;
 	int _iHeaderReadPos;
 	int _iHeaderWritePos;
+
+private:
+	int _errCode;
 };

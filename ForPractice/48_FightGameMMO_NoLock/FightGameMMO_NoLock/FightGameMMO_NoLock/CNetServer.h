@@ -42,7 +42,7 @@ protected:
 	inline int GetServerDisconnTPS() { return _serverDisconnTPS; }
 
 protected:
-	CLockFreePool<CPacket>* _pPacketPool;
+	// CLockFreePool<CPacket>* _pPacketPool;
 
 	// Called in Network Library
 private:

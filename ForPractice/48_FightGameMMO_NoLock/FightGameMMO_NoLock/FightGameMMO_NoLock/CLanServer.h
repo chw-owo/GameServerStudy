@@ -8,6 +8,11 @@
 
 class CLanServer
 {
+
+protected:
+	CLanServer();
+	~CLanServer() {};
+
 protected:
 	bool NetworkInitialize(const wchar_t* IP, short port, int numOfThreads, bool nagle);
 	bool NetworkTerminate();
@@ -55,7 +60,7 @@ protected:
 	inline int GetSendMsgTPS() { return _sendMsgTPS; }
 
 protected:
-	CLockFreePool<CPacket>* _pPacketPool;
+	// CLockFreePool<CPacket>* _pPacketPool;
 
 	// Called in Network Library
 private:
@@ -86,13 +91,14 @@ private:
 
 private:
 	CSession* _sessions[dfSESSION_MAX] = { nullptr, };
-	volatile __int64 _sessionID = 0;
-	int _sessionCnt = 0;
-	int _idxKey = 0;	// TO-DO
-	int _idKey = 0;		// TO-DO
+	short _emptyIndex[dfSESSION_MAX];
+	volatile long _emptyIndexPos = -1;
+	volatile long _sessionCnt = 0;
 
 private:
-	wchar_t _msg[dfMSG_MAX] = { '\0' }; // TO-DO: TLS로 둬서 동기화 제거
+	volatile __int64 _sessionID = 0;
+	__int64 _indexMask = 0;		
+	__int64 _idMask = 0;		
 
 private:
 	int _acceptTotal = 0;

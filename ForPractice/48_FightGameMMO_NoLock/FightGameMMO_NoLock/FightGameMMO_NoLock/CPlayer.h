@@ -56,8 +56,8 @@ public:
 		_hp = dfMAX_HP;
 		_direction = dfMOVE_DIR_LL;
 		_moveDirection = dfMOVE_DIR_LL;
-		_x = rand() % dfRANGE_MOVE_RIGHT;
-		_y = rand() % dfRANGE_MOVE_BOTTOM;
+		_x = rand() % 100; // dfRANGE_MOVE_RIGHT;
+		_y = rand() % 100; // dfRANGE_MOVE_BOTTOM;
 
 		_pSector = nullptr;
 		_lastRecvTime = timeGetTime();

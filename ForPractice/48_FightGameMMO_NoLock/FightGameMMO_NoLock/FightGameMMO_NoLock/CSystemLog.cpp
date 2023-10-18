@@ -9,9 +9,7 @@ CSystemLog* g_pSystemLog = CSystemLog::GetInstance();
 
 CSystemLog::CSystemLog() : _dir(nullptr), _logLevel(ERROR_LEVEL), _logCount(0)
 {
-#ifdef  __SYSTEM_LOG_MULTITHREAD
 	InitializeCriticalSection(&_cs);
-#endif
 }
 
 CSystemLog* CSystemLog::GetInstance()
@@ -49,9 +47,7 @@ void CSystemLog::LogHex(const wchar_t* type, LOG_LEVEL logLevel, const wchar_t* 
 {
 	if (logLevel < _logLevel) return;
 
-#ifdef  __SYSTEM_LOG_MULTITHREAD
 	EnterCriticalSection(&_cs);
-#endif
 
 	time_t baseTimer = time(NULL);
 	struct tm localTimer;
@@ -66,10 +62,7 @@ void CSystemLog::LogHex(const wchar_t* type, LOG_LEVEL logLevel, const wchar_t* 
 	{
 		::wprintf(L"Fail to StringCchPrintf : %d (%s[%d])\n",
 			titleRet, _T(__FUNCTION__), __LINE__);
-
-#ifdef  __SYSTEM_LOG_MULTITHREAD
 		LeaveCriticalSection(&_cs);
-#endif
 		return;
 	}
 
@@ -85,10 +78,7 @@ void CSystemLog::LogHex(const wchar_t* type, LOG_LEVEL logLevel, const wchar_t* 
 	{
 		::wprintf(L"Fail to StringCchPrintf : %d (%s[%d])\n",
 			InfoRet, _T(__FUNCTION__), __LINE__);
-
-#ifdef  __SYSTEM_LOG_MULTITHREAD
 		LeaveCriticalSection(&_cs);
-#endif
 		return;
 	}
 
@@ -98,10 +88,7 @@ void CSystemLog::LogHex(const wchar_t* type, LOG_LEVEL logLevel, const wchar_t* 
 	{
 		::wprintf(L"Fail to StringCchCat : %d (%s[%d])\n",
 			copyRet, _T(__FUNCTION__), __LINE__);
-
-#ifdef  __SYSTEM_LOG_MULTITHREAD
 		LeaveCriticalSection(&_cs);
-#endif
 		return;
 	}
 
@@ -110,10 +97,8 @@ void CSystemLog::LogHex(const wchar_t* type, LOG_LEVEL logLevel, const wchar_t* 
 	{
 		::wprintf(L"Fail to StringCchCat : %d (%s[%d])\n",
 			concatRet1, _T(__FUNCTION__), __LINE__);
-
-#ifdef  __SYSTEM_LOG_MULTITHREAD
 		LeaveCriticalSection(&_cs);
-#endif
+
 		return;
 	}
 
@@ -125,10 +110,7 @@ void CSystemLog::LogHex(const wchar_t* type, LOG_LEVEL logLevel, const wchar_t* 
 		{
 			::wprintf(L"Fail to StringCchPrintf : %d (%s[%d])\n",
 				printRet, _T(__FUNCTION__), __LINE__);
-
-#ifdef  __SYSTEM_LOG_MULTITHREAD
 			LeaveCriticalSection(&_cs);
-#endif
 			return;
 		}
 
@@ -137,10 +119,7 @@ void CSystemLog::LogHex(const wchar_t* type, LOG_LEVEL logLevel, const wchar_t* 
 		{
 			::wprintf(L"Fail to StringCchCat : %d (%s[%d])\n",
 				concatRet2, _T(__FUNCTION__), __LINE__);
-
-#ifdef  __SYSTEM_LOG_MULTITHREAD
 			LeaveCriticalSection(&_cs);
-#endif
 			return;
 		}
 	}
@@ -153,10 +132,7 @@ void CSystemLog::LogHex(const wchar_t* type, LOG_LEVEL logLevel, const wchar_t* 
 	{
 		::wprintf(L"Fail to open %s : %d (%s[%d])\n",
 			logTitle, openRet, _T(__FUNCTION__), __LINE__);
-
-#ifdef  __SYSTEM_LOG_MULTITHREAD
 		LeaveCriticalSection(&_cs);
-#endif
 		return;
 	}
 
@@ -170,25 +146,18 @@ void CSystemLog::LogHex(const wchar_t* type, LOG_LEVEL logLevel, const wchar_t* 
 	{
 		::wprintf(L"Fileptr is nullptr %s (%s[%d])\n",
 			logTitle, _T(__FUNCTION__), __LINE__);
-
-#ifdef  __SYSTEM_LOG_MULTITHREAD
 		LeaveCriticalSection(&_cs);
-#endif
 		return;
 	}
 
-#ifdef  __SYSTEM_LOG_MULTITHREAD
 	LeaveCriticalSection(&_cs);
-#endif
 }
 
 void CSystemLog::Log(const wchar_t* type, LOG_LEVEL logLevel, const wchar_t* stringFormat, ...)
 {
 	if (logLevel < _logLevel) return;
 
-#ifdef  __SYSTEM_LOG_MULTITHREAD
 	EnterCriticalSection(&_cs);
-#endif
 
 	time_t baseTimer = time(NULL);
 	struct tm localTimer;
@@ -203,10 +172,7 @@ void CSystemLog::Log(const wchar_t* type, LOG_LEVEL logLevel, const wchar_t* str
 	{
 		::wprintf(L"Fail to StringCchPrintf : %d (%s[%d])\n",
 			titleRet, _T(__FUNCTION__), __LINE__);
-
-#ifdef  __SYSTEM_LOG_MULTITHREAD
 		LeaveCriticalSection(&_cs);
-#endif
 		return;
 	}
 
@@ -222,10 +188,7 @@ void CSystemLog::Log(const wchar_t* type, LOG_LEVEL logLevel, const wchar_t* str
 	{
 		::wprintf(L"Fail to StringCchPrintf : %d (%s[%d])\n",
 			InfoRet, _T(__FUNCTION__), __LINE__);
-
-#ifdef  __SYSTEM_LOG_MULTITHREAD
 		LeaveCriticalSection(&_cs);
-#endif
 		return;
 	}
 
@@ -240,10 +203,7 @@ void CSystemLog::Log(const wchar_t* type, LOG_LEVEL logLevel, const wchar_t* str
 	{
 		::wprintf(L"Fail to StringCchVPrintf : %d (%s[%d])\n",
 			dataRet, _T(__FUNCTION__), __LINE__);
-
-#ifdef  __SYSTEM_LOG_MULTITHREAD
 		LeaveCriticalSection(&_cs);
-#endif
 		return;
 	}
 
@@ -253,10 +213,7 @@ void CSystemLog::Log(const wchar_t* type, LOG_LEVEL logLevel, const wchar_t* str
 	{
 		::wprintf(L"Fail to open %s : %d (%s[%d])\n",
 			logTitle, openRet, _T(__FUNCTION__), __LINE__);
-
-#ifdef  __SYSTEM_LOG_MULTITHREAD
 		LeaveCriticalSection(&_cs);
-#endif
 		return;
 	}
 
@@ -270,15 +227,11 @@ void CSystemLog::Log(const wchar_t* type, LOG_LEVEL logLevel, const wchar_t* str
 	{
 		::wprintf(L"Fileptr is nullptr %s (%s[%d])\n",
 			logTitle, _T(__FUNCTION__), __LINE__);
-
-#ifdef  __SYSTEM_LOG_MULTITHREAD
 		LeaveCriticalSection(&_cs);
-#endif
 		return;
 	}
 
-#ifdef  __SYSTEM_LOG_MULTITHREAD
 	LeaveCriticalSection(&_cs);
-#endif
+
 }
 #endif

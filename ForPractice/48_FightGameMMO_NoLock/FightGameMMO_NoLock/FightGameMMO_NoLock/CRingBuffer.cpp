@@ -27,8 +27,8 @@ int CRingBuffer::Peek(char* chpDest, int size)
 {
     if (size > _useSize)
     {
-        // TO-DO: 외부로 전달
-        return -1;
+        _errCode = ERR_PEEK_OVER;
+        return ERR_RINGBUFFER;
     }
 
     int directDequeueSize = DirectDequeueSize();
@@ -51,15 +51,16 @@ int CRingBuffer::Enqueue(char* chpData, int size)
 {
     if (size > dfRBUFFER_MAX_SIZE)
     {
-        // TO-DO: 외부로 전달
-        return -1;
+        _errCode = ERR_ENQ_OVER;
+        return ERR_RINGBUFFER;
     }
+
     else if (size > _freeSize)
     {
         if (!Resize(_bufferSize + (int)(size * 1.5f)))
         {
-            // TO-DO: 외부로 전달
-            return -1;
+            _errCode = ERR_ENQ_OVER_AFTER_RESIZE;
+            return ERR_RINGBUFFER;
         }
     }
 
@@ -87,8 +88,8 @@ int CRingBuffer::Dequeue(char* chpData, int size)
 {
     if (size > _useSize)
     {
-        // TO-DO: 외부로 전달
-        return -1;
+        _errCode = ERR_DEQ_OVER;
+        return ERR_RINGBUFFER;
     }
 
     int directDequeueSize = DirectDequeueSize();
@@ -115,8 +116,8 @@ int CRingBuffer::MoveReadPos(int size)
 {
     if (size > _useSize)
     {
-        // TO-DO: 외부로 전달
-        return -1;
+        _errCode = ERR_MOVE_READ_OVER;
+        return ERR_RINGBUFFER;
     }
 
     _readPos = (_readPos + size) % _bufferSize;
@@ -130,15 +131,15 @@ int CRingBuffer::MoveWritePos(int size)
 {
     if (size > dfRBUFFER_MAX_SIZE)
     {
-        // TO-DO: 외부로 전달
-        return -1;
+        _errCode = ERR_MOVE_WRITE_OVER;
+        return ERR_RINGBUFFER;
     }
     else if (size > _freeSize)
     {
         if (!Resize(_bufferSize + (int)(size * 1.5f)))
         {
-            // TO-DO: 외부로 전달
-            return -1;
+            _errCode = ERR_MOVE_WRITE_OVER_AFTER_RESIZE;
+            return ERR_RINGBUFFER;
         }
     }
 
@@ -167,17 +168,15 @@ int CRingBuffer::DirectDequeueSize(void)
 
 bool CRingBuffer::Resize(int size)
 {
-    // TO-DO: 외부로 전달
-
     if (size > dfRBUFFER_MAX_SIZE)
     {
-        // TO-DO: 외부로 전달
+        _errCode = ERR_RESIZE_OVER_MAX;
         return false;
     }
 
     if (size < _useSize)
     {
-        // TO-DO: 외부로 전달
+        _errCode = ERR_RESIZE_UNDER_USE;
         return false;
     }
 

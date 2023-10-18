@@ -4,6 +4,8 @@
 #include "CSector.h"
 #include "CPlayer.h"
 #include "Protocol.h"
+#include "ErrorCode.h"
+
 #include <unordered_map>
 #include <queue>
 using namespace std;
@@ -11,8 +13,11 @@ using namespace std;
 class CGameServer : public CLanServer
 {
 public:
-	CGameServer();
-	~CGameServer();
+	CGameServer() {};
+	~CGameServer() { Terminate(); };
+
+public:
+	void Initialize();
 	void Terminate();
 
 private:
@@ -104,7 +109,7 @@ private:
 	};
 
 private:
-	volatile long _serverAlive = 0;
+	bool _serverAlive = true;
 	HANDLE* _logicThreads;
 	HANDLE _monitorThread;
 

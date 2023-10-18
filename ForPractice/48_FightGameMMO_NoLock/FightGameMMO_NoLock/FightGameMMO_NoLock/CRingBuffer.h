@@ -1,5 +1,7 @@
 #pragma once
 #include "Config.h"
+#include "ErrorCode.h"
+
 /*====================================================================
 
     <Ring Buffer>
@@ -60,5 +62,8 @@ private:
     int _bufferSize;
     int _useSize = 0;
     int _freeSize = 0;
+
+private:
+    int _errCode;
 };
 

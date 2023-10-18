@@ -1,9 +1,7 @@
 ﻿
 /*
 <TO-DO>
-1. 콘텐츠는 싱글 스레드로
-2. NetLib은 락프리 구조로
-4. 프로파일러 동적 STL로 수정
+1. Error: recv 완료! 근데 Packet code error 12
 */
 
 #include "CGameServer.h"
@@ -13,6 +11,7 @@
 #ifndef _WINSOCKAPI_
 #define _WINSOCKAPI_
 #endif
+
 #include <windows.h>
 #pragma comment(lib, "winmm.lib") 
 
@@ -26,9 +25,10 @@ int wmain(int argc, wchar_t* argv[])
     LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Main Thread Start\n");
 
     timeBeginPeriod(1);
+    g_GameServer.Initialize();
     for(;;)
     {
-        if (GetAsyncKeyState(VK_ESCAPE))
+        if (GetAsyncKeyState(VK_SPACE))
             g_GameServer.Terminate();
     }
     timeEndPeriod(1);

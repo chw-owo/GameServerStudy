@@ -12,8 +12,8 @@ int CPacket::Resize(int iBufferSize)
 {
 	if (iBufferSize > dfRBUFFER_MAX_SIZE)
 	{
-		// TO-DO: 외부로 전달
-		return -1;
+		_errCode = ERR_RESIZE_OVER_MAX;
+		return ERR_PACKET;
 	}
 
 	char* chpNewBuffer = new char[iBufferSize];
@@ -30,14 +30,14 @@ int CPacket::MovePayloadReadPos(int iSize)
 {
 	if (iSize < 0)
 	{
-		// TO-DO: 외부로 전달
-		return -1;
+		_errCode = ERR_MOVE_PAYLOAD_READ_UNDER;
+		return ERR_PACKET;
 	}
 
 	if (_iPayloadReadPos + iSize > _iBufferSize)
 	{
-		// TO-DO: 외부로 전달
-		return -1;
+		_errCode = ERR_MOVE_PAYLOAD_READ_OVER;
+		return ERR_PACKET;
 	}
 
 	_iPayloadReadPos += iSize;
@@ -48,14 +48,14 @@ int	CPacket::MovePayloadWritePos(int iSize)
 {
 	if (iSize < 0)
 	{
-		// TO-DO: 외부로 전달
-		return -1;
+		_errCode = ERR_MOVE_PAYLOAD_WRITE_UNDER;
+		return ERR_PACKET;
 	}
 
 	if (_iPayloadWritePos + iSize > _iBufferSize)
 	{
-		// TO-DO: 외부로 전달
-		return -1;
+		_errCode = ERR_MOVE_PAYLOAD_WRITE_OVER;
+		return ERR_PACKET;
 	}
 
 	_iPayloadWritePos += iSize;
@@ -67,14 +67,14 @@ int CPacket::MoveHeaderReadPos(int iSize)
 {
 	if (iSize < 0)
 	{
-		// TO-DO: 외부로 전달
-		return -1;
+		_errCode = ERR_MOVE_HEADER_READ_UNDER;
+		return ERR_PACKET;
 	}
 
 	if (_iHeaderReadPos + iSize > _iHeaderSize)
 	{
-		// TO-DO: 외부로 전달
-		return -1;
+		_errCode = ERR_MOVE_HEADER_READ_OVER;
+		return ERR_PACKET;
 	}
 
 	_iHeaderReadPos += iSize;
@@ -86,14 +86,14 @@ int	CPacket::MoveHeaderWritePos(int iSize)
 {
 	if (iSize < 0)
 	{
-		// TO-DO: 외부로 전달
-		return -1;
+		_errCode = ERR_MOVE_HEADER_WRITE_UNDER;
+		return ERR_PACKET;
 	}
 
 	if (_iHeaderWritePos + iSize > _iHeaderSize)
 	{
-		// TO-DO: 외부로 전달
-		return -1;
+		_errCode = ERR_MOVE_HEADER_WRITE_OVER;
+		return ERR_PACKET;
 	}
 
 	_iHeaderWritePos += iSize;
