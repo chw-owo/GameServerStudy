@@ -111,5 +111,8 @@
     <ClInclude Include="Protocol.h">
       <Filter>GameServer</Filter>
     </ClInclude>
+    <ClInclude Include="ErrorCode.h">
+      <Filter>NetLib</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

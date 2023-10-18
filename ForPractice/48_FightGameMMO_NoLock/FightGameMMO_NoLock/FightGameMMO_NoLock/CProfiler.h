@@ -28,7 +28,7 @@ using namespace std;
 
 ==============================================================*/
 
-#define PROFILE
+//#define PROFILE
 #ifdef PROFILE
 
 #define MULTI_THREAD

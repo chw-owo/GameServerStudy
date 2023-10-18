@@ -154,6 +154,7 @@
     <ClInclude Include="CSession.h" />
     <ClInclude Include="CSystemLog.h" />
     <ClInclude Include="CLockFreePool.h" />
+    <ClInclude Include="ErrorCode.h" />
     <ClInclude Include="Protocol.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
