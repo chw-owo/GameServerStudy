@@ -97,8 +97,8 @@ private:
 
 private:
 	volatile __int64 _sessionID = 0;
-	__int64 _indexMask = 0;		
-	__int64 _idMask = 0;		
+	unsigned __int64 _indexMask = 0;
+	unsigned __int64 _idMask = 0;
 
 private:
 	int _acceptTotal = 0;

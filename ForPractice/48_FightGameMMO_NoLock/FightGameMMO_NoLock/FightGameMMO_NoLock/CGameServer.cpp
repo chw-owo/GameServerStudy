@@ -280,7 +280,7 @@ inline void CGameServer::HandleAccept(__int64 sessionID)
 	ReleaseSRWLockExclusive(&_IDGeneratorLock);
 
 	pPlayer->Initialize(sessionID, playerID);
-	// pPlayer->PushStateForDebug(__LINE__);
+
 	int sectorX = (pPlayer->_x / dfSECTOR_SIZE_X) + 2;
 	int sectorY = (pPlayer->_y / dfSECTOR_SIZE_Y) + 2;
 	pPlayer->_pSector = &_sectors[sectorY][sectorX];
@@ -300,13 +300,11 @@ inline void CGameServer::HandleAccept(__int64 sessionID)
 	//===========================================================================
 
 	CPacket* createMePacket = new CPacket;
-	createMePacket->Clear();
 	int createMeRet = SetSCPacket_CREATE_MY_CHAR(createMePacket, playerID, dir, x, y, hp);
 	ReqSendUnicast(createMePacket, sessionID);
 	delete createMePacket;
 
 	CPacket* createMeToOtherPacket = new CPacket;
-	createMeToOtherPacket->Clear();
 	int createMeToOtherRet = SetSCPacket_CREATE_OTHER_CHAR(createMeToOtherPacket, playerID, dir, x, y, hp);
 	ReqSendAroundSector(createMeToOtherPacket, pSector, pPlayer);
 	delete createMeToOtherPacket;
@@ -365,7 +363,6 @@ inline void CGameServer::HandleAccept(__int64 sessionID)
 			ReleaseSRWLockShared(&(*iter)->_lock);
 
 			CPacket* createOtherPacket = new CPacket;
-			createOtherPacket->Clear();
 			int createOtherRet = SetSCPacket_CREATE_OTHER_CHAR(createOtherPacket, iterID, iterDir, iterX, iterY, iterHp);
 			ReqSendUnicast(createOtherPacket, sessionID);
 			delete createOtherPacket;

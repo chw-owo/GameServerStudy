@@ -9,8 +9,13 @@ __declspec (thread) wchar_t g_lanErrMsg[dfMSG_MAX] = { '\0' };
 CLanServer::CLanServer()
 {
 	_indexMask = 0b111111111111111; 
-	_indexMask << ID_BIT_SIZE;
+	::printf("%p\n", _indexMask);
+
+	_indexMask <<= ID_BIT_SIZE;
 	_idMask = ~_indexMask;
+
+	::printf("%p\n", _indexMask);
+	::printf("%p\n", _idMask);
 
 	for (int i = 0; i < dfSESSION_MAX; i++)
 		_emptyIndex[i] = i;
@@ -207,9 +212,9 @@ bool CLanServer::NetworkTerminate()
 
 bool CLanServer::Disconnect(__int64 sessionID)
 {
-	__int64 idx = sessionID & _indexMask;
-	idx >> ID_BIT_SIZE;
-	CSession* pSession = _sessions[idx];
+	unsigned __int64 idx = sessionID & _indexMask;
+	idx >>= ID_BIT_SIZE;
+	CSession* pSession = _sessions[(short)idx];
 	ReleaseSession(pSession->_ID);
 
 	return false;	
@@ -217,9 +222,9 @@ bool CLanServer::Disconnect(__int64 sessionID)
 
 bool CLanServer::SendPacket(__int64 sessionID, CPacket* packet)
 {
-	__int64 idx = sessionID & _indexMask;
-	idx >> ID_BIT_SIZE;
-	CSession* pSession = _sessions[idx];
+	unsigned __int64 idx = sessionID & _indexMask;
+	idx >>= ID_BIT_SIZE;
+	CSession* pSession = _sessions[(short)idx];
 
 	InterlockedIncrement16(&pSession->_validFlag._IOCount);
 	if (pSession->_validFlag._releaseFlag == 1) 
@@ -235,7 +240,7 @@ bool CLanServer::SendPacket(__int64 sessionID, CPacket* packet)
 
 	if (packet->IsHeaderEmpty())
 	{
-		int payloadSize = packet->GetPayloadSize();
+		short payloadSize = packet->GetPayloadSize();
 		stHeader header;
 		header.Len = payloadSize;
 
@@ -300,17 +305,15 @@ unsigned int __stdcall CLanServer::AcceptThread(void* arg)
 			continue;
 		}
 
+		unsigned __int64 idx = pLanServer->_emptyIndex[emptyIndexPos];
+		unsigned __int64 sessionIdx = idx << ID_BIT_SIZE;
+		sessionID |= sessionIdx;
 
-
-		__int64 idx = pLanServer->_emptyIndex[emptyIndexPos];
-		idx << ID_BIT_SIZE;
-		sessionID |= idx;
-
-		CSession* pSession = pLanServer->_sessions[idx];
+		CSession* pSession = pLanServer->_sessions[(short)idx]; 
 		pSession->Initialize(sessionID, client_sock, clientaddr);
 		pLanServer->_acceptCnt++;
 
-		::printf("Accept Success: ID - %lld, Idx - %d\n", sessionID, (int)idx);
+		::printf("Accept Success: ID - %lld\n", (sessionID & pLanServer->_idMask));
 
 		// Connect Session to IOCP and Post Recv                                      
 		CreateIoCompletionPort((HANDLE)pSession->_sock, pLanServer->_hNetworkCP, (ULONG_PTR)pSession, 0);
@@ -360,15 +363,11 @@ unsigned int __stdcall CLanServer::NetworkThread(void* arg)
 		}
 		else if (pNetOvl->_type == NET_TYPE::RECV)
 		{
-			::printf("Recv Success: ID - %lld, Bytes - %d, IOCount - %d\n", 
-				(pSession->_ID & pLanServer->_idMask), cbTransferred, pSession->_validFlag._IOCount);
 			pLanServer->HandleRecvCP(pSession->_ID, cbTransferred);
 			pLanServer->_recvMsgCnt++;
 		}
 		else if (pNetOvl->_type == NET_TYPE::SEND)
 		{
-			::printf("Send Success: ID - %lld, Bytes - %d, IOCount - %d\n", 
-				(pSession->_ID & pLanServer->_idMask), cbTransferred, pSession->_validFlag._IOCount);
 			pLanServer->HandleSendCP(pSession->_ID, cbTransferred);
 			pLanServer->_sendMsgCnt++;
 		}
@@ -377,9 +376,6 @@ unsigned int __stdcall CLanServer::NetworkThread(void* arg)
 		{
 			PostQueuedCompletionStatus(pLanServer->_hNetworkCP, 1, (ULONG_PTR)pSession, (LPOVERLAPPED)&pSession->_releaseOvl);
 		}
-
-		::printf("After IO-- in IOCP: ID - %lld, IOCount - %d\n", 
-			(pSession->_ID & pLanServer->_idMask), pSession->_validFlag._IOCount);
 	}
 
 	swprintf_s(g_lanErrMsg, dfMSG_MAX, L"Network Thread (%d)\n", threadID);
@@ -392,9 +388,9 @@ bool CLanServer::ReleaseSession(__int64 sessionID)
 {
 	::printf("Release: ID - %lld\n", (sessionID & _idMask));
 
-	__int64 idx = sessionID & _indexMask;
-	idx >> ID_BIT_SIZE;
-	CSession* pSession = _sessions[idx];
+	unsigned __int64 idx = sessionID & _indexMask;
+	idx >>= ID_BIT_SIZE;
+	CSession* pSession = _sessions[(short)idx];
 
 	if (InterlockedExchange(&pSession->_validFlag._flag, 1) != 0) return false;
 
@@ -418,9 +414,9 @@ bool CLanServer::ReleaseSession(__int64 sessionID)
 
 bool CLanServer::HandleRecvCP(__int64 sessionID, int recvBytes)
 {
-	__int64 idx = sessionID & _indexMask;
-	idx >> ID_BIT_SIZE;
-	CSession* pSession = _sessions[idx];
+	unsigned __int64 idx = sessionID & _indexMask;
+	idx >>= ID_BIT_SIZE;
+	CSession* pSession = _sessions[(short)idx];
 
 	InterlockedIncrement16(&pSession->_validFlag._IOCount);
 	if (pSession->_validFlag._releaseFlag == 1) 
@@ -504,9 +500,7 @@ bool CLanServer::RecvPost(CSession* pSession)
 	ZeroMemory(&pSession->_recvOvl._ovl, sizeof(pSession->_recvOvl._ovl));
 
 	int recvRet = WSARecv(pSession->_sock, pSession->_wsaRecvbuf,
-		2, &recvBytes, &flags, (LPOVERLAPPED)&pSession->_recvOvl, NULL);
-	::printf("Recv Request: ID - %lld, IOCount - %d\n", 
-		(pSession->_ID & _idMask), pSession->_validFlag._IOCount);
+		dfWSARECVBUF_CNT, &recvBytes, &flags, (LPOVERLAPPED)&pSession->_recvOvl, NULL);
 
 	if (recvRet == SOCKET_ERROR)
 	{
@@ -524,9 +518,6 @@ bool CLanServer::RecvPost(CSession* pSession)
 				PostQueuedCompletionStatus(_hNetworkCP, 1,
 					(ULONG_PTR)pSession->_ID, (LPOVERLAPPED)&pSession->_releaseOvl);
 			}
-
-			::printf("After IO-- in Recv: ID - %lld, IOCount - %d\n",
-				(pSession->_ID & _idMask), pSession->_validFlag._IOCount);
 		}
 	}
 
@@ -535,9 +526,9 @@ bool CLanServer::RecvPost(CSession* pSession)
 
 bool CLanServer::HandleSendCP(__int64 sessionID, int sendBytes)
 {
-	__int64 idx = sessionID & _indexMask;
-	idx >> ID_BIT_SIZE;
-	CSession* pSession = _sessions[idx];
+	unsigned __int64 idx = sessionID & _indexMask;
+	idx >>= ID_BIT_SIZE;
+	CSession* pSession = _sessions[(short)idx];
 
 	InterlockedIncrement16(&pSession->_validFlag._IOCount);
 	if (pSession->_validFlag._releaseFlag == 1) 
@@ -587,9 +578,7 @@ bool CLanServer::SendPost(CSession* pSession)
 	ZeroMemory(&pSession->_sendOvl._ovl, sizeof(pSession->_sendOvl._ovl));
 
 	int sendRet = WSASend(pSession->_sock, pSession->_wsaSendbuf,
-		2, &sendBytes, 0, (LPOVERLAPPED)&pSession->_sendOvl, NULL);
-	::printf("Send Request: ID - %lld, Bytes - %d, IOCount - %d\n",
-		(pSession->_ID & _idMask), useSize, pSession->_validFlag._IOCount);
+		dfWSASENDBUF_CNT, &sendBytes, 0, (LPOVERLAPPED)&pSession->_sendOvl, NULL);
 
 	if (sendRet == SOCKET_ERROR)
 	{
@@ -607,9 +596,6 @@ bool CLanServer::SendPost(CSession* pSession)
 				PostQueuedCompletionStatus(_hNetworkCP, 1,
 					(ULONG_PTR)pSession->_ID, (LPOVERLAPPED)&pSession->_releaseOvl);
 			}
-
-			::printf("After IO-- in Send: ID - %lld, IOCount - %d\n",
-				(pSession->_ID & _idMask), pSession->_validFlag._IOCount);
 		}
 	}
 

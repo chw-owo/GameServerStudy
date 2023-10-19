@@ -41,18 +41,18 @@ public:
 	}
 
 public:	
-	inline int	GetBufferSize(void) { return _iBufferSize; }
+	inline int GetBufferSize(void) { return _iBufferSize; }
 	inline int GetPacketSize(void) { return _iPayloadWritePos - _iHeaderReadPos; }
-	inline char* GetPacketReadPtr(void) { return &_chpBuffer[_iHeaderReadPos]; }
+	inline char* GetPacketReadPtr(void) { return _chpBuffer; }
 
 	inline bool IsPayloadEmpty(void) { return (_iPayloadWritePos == _iPayloadReadPos); }
 	inline bool IsHeaderEmpty(void) { return (_iHeaderWritePos == _iHeaderReadPos); }
 	inline bool IsEmpty(void) { return (IsPayloadEmpty() && IsHeaderEmpty()); }
 
-	inline int	GetPayloadSize(void) { return _iPayloadWritePos - _iPayloadReadPos; }
+	inline short GetPayloadSize(void) { return (short) (_iPayloadWritePos - _iPayloadReadPos); }
 	inline char* GetPayloadReadPtr(void) { return &_chpBuffer[_iPayloadReadPos]; }
 	inline char* GetPayloadWritePtr(void) { return &_chpBuffer[_iPayloadWritePos]; }
-	inline int GetHeaderSize(void) { return _iHeaderWritePos - _iHeaderReadPos; }
+	inline short GetHeaderSize(void) { return (short) (_iHeaderWritePos - _iHeaderReadPos); }
 	inline char* GetHeaderReadPtr(void) { return &_chpBuffer[_iHeaderReadPos]; }
 	inline char* GetHeaderWritePtr(void) { return &_chpBuffer[_iHeaderWritePos]; }
 
