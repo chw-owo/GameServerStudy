@@ -8,7 +8,6 @@
 
 class CLanServer
 {
-
 protected:
 	CLanServer();
 	~CLanServer() {};
@@ -68,6 +67,7 @@ private:
 	static unsigned int WINAPI NetworkThread(void* arg);
 
 private:
+	bool DecrementIOCount(CSession* pSession);
 	bool ReleaseSession(__int64 sessionID);
 	bool HandleRecvCP(__int64 sessionID, int recvBytes);
 	bool HandleSendCP(__int64 sessionID, int sendBytes);

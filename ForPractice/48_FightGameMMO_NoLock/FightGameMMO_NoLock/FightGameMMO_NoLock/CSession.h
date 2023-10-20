@@ -2,6 +2,7 @@
 #include "Config.h"
 #include "CPacket.h"
 #include "CRingBuffer.h"
+#include "CLockFreeQueue.h"
 
 #include <ws2tcpip.h>
 #pragma comment(lib, "ws2_32.lib")
@@ -37,8 +38,12 @@ public:
 		_addr = addr;
 		_sendFlag = 0;
 		_validFlag._flag = 0;
+
 		_recvBuf.ClearBuffer();
-		_sendBuf.ClearBuffer();
+		while (_sendBuf.GetUseSize() > 0)
+			_sendBuf.Dequeue();
+		while (_tempBuf.GetUseSize() > 0)
+			_tempBuf.Dequeue();
 
 		ZeroMemory(&_recvOvl._ovl, sizeof(_recvOvl._ovl));
 		ZeroMemory(&_sendOvl._ovl, sizeof(_sendOvl._ovl));
@@ -48,6 +53,7 @@ public:
 	void Terminate()
 	{
 		_ID = -1;
+		_sock = INVALID_SOCKET;
 		_sendFlag = 0;
 		_validFlag._IOCount = 0;
 		_validFlag._releaseFlag = 1;
@@ -59,7 +65,8 @@ public:
 	SOCKADDR_IN _addr;
 
 	CRingBuffer _recvBuf;
-	CRingBuffer _sendBuf;
+	CLockFreeQueue<CPacket*> _sendBuf;
+	CLockFreeQueue<CPacket*> _tempBuf;
 	WSABUF _wsaRecvbuf[dfWSARECVBUF_CNT];
 	WSABUF _wsaSendbuf[dfWSASENDBUF_CNT];
 
@@ -67,6 +74,7 @@ public:
 	NetworkOverlapped _sendOvl;
 	NetworkOverlapped _releaseOvl;
 	volatile long _sendFlag;
+	volatile long _sendCount;
 
 public:
 	typedef union ValidFlag
@@ -81,6 +89,5 @@ public:
 	};
 
 	volatile ValidFlag _validFlag;
-
 };
 

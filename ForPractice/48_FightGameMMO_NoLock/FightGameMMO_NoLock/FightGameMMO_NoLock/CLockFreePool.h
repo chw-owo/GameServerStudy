@@ -155,7 +155,7 @@ DATA* CLockFreePool<DATA>::Alloc(Types... args) // Pop
 				return &(pNewNode->_data);
 			}
 
-			__int64 pNextTop = ((PoolNode*)(pPrevTop & _addressMask))->_next;
+			__int64 pNextTop = ((PoolNode*)(pPrevTop & _addressMask))->_next; // TO-DO: Error
 			if (InterlockedCompareExchange64(&_pTop, pNextTop, pPrevTop) == pPrevTop)
 			{
 				new (&(((PoolNode*)(pPrevTop & _addressMask))->_data)) DATA(args...);

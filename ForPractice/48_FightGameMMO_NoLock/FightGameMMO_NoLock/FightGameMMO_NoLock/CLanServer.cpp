@@ -9,13 +9,8 @@ __declspec (thread) wchar_t g_lanErrMsg[dfMSG_MAX] = { '\0' };
 CLanServer::CLanServer()
 {
 	_indexMask = 0b111111111111111; 
-	::printf("%p\n", _indexMask);
-
 	_indexMask <<= ID_BIT_SIZE;
 	_idMask = ~_indexMask;
-
-	::printf("%p\n", _indexMask);
-	::printf("%p\n", _idMask);
 
 	for (int i = 0; i < dfSESSION_MAX; i++)
 		_emptyIndex[i] = i;
@@ -215,13 +210,22 @@ bool CLanServer::Disconnect(__int64 sessionID)
 	unsigned __int64 idx = sessionID & _indexMask;
 	idx >>= ID_BIT_SIZE;
 	CSession* pSession = _sessions[(short)idx];
-	ReleaseSession(pSession->_ID);
 
-	return false;	
+	::printf("%lld: Disconnect\n", (sessionID & _idMask));
+	
+	bool ret = false;
+	while (!ret)
+	{
+		ret = DecrementIOCount(pSession);
+	}
+
+	return true;
 }
 
 bool CLanServer::SendPacket(__int64 sessionID, CPacket* packet)
 {
+	::printf("%lld: SendPacket Try\n", (sessionID & _idMask));
+
 	unsigned __int64 idx = sessionID & _indexMask;
 	idx >>= ID_BIT_SIZE;
 	CSession* pSession = _sessions[(short)idx];
@@ -229,12 +233,12 @@ bool CLanServer::SendPacket(__int64 sessionID, CPacket* packet)
 	InterlockedIncrement16(&pSession->_validFlag._IOCount);
 	if (pSession->_validFlag._releaseFlag == 1) 
 	{
-		InterlockedDecrement16(&pSession->_validFlag._IOCount);
+		DecrementIOCount(pSession);
 		return false;
 	}
 	if (pSession->_ID != sessionID) 
 	{
-		InterlockedDecrement16(&pSession->_validFlag._IOCount);
+		DecrementIOCount(pSession);
 		return false;
 	}
 
@@ -247,24 +251,23 @@ bool CLanServer::SendPacket(__int64 sessionID, CPacket* packet)
 		int putRet = packet->PutHeaderData((char*)&header, dfHEADER_LEN);
 		if (putRet != dfHEADER_LEN)
 		{
-			InterlockedDecrement16(&pSession->_validFlag._IOCount);
+			DecrementIOCount(pSession);
 			swprintf_s(g_lanErrMsg, dfMSG_MAX, L"%s[%d]: CPacket PutHeaderData Error\n", _T(__FUNCTION__), __LINE__);
 			OnError(ERR_PACKET_PUT_HEADER, g_lanErrMsg);
 			return false;
 		}
 	}
+	pSession->_sendBuf.Enqueue(packet);
+	::printf("%lld: SendBuf Enqueue %p, Size is %d\n",
+		(pSession->_ID & _idMask), packet, pSession->_sendBuf.GetUseSize());
 
-	int packetSize = packet->GetPacketSize();
-	int enqueueRet = pSession->_sendBuf.Enqueue(packet->GetPacketReadPtr(), packetSize);
-	if (enqueueRet != packetSize)
+	if (!SendPost(pSession)) 
 	{
-		InterlockedDecrement16(&pSession->_validFlag._IOCount);
-		swprintf_s(g_lanErrMsg, dfMSG_MAX, L"%s[%d]: Send Buffer Enqueue Error\n", _T(__FUNCTION__), __LINE__);
-		OnError(ERR_SENDBUF_ENQ, g_lanErrMsg);
+		DecrementIOCount(pSession);
 		return false;
 	}
 
-	if (!SendPost(pSession)) InterlockedDecrement16(&pSession->_validFlag._IOCount);
+	::printf("%lld: SendPacket Success\n", (sessionID & _idMask));
 
 	return true;
 }
@@ -313,7 +316,7 @@ unsigned int __stdcall CLanServer::AcceptThread(void* arg)
 		pSession->Initialize(sessionID, client_sock, clientaddr);
 		pLanServer->_acceptCnt++;
 
-		::printf("Accept Success: ID - %lld\n", (sessionID & pLanServer->_idMask));
+		::printf("%lld: Accept Success\n", (sessionID & pLanServer->_idMask));
 
 		// Connect Session to IOCP and Post Recv                                      
 		CreateIoCompletionPort((HANDLE)pSession->_sock, pLanServer->_hNetworkCP, (ULONG_PTR)pSession, 0);
@@ -349,7 +352,7 @@ unsigned int __stdcall CLanServer::NetworkThread(void* arg)
 			if (GQCSRet == 0)
 			{
 				int err = WSAGetLastError();
-				// if (err != WSAECONNRESET && err != WSAECONNABORTED && err != WSAENOTSOCK)
+				if (err != ERROR_CONNECTION_ABORTED)
 				{
 					swprintf_s(g_lanErrMsg, dfMSG_MAX, L"%s[%d]: GQCS return 0, %d\n", _T(__FUNCTION__), __LINE__, err);
 					pLanServer->OnError(ERR_GQCS_RET0, g_lanErrMsg);
@@ -363,19 +366,18 @@ unsigned int __stdcall CLanServer::NetworkThread(void* arg)
 		}
 		else if (pNetOvl->_type == NET_TYPE::RECV)
 		{
+			::printf("%lld: Recv Success\n", (pSession->_ID & pLanServer->_idMask));
 			pLanServer->HandleRecvCP(pSession->_ID, cbTransferred);
 			pLanServer->_recvMsgCnt++;
 		}
 		else if (pNetOvl->_type == NET_TYPE::SEND)
 		{
+			::printf("%lld: Send Success\n", (pSession->_ID & pLanServer->_idMask));
 			pLanServer->HandleSendCP(pSession->_ID, cbTransferred);
 			pLanServer->_sendMsgCnt++;
 		}
 
-		if (InterlockedDecrement16(&pSession->_validFlag._IOCount) == 0)
-		{
-			PostQueuedCompletionStatus(pLanServer->_hNetworkCP, 1, (ULONG_PTR)pSession, (LPOVERLAPPED)&pSession->_releaseOvl);
-		}
+		pLanServer->DecrementIOCount(pSession);
 	}
 
 	swprintf_s(g_lanErrMsg, dfMSG_MAX, L"Network Thread (%d)\n", threadID);
@@ -386,14 +388,19 @@ unsigned int __stdcall CLanServer::NetworkThread(void* arg)
 
 bool CLanServer::ReleaseSession(__int64 sessionID)
 {
-	::printf("Release: ID - %lld\n", (sessionID & _idMask));
+	::printf("%lld: Release Try\n", (sessionID & _idMask));
 
 	unsigned __int64 idx = sessionID & _indexMask;
 	idx >>= ID_BIT_SIZE;
 	CSession* pSession = _sessions[(short)idx];
 
-	if (InterlockedExchange(&pSession->_validFlag._flag, 1) != 0) return false;
+	if (InterlockedCompareExchange(&pSession->_validFlag._flag, 1, 0) != 0) 
+	{
+		return false;
+	}
 
+	::printf("%lld: Release Success\n", (sessionID & _idMask));
+	
 	closesocket(pSession->_sock);
 	pSession->Terminate();
 	_disconnectCnt++;
@@ -421,20 +428,20 @@ bool CLanServer::HandleRecvCP(__int64 sessionID, int recvBytes)
 	InterlockedIncrement16(&pSession->_validFlag._IOCount);
 	if (pSession->_validFlag._releaseFlag == 1) 
 	{
-		InterlockedDecrement16(&pSession->_validFlag._IOCount);
+		DecrementIOCount(pSession);
 		return false;
 	}
 
 	if (pSession->_ID != sessionID) 
 	{
-		InterlockedDecrement16(&pSession->_validFlag._IOCount);
+		DecrementIOCount(pSession);
 		return false;
 	}
 
 	int moveReadRet = pSession->_recvBuf.MoveWritePos(recvBytes);
 	if (moveReadRet != recvBytes)
 	{
-		InterlockedDecrement16(&pSession->_validFlag._IOCount);
+		DecrementIOCount(pSession);
 		swprintf_s(g_lanErrMsg, dfMSG_MAX, L"%s[%d]: Recv Buffer MoveWritePos Error\n", _T(__FUNCTION__), __LINE__);
 		OnError(ERR_RECVBUF_MOVEWRITEPOS, g_lanErrMsg);
 		return false;
@@ -450,7 +457,7 @@ bool CLanServer::HandleRecvCP(__int64 sessionID, int recvBytes)
 		int peekRet = pSession->_recvBuf.Peek((char*)&header, dfHEADER_LEN);
 		if (peekRet != dfHEADER_LEN)
 		{
-			InterlockedDecrement16(&pSession->_validFlag._IOCount);
+			DecrementIOCount(pSession);
 			swprintf_s(g_lanErrMsg, dfMSG_MAX, L"%s[%d]: Recv Buffer Peek Error\n", _T(__FUNCTION__), __LINE__);
 			OnError(ERR_RECVBUF_PEEK, g_lanErrMsg);
 			return false;
@@ -461,7 +468,7 @@ bool CLanServer::HandleRecvCP(__int64 sessionID, int recvBytes)
 		int moveReadRet = pSession->_recvBuf.MoveReadPos(dfHEADER_LEN);
 		if (moveReadRet != dfHEADER_LEN)
 		{
-			InterlockedDecrement16(&pSession->_validFlag._IOCount);
+			DecrementIOCount(pSession);
 			swprintf_s(g_lanErrMsg, dfMSG_MAX, L"%s[%d]: Recv Buffer MoveReadPos Error\n", _T(__FUNCTION__), __LINE__);
 			OnError(ERR_RECVBUF_MOVEREADPOS, g_lanErrMsg);
 			return false;
@@ -471,7 +478,7 @@ bool CLanServer::HandleRecvCP(__int64 sessionID, int recvBytes)
 		int dequeueRet = pSession->_recvBuf.Dequeue(packet->GetPayloadWritePtr(), header.Len);
 		if (dequeueRet != header.Len)
 		{
-			InterlockedDecrement16(&pSession->_validFlag._IOCount);
+			DecrementIOCount(pSession);
 			swprintf_s(g_lanErrMsg, dfMSG_MAX, L"%s[%d]: Recv Buffer Dequeue Error\n", _T(__FUNCTION__), __LINE__);
 			OnError(ERR_RECVBUF_DEQ, g_lanErrMsg);
 			return false;
@@ -479,6 +486,7 @@ bool CLanServer::HandleRecvCP(__int64 sessionID, int recvBytes)
 
 		packet->MovePayloadWritePos(dequeueRet);
 		OnRecv(pSession->_ID, packet);
+		delete packet;
 		useSize = pSession->_recvBuf.GetUseSize();
 	}
 
@@ -501,23 +509,20 @@ bool CLanServer::RecvPost(CSession* pSession)
 
 	int recvRet = WSARecv(pSession->_sock, pSession->_wsaRecvbuf,
 		dfWSARECVBUF_CNT, &recvBytes, &flags, (LPOVERLAPPED)&pSession->_recvOvl, NULL);
+	::printf("%lld: Recv Try\n", (pSession->_ID & _idMask));
 
 	if (recvRet == SOCKET_ERROR)
 	{
 		int err = WSAGetLastError();
 		if (err != ERROR_IO_PENDING)
 		{
-			// if (err != WSAECONNRESET && err != WSAECONNABORTED)
+			if (err != WSAECONNRESET && err != WSAECONNABORTED)
 			{
 				swprintf_s(g_lanErrMsg, dfMSG_MAX, L"%s[%d]: Recv Error, %d\n", _T(__FUNCTION__), __LINE__, err);
 				OnError(ERR_RECV, g_lanErrMsg);
 			}
 
-			if (InterlockedDecrement16(&pSession->_validFlag._IOCount) == 0)
-			{
-				PostQueuedCompletionStatus(_hNetworkCP, 1,
-					(ULONG_PTR)pSession->_ID, (LPOVERLAPPED)&pSession->_releaseOvl);
-			}
+			DecrementIOCount(pSession);
 		}
 	}
 
@@ -533,27 +538,33 @@ bool CLanServer::HandleSendCP(__int64 sessionID, int sendBytes)
 	InterlockedIncrement16(&pSession->_validFlag._IOCount);
 	if (pSession->_validFlag._releaseFlag == 1) 
 	{
-		InterlockedDecrement16(&pSession->_validFlag._IOCount);
+		DecrementIOCount(pSession);
 		return false;
 	}
 	if (pSession->_ID != sessionID) 
 	{
-		InterlockedDecrement16(&pSession->_validFlag._IOCount);
+		DecrementIOCount(pSession);
 		return false;
 	}
 
-	int moveReadRet = pSession->_sendBuf.MoveReadPos(sendBytes);
-	if (moveReadRet != sendBytes)
+	for (int i = 0; i < pSession->_sendCount; i++)
 	{
-		InterlockedDecrement16(&pSession->_validFlag._IOCount);
-		swprintf_s(g_lanErrMsg, dfMSG_MAX, L"%s[%d]:Send Buffer MoveReadPos Error\n", _T(__FUNCTION__), __LINE__);
-		OnError(ERR_RECVBUF_MOVEREADPOS, g_lanErrMsg);
-		return false;
+		CPacket* packet = pSession->_tempBuf.Dequeue();
+		if (packet == nullptr) break;
+
+		if (InterlockedDecrement(&packet->_usageCount) == 0)
+		{
+			delete packet;
+		}
 	}
 
 	OnSend(pSession->_ID, sendBytes);
 	InterlockedExchange(&pSession->_sendFlag, 0);
-	if(!SendPost(pSession)) InterlockedDecrement16(&pSession->_validFlag._IOCount);
+	if (!SendPost(pSession))
+	{
+		DecrementIOCount(pSession);
+		return false;
+	}
 
 	return true;
 }
@@ -568,36 +579,57 @@ bool CLanServer::SendPost(CSession* pSession)
 		return false;
 	}
 
-	DWORD sendBytes;
+	int idx = 0;
 	int useSize = pSession->_sendBuf.GetUseSize();
-	pSession->_wsaSendbuf[0].buf = pSession->_sendBuf.GetReadPtr();
-	pSession->_wsaSendbuf[0].len = pSession->_sendBuf.DirectDequeueSize();
-	pSession->_wsaSendbuf[1].buf = pSession->_sendBuf.GetFrontPtr();
-	pSession->_wsaSendbuf[1].len = useSize - pSession->_wsaSendbuf[0].len;
+		
+	for (; idx < useSize; idx++)
+	{
+		if (idx == dfWSASENDBUF_CNT) break;
+		CPacket* packet = pSession->_sendBuf.Dequeue();
+		::printf("%lld: SendBuf Dequeue %p, Size is %d\n",
+			(pSession->_ID & _idMask), packet, pSession->_sendBuf.GetUseSize());
 
+		if (packet == nullptr) break;
+
+		pSession->_wsaSendbuf[idx].buf = packet->GetPacketReadPtr();
+		pSession->_wsaSendbuf[idx].len = packet->GetPacketSize();
+		InterlockedIncrement(&packet->_usageCount);
+		pSession->_tempBuf.Enqueue(packet);
+	}
+	pSession->_sendCount = idx;
+
+	DWORD sendBytes;
 	ZeroMemory(&pSession->_sendOvl._ovl, sizeof(pSession->_sendOvl._ovl));
-
 	int sendRet = WSASend(pSession->_sock, pSession->_wsaSendbuf,
-		dfWSASENDBUF_CNT, &sendBytes, 0, (LPOVERLAPPED)&pSession->_sendOvl, NULL);
+		idx, &sendBytes, 0, (LPOVERLAPPED)&pSession->_sendOvl, NULL);
+
+	::printf("%lld: Send Try\n", (pSession->_ID & _idMask));
 
 	if (sendRet == SOCKET_ERROR)
 	{
 		int err = WSAGetLastError();
 		if (err != ERROR_IO_PENDING)
 		{
-			// if (err != WSAECONNRESET && err != WSAECONNABORTED)
+			if (err != WSAECONNRESET && err != WSAECONNABORTED)
 			{
+				// TO-DO: 10022, Invalid Arg Error
 				swprintf_s(g_lanErrMsg, dfMSG_MAX, L"%s[%d]: Send Error, %d\n", _T(__FUNCTION__), __LINE__, err);
 				OnError(ERR_SEND, g_lanErrMsg);
 			}
 
-			if (InterlockedDecrement16(&pSession->_validFlag._IOCount) == 0)
-			{
-				PostQueuedCompletionStatus(_hNetworkCP, 1,
-					(ULONG_PTR)pSession->_ID, (LPOVERLAPPED)&pSession->_releaseOvl);
-			}
+			DecrementIOCount(pSession);
 		}
 	}
-
 	return true;
+}
+
+bool CLanServer::DecrementIOCount(CSession* pSession)
+{
+	if (InterlockedDecrement16(&pSession->_validFlag._IOCount) == 0)
+	{
+		PostQueuedCompletionStatus(_hNetworkCP, 1,
+			(ULONG_PTR)pSession, (LPOVERLAPPED)&pSession->_releaseOvl);
+		return true;
+	}
+	return false;
 }

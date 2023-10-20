@@ -1,7 +1,6 @@
-﻿
-/*
+﻿/*
 <TO-DO>
-1. Error: recv 완료! 근데 Packet code error 12
+1. LockFreePool Error
 */
 
 #include "CGameServer.h"

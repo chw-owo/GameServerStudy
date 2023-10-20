@@ -43,7 +43,7 @@ public:
 public:	
 	inline int GetBufferSize(void) { return _iBufferSize; }
 	inline int GetPacketSize(void) { return _iPayloadWritePos - _iHeaderReadPos; }
-	inline char* GetPacketReadPtr(void) { return _chpBuffer; }
+	inline char* GetPacketReadPtr(void) { return &_chpBuffer[0]; }
 
 	inline bool IsPayloadEmpty(void) { return (_iPayloadWritePos == _iPayloadReadPos); }
 	inline bool IsHeaderEmpty(void) { return (_iHeaderWritePos == _iHeaderReadPos); }
@@ -419,6 +419,9 @@ public:
 
 		return iSrcSize;
 	}
+
+public:
+	volatile long _usageCount = 0;
 
 private:
 	char* _chpBuffer;

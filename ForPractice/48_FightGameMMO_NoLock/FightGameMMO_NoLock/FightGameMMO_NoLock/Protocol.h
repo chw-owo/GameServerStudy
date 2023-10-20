@@ -11,7 +11,7 @@
 
 
 #define dfSERVER_IP							L"0.0.0.0"
-#define dfSERVER_PORT						11650
+#define dfSERVER_PORT						20000
 #define dfLOGIC_THREAD_NUM					1
 
 #define dfPLAYER_MAX						10000
