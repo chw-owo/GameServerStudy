@@ -114,7 +114,6 @@ void CGameServer::OnThreadTerminate(wchar_t* threadName)
 	::wprintf(L"%s Terminate\n", threadName);
 }
 
-
 void CGameServer::OnError(int errorCode, wchar_t* errorMsg)
 {
 	// LOG(L"FightGame", CSystemLog::ERROR_LEVEL, L"%s (%d)\n", errorMsg, errorCode);
@@ -587,7 +586,6 @@ void CGameServer::LogicUpdate(int threadNum)
 
 void CGameServer::ReqSendUnicast(CPacket* packet, __int64 sessionID)
 {
-	packet->_usageCount++;
 	SendPacket(sessionID, packet);
 }
 
