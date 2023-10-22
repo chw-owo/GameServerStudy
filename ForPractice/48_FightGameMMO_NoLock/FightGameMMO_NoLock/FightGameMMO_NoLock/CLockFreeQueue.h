@@ -14,17 +14,17 @@ public:
         _addressMask = ~_addressMask;
 
         QueueNode* node = _pPool->Alloc();
-        node->_next = NULL;
+        node->_next = 0;
 
         //For Protect ABA 
         unsigned __int64 ret = (unsigned __int64)InterlockedIncrement64(&_key);
         unsigned __int64 key = ret;
         key <<= __USESIZE_64BIT__;
-        __int64 tmp = (__int64)node;
-        tmp &= _addressMask;
-        tmp |= key;
+        __int64 pNode = (__int64)node;
+        pNode &= _addressMask;
+        pNode |= key;
 
-        _head = tmp;
+        _head = pNode;
         _tail = _head;
         _size = 0;
     }
@@ -59,8 +59,7 @@ public:
         node->_data = data;
         node->_next = NULL;
 
-        unsigned __int64 ret = (unsigned __int64)InterlockedIncrement64(&_key);
-        unsigned __int64 key = ret;
+        unsigned __int64 key = (unsigned __int64)InterlockedIncrement64(&_key);
         key <<= __USESIZE_64BIT__;
         __int64 newNode = (__int64)node;
         newNode &= _addressMask;
@@ -76,15 +75,15 @@ public:
             if (next != NULL)
             {
                 InterlockedCompareExchange64(&_tail, next, tail);
-                // LeaveLog(0, size, next, tail, 0, 0);
+                LeaveLog(0, size, next, tail, 0, 0);
             }
             else
             {
                 if (InterlockedCompareExchange64(&tailNode->_next, newNode, next) == next)
                 {
-                    // LeaveLog(1, size, newNode, next, 0, (__int64)data);
+                    LeaveLog(1, size, newNode, next, 0, (__int64)data);
                     InterlockedCompareExchange64(&_tail, newNode, tail);
-                    // LeaveLog(2, size, newNode, tail, 0, (__int64)data);
+                    LeaveLog(2, size, newNode, tail, 0, (__int64)data);
                     break;
                 }
             }
@@ -99,7 +98,7 @@ public:
         int size = _size;
         if (size == 0) 
         {
-            // LeaveLog(3, size, 0, 0, 0, 0);
+            LeaveLog(3, size, 0, 0, 0, 0);
             return data;
         }
 
@@ -113,20 +112,20 @@ public:
 
             if (next == NULL)
             {
-                // LeaveLog(4, size, 0, 0, 0, 0);
+                LeaveLog(4, size, 0, 0, 0, 0);
                 return data;
             }
 
             if (head == tail)
             {
                 InterlockedCompareExchange64(&_tail, next, tail);
-                // LeaveLog(5, size, next, tail, 0, 0);
+                LeaveLog(5, size, next, tail, 0, 0);
             }
 
             if (InterlockedCompareExchange64(&_head, next, head) == head)
             {           
                 data = ((QueueNode*)(next & _addressMask))->_data;
-                // LeaveLog(6, size, next, head, 0, (__int64)data);
+                LeaveLog(6, size, next, head, 0, (__int64)data);
                 _pPool->Free(headNode);
                 break;
             }

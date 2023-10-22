@@ -35,7 +35,7 @@ public:
 		_chpBuffer = new char[_iBufferSize];
 	}
 
-	inline virtual	~CPacket()
+	inline ~CPacket()
 	{
 		delete[] _chpBuffer;
 	}

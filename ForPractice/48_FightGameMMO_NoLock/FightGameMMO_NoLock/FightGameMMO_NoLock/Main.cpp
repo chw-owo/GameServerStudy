@@ -1,6 +1,6 @@
 ﻿/*
 <TO-DO>
-1. LockFreePool Error
+1. Broadcast 후 delete packet 에러
 */
 
 #include "CGameServer.h"

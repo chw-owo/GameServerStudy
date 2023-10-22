@@ -59,7 +59,7 @@ protected:
 	inline int GetSendMsgTPS() { return _sendMsgTPS; }
 
 protected:
-	// CLockFreePool<CPacket>* _pPacketPool;
+	CLockFreePool<CPacket>* _pPacketPool;
 
 	// Called in Network Library
 private:
