@@ -1,6 +1,6 @@
 ﻿/*
 <TO-DO>
-1. Broadcast 후 delete packet 에러
+1. 서버는 문제 없는데 클라에서 Wrong Disconnect 발생
 */
 
 #include "CGameServer.h"

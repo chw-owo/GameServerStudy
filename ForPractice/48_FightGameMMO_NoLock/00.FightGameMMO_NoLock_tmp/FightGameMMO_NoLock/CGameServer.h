@@ -44,7 +44,7 @@ private:
 
 private:
 	void ReqSendUnicast(CPacket* packet, __int64 sessionID);
-	void ReqSendOneSector(CPacket* packet, CSector* sector, CPlayer* pExpPlayer = nullptr);
+	void ReqSendOneSector(vector<__int64> sendID, CPacket* packet, CSector* sector, CPlayer* pExpPlayer = nullptr);
 	void ReqSendAroundSector(CPacket* packet, CSector* centerSector, CPlayer* pExpPlayer = nullptr);
 
 private:

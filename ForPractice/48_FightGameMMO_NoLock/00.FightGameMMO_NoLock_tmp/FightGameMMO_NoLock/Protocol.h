@@ -14,8 +14,8 @@
 #define dfSERVER_PORT						20000
 #define dfLOGIC_THREAD_NUM					1
 
-#define dfPLAYER_MAX						10000
-#define dfPLAYER_PER_THREAD					10000
+#define dfPLAYER_MAX						6000
+#define dfPLAYER_PER_THREAD					6000
 #define dfPLAYER_PER_SECTOR					1024
 
 #define dfMONITOR_TEXT_LEN					1024

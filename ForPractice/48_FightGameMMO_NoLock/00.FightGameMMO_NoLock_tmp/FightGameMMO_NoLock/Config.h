@@ -24,7 +24,7 @@ struct stHeader
 #endif
 
 #define dfPACKET_DEFAULT			0
-#define dfSESSION_MAX				32768
+#define dfSESSION_MAX				10000
 
 #define dfWSARECVBUF_CNT			2
 #define dfWSASENDBUF_CNT			100

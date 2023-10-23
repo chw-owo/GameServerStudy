@@ -33,6 +33,7 @@ public:
 public:
 	void Initialize(__int64 ID, SOCKET sock, SOCKADDR_IN addr)
 	{
+		_disconnect = false;
 		_ID = ID;
 		_sock = sock;
 		_addr = addr;
@@ -40,10 +41,8 @@ public:
 		_validFlag._flag = 0;
 
 		_recvBuf.ClearBuffer();
-		while (_sendBuf.GetUseSize() > 0)
-			_sendBuf.Dequeue();
-		while (_tempBuf.GetUseSize() > 0)
-			_tempBuf.Dequeue();
+		while (_sendBuf.GetUseSize() > 0) _sendBuf.Dequeue();
+		while (_tempBuf.GetUseSize() > 0) _tempBuf.Dequeue();
 
 		ZeroMemory(&_recvOvl._ovl, sizeof(_recvOvl._ovl));
 		ZeroMemory(&_sendOvl._ovl, sizeof(_sendOvl._ovl));
@@ -52,6 +51,7 @@ public:
 
 	void Terminate()
 	{
+		_disconnect = true;
 		_ID = -1;
 		_sock = INVALID_SOCKET;
 		_sendFlag = 0;
@@ -60,6 +60,7 @@ public:
 	}
 
 public:
+	bool _disconnect = true;
 	__int64 _ID;
 	SOCKET _sock;
 	SOCKADDR_IN _addr;
@@ -81,13 +82,37 @@ public:
 	{
 		struct
 		{
-			short _IOCount;
 			short _releaseFlag;
+			short _IOCount;
 		};
-
 		long _flag;
 	};
-
 	volatile ValidFlag _validFlag;
+
+public:
+#define dfSESSION_DEBUG_MAX 1000
+	class SessionDebugData // Debug For Initial & Release
+	{
+	public:
+		void LeaveLog(int line, short IOCount, short releaseFlag, __int64 sessionID, __int64 reqID)
+		{
+			_line = line;
+			_IOCount = IOCount;
+			_releaseFlag = releaseFlag;
+			_sessionID = sessionID;
+			_reqID = reqID;
+		}
+
+	private:
+		int _line = -1;
+		short _IOCount = -1;
+		short _releaseFlag = -1;
+		__int64 _sessionID = -1;
+		__int64 _reqID = -1;
+	};
+
+public:
+	SessionDebugData _debugData[dfSESSION_DEBUG_MAX];
+	volatile long _debugIdx = -1;
 };
 

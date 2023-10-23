@@ -7,6 +7,7 @@
 #include "ErrorCode.h"
 #include "Config.h"
 #include <windows.h>
+#include <stdio.h>
 
 class CPacket
 {
@@ -18,6 +19,7 @@ public:
 	{
 		_chpBuffer = new char[_iBufferSize];
 	}
+
 
 	inline CPacket(int headerLen)
 		: _iBufferSize(dfRBUFFER_DEF_SIZE), _iPayloadSize(0), _iHeaderSize(headerLen),
@@ -35,9 +37,21 @@ public:
 		_chpBuffer = new char[_iBufferSize];
 	}
 
+
 	inline ~CPacket()
 	{
 		delete[] _chpBuffer;
+	}
+
+public:
+	void AddUsageCount(long usageCount) 
+	{ 
+		InterlockedAdd(&_usageCount, usageCount);
+	}
+
+	long DecrementUsageCount() 
+	{ 
+		return InterlockedDecrement(&_usageCount);
 	}
 
 public:	
@@ -420,8 +434,8 @@ public:
 		return iSrcSize;
 	}
 
-public:
-	volatile long _usageCount = 0;
+private:
+	volatile long _usageCount;
 
 private:
 	char* _chpBuffer;

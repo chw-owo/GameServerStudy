@@ -129,7 +129,6 @@ void CChattingServer::HandleAccept(__int64 sessionID)
 	CPlayer* pPlayer = _pPlayerPool->Alloc(sessionID, _playerIDGenerator++);
 	_players.insert(pPlayer);
 	_playersMap.insert(make_pair(sessionID, pPlayer));
-	_sectors[pPlayer->_sectorY][pPlayer->_sectorX]._players.push_back(pPlayer);
 
 	return;
 }
@@ -155,14 +154,17 @@ void CChattingServer::HandleRelease(__int64 sessionID)
 	}
 
 	// Delete From Sector
-	CSector sector = _sectors[pPlayer->_sectorY][pPlayer->_sectorX];
-	vector<CPlayer*>::iterator vectorIter = sector._players.begin();
-	for (; vectorIter < sector._players.end(); vectorIter++)
+	if(pPlayer->_sectorX != -1 && pPlayer->_sectorY != -1)
 	{
-		if ((*vectorIter) == pPlayer)
+		CSector sector = _sectors[pPlayer->_sectorY][pPlayer->_sectorX];
+		vector<CPlayer*>::iterator vectorIter = sector._players.begin();
+		for (; vectorIter < sector._players.end(); vectorIter++)
 		{
-			sector._players.erase(vectorIter);
-			break;
+			if ((*vectorIter) == pPlayer)
+			{
+				sector._players.erase(vectorIter);
+				break;
+			}
 		}
 	}
 
@@ -380,12 +382,34 @@ inline void CChattingServer::HandleCSPacket_REQ_SECTOR_MOVE(CPacket* CSpacket, C
 		::wprintf(L"%s[%d] Account No is Different: %lld != %lld\n", _T(__FUNCTION__), __LINE__, player->_accountNo, accountNo);
 		return;
 	}
+
+	if (sectorX < 0 && sectorX > 49 && sectorY < 0 && sectorY > 49)
+	{
+		LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d] Sector Val is Wrong\n", _T(__FUNCTION__), __LINE__);
+		::wprintf(L"%s[%d] Sector Val is Wrong\n", _T(__FUNCTION__), __LINE__);
+		return;
+	}
+
+	if (player->_sectorX != -1 && player->_sectorY != -1)
+	{
+		CSector sector = _sectors[player->_sectorY][player->_sectorX];
+		vector<CPlayer*>::iterator vectorIter = sector._players.begin();
+		for (; vectorIter < sector._players.end(); vectorIter++)
+		{
+			if ((*vectorIter) == player)
+			{
+				sector._players.erase(vectorIter);
+				break;
+			}
+		}
+	}
 	player->_sectorX = sectorX;
 	player->_sectorY = sectorY;
+	_sectors[player->_sectorY][player->_sectorX]._players.push_back(player);
 
 	CPacket* SCpacket = CPacket::Alloc();
 	SetSCPacket_RES_SECTOR_MOVE(SCpacket, player->_accountNo, player->_sectorX, player->_sectorY);
-	ReqSendAroundSector(SCpacket, &_sectors[player->_sectorY][player->_sectorX]);
+	ReqSendUnicast(SCpacket, player->_sessionID);
 }
 
 inline void CChattingServer::HandleCSPacket_REQ_MESSAGE(CPacket* CSpacket, CPlayer* player)
@@ -404,8 +428,11 @@ inline void CChattingServer::HandleCSPacket_REQ_MESSAGE(CPacket* CSpacket, CPlay
 
 	CPacket* SCpacket = CPacket::Alloc();
 	SetSCPacket_RES_MESSAGE(SCpacket, player->_accountNo, player->_ID, player->_nickname, messageLen, message);
-	ReqSendAroundSector(SCpacket, &_sectors[player->_sectorY][player->_sectorX]);
 	
+	if (player->_sectorX != -1 && player->_sectorY != -1)
+	{
+		ReqSendAroundSector(SCpacket, &_sectors[player->_sectorY][player->_sectorX]);
+	}
 	delete[] message; // new[] - delete[]를 다른 함수에서 하는 게 기분이 나쁘다...
 }
 

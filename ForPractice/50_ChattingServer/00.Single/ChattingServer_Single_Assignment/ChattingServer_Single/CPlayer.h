@@ -6,7 +6,7 @@ class CPlayer
 public:
 	CPlayer() {};
 	CPlayer(__int64 sessionID, __int64 playerID) : 
-	_sessionID(sessionID), _playerID(playerID), _sectorX(0), _sectorY(0)
+	_sessionID(sessionID), _playerID(playerID), _sectorX(-1), _sectorY(-1)
 	{
 		_ID = new wchar_t[dfID_LEN];
 		_nickname = new wchar_t[dfNICKNAME_LEN];

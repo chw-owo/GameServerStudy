@@ -35,22 +35,6 @@ void CGameServer::Initialize()
 	InitializeSRWLock(&_usableIdxLock);
 	InitializeSRWLock(&_IDGeneratorLock);
 
-#ifdef _MONITOR
-	_monitorThread = (HANDLE)_beginthreadex(NULL, 0, MonitorThread, this, 0, nullptr);
-	if (_monitorThread == NULL)
-	{
-		LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
-			L"%s[%d]: Begin Monitor Thread Error\n",
-			_T(__FUNCTION__), __LINE__);
-
-		::wprintf(L"%s[%d]: Begin Monitor Thread Error\n",
-			_T(__FUNCTION__), __LINE__);
-
-		__debugbreak();
-		return;
-	}
-#endif
-
 	_logicThreads = new HANDLE[dfLOGIC_THREAD_NUM];
 
 	for (int i = 0; i < dfLOGIC_THREAD_NUM; i++)
@@ -71,8 +55,6 @@ void CGameServer::Initialize()
 		}
 	}
 
-	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"GameServer Initialize\n");
-	::wprintf(L"GameServer Initialize Complete\n");
 
 	SYSTEM_INFO si;
 	GetSystemInfo(&si);
@@ -80,6 +62,26 @@ void CGameServer::Initialize()
 
 	if (!NetworkInitialize(dfSERVER_IP, dfSERVER_PORT, threadCnt, false))
 		Terminate();
+
+
+#ifdef _MONITOR
+	_monitorThread = (HANDLE)_beginthreadex(NULL, 0, MonitorThread, this, 0, nullptr);
+	if (_monitorThread == NULL)
+	{
+		LOG(L"FightGame", CSystemLog::ERROR_LEVEL,
+			L"%s[%d]: Begin Monitor Thread Error\n",
+			_T(__FUNCTION__), __LINE__);
+
+		::wprintf(L"%s[%d]: Begin Monitor Thread Error\n",
+			_T(__FUNCTION__), __LINE__);
+
+		__debugbreak();
+		return;
+	}
+#endif
+
+	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"GameServer Initialize\n");
+	::wprintf(L"GameServer Initialize\n\n");
 }
 
 void CGameServer::Terminate()
@@ -98,8 +100,8 @@ void CGameServer::Terminate()
 
 void CGameServer::OnInitialize()
 {
-	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Network Initialize Complete\n");
-	::wprintf(L"Network Initialize Complete\n");
+	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Network Initialize\n");
+	::wprintf(L"Network Initialize\n");
 }
 
 void CGameServer::OnTerminate()
@@ -379,9 +381,10 @@ inline void CGameServer::HandleRelease(__int64 sessionID)
 	if (iter == _playersMap.end())
 	{
 		ReleaseSRWLockExclusive(&_playersMapLock);
-		LOG(L"FightGame", CSystemLog::DEBUG_LEVEL,
-			L"%s[%d]: No Session\n", _T(__FUNCTION__), __LINE__);
+		LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d]: No Session\n", _T(__FUNCTION__), __LINE__);
 		::wprintf(L"%s[%d]: No Session\n", _T(__FUNCTION__), __LINE__);
+		__debugbreak();
+
 		return;
 	}
 	CPlayer* pPlayer = iter->second;
@@ -390,7 +393,6 @@ inline void CGameServer::HandleRelease(__int64 sessionID)
 
 	PLAYER_STATE state = pPlayer->_state;
 
-	// pPlayer->PushStateForDebug(__LINE__);
 	int num = pPlayer->_idx._num;
 	if (state == PLAYER_STATE::DISCONNECT)
 	{
@@ -409,11 +411,8 @@ inline void CGameServer::HandleRelease(__int64 sessionID)
 	_playersMap.erase(iter);
 	ReleaseSRWLockExclusive(&_playersMapLock);
 
-	// pPlayer->PushStateForDebug(__LINE__);
-
 	if (state != PLAYER_STATE::DEAD)
 	{
-		// pPlayer->PushStateForDebug(__LINE__);
 		__int64 playerID = pPlayer->_playerID;
 		CSector* pSector = pPlayer->_pSector;
 		PLAYER_STATE state = pPlayer->_state;
@@ -506,32 +505,26 @@ inline void CGameServer::HandleRecv(__int64 sessionID, CPacket* packet)
 	switch (msgType)
 	{
 	case dfPACKET_CS_MOVE_START:
-		// pPlayer->PushStateForDebug(__LINE__);
 		HandleCSPacket_MOVE_START(packet, pPlayer);
 		break;
 
 	case dfPACKET_CS_MOVE_STOP:
-		// pPlayer->PushStateForDebug(__LINE__);
 		HandleCSPacket_MOVE_STOP(packet, pPlayer);
 		break;
 
 	case dfPACKET_CS_ATTACK1:
-		// pPlayer->PushStateForDebug(__LINE__);
 		HandleCSPacket_ATTACK1(packet, pPlayer);
 		break;
 
 	case dfPACKET_CS_ATTACK2:
-		// pPlayer->PushStateForDebug(__LINE__);
 		HandleCSPacket_ATTACK2(packet, pPlayer);
 		break;
 
 	case dfPACKET_CS_ATTACK3:
-		// pPlayer->PushStateForDebug(__LINE__);
 		HandleCSPacket_ATTACK3(packet, pPlayer);
 		break;
 
 	case dfPACKET_CS_ECHO:
-		// pPlayer->PushStateForDebug(__LINE__);
 		HandleCSPacket_ECHO(packet, pPlayer);
 		break;
 
@@ -586,13 +579,12 @@ void CGameServer::LogicUpdate(int threadNum)
 
 void CGameServer::ReqSendUnicast(CPacket* packet, __int64 sessionID)
 {
+	packet->AddUsageCount(1);
 	SendPacket(sessionID, packet);
 }
 
-void CGameServer::ReqSendOneSector(CPacket* packet, CSector* sector, CPlayer* pExpPlayer)
+void CGameServer::ReqSendOneSector(vector<__int64> sendID, CPacket* packet, CSector* sector, CPlayer* pExpPlayer)
 {
-	vector<__int64> sendID;
-
 	if (pExpPlayer == nullptr)
 	{
 		AcquireSRWLockShared(&sector->_lock);
@@ -631,13 +623,6 @@ void CGameServer::ReqSendOneSector(CPacket* packet, CSector* sector, CPlayer* pE
 			}
 		}
 		ReleaseSRWLockShared(&sector->_lock);
-	}
-
-	packet->_usageCount = sendID.size();
-	vector<__int64>::iterator idIter = sendID.begin();
-	for (; idIter != sendID.end(); idIter++)
-	{
-		SendPacket(*idIter, packet);
 	}
 }
 
@@ -707,7 +692,7 @@ void CGameServer::ReqSendAroundSector(CPacket* packet, CSector* centerSector, CP
 		ReleaseSRWLockShared(&centerSector->_around[dfMOVE_DIR_INPLACE]->_lock);
 	}
 
-	packet->_usageCount = sendID.size();
+	packet->AddUsageCount(sendID.size());
 	vector<__int64>::iterator idIter = sendID.begin();
 	for (; idIter != sendID.end(); idIter++)
 	{
@@ -1026,20 +1011,47 @@ void CGameServer::UpdateSector(CPlayer* pPlayer, short direction)
 	CPacket* createMeToOtherPacket = new CPacket;
 	createMeToOtherPacket->Clear();
 	int createMeToOtherRet = SetSCPacket_CREATE_OTHER_CHAR(createMeToOtherPacket, playerID, dir, x, y, hp);
+	vector<__int64> createMeToOthersendID;
 	for (int i = 0; i < sectorCnt; i++)
-		ReqSendOneSector(createMeToOtherPacket, inSector[i], pPlayer);
+	{
+		ReqSendOneSector(createMeToOthersendID, createMeToOtherPacket, inSector[i], pPlayer);
+	}
+	createMeToOtherPacket->AddUsageCount(createMeToOthersendID.size());
+	vector<__int64>::iterator idIter = createMeToOthersendID.begin();
+	for (; idIter != createMeToOthersendID.end(); idIter++)
+	{
+		SendPacket(*idIter, createMeToOtherPacket);
+	}
 
 	CPacket* moveMeToOtherPacket = new CPacket;
 	moveMeToOtherPacket->Clear();
 	int moveMeToOtherRet = SetSCPacket_MOVE_START(moveMeToOtherPacket, playerID, moveDir, x, y);
+	vector<__int64> moveMeToOthersendID;
 	for (int i = 0; i < sectorCnt; i++)
-		ReqSendOneSector(moveMeToOtherPacket, inSector[i], pPlayer);
+	{
+		ReqSendOneSector(moveMeToOthersendID, moveMeToOtherPacket, inSector[i], pPlayer);
+	}
+	moveMeToOtherPacket->AddUsageCount(moveMeToOthersendID.size());
+	idIter = moveMeToOthersendID.begin();
+	for (; idIter != moveMeToOthersendID.end(); idIter++)
+	{
+		SendPacket(*idIter, moveMeToOtherPacket);
+	}
 
 	CPacket* deleteMeToOtherPacket = new CPacket;
 	deleteMeToOtherPacket->Clear();
 	int deleteMeToOtherRet = SetSCPacket_DELETE_CHAR(deleteMeToOtherPacket, playerID);
+	vector<__int64> deleteMeToOthersendID;
 	for (int i = 0; i < sectorCnt; i++)
-		ReqSendOneSector(deleteMeToOtherPacket, outSector[i], pPlayer);
+	{
+		ReqSendOneSector(deleteMeToOthersendID, deleteMeToOtherPacket, outSector[i], pPlayer);
+	}
+	deleteMeToOtherPacket->AddUsageCount(deleteMeToOthersendID.size());
+	idIter = deleteMeToOthersendID.begin();
+	for (; idIter != deleteMeToOthersendID.end(); idIter++)
+	{
+		SendPacket(*idIter, deleteMeToOtherPacket);
+	}
 
 	// Send Data About Other Player ==============================================
 

@@ -6,6 +6,7 @@ void CPacket::Clear(void)
 	_iPayloadWritePos = _iHeaderSize;
 	_iHeaderReadPos = 0;
 	_iHeaderWritePos = 0;
+	_usageCount = 0;
 }
 
 int CPacket::Resize(int iBufferSize)
