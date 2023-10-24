@@ -1,5 +1,6 @@
 #include "CPacket.h"
-CLockFreePool<CPacket>* CPacket::_pPacketPool = new CLockFreePool<CPacket>(0, false);
+
+CLockFreePool<CPacket> CPacket::_pool = CLockFreePool<CPacket>(0, false);
 
 void CPacket::Clear(void)
 {
@@ -7,6 +8,8 @@ void CPacket::Clear(void)
 	_iPayloadWritePos = _iHeaderSize;
 	_iHeaderReadPos = 0;
 	_iHeaderWritePos = 0;
+	_usageCount = 0;
+	_encode = 0;
 }
 
 int CPacket::Resize(int iBufferSize)

@@ -2,7 +2,7 @@
 #include "CSystemLog.h"
 #include <tchar.h>
 
-#define _MONITOR
+// #define _MONITOR
 
 bool CChattingServer::Initialize()
 {
@@ -11,6 +11,27 @@ bool CChattingServer::Initialize()
 	_pJobPool = new CLockFreePool<CJob>(0, false);
 	_pPlayerPool = new CObjectPool<CPlayer>(dfPLAYER_MAX, true);
 
+	// Set Sector
+	for (int i = 0; i < dfSECTOR_CNT_Y; i++)
+	{
+		for (int j = 0; j < dfSECTOR_CNT_X; j++)
+		{
+			_sectors[i][j]._x = j;
+			_sectors[i][j]._y = i;
+
+			if (i > 0)												_sectors[i][j]._around.push_back(&_sectors[i - 1][j]);
+			if (i > 0 && j > 0)										_sectors[i][j]._around.push_back(&_sectors[i - 1][j - 1]);
+			if (i > 0 && j < dfSECTOR_CNT_Y - 1)					_sectors[i][j]._around.push_back(&_sectors[i - 1][j + 1]);
+
+			if (i < dfSECTOR_CNT_X - 1)								_sectors[i][j]._around.push_back(&_sectors[i + 1][j]);
+			if (i < dfSECTOR_CNT_X - 1 && j > 0)					_sectors[i][j]._around.push_back(&_sectors[i + 1][j - 1]);
+			if (i < dfSECTOR_CNT_X - 1 && j < dfSECTOR_CNT_Y - 1)	_sectors[i][j]._around.push_back(&_sectors[i + 1][j + 1]);
+
+			if (j > 0)												_sectors[i][j]._around.push_back(&_sectors[i][j - 1]);
+			if (j < dfSECTOR_CNT_Y - 1)								_sectors[i][j]._around.push_back(&_sectors[i][j + 1]);
+		}
+	} 
+	
 	// Set Logic Thread
 	_updateThread = (HANDLE)_beginthreadex(NULL, 0, UpdateThread, this, 0, nullptr);
 	if (_updateThread == NULL)
@@ -130,6 +151,8 @@ void CChattingServer::HandleAccept(__int64 sessionID)
 	_players.insert(pPlayer);
 	_playersMap.insert(make_pair(sessionID, pPlayer));
 
+	::printf("%lld (%d): Handle Accept\n", (_sessionID & _idMask), GetCurrentThreadId());
+
 	return;
 }
 
@@ -170,6 +193,9 @@ void CChattingServer::HandleRelease(__int64 sessionID)
 
 	// Delete Player
 	_pPlayerPool->Free(pPlayer);
+
+	::printf("%lld (%d): Handle Release\n", (_sessionID & _idMask), GetCurrentThreadId());
+
 }
 
 void CChattingServer::HandleRecv(__int64 sessionID, CPacket* packet)
@@ -183,6 +209,9 @@ void CChattingServer::HandleRecv(__int64 sessionID, CPacket* packet)
 			::wprintf(L"%s[%d]: No Session\n", _T(__FUNCTION__), __LINE__);
 			return;
 		}
+
+		::printf("%lld (%d): Handle Recv\n", (_sessionID & _idMask), GetCurrentThreadId());
+
 		CPlayer* pPlayer = iter->second;
 		pPlayer->_lastRecvTime = timeGetTime();
 		short msgType = -1;
@@ -230,6 +259,9 @@ unsigned int __stdcall CChattingServer::UpdateThread(void* arg)
 		if (pJobQueue->GetUseSize() == 0) continue;
 
 		CJob* job = pJobQueue->Dequeue();
+
+		::printf("%lld (%d): Job Dequeue!\n", (job->_sessionID & pServer->_idMask), GetCurrentThreadId());
+
 		if (job->_type == JOB_TYPE::SYSTEM)
 		{
 			if (job->_sysType == SYS_TYPE::ACCEPT)
@@ -244,6 +276,7 @@ unsigned int __stdcall CChattingServer::UpdateThread(void* arg)
 		else if (job->_type == JOB_TYPE::CONTENT)
 		{
 			pServer->HandleRecv(job->_sessionID, job->_packet);
+			CPacket::Free(job->_packet);
 		}
 
 		if ((timeGetTime() - oldTick) >= dfTIMEOUT)
@@ -309,30 +342,44 @@ unsigned int __stdcall CChattingServer::MonitorThread(void* arg)
 
 void CChattingServer::ReqSendUnicast(CPacket* packet, __int64 sessionID)
 {
+	packet->AddUsageCount(1);
 	SendPacket(sessionID, packet);
 }
 
 void CChattingServer::ReqSendAroundSector(CPacket* packet, CSector* centerSector, CPlayer* pExpPlayer)
 {
+	vector<__int64> sendID;
+
 	if (pExpPlayer == nullptr)
 	{
-		for (int i = 0; i < dfAROUND_SECTOR_NUM; i++)
+		vector<CSector*>::iterator iter = centerSector->_around.begin();
+		for (; iter < centerSector->_around.end(); iter++)
 		{
-			vector<CPlayer*>::iterator playerIter = centerSector->_around[i]->_players.begin();
-			for (; playerIter < centerSector->_around[i]->_players.end(); playerIter++)
+			vector<CPlayer*>::iterator playerIter = (*iter)->_players.begin();
+			for (; playerIter < (*iter)->_players.end(); playerIter++)
 			{
-				SendPacket((*playerIter)->_sessionID, packet);
+				sendID.push_back((*playerIter)->_sessionID);
+				::printf("[%d][%d] %lld\n", (*iter)->_y, (*iter)->_x, (*playerIter)->_sessionID & _idMask);
 			}
+		}
+
+		vector<CPlayer*>::iterator playerIter = centerSector->_players.begin();
+		for (; playerIter < centerSector->_players.end(); playerIter++)
+		{
+			sendID.push_back((*playerIter)->_sessionID);
+			::printf("[%d][%d] %lld\n", centerSector->_y, centerSector->_x, (*playerIter)->_sessionID & _idMask);
 		}
 	}
 	else
 	{
-		for (int i = 0; i < dfAROUND_SECTOR_NUM; i++)
+		vector<CSector*>::iterator iter = centerSector->_around.begin();
+		for (; iter < centerSector->_around.end(); iter++)
 		{
-			vector<CPlayer*>::iterator playerIter = centerSector->_around[i]->_players.begin();
-			for (; playerIter < centerSector->_around[i]->_players.end(); playerIter++)
+			vector<CPlayer*>::iterator playerIter = (*iter)->_players.begin();
+			for (; playerIter < (*iter)->_players.end(); playerIter++)
 			{
-				SendPacket((*playerIter)->_sessionID, packet);
+				sendID.push_back((*playerIter)->_sessionID);
+				::printf("[%d][%d] %lld\n", (*iter)->_y, (*iter)->_x, (*playerIter)->_sessionID & _idMask);
 			}
 		}
 
@@ -341,14 +388,24 @@ void CChattingServer::ReqSendAroundSector(CPacket* packet, CSector* centerSector
 		{
 			if (*playerIter != pExpPlayer)
 			{
-				SendPacket((*playerIter)->_sessionID, packet);
+				sendID.push_back((*playerIter)->_sessionID);
+				::printf("[%d][%d] %lld\n", centerSector->_y, centerSector->_x, (*playerIter)->_sessionID & _idMask);
 			}
 		}
+	}
+
+	packet->AddUsageCount(sendID.size());
+	vector<__int64>::iterator idIter = sendID.begin();
+	for (; idIter != sendID.end(); idIter++)
+	{
+		SendPacket(*idIter, packet);
 	}
 }
 
 inline void CChattingServer::HandleCSPacket_REQ_LOGIN(CPacket* CSpacket, CPlayer* player)
 {
+	::printf("%lld (%d): %s\n", player->_playerID, GetCurrentThreadId(), __func__);
+
 	__int64 accountNo;
 	wchar_t* ID = new wchar_t[dfID_LEN];
 	wchar_t* nickname = new wchar_t[dfNICKNAME_LEN];
@@ -365,12 +422,15 @@ inline void CChattingServer::HandleCSPacket_REQ_LOGIN(CPacket* CSpacket, CPlayer
 	BYTE status = 1;
 
 	CPacket* SCpacket = CPacket::Alloc();
+	SCpacket->Clear();
 	SetSCPacket_RES_LOGIN(SCpacket, status, player->_accountNo);
 	ReqSendUnicast(SCpacket, player->_sessionID);
 }
 
 inline void CChattingServer::HandleCSPacket_REQ_SECTOR_MOVE(CPacket* CSpacket, CPlayer* player)
 {
+	::printf("%lld (%d): %s\n", player->_playerID, GetCurrentThreadId(), __func__);
+
 	__int64 accountNo;
 	WORD sectorX;
 	WORD sectorY;
@@ -383,7 +443,7 @@ inline void CChattingServer::HandleCSPacket_REQ_SECTOR_MOVE(CPacket* CSpacket, C
 		return;
 	}
 
-	if (sectorX < 0 && sectorX > 49 && sectorY < 0 && sectorY > 49)
+	if (sectorX < 0 && sectorX > dfSECTOR_CNT_X && sectorY < 0 && sectorY > dfSECTOR_CNT_Y)
 	{
 		LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d] Sector Val is Wrong\n", _T(__FUNCTION__), __LINE__);
 		::wprintf(L"%s[%d] Sector Val is Wrong\n", _T(__FUNCTION__), __LINE__);
@@ -392,28 +452,38 @@ inline void CChattingServer::HandleCSPacket_REQ_SECTOR_MOVE(CPacket* CSpacket, C
 
 	if (player->_sectorX != -1 && player->_sectorY != -1)
 	{
+		::printf("prev: [%d][%d] %lld\n", player->_sectorY, player->_sectorX, player->_sessionID & _idMask);
+
 		CSector sector = _sectors[player->_sectorY][player->_sectorX];
-		vector<CPlayer*>::iterator vectorIter = sector._players.begin();
-		for (; vectorIter < sector._players.end(); vectorIter++)
+		vector<CPlayer*>::iterator iter = sector._players.begin();
+		for (; iter < sector._players.end(); iter++)
 		{
-			if ((*vectorIter) == player)
+			if ((*iter) == player)
 			{
-				sector._players.erase(vectorIter);
+				iter = sector._players.erase(iter);
+				::printf("prev: [%d][%d] %lld\n", player->_sectorY, player->_sectorX, player->_sessionID & _idMask);
+				// 로그 상으로는 erase가 이루어지는 게 맞는데, 
+				// Req 시에는 주변 섹터에 자신도 들어간 적 있었다면 전송을 한다...
 				break;
 			}
 		}
 	}
+
 	player->_sectorX = sectorX;
 	player->_sectorY = sectorY;
 	_sectors[player->_sectorY][player->_sectorX]._players.push_back(player);
+	::printf("cur: [%d][%d] %lld\n", player->_sectorY, player->_sectorX, player->_sessionID & _idMask);
 
 	CPacket* SCpacket = CPacket::Alloc();
+	SCpacket->Clear();
 	SetSCPacket_RES_SECTOR_MOVE(SCpacket, player->_accountNo, player->_sectorX, player->_sectorY);
 	ReqSendUnicast(SCpacket, player->_sessionID);
 }
 
 inline void CChattingServer::HandleCSPacket_REQ_MESSAGE(CPacket* CSpacket, CPlayer* player)
 {
+	::printf("%lld (%d): %s\n", player->_playerID, GetCurrentThreadId(), __func__);
+
 	__int64 accountNo;
 	WORD messageLen;
 	wchar_t* message;
@@ -427,17 +497,20 @@ inline void CChattingServer::HandleCSPacket_REQ_MESSAGE(CPacket* CSpacket, CPlay
 	}
 
 	CPacket* SCpacket = CPacket::Alloc();
+	SCpacket->Clear();
 	SetSCPacket_RES_MESSAGE(SCpacket, player->_accountNo, player->_ID, player->_nickname, messageLen, message);
 
 	if (player->_sectorX != -1 && player->_sectorY != -1)
 	{
 		ReqSendAroundSector(SCpacket, &_sectors[player->_sectorY][player->_sectorX]);
 	}
+
 	delete[] message; // new[] - delete[]를 다른 함수에서 하는 게 기분이 나쁘다...
 }
 
 inline void CChattingServer::HandleCSPacket_REQ_HEARTBEAT(CPlayer* player)
 {
+	::printf("%lld (%d): %s\n", player->_playerID, GetCurrentThreadId(), __func__);
 	player->_lastRecvTime = timeGetTime();
 }
 
@@ -460,8 +533,8 @@ inline void CChattingServer::GetCSPacket_REQ_MESSAGE(CPacket* packet, __int64& a
 {
 	*packet >> accountNo;
 	*packet >> messageLen;
-	message = new wchar_t[messageLen];
-	packet->GetPayloadData((char*)message, messageLen * sizeof(wchar_t));
+	message = new wchar_t[messageLen / 2];
+	packet->GetPayloadData((char*)message, messageLen);
 }
 
 inline void CChattingServer::SetSCPacket_RES_LOGIN(CPacket* packet, BYTE status, __int64 accountNo)
@@ -489,5 +562,5 @@ inline void CChattingServer::SetSCPacket_RES_MESSAGE(CPacket* packet, __int64 ac
 	packet->PutPayloadData((char*)ID, dfID_LEN * sizeof(wchar_t));
 	packet->PutPayloadData((char*)nickname, dfNICKNAME_LEN * sizeof(wchar_t));
 	*packet << messageLen;
-	packet->PutPayloadData((char*)message, messageLen * sizeof(wchar_t));
+	packet->PutPayloadData((char*)message, messageLen);
 }

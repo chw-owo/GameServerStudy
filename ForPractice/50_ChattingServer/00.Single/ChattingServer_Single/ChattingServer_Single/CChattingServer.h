@@ -1,5 +1,5 @@
 #pragma once
-#include "CLanServer.h"
+#include "CNetServer.h"
 #include "CObjectPool.h"
 #include "CLockFreePool.h"
 #include "CLockFreeQueue.h"
@@ -15,7 +15,7 @@
 #include <unordered_map>
 using namespace std;
 
-class CChattingServer : public CLanServer
+class CChattingServer : public CNetServer
 {
 public:
 	CChattingServer() {};

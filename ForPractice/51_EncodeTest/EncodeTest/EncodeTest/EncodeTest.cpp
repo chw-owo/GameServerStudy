@@ -1,51 +1,83 @@
 ﻿#include <stdio.h>
 #include <windows.h>
 
+// 154
+#define dfTEST 55
+#define dfPACKET_KEY 0xa9
+
 struct stPacket
 {
 	unsigned char _code;
 	unsigned short _len;
 	unsigned char _randKey;
 	unsigned char _checkSum;
-	unsigned char _payload[55];
+	unsigned char _payload[dfTEST];
 };
 
-void Encode(stPacket& packet, char code, char fixedKey, char randKey, char payload[55])
+bool PacketDecode(stPacket& packet)
 {
-	packet._code = code;
-	packet._len = strlen(payload);
-	packet._randKey = randKey;
-
+	char p_cur;
+	char e_cur;
+	char p_prev = 0;
+	char e_prev = 0;
 	unsigned int checkSum = 0;
-	for (int i = 0; i < strlen(payload); i++)
+
+	for (int i = 0; i < dfTEST; i++)
 	{
-		checkSum += payload[i];
+		e_cur = packet._payload[i];
+		p_cur = e_cur ^ (e_prev + dfPACKET_KEY + 1 + i);
+		packet._payload[i] = p_cur ^ (p_prev + packet._randKey + 1 + i);
+		checkSum += packet._payload[i];
+
+		e_prev = e_cur;
+		p_prev = p_cur;
 	}
-	packet._checkSum = checkSum % 256;
-	memcpy_s(packet._payload, strlen(payload), payload, strlen(payload));
+
+	checkSum = checkSum % 256;
+	::printf("\n\nchecksum: %02x\n", checkSum);
+	return true;
+}
+
+bool PacketEncode(stPacket& packet)
+{
+	unsigned int checkSum = 0;
+	for (int i = 0; i < dfTEST; i++)
+	{
+		checkSum += packet._payload[i];
+	}
+	checkSum %= 256;
+	packet._checkSum = checkSum;
 
 	char d;
 	char p = 0;
 	char e = 0;
-
-	for (int i = 0; i <= strlen(payload); i++)
+	for (int i = 0; i < dfTEST; i++)
 	{
 		d = packet._payload[i];
-		p = d ^ (p + randKey + 1 + i);
-		e = p ^ (e + fixedKey + 1 + i);
+		p = d ^ (p + packet._randKey + 1 + i);
+		e = p ^ (e + dfPACKET_KEY + 1 + i);
 		packet._payload[i] = e;
 	}
+
+	return true;
 }
 
 int main()
 {
-	char payload[55] = "aaaaaaaaaabbbbbbbbbbcccccccccc1234567890abcdefghijklmn";
-	for (int i = 0; i < 55; i++) ::printf("%02x ", payload[i]);
-
-	stPacket packet;
-	Encode(packet, 0x77, 0xa9, 0x31, payload);
+	char payload[dfTEST] = "aaaaaaaaaabbbbbbbbbbcccccccccc1234567890abcdefghijklmn";
+	// unsigned char payload[dfTEST] = { 0xac, 0x04, 0xea, 0x9c, 0x7f, 0x22, 0xd6, 0x6a, 0xcb, 0x68, 0xbb, 0xe8, 0x64, 0xe6, 0x4c, 0xd2, 0x71, 0xd4, 0x44, 0xd0, 0x41, 0xd2, 0x44, 0xd6, 0x79, 0x98, 0x84, 0xb4, 0x69, 0xce, 0x5c, 0x2a, 0xf1, 0xdc, 0x94, 0x58, 0x71, 0x1a, 0x94, 0x1e, 0x79, 0xc0, 0x34, 0xac, 0x59, 0xd6, 0xbc, 0x82, 0x51, 0x64, 0x6a, 0x6c, 0x46, 0x1e, 0x1a, 0x36, 0x3c, 0x68, 0x6c, 0x04, 0x41, 0xee, 0xe4, 0xfa, 0xb9, 0x2c, 0x8c, 0x58, 0x59, 0x6a, 0x0c, 0x9e, 0x51, 0xb0, 0x9c, 0xfc, 0x61, 0xb6, 0xb4, 0xf2, 0x89, 0x34, 0xcc, 0xe0, 0x99, 0x12, 0xec, 0xc6, 0xa1, 0x18, 0xb1, 0x52, 0x82, 0xdd, 0x2f, 0x7d, 0x7c, 0xd3, 0x24, 0x77, 0x6f, 0xfe, 0x8e, 0x6a, 0xf5, 0x95, 0x4d, 0x6d, 0xa8, 0x83, 0x72, 0x92, 0xe1, 0xd6, 0x89, 0x11, 0xb3, 0x6f, 0xe0, 0x90, 0x05, 0x1d, 0xb6, 0xb2, 0x0f, 0x55, 0x97, 0xca, 0xe5, 0xab, 0xaa, 0x0f, 0x4e, 0xa1, 0x2e, 0x50, 0x67, 0xb9, 0x53, 0xaa, 0x65, 0xcd, 0xb2, 0x93, 0x5e, 0xe9, 0xa7, 0x93, 0x54, 0xfc, 0xd2, 0x38, 0x76, 0xd1 };
+	for (int i = 0; i < dfTEST; i++) ::printf("0x%02x, ", payload[i]);
 	::printf("\n\n");
 
-	for (int i = 0; i < 55; i++) ::printf("%02x ", packet._payload[i]);
-}
+	stPacket packet;
+	packet._len = dfTEST;
+	packet._randKey = 0x31;
+	memcpy_s(packet._payload, dfTEST, payload, dfTEST);
 
+	PacketEncode(packet);
+	for (int i = 0; i < dfTEST; i++) ::printf("0x%02x, ", packet._payload[i]);
+
+	PacketDecode(packet);
+	for (int i = 0; i < dfTEST; i++) ::printf("0x%02x, ", packet._payload[i]);
+	::printf("\n\n");
+}

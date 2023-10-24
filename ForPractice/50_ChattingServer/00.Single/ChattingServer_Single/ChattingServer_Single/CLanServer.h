@@ -58,18 +58,24 @@ protected:
 	inline int GetRecvMsgTPS() { return _recvMsgTPS; }
 	inline int GetSendMsgTPS() { return _sendMsgTPS; }
 
+protected:
+	// CLockFreePool<CPacket>* _pPacketPool;
+
 	// Called in Network Library
 private:
 	static unsigned int WINAPI AcceptThread(void* arg);
 	static unsigned int WINAPI NetworkThread(void* arg);
 
 private:
-	bool DecrementIOCount(CSession* pSession);
 	bool ReleaseSession(__int64 sessionID);
 	bool HandleRecvCP(__int64 sessionID, int recvBytes);
 	bool HandleSendCP(__int64 sessionID, int sendBytes);
 	bool RecvPost(CSession* pSession);
 	bool SendPost(CSession* pSession);
+
+private:
+	bool DecrementIOCount(CSession* pSession);
+	bool IncrementIOCount(CSession* pSession);
 
 private:
 	wchar_t _IP[10];
@@ -110,4 +116,7 @@ private:
 	int _disconnectCnt = 0;
 	int _recvMsgCnt = 0;
 	int _sendMsgCnt = 0;
+
+private:
+	wchar_t _errMsg[dfMSG_MAX] = { '\0' };
 };

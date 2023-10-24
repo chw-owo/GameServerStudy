@@ -8,29 +8,40 @@
 #include "ErrorCode.h"
 #include "Config.h"
 #include <windows.h>
+#include <stdio.h>
 
 class CPacket
 {
 	friend CLockFreePool<CPacket>;
 
-private:
-	volatile long _usageCount = 0;
-	static CLockFreePool<CPacket>* _pPacketPool;
+public:
+	static CLockFreePool<CPacket> _pool;
 
-private:
-	char* _chpBuffer;
-	int	_iBufferSize;
-	int	_iPayloadSize;
-	int	_iHeaderSize;
+	static CPacket* Alloc()
+	{
+		CPacket* packet = _pool.Alloc();
+		return packet;
+	}
 
-private:
-	int _iPayloadReadPos;
-	int _iPayloadWritePos;
-	int _iHeaderReadPos;
-	int _iHeaderWritePos;
+	static bool Free(CPacket* packet)
+	{
+		if (InterlockedDecrement(&packet->_usageCount) == 0)
+		{
+			_pool.Free(packet);
+			return true;
+		}
+		return false;
+	}
 
-private:
-	int _errCode;
+	inline void Debug()
+	{
+		::printf("%d\n", _usageCount);
+	}
+
+	void AddUsageCount(long usageCount)
+	{
+		InterlockedAdd(&_usageCount, usageCount);
+	}
 
 private:
 	inline CPacket()
@@ -46,7 +57,6 @@ private:
 		_iPayloadReadPos(headerLen), _iPayloadWritePos(headerLen),
 		_iHeaderReadPos(0), _iHeaderWritePos(0)
 	{
-		_pPacketPool = new CLockFreePool<CPacket>(0, false);
 		_chpBuffer = new char[_iBufferSize];
 	}
 
@@ -64,24 +74,67 @@ private:
 	}
 
 public:
-	void IncrementUsageCount()
-	{
-		InterlockedIncrement(&_usageCount);
-	}
+	volatile long _encode = 0;
 
-	static CPacket* Alloc()
-	{
-		return _pPacketPool->Alloc();
-	}
+	bool Decode(stHeader& header)
+	{	
+		unsigned char checkSum = 0;
+		unsigned char* payload = (unsigned char*) GetPayloadPtr();
 
-	static bool Free(CPacket* packet)
-	{
-		if (InterlockedDecrement(&packet->_usageCount) == 0)
+		char e_cur = header._checkSum;
+		char p_cur = e_cur ^ (dfPACKET_KEY + 1);
+		header._checkSum = p_cur ^ (header._randKey + 1);
+		char e_prev = e_cur;
+		char p_prev = p_cur;	
+
+		for (int i = 0; i < header._len; i++)
 		{
-			_pPacketPool->Free(packet);
-			return true;
+			e_cur = payload[i];
+			p_cur = e_cur ^ (e_prev + dfPACKET_KEY + 2 + i);
+			payload[i] = p_cur ^ (p_prev + header._randKey + 2 + i);
+			checkSum += payload[i];
+
+			e_prev = e_cur;
+			p_prev = p_cur;
 		}
-		return false;
+
+		checkSum = checkSum % 256;
+		if (header._checkSum != checkSum) 
+		{
+			::printf("%02x != %02x\n", header._checkSum, checkSum);
+			return false;
+		}
+
+		return true;
+	}
+
+	bool Encode(stHeader& header) 
+	{
+		if (InterlockedExchange(&_encode, 1) == 1) return false;
+		// 콘텐츠를 멀티로 제작할 경우 event를 통한 완료 확인 및 대기 필요
+
+		unsigned char checkSum = 0;
+		char* payload = GetPayloadPtr();
+		for (int i = 0; i < header._len; i++)
+		{
+			checkSum += payload[i];
+		}
+		header._checkSum = checkSum % 256;
+
+		char d = header._checkSum;
+		char p = d ^ (header._randKey + 1);
+		char e = p ^ (dfPACKET_KEY + 1);
+		header._checkSum = e;
+
+		for (int i = 0; i < header._len; i++)
+		{
+			d = payload[i];
+			p = d ^ (p + header._randKey + 2 + i);
+			e = p ^ (e + dfPACKET_KEY + 2 + i);
+			payload[i] = e;
+		}
+		
+		return true;
 	}
 
 public:
@@ -94,6 +147,7 @@ public:
 	inline bool IsEmpty(void) { return (IsPayloadEmpty() && IsHeaderEmpty()); }
 
 	inline short GetPayloadSize(void) { return (short)(_iPayloadWritePos - _iPayloadReadPos); }
+	inline char* GetPayloadPtr(void) { return &_chpBuffer[dfHEADER_LEN]; }
 	inline char* GetPayloadReadPtr(void) { return &_chpBuffer[_iPayloadReadPos]; }
 	inline char* GetPayloadWritePtr(void) { return &_chpBuffer[_iPayloadWritePos]; }
 	inline short GetHeaderSize(void) { return (short)(_iHeaderWritePos - _iHeaderReadPos); }
@@ -463,4 +517,22 @@ public:
 
 		return iSrcSize;
 	}
+
+private:
+	volatile long _usageCount;
+
+private:
+	char* _chpBuffer;
+	int	_iBufferSize;
+	int	_iPayloadSize;
+	int	_iHeaderSize;
+
+private:
+	int _iPayloadReadPos;
+	int _iPayloadWritePos;
+	int _iHeaderReadPos;
+	int _iHeaderWritePos;
+
+private:
+	int _errCode;
 };
