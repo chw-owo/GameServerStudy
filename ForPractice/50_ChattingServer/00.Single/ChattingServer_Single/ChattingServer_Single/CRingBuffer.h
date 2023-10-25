@@ -1,6 +1,7 @@
 #pragma once
 #include "Config.h"
 #include "ErrorCode.h"
+#include <stdio.h>
 
 /*====================================================================
 
@@ -52,6 +53,20 @@ public:
     int MoveWritePos(int size);
     int DirectEnqueueSize(void);
     int DirectDequeueSize(void);
+
+public:
+    inline void PrintBufferDataForDebug()
+    {
+        ::wprintf(L"\n");
+        ::wprintf(L"Buffer Size: %d\n", _bufferSize);
+        ::wprintf(L"Read: %d\n", _readPos);
+        ::wprintf(L"Write: %d\n", _writePos);
+        ::wprintf(L"Real Use Size: %d\n", _useSize);
+        ::wprintf(L"Real Free Size: %d\n", _freeSize);
+        ::wprintf(L"Direct Dequeue Size: %d\n", DirectDequeueSize());
+        ::wprintf(L"Direct Enqueue Size: %d\n", DirectEnqueueSize());
+        ::wprintf(L"\n");
+    }
 
 private:
     char* _buffer;

@@ -2,7 +2,8 @@
 #include "CSystemLog.h"
 #include <tchar.h>
 
-// #define _MONITOR
+#define _MONITOR
+// #define _TIMEOUT
 
 bool CChattingServer::Initialize()
 {
@@ -66,6 +67,17 @@ bool CChattingServer::Initialize()
 	}
 #endif
 
+#ifdef _TIMEOUT
+	// Set Timeout Thread
+	_timeoutThread = (HANDLE)_beginthreadex(NULL, 0, TimeoutThread, this, 0, nullptr);
+	if (_timeoutThread == NULL)
+	{
+		LOG(L"FightGame", CSystemLog::ERROR_LEVEL, L"%s[%d]: Begin Timeout Thread Error\n", _T(__FUNCTION__), __LINE__);
+		::wprintf(L"%s[%d]: Begin Timeout Thread Error\n", _T(__FUNCTION__), __LINE__);
+		return false;
+	}
+#endif
+
 	return true;
 }
 
@@ -77,6 +89,10 @@ void CChattingServer::Terminate()
 
 #ifdef _MONITOR
 	WaitForSingleObject(_monitorThread, INFINITE);
+#endif
+
+#ifdef _TIMEOUT
+	WaitForSingleObject(_timeoutThread, INFINITE);
 #endif
 
 	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Server Terminate.\n");
@@ -117,6 +133,9 @@ void CChattingServer::OnAcceptClient(__int64 sessionID)
 	CJob* job = _pJobPool->Alloc();
 	job->Setting(JOB_TYPE::SYSTEM, SYS_TYPE::ACCEPT, sessionID, nullptr);
 	_pJobQueue->Enqueue(job);
+
+	InterlockedExchange(&_event, 1);
+	WakeByAddressSingle(&_event);
 }
 
 void CChattingServer::OnReleaseClient(__int64 sessionID)
@@ -124,6 +143,9 @@ void CChattingServer::OnReleaseClient(__int64 sessionID)
 	CJob* job = _pJobPool->Alloc();
 	job->Setting(JOB_TYPE::SYSTEM, SYS_TYPE::RELEASE, sessionID, nullptr);
 	_pJobQueue->Enqueue(job);
+
+	InterlockedExchange(&_event, 1);
+	WakeByAddressSingle(&_event);
 }
 
 void CChattingServer::OnRecv(__int64 sessionID, CPacket* packet)
@@ -131,15 +153,37 @@ void CChattingServer::OnRecv(__int64 sessionID, CPacket* packet)
 	CJob* job = _pJobPool->Alloc();
 	job->Setting(JOB_TYPE::CONTENT, SYS_TYPE::NONE, sessionID, packet);
 	_pJobQueue->Enqueue(job);
+
+	InterlockedExchange(&_event, 1);
+	WakeByAddressSingle(&_event);
 }
 
 void CChattingServer::OnSend(__int64 sessionID, int sendSize)
 {
 }
 
+void CChattingServer::HandleTimeout()
+{
+	unordered_map<__int64, CPlayer*>::iterator iter = _playersMap.begin();
+	for (; iter != _playersMap.end();)
+	{
+		CPlayer* player = (*iter).second;
+
+		if ((timeGetTime() - player->_lastRecvTime) >= dfTIMEOUT)
+		{
+			Disconnect(player->_sessionID);
+			iter = _playersMap.erase(iter);
+		}
+		else
+		{
+			iter++;
+		}
+	}
+}
+
 void CChattingServer::HandleAccept(__int64 sessionID)
 {
-	if (_players.size() >= dfPLAYER_MAX)
+	if (_playersMap.size() >= dfPLAYER_MAX)
 	{
 		LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d] player max\n", _T(__FUNCTION__), __LINE__);
 		::wprintf(L"%s[%d] player max\n", _T(__FUNCTION__), __LINE__);
@@ -148,10 +192,9 @@ void CChattingServer::HandleAccept(__int64 sessionID)
 	}
 
 	CPlayer* pPlayer = _pPlayerPool->Alloc(sessionID, _playerIDGenerator++);
-	_players.insert(pPlayer);
 	_playersMap.insert(make_pair(sessionID, pPlayer));
 
-	::printf("%lld (%d): Handle Accept\n", (_sessionID & _idMask), GetCurrentThreadId());
+	// ::printf("%lld (%d): Handle Accept\n", (_sessionID & _idMask), GetCurrentThreadId());
 
 	return;
 }
@@ -169,23 +212,16 @@ void CChattingServer::HandleRelease(__int64 sessionID)
 	CPlayer* pPlayer = mapIter->second;
 	_playersMap.erase(mapIter);
 
-	// Delete From Player Set
-	unordered_set<CPlayer*>::iterator setIter = _players.find(pPlayer);
-	if (setIter != _players.end())
-	{
-		_players.erase(setIter);
-	}
-
 	// Delete From Sector
 	if (pPlayer->_sectorX != -1 && pPlayer->_sectorY != -1)
 	{
-		CSector sector = _sectors[pPlayer->_sectorY][pPlayer->_sectorX];
-		vector<CPlayer*>::iterator vectorIter = sector._players.begin();
-		for (; vectorIter < sector._players.end(); vectorIter++)
+		CSector* sector = &_sectors[pPlayer->_sectorY][pPlayer->_sectorX];
+		vector<CPlayer*>::iterator vectorIter = sector->_players.begin();
+		for (; vectorIter < sector->_players.end(); vectorIter++)
 		{
 			if ((*vectorIter) == pPlayer)
 			{
-				sector._players.erase(vectorIter);
+				sector->_players.erase(vectorIter);
 				break;
 			}
 		}
@@ -193,10 +229,10 @@ void CChattingServer::HandleRelease(__int64 sessionID)
 
 	// Delete Player
 	_pPlayerPool->Free(pPlayer);
-
-	::printf("%lld (%d): Handle Release\n", (_sessionID & _idMask), GetCurrentThreadId());
+	// ::printf("%lld (%d): Handle Release\n", (_sessionID & _idMask), GetCurrentThreadId());
 
 }
+
 
 void CChattingServer::HandleRecv(__int64 sessionID, CPacket* packet)
 {
@@ -210,7 +246,7 @@ void CChattingServer::HandleRecv(__int64 sessionID, CPacket* packet)
 			return;
 		}
 
-		::printf("%lld (%d): Handle Recv\n", (_sessionID & _idMask), GetCurrentThreadId());
+		// ::printf("%lld (%d): Handle Recv\n", (_sessionID & _idMask), GetCurrentThreadId());
 
 		CPlayer* pPlayer = iter->second;
 		pPlayer->_lastRecvTime = timeGetTime();
@@ -253,49 +289,40 @@ unsigned int __stdcall CChattingServer::UpdateThread(void* arg)
 	CChattingServer* pServer = (CChattingServer*)arg;
 	CLockFreeQueue<CJob*>* pJobQueue = pServer->_pJobQueue;
 	DWORD oldTick = timeGetTime();
-
+	long undesired = 0;
+	
 	while (pServer->_serverAlive)
 	{
-		if (pJobQueue->GetUseSize() == 0) continue;
+		WaitOnAddress(&pServer->_event, &undesired, sizeof(long), INFINITE);
 
-		CJob* job = pJobQueue->Dequeue();
-
-		::printf("%lld (%d): Job Dequeue!\n", (job->_sessionID & pServer->_idMask), GetCurrentThreadId());
-
-		if (job->_type == JOB_TYPE::SYSTEM)
+		while(pJobQueue->GetUseSize() > 0)
 		{
-			if (job->_sysType == SYS_TYPE::ACCEPT)
-			{
-				pServer->HandleAccept(job->_sessionID);
-			}
-			else if (job->_sysType == SYS_TYPE::RELEASE)
-			{
-				pServer->HandleRelease(job->_sessionID);
-			}
-		}
-		else if (job->_type == JOB_TYPE::CONTENT)
-		{
-			pServer->HandleRecv(job->_sessionID, job->_packet);
-			CPacket::Free(job->_packet);
-		}
+			CJob* job = pJobQueue->Dequeue();
+			if (job == nullptr) break;
 
-		if ((timeGetTime() - oldTick) >= dfTIMEOUT)
-		{
-			unordered_set<CPlayer*>::iterator setIter = pServer->_players.begin();
-			for (; setIter != pServer->_players.end();)
+			if (job->_type == JOB_TYPE::SYSTEM)
 			{
-				if ((timeGetTime() - (*setIter)->_lastRecvTime) >= dfTIMEOUT)
+				if (job->_sysType == SYS_TYPE::ACCEPT)
 				{
-					pServer->Disconnect((*setIter)->_sessionID);
-					setIter = pServer->_players.erase(setIter);
+					pServer->HandleAccept(job->_sessionID);
 				}
-				else
+				else if (job->_sysType == SYS_TYPE::RELEASE)
 				{
-					setIter++;
+					pServer->HandleRelease(job->_sessionID);
+				}
+				else if (job->_sysType == SYS_TYPE::TIMEOUT)
+				{
+					pServer->HandleTimeout();
 				}
 			}
-			oldTick = timeGetTime();
+			else if (job->_type == JOB_TYPE::CONTENT)
+			{
+				pServer->HandleRecv(job->_sessionID, job->_packet);
+				CPacket::Free(job->_packet);
+			}
 		}
+
+		InterlockedExchange(&pServer->_event, undesired);
 	}
 	return 0;
 }
@@ -308,16 +335,17 @@ unsigned int __stdcall CChattingServer::MonitorThread(void* arg)
 	while (pServer->_serverAlive)
 	{
 		Sleep(1000);
+		
 		pServer->UpdateMonitorData();
-		pServer->_totalAccept += pServer->GetAcceptTPS();
-		pServer->_totalDisconnect += pServer->GetDisconnectTPS();
 
 		SYSTEMTIME stTime;
 		GetLocalTime(&stTime);
 		WCHAR text[dfMONITOR_TEXT_LEN];
-		swprintf_s(text, dfMONITOR_TEXT_LEN, L"[%s %02d:%02d:%02d]\n\nTotal Accept: %d\nTotal Disconnect: %d\nConnected Session: %d\nAccept/1sec: %d\nDisconnect/1sec: %d\n\n",
-			_T(__DATE__), stTime.wHour, stTime.wMinute, stTime.wSecond, pServer->_totalAccept, pServer->_totalDisconnect, pServer->GetSessionCount(), pServer->GetAcceptTPS(), pServer->GetDisconnectTPS());
+		swprintf_s(text, dfMONITOR_TEXT_LEN, L"[%s %02d:%02d:%02d]\n\nTotal Accept: %d\nTotal Disconnect: %d\nConnected Session: %d\nRecv/1sec: %d\nSend/1sec: %d\nAccept/1sec: %d\nDisconnect/1sec: %d\n\n",
+			_T(__DATE__), stTime.wHour, stTime.wMinute, stTime.wSecond, pServer->GetAcceptTotal(), pServer->GetDisconnectTotal(), pServer->GetSessionCount(), pServer->GetRecvMsgTPS(), pServer->GetSendMsgTPS(), pServer->GetAcceptTPS(), pServer->GetDisconnectTPS());
 		::wprintf(L"%s", text);
+
+		pServer->ResetMonitorData();
 
 		FILE* file;
 		errno_t openRet = _wfopen_s(&file, L"MonitorLog/MonitorLog.txt", L"a+");
@@ -335,7 +363,25 @@ unsigned int __stdcall CChattingServer::MonitorThread(void* arg)
 		{
 			LOG(L"FightGame", CSystemLog::ERROR_LEVEL, L"%s[%d]: Fileptr is nullptr %s\n", _T(__FUNCTION__), __LINE__, L"MonitorLog/MonitorLog.txt");
 			::wprintf(L"%s[%d]: Fileptr is nullptr %s\n", _T(__FUNCTION__), __LINE__, L"MonitorLog/MonitorLog.txt");
-		}
+		}	
+	}
+	return 0;
+}
+
+unsigned int __stdcall CChattingServer::TimeoutThread(void* arg)
+{
+	CChattingServer* pServer = (CChattingServer*)arg;
+	CreateDirectory(L"MonitorLog", NULL);
+
+	while (pServer->_serverAlive)
+	{
+		Sleep(dfTIMEOUT);
+		CJob* job = pServer->_pJobPool->Alloc();
+		job->Setting(JOB_TYPE::SYSTEM, SYS_TYPE::TIMEOUT, 0, nullptr);
+		pServer->_pJobQueue->Enqueue(job);
+
+		InterlockedExchange(&pServer->_event, 1);
+		WakeByAddressSingle(&pServer->_event);
 	}
 	return 0;
 }
@@ -358,16 +404,16 @@ void CChattingServer::ReqSendAroundSector(CPacket* packet, CSector* centerSector
 			vector<CPlayer*>::iterator playerIter = (*iter)->_players.begin();
 			for (; playerIter < (*iter)->_players.end(); playerIter++)
 			{
+				// ::wprintf(L"%lld (%d): Message Recv (%lld, [%d][%d])\n", ((*playerIter)->_sessionID & _idMask), GetCurrentThreadId(), (*playerIter)->_accountNo, (*iter)->_y, (*iter)->_x);
 				sendID.push_back((*playerIter)->_sessionID);
-				::printf("[%d][%d] %lld\n", (*iter)->_y, (*iter)->_x, (*playerIter)->_sessionID & _idMask);
 			}
 		}
 
 		vector<CPlayer*>::iterator playerIter = centerSector->_players.begin();
 		for (; playerIter < centerSector->_players.end(); playerIter++)
 		{
+			// ::wprintf(L"%lld (%d): Message Recv (%lld, [%d][%d])\n", ((*playerIter)->_sessionID & _idMask), GetCurrentThreadId(), (*playerIter)->_accountNo, (*playerIter)->_sectorY, (*playerIter)->_sectorX);
 			sendID.push_back((*playerIter)->_sessionID);
-			::printf("[%d][%d] %lld\n", centerSector->_y, centerSector->_x, (*playerIter)->_sessionID & _idMask);
 		}
 	}
 	else
@@ -378,8 +424,8 @@ void CChattingServer::ReqSendAroundSector(CPacket* packet, CSector* centerSector
 			vector<CPlayer*>::iterator playerIter = (*iter)->_players.begin();
 			for (; playerIter < (*iter)->_players.end(); playerIter++)
 			{
+				// ::wprintf(L"%lld (%d): Message Recv (%lld, [%d][%d])\n", ((*playerIter)->_sessionID & _idMask), GetCurrentThreadId(), (*playerIter)->_accountNo, (*iter)->_y, (*iter)->_x);
 				sendID.push_back((*playerIter)->_sessionID);
-				::printf("[%d][%d] %lld\n", (*iter)->_y, (*iter)->_x, (*playerIter)->_sessionID & _idMask);
 			}
 		}
 
@@ -388,8 +434,8 @@ void CChattingServer::ReqSendAroundSector(CPacket* packet, CSector* centerSector
 		{
 			if (*playerIter != pExpPlayer)
 			{
+				// ::wprintf(L"%lld (%d): Message Recv (%lld, [%d][%d])\n", ((*playerIter)->_sessionID & _idMask), GetCurrentThreadId(), (*playerIter)->_accountNo, (*playerIter)->_sectorY, (*playerIter)->_sectorX);
 				sendID.push_back((*playerIter)->_sessionID);
-				::printf("[%d][%d] %lld\n", centerSector->_y, centerSector->_x, (*playerIter)->_sessionID & _idMask);
 			}
 		}
 	}
@@ -399,18 +445,19 @@ void CChattingServer::ReqSendAroundSector(CPacket* packet, CSector* centerSector
 	for (; idIter != sendID.end(); idIter++)
 	{
 		SendPacket(*idIter, packet);
+		// ::wprintf(L"%lld (%d): Send Packet!\n", ((*idIter) & _idMask), GetCurrentThreadId());
 	}
 }
 
 inline void CChattingServer::HandleCSPacket_REQ_LOGIN(CPacket* CSpacket, CPlayer* player)
 {
-	::printf("%lld (%d): %s\n", player->_playerID, GetCurrentThreadId(), __func__);
-
 	__int64 accountNo;
 	wchar_t* ID = new wchar_t[dfID_LEN];
 	wchar_t* nickname = new wchar_t[dfNICKNAME_LEN];
 	char* sessionKey = new char[dfSESSIONKEY_LEN];
 	GetCSPacket_REQ_LOGIN(CSpacket, accountNo, ID, nickname, sessionKey);
+
+	// ::printf("%lld (%d): Login (%lld)\n", (player->_sessionID & _idMask), GetCurrentThreadId(), accountNo);
 
 	player->_accountNo = accountNo;
 	memcpy_s(player->_ID, dfID_LEN * sizeof(wchar_t), ID, dfID_LEN * sizeof(wchar_t));
@@ -429,8 +476,6 @@ inline void CChattingServer::HandleCSPacket_REQ_LOGIN(CPacket* CSpacket, CPlayer
 
 inline void CChattingServer::HandleCSPacket_REQ_SECTOR_MOVE(CPacket* CSpacket, CPlayer* player)
 {
-	::printf("%lld (%d): %s\n", player->_playerID, GetCurrentThreadId(), __func__);
-
 	__int64 accountNo;
 	WORD sectorX;
 	WORD sectorY;
@@ -450,29 +495,27 @@ inline void CChattingServer::HandleCSPacket_REQ_SECTOR_MOVE(CPacket* CSpacket, C
 		return;
 	}
 
+	// ::printf("%lld (%d): Sector Move (%lld, [%d][%d]->[%d][%d])\n", (player->_sessionID & _idMask), GetCurrentThreadId(), accountNo, player->_sectorY, player->_sectorX, sectorY, sectorX);
+
 	if (player->_sectorX != -1 && player->_sectorY != -1)
 	{
-		::printf("prev: [%d][%d] %lld\n", player->_sectorY, player->_sectorX, player->_sessionID & _idMask);
-
-		CSector sector = _sectors[player->_sectorY][player->_sectorX];
-		vector<CPlayer*>::iterator iter = sector._players.begin();
-		for (; iter < sector._players.end(); iter++)
+		CSector* sector = &_sectors[player->_sectorY][player->_sectorX];
+		vector<CPlayer*>::iterator iter = sector->_players.begin();
+		for (; iter < sector->_players.end(); iter++)
 		{
 			if ((*iter) == player)
 			{
-				iter = sector._players.erase(iter);
-				::printf("prev: [%d][%d] %lld\n", player->_sectorY, player->_sectorX, player->_sessionID & _idMask);
-				// 로그 상으로는 erase가 이루어지는 게 맞는데, 
-				// Req 시에는 주변 섹터에 자신도 들어간 적 있었다면 전송을 한다...
+				sector->_players.erase(iter);
 				break;
 			}
 		}
+
+		// 로그 상으로는 erase가 잘 됐는데 Req 시에는 주변 섹터에 자신도 들어간 적 있었다면 전송을 한다...
 	}
 
 	player->_sectorX = sectorX;
 	player->_sectorY = sectorY;
 	_sectors[player->_sectorY][player->_sectorX]._players.push_back(player);
-	::printf("cur: [%d][%d] %lld\n", player->_sectorY, player->_sectorX, player->_sessionID & _idMask);
 
 	CPacket* SCpacket = CPacket::Alloc();
 	SCpacket->Clear();
@@ -482,8 +525,6 @@ inline void CChattingServer::HandleCSPacket_REQ_SECTOR_MOVE(CPacket* CSpacket, C
 
 inline void CChattingServer::HandleCSPacket_REQ_MESSAGE(CPacket* CSpacket, CPlayer* player)
 {
-	::printf("%lld (%d): %s\n", player->_playerID, GetCurrentThreadId(), __func__);
-
 	__int64 accountNo;
 	WORD messageLen;
 	wchar_t* message;
@@ -496,6 +537,12 @@ inline void CChattingServer::HandleCSPacket_REQ_MESSAGE(CPacket* CSpacket, CPlay
 		return;
 	}
 
+	WORD tmpLen = (messageLen / 2) + 1;
+	wchar_t* tmp = new wchar_t[tmpLen];
+	memcpy_s(tmp, tmpLen * 2, message, messageLen);
+	tmp[tmpLen - 1] = L'\0';
+	// ::wprintf(L"%lld (%d): Message Send (%lld, %s)\n", (player->_sessionID & _idMask), GetCurrentThreadId(), accountNo, tmp);
+
 	CPacket* SCpacket = CPacket::Alloc();
 	SCpacket->Clear();
 	SetSCPacket_RES_MESSAGE(SCpacket, player->_accountNo, player->_ID, player->_nickname, messageLen, message);
@@ -506,11 +553,11 @@ inline void CChattingServer::HandleCSPacket_REQ_MESSAGE(CPacket* CSpacket, CPlay
 	}
 
 	delete[] message; // new[] - delete[]를 다른 함수에서 하는 게 기분이 나쁘다...
+	delete[] tmp;
 }
 
 inline void CChattingServer::HandleCSPacket_REQ_HEARTBEAT(CPlayer* player)
 {
-	::printf("%lld (%d): %s\n", player->_playerID, GetCurrentThreadId(), __func__);
 	player->_lastRecvTime = timeGetTime();
 }
 

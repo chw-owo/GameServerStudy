@@ -2,6 +2,7 @@
 #ifndef _WINSOCKAPI_
 #define _WINSOCKAPI_
 #endif
+
 #include <windows.h>
 #include <iostream>
 #include <string>
@@ -17,7 +18,7 @@ using namespace std;
 
 1.	PRO_SAVE, PRO_SAVE_ADDUP 호출 시 확장자 이름은 포함하지 않는다.
 
-2. microsec 단위 출력 시 #define USE_MS_UNIT, 
+2. microsec 단위 출력 시 #define USE_MS_UNIT,
 	nanosec 단위 출력 시 #define USE_NS_UNIT
 
 3. read 시도 시 write 중인 경우 해당 pf는 결과에 반영하지 않고 넘어간다
@@ -41,7 +42,7 @@ using namespace std;
 #define MS_PER_SEC 1000000
 #define NS_PER_SEC 1000
 
-class _PROFILE_RESULT 
+class _PROFILE_RESULT
 {
 public:
 	_PROFILE_RESULT()
@@ -64,7 +65,7 @@ public:
 
 class _PROFILE_RESULT_FOR_ADDUP
 {
-public:	  
+public:
 	double			_dTotalTime = 0;							// 전체 사용시간 카운터 Time
 	double			_dMin[MINMAX_CNT] = { 0, 0 };				// 최소 사용시간 카운터 Time
 	double			_dMax[MINMAX_CNT] = { 0, 0 };				// 최대 사용시간 카운터 Time

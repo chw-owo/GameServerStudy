@@ -1,5 +1,6 @@
 #pragma once
 #include "CLockFreePool.h"
+#include "CLockFreeStack.h"
 #include "CSession.h"
 #include "Config.h"
 #include <ws2tcpip.h>
@@ -36,14 +37,20 @@ protected:
 protected:
 	inline void UpdateMonitorData()
 	{
-		_acceptTotal += _acceptCnt;
-		_disconnectTotal += _disconnectCnt;
+		long acceptCnt = InterlockedExchange(&_acceptCnt, 0);
+		long disconnectCnt = InterlockedExchange(&_disconnectCnt, 0);
 
-		_acceptTPS = _acceptCnt;
-		_disconnectTPS = _disconnectCnt;
+		_acceptTotal += acceptCnt;
+		_disconnectTotal += disconnectCnt;
+
+		_acceptTPS = acceptCnt;
+		_disconnectTPS = disconnectCnt;
 		_recvMsgTPS = _recvMsgCnt;
 		_sendMsgTPS = _sendMsgCnt;
+	}
 
+	inline void ResetMonitorData()
+	{
 		_acceptCnt = 0;
 		_disconnectCnt = 0;
 		_recvMsgCnt = 0;
@@ -53,10 +60,11 @@ protected:
 	inline int GetAcceptTotal() { return _acceptTotal; }
 	inline int GetDisconnectTotal() { return _disconnectTotal; }
 	inline long GetSessionCount() { return _sessionCnt; }
-	inline int GetAcceptTPS() { return _acceptTPS; }
-	inline int GetDisconnectTPS() { return _disconnectTPS; }
+
 	inline int GetRecvMsgTPS() { return _recvMsgTPS; }
 	inline int GetSendMsgTPS() { return _sendMsgTPS; }
+	inline int GetAcceptTPS() { return _acceptTPS; }
+	inline int GetDisconnectTPS() { return _disconnectTPS; }
 
 protected:
 	// CLockFreePool<CPacket>* _pPacketPool;
@@ -74,8 +82,8 @@ private:
 	bool SendPost(CSession* pSession);
 
 private:
-	bool DecrementIOCount(CSession* pSession);
-	bool IncrementIOCount(CSession* pSession);
+	bool DecrementIOCount(CSession* pSession, int line, int sessionID);
+	bool IncrementIOCount(CSession* pSession, int line, int sessionID);
 
 private:
 	wchar_t _IP[10];
@@ -94,11 +102,10 @@ private:
 
 private:
 	CSession* _sessions[dfSESSION_MAX] = { nullptr, };
-	short _emptyIndex[dfSESSION_MAX];
-	volatile long _emptyIndexPos = -1;
+	CLockFreeStack<__int64> _emptyIdx;
 	volatile long _sessionCnt = 0;
 
-protected: // TO-DO: private으로 수정
+private: 
 	volatile __int64 _sessionID = 0;
 	unsigned __int64 _indexMask = 0;
 	unsigned __int64 _idMask = 0;
@@ -106,17 +113,16 @@ protected: // TO-DO: private으로 수정
 private:
 	int _acceptTotal = 0;
 	int _disconnectTotal = 0;
+	int _TryReleaseTotal = 0;
 
 	int _acceptTPS = 0;
 	int _disconnectTPS = 0;
 	int _recvMsgTPS = 0;
 	int _sendMsgTPS = 0;
 
-	int _acceptCnt = 0;
-	int _disconnectCnt = 0;
+	volatile long _acceptCnt = 0;
+	volatile long _disconnectCnt = 0;
 	int _recvMsgCnt = 0;
 	int _sendMsgCnt = 0;
 
-private:
-	wchar_t _errMsg[dfMSG_MAX] = { '\0' }; // TO-DO 동시 접근을 대비한 수정 필요
 };

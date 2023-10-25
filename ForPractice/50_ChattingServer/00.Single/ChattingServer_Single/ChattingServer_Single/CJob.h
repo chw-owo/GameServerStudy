@@ -12,7 +12,8 @@ enum class SYS_TYPE
 {
 	NONE,
 	ACCEPT,
-	RELEASE
+	RELEASE,
+	TIMEOUT
 };
 
 class CJob

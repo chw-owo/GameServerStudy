@@ -11,9 +11,11 @@
 #include "Protocol.h"
 #include "ErrorCode.h"
 
-#include <unordered_set>
 #include <unordered_map>
 using namespace std;
+
+#include <synchapi.h>
+#pragma comment(lib, "Synchronization.lib")
 
 class CChattingServer : public CNetServer
 {
@@ -39,6 +41,7 @@ private:
 	void OnSend(__int64 sessionID, int sendSize);
 
 private:
+	void HandleTimeout();
 	void HandleAccept(__int64 sessionID);
 	void HandleRelease(__int64 sessionID);
 	void HandleRecv(__int64 sessionID, CPacket* packet);
@@ -46,6 +49,7 @@ private:
 private:
 	static unsigned int WINAPI UpdateThread(void* arg);
 	static unsigned int WINAPI MonitorThread(void* arg);
+	static unsigned int WINAPI TimeoutThread(void* arg);
 
 private:
 	void ReqSendUnicast(CPacket* packet, __int64 sessionID);
@@ -70,14 +74,17 @@ private:
 private:
 	bool _serverAlive = true;
 	HANDLE _updateThread;
-	HANDLE _monitorThread;
+	HANDLE _monitorThread; 
+	HANDLE _timeoutThread;
+
+private:
+	long _event = 0;
 
 private:
 	CSector _sectors[dfSECTOR_CNT_Y][dfSECTOR_CNT_X];
 
 private:
 	__int64 _playerIDGenerator = 0;
-	unordered_set<CPlayer*> _players;
 	unordered_map<__int64, CPlayer*> _playersMap;
 	CObjectPool<CPlayer>* _pPlayerPool;
 

@@ -94,9 +94,10 @@ public:
 	class SessionDebugData // Debug For Initial & Release
 	{
 	public:
-		void LeaveLog(int line, short IOCount, short releaseFlag, __int64 sessionID, __int64 reqID)
+		void LeaveLog(int line, int threadID, short IOCount, short releaseFlag, __int64 sessionID, __int64 reqID)
 		{
 			_line = line;
+			_threadID = threadID;
 			_IOCount = IOCount;
 			_releaseFlag = releaseFlag;
 			_sessionID = sessionID;
@@ -105,6 +106,7 @@ public:
 
 	private:
 		int _line = -1;
+		int _threadID = -1;
 		short _IOCount = -1;
 		short _releaseFlag = -1;
 		__int64 _sessionID = -1;

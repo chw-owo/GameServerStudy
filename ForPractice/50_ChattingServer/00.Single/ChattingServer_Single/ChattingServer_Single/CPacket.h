@@ -33,11 +33,6 @@ public:
 		return false;
 	}
 
-	inline void Debug()
-	{
-		::printf("%d\n", _usageCount);
-	}
-
 	void AddUsageCount(long usageCount)
 	{
 		InterlockedAdd(&_usageCount, usageCount);

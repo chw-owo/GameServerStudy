@@ -1,4 +1,4 @@
-#include "Profiler.h"
+#include "CProfiler.h"
 
 CProfilerManager* g_pManager = CProfilerManager::GetInstance();
 
@@ -147,7 +147,7 @@ CProfilerManager::CProfilerManager()
 CProfilerManager::~CProfilerManager()
 {
 	vector<CProfiler*>::iterator iter = _profilers.begin();
-	for(; iter != _profilers.end();)
+	for (; iter != _profilers.end();)
 	{
 		CProfiler* profiler = *iter;
 		iter = _profilers.erase(iter);
@@ -192,12 +192,12 @@ void CProfilerManager::PrintResult(void)
 	for (; iter != _profilers.end(); iter++)
 	{
 		CProfiler* pf = *iter;
-		
+
 		::printf(
 			"\n<Thread ID: %d>\n"
 			"----------------------------------------------\n"
 			"| Name | Average | Min | Max | Call | Total |\n"
-			"----------------------------------------------\n", 
+			"----------------------------------------------\n",
 			pf->_threadID);
 
 		int idx = 0;
@@ -321,7 +321,7 @@ void CProfilerManager::PrintResultAddup(void)
 			ReleaseSRWLockShared(&pf->_profileResults[idx]._lock);
 
 			resultIter = _resultAddupMap.find(result._szName);
-			if(resultIter != _resultAddupMap.end())
+			if (resultIter != _resultAddupMap.end())
 			{
 				_PROFILE_RESULT_FOR_ADDUP* resultAddup = resultIter->second;
 
@@ -343,7 +343,7 @@ void CProfilerManager::PrintResultAddup(void)
 		"----------------------------------------------\n");
 
 	resultIter = _resultAddupMap.begin();
-	for(; resultIter != _resultAddupMap.end(); resultIter++)
+	for (; resultIter != _resultAddupMap.end(); resultIter++)
 	{
 		_PROFILE_RESULT_FOR_ADDUP* resultAddup = resultIter->second;
 
@@ -414,7 +414,7 @@ void CProfilerManager::SaveResultAddup(const wchar_t* szFileName)
 	resultIter = _resultAddupMap.begin();
 	for (; resultIter != _resultAddupMap.end(); resultIter++)
 	{
-		_PROFILE_RESULT_FOR_ADDUP* resultAddup = resultIter->second;	
+		_PROFILE_RESULT_FOR_ADDUP* resultAddup = resultIter->second;
 		memset(buffer, '\0', BUFFER_SIZE);
 
 #ifdef USE_MS_UNIT
@@ -435,7 +435,7 @@ void CProfilerManager::SaveResultAddup(const wchar_t* szFileName)
 			resultAddup->_szName.c_str(),
 			(resultAddup->_dTotalTime / resultAddup->_iCall) * NS_PER_SEC,
 			resultAddup->_dMin[0] * NS_PER_SEC,
-			resultAddup->_dMax[0] * NS_PER_SEC ,
+			resultAddup->_dMax[0] * NS_PER_SEC,
 			resultAddup->_iCall,
 			resultAddup->_dTotalTime * NS_PER_SEC);
 #endif

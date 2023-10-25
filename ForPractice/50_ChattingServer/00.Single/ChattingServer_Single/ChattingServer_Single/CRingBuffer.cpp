@@ -32,6 +32,7 @@ int CRingBuffer::Peek(char* chpDest, int size)
     }
 
     int directDequeueSize = DirectDequeueSize();
+
     if (size <= directDequeueSize)
     {
         memcpy_s(chpDest, size, &_buffer[(_readPos + 1) % _bufferSize], size);
@@ -41,7 +42,7 @@ int CRingBuffer::Peek(char* chpDest, int size)
         int size1 = directDequeueSize;
         int size2 = size - size1;
         memcpy_s(chpDest, size1, &_buffer[(_readPos + 1) % _bufferSize], size1);
-        memcpy_s(&chpDest[size1], size2, _buffer, size2);
+        memcpy_s(&chpDest[size1], size2, &_buffer[0], size2);
     }
 
     return size;

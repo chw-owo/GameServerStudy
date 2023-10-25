@@ -64,6 +64,9 @@
     <ClCompile Include="CNetServer.cpp">
       <Filter>NetLib\Network</Filter>
     </ClCompile>
+    <ClCompile Include="CProfiler.cpp">
+      <Filter>ChattingServer\DebugTool</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Config.h">
@@ -116,6 +119,12 @@
     </ClInclude>
     <ClInclude Include="CLockFreeQueue.h">
       <Filter>Common\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="CLockFreeStack.h">
+      <Filter>Common\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="CProfiler.h">
+      <Filter>ChattingServer\DebugTool</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -7,10 +7,6 @@
 #pragma comment(lib, "Synchronization.lib")
 #pragma comment(lib, "winmm.lib")
 
-#ifdef USE_STLS
-__declspec (thread) CProfiler* pSTLSProfiler = new CProfiler;
-#endif
-
 #define threadCnt 6
 #define clickTerm 1000
 bool g_bTerminate = false;
@@ -31,7 +27,7 @@ int wmain(int argc, wchar_t* argv[])
 	arrThread[4] = (HANDLE)_beginthreadex(NULL, 0, Func3, NULL, 0, nullptr);
 	arrThread[5] = (HANDLE)_beginthreadex(NULL, 0, Func3, NULL, 0, nullptr);
 
-	ULONGLONG click = GetTickCount64();
+	LONG click = GetTickCount64();
 
 	while (!g_bTerminate)
 	{
@@ -40,25 +36,25 @@ int wmain(int argc, wchar_t* argv[])
 			g_bTerminate = true;
 		}
 
-		if (GetAsyncKeyState(0x31) && (GetTickCount64() - click) > clickTerm)
+		if (GetAsyncKeyState(0x51) && (GetTickCount64() - click) > clickTerm) // Q
 		{
 			PRO_PRINT();
 			click = GetTickCount64();
 		}
 
-		if (GetAsyncKeyState(0x32) && (GetTickCount64() - click) > clickTerm)
+		if (GetAsyncKeyState(0x57) && (GetTickCount64() - click) > clickTerm) // W
 		{
 			PRO_SAVE(L"result");
 			click = GetTickCount64();
 		}
 
-		if (GetAsyncKeyState(0x33) && (GetTickCount64() - click) > clickTerm)
+		if (GetAsyncKeyState(0x45) && (GetTickCount64() - click) > clickTerm) // E
 		{
 			PRO_PRINT_ADDUP();
 			click = GetTickCount64();
 		}
 
-		if (GetAsyncKeyState(0x34) && (GetTickCount64() - click) > clickTerm)
+		if (GetAsyncKeyState(0x52) && (GetTickCount64() - click) > clickTerm) // R
 		{
 			PRO_SAVE_ADDUP(L"result");
 			click = GetTickCount64();
@@ -74,8 +70,8 @@ int wmain(int argc, wchar_t* argv[])
 
 unsigned WINAPI Func1(void* arg)
 {
-	::printf("\nThread %d Start!\n", GetCurrentThreadId());
-	PRO_SET(pSTLSProfiler, GetCurrentThreadId());
+	::printf("Thread %d Start!\n", GetCurrentThreadId());
+	PRO_SET();
 
 	int a = 0;
 
@@ -96,8 +92,8 @@ unsigned WINAPI Func1(void* arg)
 
 unsigned WINAPI Func2(void* arg)
 {
-	::printf("\nThread %d Start!\n", GetCurrentThreadId());
-	PRO_SET(pSTLSProfiler, GetCurrentThreadId());
+	::printf("Thread %d Start!\n", GetCurrentThreadId());
+	PRO_SET();
 
 	int a = 0;
 	int b = 0;
@@ -122,8 +118,8 @@ unsigned WINAPI Func2(void* arg)
 
 unsigned WINAPI Func3(void* arg)
 {
-	::printf("\nThread %d Start!\n", GetCurrentThreadId());
-	PRO_SET(pSTLSProfiler, GetCurrentThreadId());
+	::printf("Thread %d Start!\n", GetCurrentThreadId());
+	PRO_SET();
 
 	int a = 0;
 	int b = 0;

@@ -135,6 +135,7 @@
   <ItemGroup>
     <ClCompile Include="CChattingServer.cpp" />
     <ClCompile Include="CPacket.cpp" />
+    <ClCompile Include="CProfiler.cpp" />
     <ClCompile Include="CRingBuffer.cpp" />
     <ClCompile Include="CSystemLog.cpp" />
     <ClCompile Include="CLanServer.cpp" />
@@ -147,10 +148,12 @@
     <ClInclude Include="CJob.h" />
     <ClInclude Include="CLockFreePool.h" />
     <ClInclude Include="CLockFreeQueue.h" />
+    <ClInclude Include="CLockFreeStack.h" />
     <ClInclude Include="CObjectPool.h" />
     <ClInclude Include="Config.h" />
     <ClInclude Include="CPacket.h" />
     <ClInclude Include="CPlayer.h" />
+    <ClInclude Include="CProfiler.h" />
     <ClInclude Include="CRingBuffer.h" />
     <ClInclude Include="CSector.h" />
     <ClInclude Include="CSession.h" />
