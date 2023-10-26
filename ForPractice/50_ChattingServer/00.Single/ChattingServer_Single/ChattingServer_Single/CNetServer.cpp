@@ -174,7 +174,7 @@ bool CNetServer::NetworkTerminate()
 	// Terminate Accept Thread
 	SOCKADDR_IN serveraddr;
 	ZeroMemory(&serveraddr, sizeof(serveraddr));
-	InetPton(AF_INET, _IP, &serveraddr.sin_addr);
+	InetPton(AF_INET, L"127.0.0.1", &serveraddr.sin_addr);
 	serveraddr.sin_family = AF_INET;
 	serveraddr.sin_port = htons(_port);
 
@@ -183,7 +183,7 @@ bool CNetServer::NetworkTerminate()
 	if (socktmp == INVALID_SOCKET)
 	{
 		int err = ::WSAGetLastError();
-		swprintf_s(_errMsg, dfMSG_MAX, L"%s[%d]: Temp Socket is INVALID, %d\n", _T(__FUNCTION__), __LINE__, err);
+		swprintf_s(_errMsg, dfMSG_MAX, L"%s[%d]: Socket for Wake is INVALID, %d\n", _T(__FUNCTION__), __LINE__, err);
 		OnError(ERR_TEMPSOCK_INVALID, _errMsg);
 		delete[] _errMsg;
 		return false;
@@ -193,7 +193,7 @@ bool CNetServer::NetworkTerminate()
 	if (connectRet == SOCKET_ERROR)
 	{
 		int err = ::WSAGetLastError();
-		swprintf_s(_errMsg, dfMSG_MAX, L"%s[%d]: Temp Socket Connect Error, %d\n", _T(__FUNCTION__), __LINE__, err);
+		swprintf_s(_errMsg, dfMSG_MAX, L"%s[%d]: Socket for Wake Connect Error, %d\n", _T(__FUNCTION__), __LINE__, err);
 		OnError(ERR_TEMPSOCK_CONNECT, _errMsg);
 		delete[] _errMsg;
 		return false;
@@ -341,7 +341,7 @@ unsigned int __stdcall CNetServer::AcceptThread(void* arg)
 		pNetServer->OnAcceptClient(pSession->_ID);
 	}
 
-	swprintf_s(_errMsg, dfMSG_MAX, L"Accept Thread (%d)\n", GetCurrentThreadId());
+	swprintf_s(_errMsg, dfMSG_MAX, L"Accept Thread (%d)", GetCurrentThreadId());
 	pNetServer->OnThreadTerminate(_errMsg);
 	delete[] _errMsg;
 	return 0;
@@ -399,7 +399,7 @@ unsigned int __stdcall CNetServer::NetworkThread(void* arg)
 		pNetServer->DecrementIOCount(pSession, __LINE__, 0);
 	}
 
-	swprintf_s(_errMsg, dfMSG_MAX, L"Network Thread (%d)\n", threadID);
+	swprintf_s(_errMsg, dfMSG_MAX, L"Network Thread (%d)", threadID);
 	pNetServer->OnThreadTerminate(_errMsg);
 	delete[] _errMsg;
 

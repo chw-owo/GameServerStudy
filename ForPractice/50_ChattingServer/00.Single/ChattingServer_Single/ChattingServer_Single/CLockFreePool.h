@@ -170,7 +170,6 @@ CLockFreePool<T>::CLockFreePool(int blockNum, bool placementNew, Types... args)
 	}
 }
 
-// TO-DO: ¼Ò¸êÀÚ Error
 template<class T>
 CLockFreePool<T>::~CLockFreePool()
 {

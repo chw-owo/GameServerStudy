@@ -24,6 +24,7 @@ public:
 	CObjectPoolTester();
 	~CObjectPoolTester();
 	void Test();
+	void TestLoop();
 
 private:
 	void NewDeleteTest();
@@ -39,11 +40,46 @@ private:
 	static unsigned WINAPI MinLockPoolThread(void* arg);
 
 private:
-	struct Data1 { int data; };
-	struct Data2 { int data[BLOCK2]; };
-	struct Data3 { int data[BLOCK3]; };
-	struct Data4 { int data[BLOCK4]; };
-	struct Data5 { int data[BLOCK5]; };
+	struct Data1 { Data1() { data = 0; data++; }; int data; };
+	struct Data2 
+	{ 
+		Data2() 
+		{ 
+			for(int i = 0; i < BLOCK2; i++) data[i] = 0; 
+			for (int i = 0; i < BLOCK2; i++) data[i]++;
+		}; 	
+		int data[BLOCK2]; 
+	};
+
+	struct Data3
+	{
+		Data3()
+		{
+			for (int i = 0; i < BLOCK3; i++) data[i] = 0;
+			for (int i = 0; i < BLOCK3; i++) data[i]++;
+		};
+		int data[BLOCK3];
+	};
+
+	struct Data4 
+	{
+		Data4()
+		{
+			for (int i = 0; i < BLOCK4; i++) data[i] = 0;
+			for (int i = 0; i < BLOCK4; i++) data[i]++;
+		};
+		int data[BLOCK4];
+	};
+
+	struct Data5
+	{
+		Data5()
+		{
+			for (int i = 0; i < BLOCK5; i++) data[i] = 0;
+			for (int i = 0; i < BLOCK5; i++) data[i]++;
+		};
+		int data[BLOCK5];
+	};
 
 private:
 	int _threadCnt = 0;
@@ -70,6 +106,12 @@ private:
 		double _MinLockPoolAvg = 0;
 	};	
 	RecordTime _records[SIZENUM];
+
+private:
+	HANDLE* _newDeleteThreads = nullptr;
+	HANDLE* _basicLockThreads = nullptr;
+	HANDLE* _lockFreeThreads = nullptr;
+	HANDLE* _minLockThreads = nullptr;
 
 private:
 	CObjectPool_BasicLock<Data1>* _pBasicLockPool1 = nullptr;

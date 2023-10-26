@@ -85,6 +85,12 @@ void CChattingServer::Terminate()
 {
 	NetworkTerminate();
 	_serverAlive = false;
+
+	CJob* job = _pJobPool->Alloc();
+	job->Setting(JOB_TYPE::SYSTEM, SYS_TYPE::TERMINATE, 0, nullptr);
+	_pJobQueue->Enqueue(job);
+	InterlockedExchange(&_event, 1);
+	WakeByAddressSingle(&_event);
 	WaitForSingleObject(_updateThread, INFINITE);
 
 #ifdef _MONITOR
@@ -101,14 +107,14 @@ void CChattingServer::Terminate()
 
 void CChattingServer::OnInitialize()
 {
-	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Network Initialize\n");
-	::wprintf(L"Network Initialize\n");
+	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Network Library Initialize\n");
+	::wprintf(L"Network Library Initialize\n");
 }
 
 void CChattingServer::OnTerminate()
 {
-	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Network Terminate\n");
-	::wprintf(L"Network Terminate\n");
+	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Network Library Terminate\n");
+	::wprintf(L"Network Library Terminate\n");
 }
 
 void CChattingServer::OnThreadTerminate(wchar_t* threadName)
@@ -314,6 +320,10 @@ unsigned int __stdcall CChattingServer::UpdateThread(void* arg)
 				{
 					pServer->HandleTimeout();
 				}
+				else if (job->_sysType == SYS_TYPE::TERMINATE)
+				{
+					break;
+				}
 			}
 			else if (job->_type == JOB_TYPE::CONTENT)
 			{
@@ -324,6 +334,10 @@ unsigned int __stdcall CChattingServer::UpdateThread(void* arg)
 
 		InterlockedExchange(&pServer->_event, undesired);
 	}
+
+	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Update Thread (%d) Terminate\n", GetCurrentThreadId());
+	::wprintf(L"Update Thread (%d) Terminate\n", GetCurrentThreadId());
+
 	return 0;
 }
 
@@ -333,9 +347,7 @@ unsigned int __stdcall CChattingServer::MonitorThread(void* arg)
 	CreateDirectory(L"MonitorLog", NULL);
 
 	while (pServer->_serverAlive)
-	{
-		Sleep(1000);
-		
+	{		
 		pServer->UpdateMonitorData();
 
 		SYSTEMTIME stTime;
@@ -363,26 +375,35 @@ unsigned int __stdcall CChattingServer::MonitorThread(void* arg)
 		{
 			LOG(L"FightGame", CSystemLog::ERROR_LEVEL, L"%s[%d]: Fileptr is nullptr %s\n", _T(__FUNCTION__), __LINE__, L"MonitorLog/MonitorLog.txt");
 			::wprintf(L"%s[%d]: Fileptr is nullptr %s\n", _T(__FUNCTION__), __LINE__, L"MonitorLog/MonitorLog.txt");
-		}	
+		}
+
+		Sleep(1000);
 	}
+
+	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Monitor Thread (%d) Terminate\n", GetCurrentThreadId());
+	::wprintf(L"Monitor Thread (%d) Terminate\n", GetCurrentThreadId());
 	return 0;
 }
 
 unsigned int __stdcall CChattingServer::TimeoutThread(void* arg)
 {
 	CChattingServer* pServer = (CChattingServer*)arg;
-	CreateDirectory(L"MonitorLog", NULL);
 
 	while (pServer->_serverAlive)
 	{
-		Sleep(dfTIMEOUT);
 		CJob* job = pServer->_pJobPool->Alloc();
 		job->Setting(JOB_TYPE::SYSTEM, SYS_TYPE::TIMEOUT, 0, nullptr);
 		pServer->_pJobQueue->Enqueue(job);
 
 		InterlockedExchange(&pServer->_event, 1);
 		WakeByAddressSingle(&pServer->_event);
+
+		Sleep(dfTIMEOUT);
 	}
+
+	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Timeout Thread (%d) Terminate\n", GetCurrentThreadId());
+	::wprintf(L"Timeout Thread (%d) Terminate\n", GetCurrentThreadId());
+
 	return 0;
 }
 

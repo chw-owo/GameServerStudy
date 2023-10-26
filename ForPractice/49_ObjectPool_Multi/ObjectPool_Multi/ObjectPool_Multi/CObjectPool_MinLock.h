@@ -38,7 +38,7 @@ private:
 	HANDLE _heapHandle[dfTHREAD_MAX];	// 스레드 별 힙으로 alloc 경합 최소화
 	stNODE* _pFreeNode[dfTHREAD_MAX];	// Free된 노드는 스레드 별로 관리	
 	int _freeNodeCnt[dfTHREAD_MAX];		// 각 스레드가 지닌 Free Node 개수
-	SRWLOCK _lock[dfTHREAD_MAX];
+	SRWLOCK _lock[dfTHREAD_MAX];		// for freeNodeCnt & pFreeNode
 
 };
 
@@ -149,13 +149,17 @@ DATA* CObjectPool_MinLock<DATA>::Alloc(Types... args)
 		// 노드가 없다면 타 스레드의 노드를 탐색한다. 
 		int targetIdx = -1; 
 		int nodeCnt = -1;
-		for (int i = 0; i < _tlsIdx; i++)
+		for (int i = 1; i < _threadIdx; i++)
 		{
+			if (threadIdx == i) continue;
+
+			AcquireSRWLockShared(&_lock[i]);
 			if (_freeNodeCnt[i] > NODE_MIN && _freeNodeCnt[i] > nodeCnt)
 			{
 				targetIdx = i;
 				nodeCnt = _freeNodeCnt[i];
 			}
+			ReleaseSRWLockShared(&_lock[i]);
 		}
 
 		if (targetIdx == -1)
@@ -169,31 +173,52 @@ DATA* CObjectPool_MinLock<DATA>::Alloc(Types... args)
 		else
 		{
 			// 타 스레드에 노드가 NODE_MIN 이상 있다면 타 스레드 노드의 절반을 가져온다
-			AcquireSRWLockExclusive(&_lock[threadIdx]);
-			AcquireSRWLockExclusive(&_lock[targetIdx]);
 
-			nodeCnt = nodeCnt / 2;
-			_pFreeNode[threadIdx] = _pFreeNode[targetIdx];
-			stNODE* lastNode = (stNODE*)_pFreeNode[targetIdx]->tail;
-			for (int i = 0; i < nodeCnt; i++)
+			if (threadIdx > targetIdx)
 			{
-				lastNode = (stNODE*)lastNode->tail;
+				AcquireSRWLockExclusive(&_lock[targetIdx]);
+				AcquireSRWLockExclusive(&_lock[threadIdx]);
+
+				nodeCnt = nodeCnt / 2;
+				_pFreeNode[threadIdx] = _pFreeNode[targetIdx];
+				stNODE* next = (stNODE*)_pFreeNode[threadIdx]->tail;
+
+				for (int i = 0; i < nodeCnt; i++)
+					next = (stNODE*)next->tail;
+				_pFreeNode[targetIdx] = next;
+
+				ReleaseSRWLockExclusive(&_lock[targetIdx]);
+				ReleaseSRWLockExclusive(&_lock[threadIdx]);
 			}
-			_pFreeNode[targetIdx] = lastNode;
-			
-			ReleaseSRWLockExclusive(&_lock[threadIdx]);
-			ReleaseSRWLockExclusive(&_lock[targetIdx]);
+			else if(threadIdx < targetIdx)
+			{
+				AcquireSRWLockExclusive(&_lock[threadIdx]);
+				AcquireSRWLockExclusive(&_lock[targetIdx]);
+
+				nodeCnt = nodeCnt / 2;
+				_pFreeNode[threadIdx] = _pFreeNode[targetIdx];
+				stNODE* next = (stNODE*)_pFreeNode[threadIdx]->tail;
+
+				for (int i = 0; i < nodeCnt; i++)
+					next = (stNODE*)next->tail;
+				_pFreeNode[targetIdx] = next;
+
+				ReleaseSRWLockExclusive(&_lock[threadIdx]);
+				ReleaseSRWLockExclusive(&_lock[targetIdx]);
+			}
 		}
 	}
 
 	if (_placementNew)
 	{
 		AcquireSRWLockExclusive(&_lock[threadIdx]);
+
 		// 노드를 가져온 후 Data의 생성자를 호출한다
 		stNODE* p = _pFreeNode[threadIdx];
 		_pFreeNode[threadIdx] = (stNODE*)p->tail;
 		new (&(p->data)) DATA(args...);
 		_freeNodeCnt[threadIdx]--;
+		
 		ReleaseSRWLockExclusive(&_lock[threadIdx]);
 		return &(p->data);
 	}
@@ -201,9 +226,11 @@ DATA* CObjectPool_MinLock<DATA>::Alloc(Types... args)
 	{
 		// 노드를 가져온 후 Data의 생성자를 호출하지 않는다
 		AcquireSRWLockExclusive(&_lock[threadIdx]);
+
 		stNODE* p = _pFreeNode[threadIdx];
 		_pFreeNode[threadIdx] = (stNODE*)p->tail;
 		_freeNodeCnt[threadIdx]--;
+
 		ReleaseSRWLockExclusive(&_lock[threadIdx]);
 		return &(p->data);
 	}
@@ -230,10 +257,12 @@ bool CObjectPool_MinLock<DATA>::Free(DATA* pData)
 	{
 		// Data의 소멸자를 호출한 후 _pFreeNode에 push한다
 		AcquireSRWLockExclusive(&_lock[threadIdx]);
+
 		pData->~DATA();
 		((stNODE*)pData)->tail = (size_t)_pFreeNode[threadIdx];
 		_pFreeNode[threadIdx] = (stNODE*)pData;
 		_freeNodeCnt[threadIdx]++;
+
 		ReleaseSRWLockExclusive(&_lock[threadIdx]);
 		return true;
 	}
@@ -241,9 +270,11 @@ bool CObjectPool_MinLock<DATA>::Free(DATA* pData)
 	{
 		// Data의 소멸자를 호출하지 않고 _pFreeNode에 push한다
 		AcquireSRWLockExclusive(&_lock[threadIdx]);
+
 		((stNODE*)pData)->tail = (size_t)_pFreeNode[threadIdx];
 		_pFreeNode[threadIdx] = (stNODE*)pData;
 		_freeNodeCnt[threadIdx]++;
+
 		ReleaseSRWLockExclusive(&_lock[threadIdx]);
 		return true;
 	}

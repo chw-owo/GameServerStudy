@@ -4,8 +4,6 @@
 #pragma comment(lib, "winmm.lib")
 #define MS_PER_SEC	1000000
 
-// TO-DO: 생각해보니 측정도 스레드 별로 진행해서 평균내야됨
-
 CObjectPoolTester::CObjectPoolTester()
 {
 	LARGE_INTEGER freq;
@@ -23,6 +21,11 @@ void CObjectPoolTester::Test()
 	::printf("Test Count: ");
 	::scanf_s("%d", &_testCnt);
 
+	_newDeleteThreads = new HANDLE[_threadCnt];
+	_basicLockThreads = new HANDLE[_threadCnt];
+	_lockFreeThreads = new HANDLE[_threadCnt];
+	_minLockThreads = new HANDLE[_threadCnt];
+
 	for (int i = 0; i < SIZENUM; i++)
 	{
 		_records[i]._NewDeleteTimes = new double[_threadCnt];
@@ -34,7 +37,7 @@ void CObjectPoolTester::Test()
 	// Test Thread
 	::printf("\nTest Start\n");
 	timeBeginPeriod(1);
-	
+
 	NewDeleteTest();
 	BasicLockPoolTest();
 	LockFreePoolTest();
@@ -44,57 +47,124 @@ void CObjectPoolTester::Test()
 	::printf("Test End\n\n");
 
 	// Print Out Result
-	PrintOutResult();	
+	PrintOutResult();
+
+	for (int i = 0; i < SIZENUM; i++)
+	{
+		delete[] _records[i]._NewDeleteTimes;
+		delete[] _records[i]._BasicLockPoolTimes; // Error
+		delete[] _records[i]._LockFreePoolTimes;
+		delete[] _records[i]._MinLockPoolTimes;
+	}
+
+	delete[] _newDeleteThreads;
+	delete[] _basicLockThreads;
+	delete[] _lockFreeThreads;
+	delete[] _minLockThreads;
+}
+
+void CObjectPoolTester::TestLoop()
+{
+	// Set Test Config
+	SYSTEM_INFO si;
+	GetSystemInfo(&si);
+	::printf("Thread Count (max: %d): ", (int)si.dwNumberOfProcessors);
+	::scanf_s("%d", &_threadCnt);
+	::printf("Test Count: ");
+	::scanf_s("%d", &_testCnt);
+
+	for (;;)
+	{
+		if (GetAsyncKeyState(VK_SPACE)) break;
+		
+		_NewDeleteThreadIdx = -1;
+		_BasicLockPoolThreadIdx = -1;
+		_LockFreePoolThreadIdx = -1;
+		_MinLockPoolThreadIdx = -1;
+
+		_newDeleteThreads = new HANDLE[_threadCnt];
+		_basicLockThreads = new HANDLE[_threadCnt];
+		_lockFreeThreads = new HANDLE[_threadCnt];
+		_minLockThreads = new HANDLE[_threadCnt];
+
+		for (int i = 0; i < SIZENUM; i++)
+		{
+			_records[i]._NewDeleteTimes = new double[_threadCnt];
+			_records[i]._BasicLockPoolTimes = new double[_threadCnt];
+			_records[i]._LockFreePoolTimes = new double[_threadCnt];
+			_records[i]._MinLockPoolTimes = new double[_threadCnt];
+		}
+
+		// Test Thread
+		::printf("\nTest Start\n");
+		timeBeginPeriod(1);
+
+		NewDeleteTest();
+		BasicLockPoolTest();
+		LockFreePoolTest();
+		MinLockPoolTest();
+
+		timeEndPeriod(1);
+		::printf("Test End\n\n");
+
+		// Print Out Result
+		PrintOutResult();
+
+		for (int i = 0; i < SIZENUM; i++)
+		{
+			delete[] _records[i]._NewDeleteTimes;
+			delete[] _records[i]._BasicLockPoolTimes; // Error
+			delete[] _records[i]._LockFreePoolTimes;
+			delete[] _records[i]._MinLockPoolTimes;
+		}
+
+		delete[] _newDeleteThreads;
+		delete[] _basicLockThreads;
+		delete[] _lockFreeThreads;
+		delete[] _minLockThreads;
+	}
 }
 
 CObjectPoolTester::~CObjectPoolTester()
 {
-	for (int i = 0; i < SIZENUM; i++)
-	{
-		delete[] _records[i]._NewDeleteTimes;
-		delete[] _records[i]._BasicLockPoolTimes;
-		delete[] _records[i]._LockFreePoolTimes;
-		delete[] _records[i]._MinLockPoolTimes;
-	}
+
 }
 
 void CObjectPoolTester::NewDeleteTest()
 {
 	::printf("New Delete Test Start!");
-	HANDLE* threads = new HANDLE[_threadCnt];
 	for (int i = 0; i < _threadCnt; i++)
 	{
-		threads[i] = (HANDLE)_beginthreadex(NULL, 0, NewDeleteThread, this, 0, nullptr);
-		if (threads[i] == NULL)
+		_newDeleteThreads[i] = (HANDLE)_beginthreadex(NULL, 0, NewDeleteThread, this, 0, nullptr);
+		if (_newDeleteThreads[i] == NULL)
 		{
 			::printf(" Error! %s(%d)\n", __func__, __LINE__);
 			__debugbreak();
 		}
 	}
-	WaitForMultipleObjects(_threadCnt, threads, true, INFINITE);
+	WaitForMultipleObjects(_threadCnt, _newDeleteThreads, true, INFINITE);
 	::printf(" -> New Delete Test End!\n");
 }
 
 void CObjectPoolTester::BasicLockPoolTest()
 {
-	_pBasicLockPool1 = new CObjectPool_BasicLock<Data1>(_testCnt * _threadCnt, false);
-	_pBasicLockPool2 = new CObjectPool_BasicLock<Data2>(_testCnt * _threadCnt, false);
-	_pBasicLockPool3 = new CObjectPool_BasicLock<Data3>(_testCnt * _threadCnt, false);
-	_pBasicLockPool4 = new CObjectPool_BasicLock<Data4>(_testCnt * _threadCnt, false);
-	_pBasicLockPool5 = new CObjectPool_BasicLock<Data5>(_testCnt * _threadCnt, false);
+	_pBasicLockPool1 = new CObjectPool_BasicLock<Data1>(_testCnt * _threadCnt, true);
+	_pBasicLockPool2 = new CObjectPool_BasicLock<Data2>(_testCnt * _threadCnt, true);
+	_pBasicLockPool3 = new CObjectPool_BasicLock<Data3>(_testCnt * _threadCnt, true);
+	_pBasicLockPool4 = new CObjectPool_BasicLock<Data4>(_testCnt * _threadCnt, true);
+	_pBasicLockPool5 = new CObjectPool_BasicLock<Data5>(_testCnt * _threadCnt, true);
 
 	::printf("BasicLockPool Test Start!");
-	HANDLE* threads = new HANDLE[_threadCnt];
 	for (int i = 0; i < _threadCnt; i++)
 	{
-		threads[i] = (HANDLE)_beginthreadex(NULL, 0, BasicLockPoolThread, this, 0, nullptr);
-		if (threads[i] == NULL)
+		_basicLockThreads[i] = (HANDLE)_beginthreadex(NULL, 0, BasicLockPoolThread, this, 0, nullptr);
+		if (_basicLockThreads[i] == NULL)
 		{
 			::printf(" Error! %s(%d)\n", __func__, __LINE__);
 			__debugbreak();
 		}
 	}
-	WaitForMultipleObjects(_threadCnt, threads, true, INFINITE);
+	WaitForMultipleObjects(_threadCnt, _basicLockThreads, true, INFINITE);
 	::printf(" -> BasicLockPool Test End!\n");
 
 	delete _pBasicLockPool1;
@@ -106,55 +176,51 @@ void CObjectPoolTester::BasicLockPoolTest()
 
 void CObjectPoolTester::LockFreePoolTest()
 {
-	_pLockFreePool1 = new CLockFreePool<Data1>(_testCnt * _threadCnt, false);
-	_pLockFreePool2 = new CLockFreePool<Data2>(_testCnt * _threadCnt, false);
-	_pLockFreePool3 = new CLockFreePool<Data3>(_testCnt * _threadCnt, false);
-	_pLockFreePool4 = new CLockFreePool<Data4>(_testCnt * _threadCnt, false);
-	_pLockFreePool5 = new CLockFreePool<Data5>(_testCnt * _threadCnt, false);
+	_pLockFreePool1 = new CLockFreePool<Data1>(_testCnt * _threadCnt, true);
+	_pLockFreePool2 = new CLockFreePool<Data2>(_testCnt * _threadCnt, true);
+	_pLockFreePool3 = new CLockFreePool<Data3>(_testCnt * _threadCnt, true);
+	_pLockFreePool4 = new CLockFreePool<Data4>(_testCnt * _threadCnt, true);
+	_pLockFreePool5 = new CLockFreePool<Data5>(_testCnt * _threadCnt, true);
 
 	::printf("LockFreePool Test Start!");
-	HANDLE* threads = new HANDLE[_threadCnt];
 	for (int i = 0; i < _threadCnt; i++)
 	{
-		threads[i] = (HANDLE)_beginthreadex(NULL, 0, LockFreePoolThread, this, 0, nullptr);
-		if (threads[i] == NULL)
+		_lockFreeThreads[i] = (HANDLE)_beginthreadex(NULL, 0, LockFreePoolThread, this, 0, nullptr);
+		if (_lockFreeThreads[i] == NULL)
 		{
 			::printf(" Error! %s(%d)\n", __func__, __LINE__);
 			__debugbreak();
 		}
 	}
-	WaitForMultipleObjects(_threadCnt, threads, true, INFINITE);
+	WaitForMultipleObjects(_threadCnt, _lockFreeThreads, true, INFINITE);
 	::printf(" -> LockFreePool Test End!\n");
 
-	/*
 	delete _pLockFreePool1;
 	delete _pLockFreePool2;
 	delete _pLockFreePool3;
 	delete _pLockFreePool4;
 	delete _pLockFreePool5;
-	*/
 }
 
 void CObjectPoolTester::MinLockPoolTest()
 {
-	_pMinLockPool1 = new CObjectPool_MinLock<Data1>(_testCnt * _threadCnt, false);
-	_pMinLockPool2 = new CObjectPool_MinLock<Data2>(_testCnt * _threadCnt, false);
-	_pMinLockPool3 = new CObjectPool_MinLock<Data3>(_testCnt * _threadCnt, false);
-	_pMinLockPool4 = new CObjectPool_MinLock<Data4>(_testCnt * _threadCnt, false);
-	_pMinLockPool5 = new CObjectPool_MinLock<Data5>(_testCnt * _threadCnt, false);
+	_pMinLockPool1 = new CObjectPool_MinLock<Data1>(_testCnt * _threadCnt, true);
+	_pMinLockPool2 = new CObjectPool_MinLock<Data2>(_testCnt * _threadCnt, true);
+	_pMinLockPool3 = new CObjectPool_MinLock<Data3>(_testCnt * _threadCnt, true);
+	_pMinLockPool4 = new CObjectPool_MinLock<Data4>(_testCnt * _threadCnt, true);
+	_pMinLockPool5 = new CObjectPool_MinLock<Data5>(_testCnt * _threadCnt, true);
 
 	::printf("MinLockPool Test Start!");
-	HANDLE* threads = new HANDLE[_threadCnt];
 	for (int i = 0; i < _threadCnt; i++)
 	{
-		threads[i] = (HANDLE)_beginthreadex(NULL, 0, MinLockPoolThread, this, 0, nullptr);
-		if (threads[i] == NULL)
+		_minLockThreads[i] = (HANDLE)_beginthreadex(NULL, 0, MinLockPoolThread, this, 0, nullptr);
+		if (_minLockThreads[i] == NULL)
 		{
 			::printf(" Error! %s(%d)\n", __func__, __LINE__);
 			__debugbreak();
 		}
 	}
-	WaitForMultipleObjects(_threadCnt, threads, true, INFINITE);
+	WaitForMultipleObjects(_threadCnt, _minLockThreads, true, INFINITE);
 	::printf(" -> MinLockPool Test End!\n");
 
 	delete _pMinLockPool1;

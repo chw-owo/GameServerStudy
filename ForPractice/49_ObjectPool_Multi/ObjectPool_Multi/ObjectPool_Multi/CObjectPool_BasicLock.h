@@ -10,7 +10,7 @@ private:
 	struct stNODE
 	{
 		DATA data;
-		size_t tail = nullptr;
+		size_t tail = NULL;
 	};
 
 public:
@@ -79,7 +79,7 @@ CObjectPool_BasicLock<DATA>::~CObjectPool_BasicLock()
 	if (_placementNew)
 	{
 		// Free 시 Data의 소멸자를 호출하므로 이때는 호출하면 안된다
-		while (_pFreeNode->tail != (size_t)nullptr)
+		while (_pFreeNode->tail != NULL)
 		{
 			size_t next = _pFreeNode->tail;
 			free(_pFreeNode);
@@ -90,7 +90,7 @@ CObjectPool_BasicLock<DATA>::~CObjectPool_BasicLock()
 	else
 	{
 		// Free 시 Data의 소멸자를 호출하지 않으므로 이때 호출해야 된다
-		while (_pFreeNode->tail != (size_t)nullptr)
+		while (_pFreeNode->tail != NULL)
 		{
 			size_t next = _pFreeNode->tail;
 			(_pFreeNode->data).~DATA();
