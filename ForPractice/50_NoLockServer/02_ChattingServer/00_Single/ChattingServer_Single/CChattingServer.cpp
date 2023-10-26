@@ -89,8 +89,8 @@ void CChattingServer::Terminate()
 	CJob* job = _pJobPool->Alloc();
 	job->Setting(JOB_TYPE::SYSTEM, SYS_TYPE::TERMINATE, 0, nullptr);
 	_pJobQueue->Enqueue(job);
-	InterlockedExchange(&_event, 1);
-	WakeByAddressSingle(&_event);
+	InterlockedExchange(&_signal, 1);
+	WakeByAddressSingle(&_signal);
 	WaitForSingleObject(_updateThread, INFINITE);
 
 #ifdef _MONITOR
@@ -140,8 +140,8 @@ void CChattingServer::OnAcceptClient(__int64 sessionID)
 	job->Setting(JOB_TYPE::SYSTEM, SYS_TYPE::ACCEPT, sessionID, nullptr);
 	_pJobQueue->Enqueue(job);
 
-	InterlockedExchange(&_event, 1);
-	WakeByAddressSingle(&_event);
+	InterlockedExchange(&_signal, 1);
+	WakeByAddressSingle(&_signal);
 }
 
 void CChattingServer::OnReleaseClient(__int64 sessionID)
@@ -150,18 +150,19 @@ void CChattingServer::OnReleaseClient(__int64 sessionID)
 	job->Setting(JOB_TYPE::SYSTEM, SYS_TYPE::RELEASE, sessionID, nullptr);
 	_pJobQueue->Enqueue(job);
 
-	InterlockedExchange(&_event, 1);
-	WakeByAddressSingle(&_event);
+	InterlockedExchange(&_signal, 1);
+	WakeByAddressSingle(&_signal);
 }
 
 void CChattingServer::OnRecv(__int64 sessionID, CPacket* packet)
 {
+	packet->AddUsageCount(1);
 	CJob* job = _pJobPool->Alloc();
 	job->Setting(JOB_TYPE::CONTENT, SYS_TYPE::NONE, sessionID, packet);
 	_pJobQueue->Enqueue(job);
 
-	InterlockedExchange(&_event, 1);
-	WakeByAddressSingle(&_event);
+	InterlockedExchange(&_signal, 1);
+	WakeByAddressSingle(&_signal);
 }
 
 void CChattingServer::OnSend(__int64 sessionID, int sendSize)
@@ -282,11 +283,17 @@ void CChattingServer::HandleRecv(__int64 sessionID, CPacket* packet)
 			::wprintf(L"%s[%d] Undefined Message, %d\n", _T(__FUNCTION__), __LINE__, msgType);
 			break;
 		}
+
+		CPacket::Free(packet);
 	}
 	catch (int packetError)
 	{
 		if (packetError == ERR_PACKET)
+		{
+			LOG(L"FightGame", CSystemLog::DEBUG_LEVEL,L"%s[%d] Packet Error\n", _T(__FUNCTION__), __LINE__);
+			::wprintf(L"%s[%d] Packet Error\n", _T(__FUNCTION__), __LINE__);
 			Disconnect(sessionID);
+		}
 	}
 }
 
@@ -299,7 +306,7 @@ unsigned int __stdcall CChattingServer::UpdateThread(void* arg)
 	
 	while (pServer->_serverAlive)
 	{
-		WaitOnAddress(&pServer->_event, &undesired, sizeof(long), INFINITE);
+		WaitOnAddress(&pServer->_signal, &undesired, sizeof(long), INFINITE);
 
 		while(pJobQueue->GetUseSize() > 0)
 		{
@@ -332,7 +339,7 @@ unsigned int __stdcall CChattingServer::UpdateThread(void* arg)
 			}
 		}
 
-		InterlockedExchange(&pServer->_event, undesired);
+		InterlockedExchange(&pServer->_signal, undesired);
 	}
 
 	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Update Thread (%d) Terminate\n", GetCurrentThreadId());
@@ -395,8 +402,8 @@ unsigned int __stdcall CChattingServer::TimeoutThread(void* arg)
 		job->Setting(JOB_TYPE::SYSTEM, SYS_TYPE::TIMEOUT, 0, nullptr);
 		pServer->_pJobQueue->Enqueue(job);
 
-		InterlockedExchange(&pServer->_event, 1);
-		WakeByAddressSingle(&pServer->_event);
+		InterlockedExchange(&pServer->_signal, 1);
+		WakeByAddressSingle(&pServer->_signal);
 
 		Sleep(dfTIMEOUT);
 	}

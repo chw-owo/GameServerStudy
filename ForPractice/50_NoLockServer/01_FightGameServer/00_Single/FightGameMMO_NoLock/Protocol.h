@@ -12,12 +12,9 @@
 
 #define dfSERVER_IP							L"0.0.0.0"
 #define dfSERVER_PORT						20000
-#define dfLOGIC_THREAD_NUM					1
 
 #define dfPLAYER_MAX						6000
-#define dfPLAYER_PER_THREAD					6000
 #define dfPLAYER_PER_SECTOR					1024
-
 #define dfMONITOR_TEXT_LEN					1024
 
 #define	dfPACKET_SC_CREATE_MY_CHARACTER		0

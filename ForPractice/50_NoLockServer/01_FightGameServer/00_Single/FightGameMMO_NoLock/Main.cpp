@@ -19,7 +19,7 @@ int wmain(int argc, wchar_t* argv[])
     LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Main Thread Start\n");
 
     timeBeginPeriod(1);
-    g_GameServer.Initialize();
+    if (!g_GameServer.Initialize()) return 0;
     for(;;)
     {
         if (GetAsyncKeyState(VK_SPACE))

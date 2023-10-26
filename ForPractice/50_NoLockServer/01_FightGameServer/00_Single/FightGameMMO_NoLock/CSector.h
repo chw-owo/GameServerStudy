@@ -13,7 +13,6 @@ public:
 		_idx = idx;
 		_xIndex = xIndex;
 		_yIndex = yIndex;
-		InitializeSRWLock(&_lock);
 
 		if (_xIndex < 2 || _xIndex >= (dfSECTOR_CNT_X - 2) ||
 			_yIndex < 2 || _yIndex >= (dfSECTOR_CNT_Y - 2))
@@ -35,7 +34,6 @@ public:
 	short _xPosMax;
 	short _yPosMax;
 	vector<CPlayer*> _players;
-	SRWLOCK _lock;
 
 public:
 	CSector* _llNew[dfVERT_SECTOR_NUM];

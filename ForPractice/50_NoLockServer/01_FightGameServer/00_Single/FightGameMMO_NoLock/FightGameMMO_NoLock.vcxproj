@@ -141,10 +141,12 @@
   <ItemGroup>
     <ClInclude Include="CCrashDump.h" />
     <ClInclude Include="CGameServer.h" />
+    <ClInclude Include="CJob.h" />
     <ClInclude Include="CLanServer.h" />
     <ClInclude Include="CLockFreeQueue.h" />
     <ClInclude Include="CLockFreeStack.h" />
     <ClInclude Include="CNetServer.h" />
+    <ClInclude Include="CObjectPool.h" />
     <ClInclude Include="Config.h" />
     <ClInclude Include="CPacket.h" />
     <ClInclude Include="CPlayer.h" />

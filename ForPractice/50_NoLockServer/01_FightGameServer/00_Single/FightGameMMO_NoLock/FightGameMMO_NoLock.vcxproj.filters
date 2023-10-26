@@ -35,6 +35,9 @@
     <Filter Include="GameServer\GameServer\Object">
       <UniqueIdentifier>{05976472-49b5-44b5-b984-d896dff5e3ef}</UniqueIdentifier>
     </Filter>
+    <Filter Include="GameServer\GameServer\Utils">
+      <UniqueIdentifier>{ba17bd30-dd4e-40a1-9b7b-4ae235f194b2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CGameServer.cpp">
@@ -113,6 +116,12 @@
     </ClInclude>
     <ClInclude Include="CLockFreeStack.h">
       <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="CObjectPool.h">
+      <Filter>GameServer\GameServer\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="CJob.h">
+      <Filter>GameServer\GameServer\Utils</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

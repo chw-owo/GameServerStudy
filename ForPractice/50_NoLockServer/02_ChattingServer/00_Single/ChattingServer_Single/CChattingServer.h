@@ -78,9 +78,6 @@ private:
 	HANDLE _timeoutThread;
 
 private:
-	long _event = 0;
-
-private:
 	CSector _sectors[dfSECTOR_CNT_Y][dfSECTOR_CNT_X];
 
 private:
@@ -89,6 +86,7 @@ private:
 	CObjectPool<CPlayer>* _pPlayerPool;
 
 private:
+	long _signal = 0;
 	CLockFreeQueue<CJob*>* _pJobQueue;
 	CLockFreePool<CJob>* _pJobPool;
 

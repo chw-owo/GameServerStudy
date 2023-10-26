@@ -8,6 +8,8 @@
 2. SendPacket으로 전송 요청 하기 전 AddUsageCount(n)으로 목적지 수 설정
    Unicast의 경우 1, Multicast의 경우 목적지 수를 n으로 입력한다.
 
+3. 잡큐잉 방식을 사용할 경우 OnRecv에서 AddUsageCount(1),
+   HandleRecv에서 CPacket::Free... 아 관리 방법이 너무 애매한데...
 */
 
 #ifndef _WINSOCKAPI_

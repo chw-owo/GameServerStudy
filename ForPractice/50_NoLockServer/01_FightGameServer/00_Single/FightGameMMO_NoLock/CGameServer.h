@@ -1,13 +1,15 @@
 #pragma once
 #include "CLockFreePool.h"
+#include "CLockFreeQueue.h"
+#include "CObjectPool.h"
 #include "CLanServer.h"
 #include "CSector.h"
 #include "CPlayer.h"
+#include "CJob.h"
 #include "Protocol.h"
 #include "ErrorCode.h"
 
 #include <unordered_map>
-#include <queue>
 using namespace std;
 
 class CGameServer : public CLanServer
@@ -17,7 +19,7 @@ public:
 	~CGameServer() { Terminate(); };
 
 public:
-	void Initialize();
+	bool Initialize();
 	void Terminate();
 
 private:
@@ -49,7 +51,8 @@ private:
 
 private:
 	void SleepForFixedFrame();
-	void LogicUpdate(int threadNum);
+	void LogicUpdate();
+	void HandleNetwork();
 
 private:
 	bool CheckMovable(short x, short y);
@@ -98,19 +101,8 @@ private:
 	inline int SetSCPacket_ECHO(CPacket* pPacket, int time);
 
 private:
-	class ThreadArg
-	{
-	public:
-		ThreadArg(CGameServer* pServer, int num)
-			:_pServer(pServer), _num(num) {};
-	public:
-		CGameServer* _pServer;
-		int _num;
-	};
-
-private:
 	bool _serverAlive = true;
-	HANDLE* _logicThreads;
+	HANDLE _updateThread;
 	HANDLE _monitorThread;
 
 private:
@@ -122,20 +114,20 @@ private:
 	  dfVERT_SECTOR_NUM, dfDIAG_SECTOR_NUM };
 
 private:
-	CPlayer* _playersArray[dfLOGIC_THREAD_NUM][dfPLAYER_PER_THREAD];
-
-	unordered_map<__int64, CPlayer*> _playersMap;
-	SRWLOCK _playersMapLock;
 	__int64 _playerIDGenerator = 0;
-	SRWLOCK _IDGeneratorLock;
-	queue<int> _usablePlayerIdx;
-	SRWLOCK _usableIdxLock;
+	vector<CPlayer*> _players;
+	unordered_map<__int64, CPlayer*> _playersMap;
+	CObjectPool<CPlayer>* _playerPool;
 
 private:
+	// For Update Thread
+	DWORD _oldTick;
 	int _timeGap = 1000 / dfFPS;
+	CLockFreeQueue<CJob*>* _pJobQueue;
+	CLockFreePool<CJob>* _pJobPool;
 
 private:
-	// For Monitor
+	// For Monitor Thread
 	long _totalSyncCnt = 0;
 	long _totalAcceptCnt = 0;
 	volatile long _logicFPS = 0;
