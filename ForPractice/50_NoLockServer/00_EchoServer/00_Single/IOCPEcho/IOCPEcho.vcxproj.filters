@@ -1,0 +1,106 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="리소스 파일">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="EchoServer">
+      <UniqueIdentifier>{b1fd646d-8c2e-4f12-ad45-e512fa038b79}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib">
+      <UniqueIdentifier>{11e67b32-0718-493c-8b9b-f1af7320c346}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Network">
+      <UniqueIdentifier>{d73b9975-2727-42f1-9f53-538d713757c9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Network\Utils">
+      <UniqueIdentifier>{aab37369-764f-43c1-bc57-39d8b930a2bf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Network\CSession">
+      <UniqueIdentifier>{d6786270-80be-402e-b933-cabbcc7f14cb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="EchoServer\EchoServer">
+      <UniqueIdentifier>{e10ddb17-c75b-446d-983d-268da678d89b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="EchoServer\DebugTool">
+      <UniqueIdentifier>{bd80f979-060f-4560-b8de-69326dde32a9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Commons">
+      <UniqueIdentifier>{d19a6fd5-5536-45c2-847f-1b9e4f9a869f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Packet">
+      <UniqueIdentifier>{6dc7e210-657e-49cf-bafc-04785c3ff7ae}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="RingBuffer.cpp">
+      <Filter>NetLib\Network\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="Main.cpp">
+      <Filter>EchoServer</Filter>
+    </ClCompile>
+    <ClCompile Include="CLanServer.cpp">
+      <Filter>NetLib\Network</Filter>
+    </ClCompile>
+    <ClCompile Include="CNetServer.cpp">
+      <Filter>NetLib\Network</Filter>
+    </ClCompile>
+    <ClCompile Include="CEchoServer.cpp">
+      <Filter>EchoServer\EchoServer</Filter>
+    </ClCompile>
+    <ClCompile Include="CProfiler.cpp">
+      <Filter>EchoServer\DebugTool</Filter>
+    </ClCompile>
+    <ClCompile Include="CSystemLog.cpp">
+      <Filter>EchoServer\DebugTool</Filter>
+    </ClCompile>
+    <ClCompile Include="CPacket.cpp">
+      <Filter>NetLib\Packet</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="RingBuffer.h">
+      <Filter>NetLib\Network\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="CLanServer.h">
+      <Filter>NetLib\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="CNetServer.h">
+      <Filter>NetLib\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="CSession.h">
+      <Filter>NetLib\Network\CSession</Filter>
+    </ClInclude>
+    <ClInclude Include="Protocol.h">
+      <Filter>EchoServer</Filter>
+    </ClInclude>
+    <ClInclude Include="CEchoServer.h">
+      <Filter>EchoServer\EchoServer</Filter>
+    </ClInclude>
+    <ClInclude Include="CCrashDump.h">
+      <Filter>EchoServer\DebugTool</Filter>
+    </ClInclude>
+    <ClInclude Include="CProfiler.h">
+      <Filter>EchoServer\DebugTool</Filter>
+    </ClInclude>
+    <ClInclude Include="CSystemLog.h">
+      <Filter>EchoServer\DebugTool</Filter>
+    </ClInclude>
+    <ClInclude Include="CLockFreePool.h">
+      <Filter>Commons</Filter>
+    </ClInclude>
+    <ClInclude Include="CLockFreeQueue.h">
+      <Filter>Commons</Filter>
+    </ClInclude>
+    <ClInclude Include="CPacket.h">
+      <Filter>NetLib\Packet</Filter>
+    </ClInclude>
+    <ClInclude Include="Config.h">
+      <Filter>NetLib</Filter>
+    </ClInclude>
+    <ClInclude Include="ErrorCode.h">
+      <Filter>NetLib</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

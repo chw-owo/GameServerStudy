@@ -1,0 +1,118 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="리소스 파일">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="NetLib">
+      <UniqueIdentifier>{9a659b93-34fb-4746-8a65-12da4fb95190}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GameServer">
+      <UniqueIdentifier>{bdaa42a2-5b2d-4766-9874-d11f1a0b911b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GameServer\GameServer">
+      <UniqueIdentifier>{34fa55f9-da01-4382-a10a-e3a183f6366a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GameServer\DebugTool">
+      <UniqueIdentifier>{41b579b8-0a89-440c-a050-65905fc1ba93}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Network">
+      <UniqueIdentifier>{5884db74-f919-4f60-9a4c-4076221c5f75}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Network\Session">
+      <UniqueIdentifier>{15c9c520-77ac-4db6-96b7-788592979aa3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Network\Utils">
+      <UniqueIdentifier>{52cf3042-bf62-4754-94d6-a9db491df06e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Packet">
+      <UniqueIdentifier>{b4c423fa-92d4-4cd2-a65d-20201722f888}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GameServer\GameServer\Object">
+      <UniqueIdentifier>{05976472-49b5-44b5-b984-d896dff5e3ef}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Common">
+      <UniqueIdentifier>{f7d2dbf4-648d-4602-9003-c3581892141d}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="CGameServer.cpp">
+      <Filter>GameServer\GameServer</Filter>
+    </ClCompile>
+    <ClCompile Include="CProfiler.cpp">
+      <Filter>GameServer\DebugTool</Filter>
+    </ClCompile>
+    <ClCompile Include="CSystemLog.cpp">
+      <Filter>GameServer\DebugTool</Filter>
+    </ClCompile>
+    <ClCompile Include="CRingBuffer.cpp">
+      <Filter>NetLib\Network\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="CLanServer.cpp">
+      <Filter>NetLib\Network</Filter>
+    </ClCompile>
+    <ClCompile Include="CNetServer.cpp">
+      <Filter>NetLib\Network</Filter>
+    </ClCompile>
+    <ClCompile Include="CPacket.cpp">
+      <Filter>NetLib\Packet</Filter>
+    </ClCompile>
+    <ClCompile Include="Main.cpp">
+      <Filter>GameServer</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="CGameServer.h">
+      <Filter>GameServer\GameServer</Filter>
+    </ClInclude>
+    <ClInclude Include="CCrashDump.h">
+      <Filter>GameServer\DebugTool</Filter>
+    </ClInclude>
+    <ClInclude Include="CProfiler.h">
+      <Filter>GameServer\DebugTool</Filter>
+    </ClInclude>
+    <ClInclude Include="CSystemLog.h">
+      <Filter>GameServer\DebugTool</Filter>
+    </ClInclude>
+    <ClInclude Include="CSession.h">
+      <Filter>NetLib\Network\Session</Filter>
+    </ClInclude>
+    <ClInclude Include="CRingBuffer.h">
+      <Filter>NetLib\Network\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="CPlayer.h">
+      <Filter>GameServer\GameServer\Object</Filter>
+    </ClInclude>
+    <ClInclude Include="CSector.h">
+      <Filter>GameServer\GameServer\Object</Filter>
+    </ClInclude>
+    <ClInclude Include="Config.h">
+      <Filter>NetLib</Filter>
+    </ClInclude>
+    <ClInclude Include="Protocol.h">
+      <Filter>GameServer</Filter>
+    </ClInclude>
+    <ClInclude Include="ErrorCode.h">
+      <Filter>NetLib</Filter>
+    </ClInclude>
+    <ClInclude Include="CNetServer.h">
+      <Filter>NetLib\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="CLanServer.h">
+      <Filter>NetLib\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="CPacket.h">
+      <Filter>NetLib\Packet</Filter>
+    </ClInclude>
+    <ClInclude Include="CLockFreePool.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="CLockFreeQueue.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="CLockFreeStack.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
