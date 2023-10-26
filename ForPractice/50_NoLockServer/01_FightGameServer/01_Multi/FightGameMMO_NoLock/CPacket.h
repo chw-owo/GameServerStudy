@@ -70,7 +70,7 @@ private:
 
 public:
 	volatile long _encode = 0;
-
+#ifdef NETSERVER
 	bool Decode(stHeader& header)
 	{
 		unsigned char checkSum = 0;
@@ -131,6 +131,7 @@ public:
 
 		return true;
 	}
+#endif
 
 public:
 	inline int GetBufferSize(void) { return _iBufferSize; }

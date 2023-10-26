@@ -1,8 +1,29 @@
 #include "CEchoServer.h"
+#include "CSystemLog.h"
 
 CEchoServer::CEchoServer()
 {
 
+}
+
+void CEchoServer::Initialize()
+{
+	SYSTEM_INFO si;
+	GetSystemInfo(&si);
+	int threadCnt = (int)si.dwNumberOfProcessors / 2;
+
+	if (!NetworkInitialize(dfSERVER_IP, dfSERVER_PORT, threadCnt, false))
+		Terminate();
+
+	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"EchoServer Initialize\n");
+	::wprintf(L"EchoServer Initialize\n\n");
+}
+
+void CEchoServer::Terminate()
+{
+	NetworkTerminate();
+	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"EchoServer Terminate.\n");
+	::wprintf(L"EchoServer Terminate.\n");
 }
 
 bool CEchoServer::OnConnectRequest()
@@ -16,14 +37,27 @@ void CEchoServer::OnAcceptClient(__int64 sessionID)
 
 void CEchoServer::OnRecv(__int64 sessionID, CPacket* packet)
 {
-	__int64 echo;
-	*packet >> echo;
+	try
+	{
+		__int64 echo;
+		*packet >> echo;
 
-	// ::printf("%llu\n", echo);
+		//::printf("%llu\n", echo);
 
-	CPacket* sendPacket = CPacket::Alloc();
-	*sendPacket << echo;
-	SendPacket(sessionID, sendPacket);
+		CPacket* sendPacket = CPacket::Alloc();
+		sendPacket->Clear();
+		sendPacket->AddUsageCount(1);
+		*sendPacket << echo;
+		SendPacket(sessionID, sendPacket);
+	}
+	catch (int packetError)
+	{
+		if (packetError == ERR_PACKET)
+		{
+			::printf("packet error!\n");
+			Disconnect(sessionID);
+		}
+	}
 }
 
 void CEchoServer::OnSend(__int64 sessionID, int sendSize)

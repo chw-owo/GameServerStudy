@@ -1,4 +1,6 @@
 #include "CNetServer.h"
+#ifdef NETSERVER
+
 #include "ErrorCode.h"
 #include <stdio.h>
 #include <tchar.h>
@@ -520,6 +522,7 @@ bool CNetServer::HandleRecvCP(__int64 sessionID, int recvBytes)
 		}
 
 		OnRecv(pSession->_ID, packet);
+		CPacket::Free(packet);
 		useSize = pSession->_recvBuf.GetUseSize();
 	}
 
@@ -668,3 +671,4 @@ bool CNetServer::DecrementIOCount(CSession* pSession, int line, int sessionID)
 	}
 	return false;
 }
+#endif

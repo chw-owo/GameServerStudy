@@ -1,12 +1,17 @@
 #pragma once
 #include "CPacket.h"
 #include "CLanServer.h"
+#include "Protocol.h"
 
 class CEchoServer: public CLanServer
 {
 public:
 	CEchoServer();
 	~CEchoServer() {}
+
+public:
+	void Initialize();
+	void Terminate();
 
 private:
 	bool OnConnectRequest();

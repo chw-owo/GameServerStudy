@@ -1,5 +1,15 @@
 #pragma once
 
+/*
+<사용 방법>
+
+1. CPacket::Alloc()로 할당, 데이터 삽입 전 Clear()로 초기화.
+
+2. SendPacket으로 전송 요청 하기 전 AddUsageCount(n)으로 목적지 수 설정
+   Unicast의 경우 1, Multicast의 경우 목적지 수를 n으로 입력한다.
+
+*/
+
 #ifndef _WINSOCKAPI_
 #define _WINSOCKAPI_
 #endif
@@ -71,6 +81,7 @@ private:
 public:
 	volatile long _encode = 0;
 
+#ifdef NETSERVER
 	bool Decode(stHeader& header)
 	{
 		unsigned char checkSum = 0;
@@ -131,6 +142,7 @@ public:
 
 		return true;
 	}
+#endif
 
 public:
 	inline int GetBufferSize(void) { return _iBufferSize; }

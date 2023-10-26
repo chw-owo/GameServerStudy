@@ -34,9 +34,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="RingBuffer.cpp">
-      <Filter>NetLib\Network\Utils</Filter>
-    </ClCompile>
     <ClCompile Include="Main.cpp">
       <Filter>EchoServer</Filter>
     </ClCompile>
@@ -58,9 +55,12 @@
     <ClCompile Include="CPacket.cpp">
       <Filter>NetLib\Packet</Filter>
     </ClCompile>
+    <ClCompile Include="CRingBuffer.cpp">
+      <Filter>NetLib\Network\Utils</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="RingBuffer.h">
+    <ClInclude Include="CRingBuffer.h">
       <Filter>NetLib\Network\Utils</Filter>
     </ClInclude>
     <ClInclude Include="CLanServer.h">

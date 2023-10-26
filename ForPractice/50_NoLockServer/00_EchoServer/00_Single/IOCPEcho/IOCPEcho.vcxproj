@@ -139,7 +139,7 @@
     <ClCompile Include="CProfiler.cpp" />
     <ClCompile Include="CSystemLog.cpp" />
     <ClCompile Include="CEchoServer.cpp" />
-    <ClCompile Include="RingBuffer.cpp" />
+    <ClCompile Include="CRingBuffer.cpp" />
     <ClCompile Include="CPacket.cpp" />
     <ClCompile Include="Main.cpp" />
   </ItemGroup>
@@ -156,7 +156,7 @@
     <ClInclude Include="CLockFreeQueue.h" />
     <ClInclude Include="CEchoServer.h" />
     <ClInclude Include="Protocol.h" />
-    <ClInclude Include="RingBuffer.h" />
+    <ClInclude Include="CRingBuffer.h" />
     <ClInclude Include="CPacket.h" />
     <ClInclude Include="CSession.h" />
   </ItemGroup>

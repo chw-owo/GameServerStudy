@@ -55,14 +55,12 @@ void CGameServer::Initialize()
 		}
 	}
 
-
 	SYSTEM_INFO si;
 	GetSystemInfo(&si);
 	int threadCnt = (int)si.dwNumberOfProcessors / 2;
 
 	if (!NetworkInitialize(dfSERVER_IP, dfSERVER_PORT, threadCnt, false))
 		Terminate();
-
 
 #ifdef _MONITOR
 	_monitorThread = (HANDLE)_beginthreadex(NULL, 0, MonitorThread, this, 0, nullptr);
@@ -79,6 +77,7 @@ void CGameServer::Initialize()
 		return;
 	}
 #endif
+
 
 	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"GameServer Initialize\n");
 	::wprintf(L"GameServer Initialize\n\n");
@@ -106,8 +105,8 @@ void CGameServer::OnInitialize()
 
 void CGameServer::OnTerminate()
 {
-	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Network Terminate Complete\n");
-	::wprintf(L"Network Terminate Complete\n");
+	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Network Terminate\n");
+	::wprintf(L"Network Terminate\n");
 }
 
 void CGameServer::OnThreadTerminate(wchar_t* threadName)
@@ -153,7 +152,7 @@ void CGameServer::OnRecv(__int64 sessionID, CPacket* packet)
 
 void CGameServer::OnSend(__int64 sessionID, int sendSize)
 {
-	
+
 }
 
 unsigned int __stdcall CGameServer::UpdateThread(void* arg)
@@ -164,8 +163,8 @@ unsigned int __stdcall CGameServer::UpdateThread(void* arg)
 
 	while (pServer->_serverAlive)
 	{
-		pServer->SleepForFixedFrame();
 		pServer->LogicUpdate(num);
+		pServer->SleepForFixedFrame();
 	}
 
 	delete arg;
@@ -177,9 +176,10 @@ unsigned int __stdcall CGameServer::MonitorThread(void* arg)
 	CGameServer* pServer = (CGameServer*)arg;
 	CreateDirectory(L"MonitorLog", NULL);
 
+	Sleep(1000);
+
 	while (pServer->_serverAlive)
 	{
-		Sleep(1000);
 		pServer->UpdateMonitorData();
 		pServer->_totalAcceptCnt += pServer->GetAcceptTPS();
 		pServer->_totalSyncCnt += pServer->_syncCnt;
@@ -229,6 +229,8 @@ unsigned int __stdcall CGameServer::MonitorThread(void* arg)
 		InterlockedExchange(&pServer->_syncCnt, 0);
 		InterlockedExchange(&pServer->_timeoutCnt, 0);
 		InterlockedExchange(&pServer->_connectEndCnt, 0);
+
+		Sleep(1000);
 	}
 	return 0;
 }
@@ -549,7 +551,7 @@ void CGameServer::LogicUpdate(int threadNum)
 {
 	InterlockedIncrement(&_logicFPS);
 
-	for (int i = 0; i <	dfPLAYER_PER_THREAD; i++)
+	for (int i = 0; i < dfPLAYER_PER_THREAD; i++)
 	{
 		AcquireSRWLockShared(&_playersArray[threadNum][i]->_lock);
 		if (_playersArray[threadNum][i]->_state != PLAYER_STATE::CONNECT)
@@ -583,33 +585,17 @@ void CGameServer::ReqSendUnicast(CPacket* packet, __int64 sessionID)
 	SendPacket(sessionID, packet);
 }
 
-void CGameServer::ReqSendOneSector(vector<__int64> sendID, CPacket* packet, CSector* sector, CPlayer* pExpPlayer)
+void CGameServer::ReqSendSectors(CPacket* packet, CSector** sector, int sectorCnt, CPlayer* pExpPlayer)
 {
+	vector<__int64> sendID;
+
 	if (pExpPlayer == nullptr)
 	{
-		AcquireSRWLockShared(&sector->_lock);
-		vector<CPlayer*>::iterator playerIter = sector->_players.begin();
-		for (; playerIter < sector->_players.end(); playerIter++)
+		for (int i = 0; i < sectorCnt; i++)
 		{
-			AcquireSRWLockShared(&(*playerIter)->_lock);
-			PLAYER_STATE state = (*playerIter)->_state;
-			__int64 sessionID = (*playerIter)->_sessionID;
-			ReleaseSRWLockShared(&(*playerIter)->_lock);
-
-			if (state == PLAYER_STATE::CONNECT)
-			{
-				sendID.push_back(sessionID);
-			}
-		}
-		ReleaseSRWLockShared(&sector->_lock);
-	}
-	else
-	{
-		AcquireSRWLockShared(&sector->_lock);
-		vector<CPlayer*>::iterator playerIter = sector->_players.begin();
-		for (; playerIter < sector->_players.end(); playerIter++)
-		{
-			if (*playerIter != pExpPlayer)
+			AcquireSRWLockShared(&sector[i]->_lock);
+			vector<CPlayer*>::iterator playerIter = sector[i]->_players.begin();
+			for (; playerIter < sector[i]->_players.end(); playerIter++)
 			{
 				AcquireSRWLockShared(&(*playerIter)->_lock);
 				PLAYER_STATE state = (*playerIter)->_state;
@@ -621,8 +607,39 @@ void CGameServer::ReqSendOneSector(vector<__int64> sendID, CPacket* packet, CSec
 					sendID.push_back(sessionID);
 				}
 			}
+			ReleaseSRWLockShared(&sector[i]->_lock);
 		}
-		ReleaseSRWLockShared(&sector->_lock);
+	}
+	else
+	{
+		for (int i = 0; i < sectorCnt; i++)
+		{
+			AcquireSRWLockShared(&sector[i]->_lock);
+			vector<CPlayer*>::iterator playerIter = sector[i]->_players.begin();
+			for (; playerIter < sector[i]->_players.end(); playerIter++)
+			{
+				if (*playerIter != pExpPlayer)
+				{
+					AcquireSRWLockShared(&(*playerIter)->_lock);
+					PLAYER_STATE state = (*playerIter)->_state;
+					__int64 sessionID = (*playerIter)->_sessionID;
+					ReleaseSRWLockShared(&(*playerIter)->_lock);
+
+					if (state == PLAYER_STATE::CONNECT)
+					{
+						sendID.push_back(sessionID);
+					}
+				}
+			}
+			ReleaseSRWLockShared(&sector[i]->_lock);
+		}
+	}
+
+	packet->AddUsageCount(sendID.size());
+	vector<__int64>::iterator idIter = sendID.begin();
+	for (; idIter != sendID.end(); idIter++)
+	{
+		SendPacket(*idIter, packet);
 	}
 }
 
@@ -1011,47 +1028,17 @@ void CGameServer::UpdateSector(CPlayer* pPlayer, short direction)
 	CPacket* createMeToOtherPacket = CPacket::Alloc();
 	createMeToOtherPacket->Clear();
 	int createMeToOtherRet = SetSCPacket_CREATE_OTHER_CHAR(createMeToOtherPacket, playerID, dir, x, y, hp);
-	vector<__int64> createMeToOthersendID;
-	for (int i = 0; i < sectorCnt; i++)
-	{
-		ReqSendOneSector(createMeToOthersendID, createMeToOtherPacket, inSector[i], pPlayer);
-	}
-	createMeToOtherPacket->AddUsageCount(createMeToOthersendID.size());
-	vector<__int64>::iterator idIter = createMeToOthersendID.begin();
-	for (; idIter != createMeToOthersendID.end(); idIter++)
-	{
-		SendPacket(*idIter, createMeToOtherPacket);
-	}
+	ReqSendSectors(createMeToOtherPacket, inSector, sectorCnt, pPlayer);
 
 	CPacket* moveMeToOtherPacket = CPacket::Alloc();
 	moveMeToOtherPacket->Clear();
 	int moveMeToOtherRet = SetSCPacket_MOVE_START(moveMeToOtherPacket, playerID, moveDir, x, y);
-	vector<__int64> moveMeToOthersendID;
-	for (int i = 0; i < sectorCnt; i++)
-	{
-		ReqSendOneSector(moveMeToOthersendID, moveMeToOtherPacket, inSector[i], pPlayer);
-	}
-	moveMeToOtherPacket->AddUsageCount(moveMeToOthersendID.size());
-	idIter = moveMeToOthersendID.begin();
-	for (; idIter != moveMeToOthersendID.end(); idIter++)
-	{
-		SendPacket(*idIter, moveMeToOtherPacket);
-	}
+	ReqSendSectors(moveMeToOtherPacket, inSector, sectorCnt, pPlayer);
 
 	CPacket* deleteMeToOtherPacket = CPacket::Alloc();
 	deleteMeToOtherPacket->Clear();
 	int deleteMeToOtherRet = SetSCPacket_DELETE_CHAR(deleteMeToOtherPacket, playerID);
-	vector<__int64> deleteMeToOthersendID;
-	for (int i = 0; i < sectorCnt; i++)
-	{
-		ReqSendOneSector(deleteMeToOthersendID, deleteMeToOtherPacket, outSector[i], pPlayer);
-	}
-	deleteMeToOtherPacket->AddUsageCount(deleteMeToOthersendID.size());
-	idIter = deleteMeToOthersendID.begin();
-	for (; idIter != deleteMeToOthersendID.end(); idIter++)
-	{
-		SendPacket(*idIter, deleteMeToOtherPacket);
-	}
+	ReqSendSectors(deleteMeToOtherPacket, inSector, sectorCnt, pPlayer);
 
 	// Send Data About Other Player ==============================================
 
@@ -1079,7 +1066,6 @@ void CGameServer::UpdateSector(CPlayer* pPlayer, short direction)
 				char iterHp = (*iter)->_hp;
 				ReleaseSRWLockShared(&(*iter)->_lock);
 
-				// Create Fail!!!
 				CPacket* createOtherPacket = CPacket::Alloc();
 				createOtherPacket->Clear();
 				int createOtherRet = SetSCPacket_CREATE_OTHER_CHAR(createOtherPacket, iterID, iterDir, iterX, iterY, iterHp);
@@ -1762,7 +1748,7 @@ inline bool CGameServer::SetPlayerAttack1(CPlayer* pPlayer, CPlayer*& pDamagedPl
 
 					if (targetHp <= 0)
 					{
-						
+
 						SetPlayerDead(pDamagedPlayer, false);
 					}
 
@@ -1808,7 +1794,7 @@ inline bool CGameServer::SetPlayerAttack1(CPlayer* pPlayer, CPlayer*& pDamagedPl
 
 					if (targetHp <= 0)
 					{
-						
+
 						SetPlayerDead(pDamagedPlayer, false);
 					}
 
@@ -2036,7 +2022,7 @@ inline bool CGameServer::SetPlayerAttack1(CPlayer* pPlayer, CPlayer*& pDamagedPl
 
 					if (targetHp <= 0)
 					{
-						
+
 						SetPlayerDead(pDamagedPlayer, false);
 					}
 
@@ -2081,7 +2067,7 @@ inline bool CGameServer::SetPlayerAttack1(CPlayer* pPlayer, CPlayer*& pDamagedPl
 
 					if (targetHp <= 0)
 					{
-						
+
 						SetPlayerDead(pDamagedPlayer, false);
 					}
 
@@ -2328,7 +2314,7 @@ inline bool CGameServer::SetPlayerAttack2(CPlayer* pPlayer, CPlayer*& pDamagedPl
 
 					if (targetHp <= 0)
 					{
-						
+
 						SetPlayerDead(pDamagedPlayer, false);
 					}
 
@@ -2374,7 +2360,7 @@ inline bool CGameServer::SetPlayerAttack2(CPlayer* pPlayer, CPlayer*& pDamagedPl
 
 					if (targetHp <= 0)
 					{
-						
+
 						SetPlayerDead(pDamagedPlayer, false);
 					}
 
@@ -2602,7 +2588,7 @@ inline bool CGameServer::SetPlayerAttack2(CPlayer* pPlayer, CPlayer*& pDamagedPl
 
 					if (targetHp <= 0)
 					{
-						
+
 						SetPlayerDead(pDamagedPlayer, false);
 					}
 
@@ -2647,7 +2633,7 @@ inline bool CGameServer::SetPlayerAttack2(CPlayer* pPlayer, CPlayer*& pDamagedPl
 
 					if (targetHp <= 0)
 					{
-						
+
 						SetPlayerDead(pDamagedPlayer, false);
 					}
 
@@ -2894,7 +2880,7 @@ inline bool CGameServer::SetPlayerAttack3(CPlayer* pPlayer, CPlayer*& pDamagedPl
 
 					if (targetHp <= 0)
 					{
-						
+
 						SetPlayerDead(pDamagedPlayer, false);
 					}
 
@@ -2940,7 +2926,7 @@ inline bool CGameServer::SetPlayerAttack3(CPlayer* pPlayer, CPlayer*& pDamagedPl
 
 					if (targetHp <= 0)
 					{
-						
+
 						SetPlayerDead(pDamagedPlayer, false);
 					}
 
@@ -3168,7 +3154,7 @@ inline bool CGameServer::SetPlayerAttack3(CPlayer* pPlayer, CPlayer*& pDamagedPl
 
 					if (targetHp <= 0)
 					{
-						
+
 						SetPlayerDead(pDamagedPlayer, false);
 					}
 
@@ -3213,7 +3199,7 @@ inline bool CGameServer::SetPlayerAttack3(CPlayer* pPlayer, CPlayer*& pDamagedPl
 
 					if (targetHp <= 0)
 					{
-						
+
 						SetPlayerDead(pDamagedPlayer, false);
 					}
 

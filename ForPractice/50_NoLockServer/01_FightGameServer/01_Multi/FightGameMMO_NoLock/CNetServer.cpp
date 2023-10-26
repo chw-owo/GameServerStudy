@@ -1,4 +1,6 @@
 #include "CNetServer.h"
+#ifdef NETSERVER
+
 #include "ErrorCode.h"
 #include <stdio.h>
 #include <tchar.h>
@@ -668,3 +670,4 @@ bool CNetServer::DecrementIOCount(CSession* pSession, int line, int sessionID)
 	}
 	return false;
 }
+#endif

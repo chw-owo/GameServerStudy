@@ -48,8 +48,8 @@ int main()
         return 0;
     }
 
+    /*
     HANDLE threads[2];
-
     threads[0] = (HANDLE)_beginthreadex(NULL, 0, SendThread, 0, 0, nullptr);
     threads[1] = (HANDLE)_beginthreadex(NULL, 0, RecvThread, 0, 0, nullptr);
 
@@ -62,9 +62,9 @@ int main()
     WaitForMultipleObjects(2, threads, true, INFINITE);
     ::printf("\nAll Thread Terminate!\n");
     ::printf("RecvCnt: %d, SendCnt: %d\n", g_RecvCnt, g_SendCnt);
+    */
 
-
-    //PingPongTest();
+    PingPongTest();
 
     closesocket(g_Socket);
     WSACleanup();
@@ -116,6 +116,11 @@ void PingPongTest()
 
         printf("Success to Recv %d bytes!\n", recvRet);
         printf(" - %llu\n", recvPacket.data);
+
+        if (sendPacket.data != recvPacket.data)
+        {
+            __debugbreak();
+        }
     }
 }
 

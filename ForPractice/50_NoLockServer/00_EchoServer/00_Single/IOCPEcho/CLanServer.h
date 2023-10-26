@@ -1,8 +1,11 @@
 #pragma once
+#include "Config.h"
+#ifdef LANSERVER
+
 #include "CLockFreePool.h"
 #include "CLockFreeStack.h"
 #include "CSession.h"
-#include "Config.h"
+
 #include <ws2tcpip.h>
 #include <process.h>
 #pragma comment(lib, "ws2_32.lib")
@@ -126,3 +129,5 @@ private:
 	int _sendMsgCnt = 0;
 
 };
+
+#endif

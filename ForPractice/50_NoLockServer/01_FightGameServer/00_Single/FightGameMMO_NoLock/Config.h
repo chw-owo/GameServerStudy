@@ -1,7 +1,7 @@
 #pragma once
 
-// #define LANSERVER
-#define NETSERVER
+#define LANSERVER
+// #define NETSERVER
 
 #ifdef LANSERVER
 #pragma pack (push, 1)

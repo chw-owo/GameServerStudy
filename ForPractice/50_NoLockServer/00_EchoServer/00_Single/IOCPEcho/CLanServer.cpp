@@ -1,4 +1,6 @@
 #include "CLanServer.h"
+#ifdef LANSERVER
+
 #include "ErrorCode.h"
 #include <stdio.h>
 #include <tchar.h>
@@ -329,7 +331,7 @@ unsigned int __stdcall CLanServer::AcceptThread(void* arg)
 		pSession->Initialize(sessionID, client_sock, clientaddr);
 		InterlockedIncrement(&pNetServer->_acceptCnt);
 
-		// ::printf("%lld (%d): Accept Success\n", (sessionID & pNetServer->_idMask), GetCurrentThreadId());
+		//::printf("%lld (%d): Accept Success\n", (sessionID & pNetServer->_idMask), GetCurrentThreadId());
 
 		// Connect Session to IOCP and Post Recv                                      
 		CreateIoCompletionPort((HANDLE)pSession->_sock, pNetServer->_hNetworkCP, (ULONG_PTR)pSession, 0);
@@ -382,13 +384,13 @@ unsigned int __stdcall CLanServer::NetworkThread(void* arg)
 		}
 		else if (pNetOvl->_type == NET_TYPE::RECV)
 		{
-			// ::printf("%lld (%d): Recv Success\n", (pSession->_ID & pNetServer->_idMask), GetCurrentThreadId());
+			//::printf("%lld (%d): Recv Success\n", (pSession->_ID & pNetServer->_idMask), GetCurrentThreadId());
 			pNetServer->HandleRecvCP(pSession->_ID, cbTransferred);
 			pNetServer->_recvMsgCnt++;
 		}
 		else if (pNetOvl->_type == NET_TYPE::SEND)
 		{
-			// ::printf("%lld (%d): Send Success\n", (pSession->_ID & pNetServer->_idMask), GetCurrentThreadId());
+			//::printf("%lld (%d): Send Success\n", (pSession->_ID & pNetServer->_idMask), GetCurrentThreadId());
 			pNetServer->HandleSendCP(pSession->_ID, cbTransferred);
 			pNetServer->_sendMsgCnt++;
 		}
@@ -425,7 +427,7 @@ bool CLanServer::ReleaseSession(__int64 sessionID)
 	pSession->_debugData[debugIdx % dfSESSION_DEBUG_MAX].LeaveLog(
 		1, GetCurrentThreadId(), pSession->_validFlag._IOCount, pSession->_validFlag._releaseFlag, pSession->_ID, sessionID);
 
-	// ::printf("%lld (%d): Release Success\n", (pSession->_ID & _idMask), GetCurrentThreadId());
+	//::printf("%lld (%d): Release Success\n", (pSession->_ID & _idMask), GetCurrentThreadId());
 
 	closesocket(pSession->_sock);
 	pSession->Terminate();
@@ -502,6 +504,8 @@ bool CLanServer::HandleRecvCP(__int64 sessionID, int recvBytes)
 		packet->MovePayloadWritePos(dequeueRet);
 
 		OnRecv(pSession->_ID, packet);
+		CPacket::Free(packet);
+
 		useSize = pSession->_recvBuf.GetUseSize();
 	}
 
@@ -525,7 +529,7 @@ bool CLanServer::RecvPost(CSession* pSession)
 	if (!IncrementIOCount(pSession, __LINE__, 0)) return false;
 	int recvRet = WSARecv(pSession->_sock, pSession->_wsaRecvbuf,
 		dfWSARECVBUF_CNT, &recvBytes, &flags, (LPOVERLAPPED)&pSession->_recvOvl, NULL);
-	// ::printf("%lld (%d): Recv Request\n", (pSession->_ID & _idMask), GetCurrentThreadId());
+	//::printf("%lld (%d): Recv Request\n", (pSession->_ID & _idMask), GetCurrentThreadId());
 
 	if (recvRet == SOCKET_ERROR)
 	{
@@ -581,6 +585,20 @@ bool CLanServer::SendPost(CSession* pSession)
 		return false;
 	}
 
+	/*
+	for (;;)
+	{
+		if (pSession->_sendBuf.GetUseSize() == 0) return false;
+		if (InterlockedExchange(&pSession->_sendFlag, 1) == 1) continue;
+		if (pSession->_sendBuf.GetUseSize() == 0)
+		{
+			InterlockedExchange(&pSession->_sendFlag, 0);
+			return false;
+		}
+		break;
+	}
+	*/
+
 	int idx = 0;
 	int useSize = pSession->_sendBuf.GetUseSize();
 
@@ -603,7 +621,7 @@ bool CLanServer::SendPost(CSession* pSession)
 	int sendRet = WSASend(pSession->_sock, pSession->_wsaSendbuf,
 		idx, &sendBytes, 0, (LPOVERLAPPED)&pSession->_sendOvl, NULL);
 
-	// ::printf("%lld (%d): Send Request\n", (pSession->_ID & _idMask), GetCurrentThreadId());
+	//::printf("%lld (%d): Send Request\n", (pSession->_ID & _idMask), GetCurrentThreadId());
 
 	if (sendRet == SOCKET_ERROR)
 	{
@@ -650,3 +668,4 @@ bool CLanServer::DecrementIOCount(CSession* pSession, int line, int sessionID)
 	}
 	return false;
 }
+#endif

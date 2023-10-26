@@ -1,4 +1,6 @@
 #include "CLanServer.h"
+#ifdef LANSERVER
+
 #include "ErrorCode.h"
 #include <stdio.h>
 #include <tchar.h>
@@ -650,3 +652,4 @@ bool CLanServer::DecrementIOCount(CSession* pSession, int line, int sessionID)
 	}
 	return false;
 }
+#endif

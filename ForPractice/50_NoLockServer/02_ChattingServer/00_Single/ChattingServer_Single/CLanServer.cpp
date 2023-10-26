@@ -1,4 +1,6 @@
 #include "CLanServer.h"
+#ifdef LANSERVER
+
 #include "ErrorCode.h"
 #include <stdio.h>
 #include <tchar.h>
@@ -502,6 +504,8 @@ bool CLanServer::HandleRecvCP(__int64 sessionID, int recvBytes)
 		packet->MovePayloadWritePos(dequeueRet);
 
 		OnRecv(pSession->_ID, packet);
+		CPacket::Free(packet);
+
 		useSize = pSession->_recvBuf.GetUseSize();
 	}
 
@@ -650,3 +654,4 @@ bool CLanServer::DecrementIOCount(CSession* pSession, int line, int sessionID)
 	}
 	return false;
 }
+#endif
