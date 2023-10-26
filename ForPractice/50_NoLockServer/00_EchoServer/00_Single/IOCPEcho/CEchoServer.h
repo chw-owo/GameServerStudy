@@ -1,25 +1,24 @@
 #pragma once
-#include "SerializePacket.h"
-#include "NetLib.h"
+#include "CPacket.h"
+#include "CLanServer.h"
 
-class Server: public NetLib
+class CEchoServer: public CLanServer
 {
-private:
-	Server();
-	~Server() {}
-
 public:
-	static Server* GetInstance();
+	CEchoServer();
+	~CEchoServer() {}
 
 private:
-	static Server _server;
+	bool OnConnectRequest();
+	void OnAcceptClient(__int64 sessionID);
+	void OnRecv(__int64 sessionID, CPacket* packet);
+	void OnSend(__int64 sessionID, int sendSize);
+	void OnReleaseClient(__int64 sessionID);
 
-public:
-	void Monitor();
-
-public:
-	void OnAccept(__int64 sessionID);
-	void OnRecv(__int64 sessionID, SerializePacket* packet);
-	void OnRelease(__int64 sessionID);
+private:
+	 void OnInitialize();
+	 void OnTerminate();
+	 void OnThreadTerminate(wchar_t* threadName);
+	 void OnError(int errorCode, wchar_t* errorMsg);
 };
 

@@ -1,19 +1,12 @@
-﻿#include "Main.h"
+﻿#include "CEchoServer.h"
 
-bool g_bShutdown = false;
-
+CEchoServer g_Server;
 int wmain(int argc, wchar_t* argv[])
 {
-	Server* pServer = Server::GetInstance();
-
-	while (!g_bShutdown)
+	for(;;)
 	{
 		Sleep(1000);
-		if (GetAsyncKeyState(VK_ESCAPE))
-		{
-			g_bShutdown = true;
-		}
-		// pServer->Monitor();
+		if (GetAsyncKeyState(VK_ESCAPE)) break;
 	}
 
 	return 0;

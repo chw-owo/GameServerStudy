@@ -146,6 +146,7 @@
   <ItemGroup>
     <ClInclude Include="CCrashDump.h" />
     <ClInclude Include="CLanServer.h" />
+    <ClInclude Include="CLockFreeStack.h" />
     <ClInclude Include="CNetServer.h" />
     <ClInclude Include="Config.h" />
     <ClInclude Include="CProfiler.h" />

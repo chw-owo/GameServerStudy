@@ -102,5 +102,8 @@
     <ClInclude Include="ErrorCode.h">
       <Filter>NetLib</Filter>
     </ClInclude>
+    <ClInclude Include="CLockFreeStack.h">
+      <Filter>Commons</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

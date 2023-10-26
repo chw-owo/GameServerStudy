@@ -1,39 +1,57 @@
-#include "Server.h"
+#include "CEchoServer.h"
 
-Server::Server()
+CEchoServer::CEchoServer()
+{
+
+}
+
+bool CEchoServer::OnConnectRequest()
+{
+	return true;
+}
+
+void CEchoServer::OnAcceptClient(__int64 sessionID)
 {
 }
 
-Server* Server::GetInstance()
-{
-	static Server _server;
-	return &_server;
-}
-
-void Server::Monitor()
-{
-	// TO-DO
-}
-
-void Server::OnAccept(__int64 sessionID)
-{
-}
-
-void Server::OnRecv(__int64 sessionID, SerializePacket* packet)
+void CEchoServer::OnRecv(__int64 sessionID, CPacket* packet)
 {
 	__int64 echo;
 	*packet >> echo;
 
 	// ::printf("%llu\n", echo);
 
-	SerializePacket* sendPacket = _packetPool->Alloc();
+	CPacket* sendPacket = CPacket::Alloc();
 	*sendPacket << echo;
 	SendPacket(sessionID, sendPacket);
 }
 
-void Server::OnRelease(__int64 sessionID)
+void CEchoServer::OnSend(__int64 sessionID, int sendSize)
 {
 
 }
+
+void CEchoServer::OnReleaseClient(__int64 sessionID)
+{
+
+}
+
+void CEchoServer::OnInitialize()
+{
+}
+
+void CEchoServer::OnTerminate()
+{
+}
+
+void CEchoServer::OnThreadTerminate(wchar_t* threadName)
+{
+}
+
+void CEchoServer::OnError(int errorCode, wchar_t* errorMsg)
+{
+}
+
+
 
 
