@@ -582,7 +582,10 @@ void CGameServer::LogicUpdate(int threadNum)
 void CGameServer::ReqSendUnicast(CPacket* packet, __int64 sessionID)
 {
 	packet->AddUsageCount(1);
-	SendPacket(sessionID, packet);
+	if (!SendPacket(sessionID, packet))
+	{
+		CPacket::Free(packet);
+	}
 }
 
 void CGameServer::ReqSendSectors(CPacket* packet, CSector** sector, int sectorCnt, CPlayer* pExpPlayer)
@@ -639,7 +642,10 @@ void CGameServer::ReqSendSectors(CPacket* packet, CSector** sector, int sectorCn
 	vector<__int64>::iterator idIter = sendID.begin();
 	for (; idIter != sendID.end(); idIter++)
 	{
-		SendPacket(*idIter, packet);
+		if (!SendPacket(*idIter, packet))
+		{
+			CPacket::Free(packet);
+		}
 	}
 }
 
@@ -713,7 +719,10 @@ void CGameServer::ReqSendAroundSector(CPacket* packet, CSector* centerSector, CP
 	vector<__int64>::iterator idIter = sendID.begin();
 	for (; idIter != sendID.end(); idIter++)
 	{
-		SendPacket(*idIter, packet);
+		if (!SendPacket(*idIter, packet))
+		{
+			CPacket::Free(packet);
+		}
 	}
 }
 

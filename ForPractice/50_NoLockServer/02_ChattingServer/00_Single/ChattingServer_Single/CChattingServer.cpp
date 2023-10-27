@@ -572,12 +572,6 @@ inline void CChattingServer::HandleCSPacket_REQ_MESSAGE(CPacket* CSpacket, CPlay
 		return;
 	}
 
-	WORD tmpLen = (messageLen / 2) + 1;
-	wchar_t* tmp = new wchar_t[tmpLen];
-	memcpy_s(tmp, tmpLen * 2, message, messageLen);
-	tmp[tmpLen - 1] = L'\0';
-	// ::wprintf(L"%lld (%d): Message Send (%lld, %s)\n", (player->_sessionID & _idMask), GetCurrentThreadId(), accountNo, tmp);
-
 	CPacket* SCpacket = CPacket::Alloc();
 	SCpacket->Clear();
 	SetSCPacket_RES_MESSAGE(SCpacket, player->_accountNo, player->_ID, player->_nickname, messageLen, message);
@@ -588,7 +582,6 @@ inline void CChattingServer::HandleCSPacket_REQ_MESSAGE(CPacket* CSpacket, CPlay
 	}
 
 	delete[] message; // new[] - delete[]를 다른 함수에서 하는 게 기분이 나쁘다...
-	delete[] tmp;
 }
 
 inline void CChattingServer::HandleCSPacket_REQ_HEARTBEAT(CPlayer* player)

@@ -53,7 +53,6 @@ public:
 		return _pool.GetNodeCount();
 	}
 
-#define dfMAX 100
 	void AddUsageCount(long usageCount)
 	{
 		InterlockedAdd(&_usageCount, usageCount);

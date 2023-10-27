@@ -7,8 +7,6 @@
 #include <new.h>
 #include <windows.h>
 
-#define dfPACKET_DEF				10000
-
 template <class T>
 class CLockFreePool
 {

@@ -48,7 +48,10 @@ void CEchoServer::OnRecv(__int64 sessionID, CPacket* packet)
 		sendPacket->Clear();
 		sendPacket->AddUsageCount(1);
 		*sendPacket << echo;
-		SendPacket(sessionID, sendPacket);
+		if (!SendPacket(sessionID, sendPacket))
+		{
+			CPacket::Free(packet);
+		}
 	}
 	catch (int packetError)
 	{
