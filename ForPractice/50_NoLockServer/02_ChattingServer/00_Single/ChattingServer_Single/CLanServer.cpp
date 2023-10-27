@@ -30,8 +30,6 @@ bool CLanServer::NetworkInitialize(const wchar_t* IP, short port, int numOfThrea
 
 	// Network Setting ===================================================
 
-	// _pPacketPool = new CLockFreePool<CPacket>(0, false);
-
 	// Initialize Winsock
 	WSADATA wsa;
 	int startRet = WSAStartup(MAKEWORD(2, 2), &wsa);

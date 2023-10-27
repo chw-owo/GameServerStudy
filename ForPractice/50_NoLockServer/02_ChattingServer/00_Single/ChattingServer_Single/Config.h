@@ -30,7 +30,6 @@ struct stHeader
 #define dfHEADER_LEN				sizeof(stHeader)
 #endif
 
-#define dfPACKET_DEFAULT			0
 #define dfSESSION_MAX				10000
 
 #define dfWSARECVBUF_CNT			2

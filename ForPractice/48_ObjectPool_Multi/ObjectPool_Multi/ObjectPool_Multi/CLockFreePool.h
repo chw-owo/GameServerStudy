@@ -160,6 +160,7 @@ T* CLockFreePool<T>::Alloc(Types... args) // Pop
 			{
 				// 비어있는 노드가 없다면 생성한 후 Data의 생성자를 호출한다 (최초 생성)
 				PoolNode* pNewNode = (PoolNode*)malloc(sizeof(PoolNode));
+				new (&(pNewNode->_data)) T(args...);
 				return &(pNewNode->_data);
 			}
 

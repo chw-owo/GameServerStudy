@@ -30,8 +30,6 @@ bool CNetServer::NetworkInitialize(const wchar_t* IP, short port, int numOfThrea
 
 	// Network Setting ===================================================
 
-	// _pPacketPool = new CLockFreePool<CPacket>(0, false);
-
 	// Initialize Winsock
 	WSADATA wsa;
 	int startRet = WSAStartup(MAKEWORD(2, 2), &wsa);
@@ -283,10 +281,8 @@ bool CNetServer::SendPacket(__int64 sessionID, CPacket* packet)
 	}
 
 	pSession->_sendBuf.Enqueue(packet);
-	
 	SendPost(pSession);
 	DecrementIOCount(pSession, __LINE__, sessionID);
-
 	return true;
 }
 
@@ -502,6 +498,7 @@ bool CNetServer::HandleRecvCP(__int64 sessionID, int recvBytes)
 		}
 
 		CPacket* packet = CPacket::Alloc();
+
 		packet->Clear();
 		packet->AddUsageCount(1);
 		int dequeueRet = pSession->_recvBuf.Dequeue(packet->GetPayloadWritePtr(), header._len);
@@ -596,14 +593,19 @@ bool CNetServer::HandleSendCP(__int64 sessionID, int sendBytes)
 
 bool CNetServer::SendPost(CSession* pSession)
 {
-	if (pSession->_sendBuf.GetUseSize() == 0) return false;
-	if (InterlockedExchange(&pSession->_sendFlag, 1) == 1) return false;
-	if (pSession->_sendBuf.GetUseSize() == 0)
+	for (;;)
 	{
-		InterlockedExchange(&pSession->_sendFlag, 0);
-		return false;
+		if (pSession->_disconnect) return false;
+		if (pSession->_sendBuf.GetUseSize() == 0) return false;
+		if (InterlockedExchange(&pSession->_sendFlag, 1) == 1) continue;
+		if (pSession->_sendBuf.GetUseSize() == 0)
+		{
+			InterlockedExchange(&pSession->_sendFlag, 0);
+			return false;
+		}
+		break;
 	}
-
+	
 	int idx = 0;
 	int useSize = pSession->_sendBuf.GetUseSize();
 

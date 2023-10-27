@@ -40,10 +40,6 @@ public:
 		_sendFlag = 0;
 		_validFlag._flag = 0;
 
-		_recvBuf.ClearBuffer();
-		while (_sendBuf.GetUseSize() > 0) _sendBuf.Dequeue();
-		while (_tempBuf.GetUseSize() > 0) _tempBuf.Dequeue();
-
 		ZeroMemory(&_recvOvl._ovl, sizeof(_recvOvl._ovl));
 		ZeroMemory(&_sendOvl._ovl, sizeof(_sendOvl._ovl));
 		ZeroMemory(&_releaseOvl._ovl, sizeof(_releaseOvl._ovl));
@@ -57,6 +53,18 @@ public:
 		_sendFlag = 0;
 		_validFlag._IOCount = 0;
 		_validFlag._releaseFlag = 1;
+
+		_recvBuf.ClearBuffer();
+		while (_sendBuf.GetUseSize() > 0)
+		{
+			CPacket* packet = _sendBuf.Dequeue();
+			CPacket::Free(packet);
+		}
+		while (_tempBuf.GetUseSize() > 0)
+		{
+			CPacket* packet = _tempBuf.Dequeue();
+			CPacket::Free(packet);
+		}
 	}
 
 public:

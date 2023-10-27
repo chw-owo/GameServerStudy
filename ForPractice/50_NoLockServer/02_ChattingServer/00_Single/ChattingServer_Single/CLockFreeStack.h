@@ -44,11 +44,9 @@ private:
 
 private:
 	volatile long _useSize = 0;
+
 public:
-	long GetUseSize()
-	{
-		return _useSize;
-	}
+	long GetUseSize(){ return _useSize; }
 
 public:
 	void Push(T data)

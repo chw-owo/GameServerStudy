@@ -9,7 +9,7 @@ bool CChattingServer::Initialize()
 {
 	// Set Queue & Pool
 	_pJobQueue = new CLockFreeQueue<CJob*>;
-	_pJobPool = new CLockFreePool<CJob>(0, false);
+	_pJobPool = new CLockFreePool<CJob>(dfJOB_DEF, true);
 	_pPlayerPool = new CObjectPool<CPlayer>(dfPLAYER_MAX, true);
 
 	// Set Sector
@@ -283,8 +283,6 @@ void CChattingServer::HandleRecv(__int64 sessionID, CPacket* packet)
 			::wprintf(L"%s[%d] Undefined Message, %d\n", _T(__FUNCTION__), __LINE__, msgType);
 			break;
 		}
-
-		CPacket::Free(packet);
 	}
 	catch (int packetError)
 	{
@@ -337,6 +335,8 @@ unsigned int __stdcall CChattingServer::UpdateThread(void* arg)
 				pServer->HandleRecv(job->_sessionID, job->_packet);
 				CPacket::Free(job->_packet);
 			}
+
+			pServer->_pJobPool->Free(job);
 		}
 
 		InterlockedExchange(&pServer->_signal, undesired);
@@ -360,8 +360,9 @@ unsigned int __stdcall CChattingServer::MonitorThread(void* arg)
 		SYSTEMTIME stTime;
 		GetLocalTime(&stTime);
 		WCHAR text[dfMONITOR_TEXT_LEN];
-		swprintf_s(text, dfMONITOR_TEXT_LEN, L"[%s %02d:%02d:%02d]\n\nTotal Accept: %d\nTotal Disconnect: %d\nConnected Session: %d\nRecv/1sec: %d\nSend/1sec: %d\nAccept/1sec: %d\nDisconnect/1sec: %d\n\n",
-			_T(__DATE__), stTime.wHour, stTime.wMinute, stTime.wSecond, pServer->GetAcceptTotal(), pServer->GetDisconnectTotal(), pServer->GetSessionCount(), pServer->GetRecvMsgTPS(), pServer->GetSendMsgTPS(), pServer->GetAcceptTPS(), pServer->GetDisconnectTPS());
+		swprintf_s(text, dfMONITOR_TEXT_LEN, L"[%s %02d:%02d:%02d]\n\nTotal Accept: %d\nTotal Disconnect: %d\nConnected Session: %d\nRecv/1sec: %d\nSend/1sec: %d\nAccept/1sec: %d\nDisconnect/1sec: %d\n\nPacket Pool: %d/%d\nPlayer Pool:%d/%d\nJob Pool: %d/%d\n\n",
+			_T(__DATE__), stTime.wHour, stTime.wMinute, stTime.wSecond, pServer->GetAcceptTotal(), pServer->GetDisconnectTotal(), pServer->GetSessionCount(), pServer->GetRecvMsgTPS(), pServer->GetSendMsgTPS(), pServer->GetAcceptTPS(), pServer->GetDisconnectTPS(),
+			CPacket::GetPoolSize(), CPacket::GetNodeCount(), pServer->_pPlayerPool->GetPoolSize(), pServer->_pPlayerPool->GetNodeCount(), pServer->_pJobPool->GetPoolSize(), pServer->_pJobPool->GetNodeCount());
 		::wprintf(L"%s", text);
 
 		pServer->ResetMonitorData();
@@ -417,7 +418,10 @@ unsigned int __stdcall CChattingServer::TimeoutThread(void* arg)
 void CChattingServer::ReqSendUnicast(CPacket* packet, __int64 sessionID)
 {
 	packet->AddUsageCount(1);
-	SendPacket(sessionID, packet);
+	if (!SendPacket(sessionID, packet))
+	{
+		CPacket::Free(packet);
+	}
 }
 
 void CChattingServer::ReqSendAroundSector(CPacket* packet, CSector* centerSector, CPlayer* pExpPlayer)
@@ -472,7 +476,10 @@ void CChattingServer::ReqSendAroundSector(CPacket* packet, CSector* centerSector
 	vector<__int64>::iterator idIter = sendID.begin();
 	for (; idIter != sendID.end(); idIter++)
 	{
-		SendPacket(*idIter, packet);
+		if (!SendPacket(*idIter, packet))
+		{
+			CPacket::Free(packet);
+		}
 		// ::wprintf(L"%lld (%d): Send Packet!\n", ((*idIter) & _idMask), GetCurrentThreadId());
 	}
 }

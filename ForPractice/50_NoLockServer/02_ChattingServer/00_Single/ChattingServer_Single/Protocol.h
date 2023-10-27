@@ -11,6 +11,7 @@
 #define dfPLAYER_MAX			10000
 #define dfTIMEOUT				40000
 #define dfMONITOR_TEXT_LEN		1024
+#define dfJOB_DEF				10000
 
 #define dfID_LEN				20
 #define dfNICKNAME_LEN			20

@@ -24,6 +24,14 @@ public:
 	inline bool Free(T* pData);
 
 private:
+	long _poolSize = 0;
+	long _nodeCount = 0;
+
+public:
+	long GetPoolSize() { return _poolSize; }
+	long GetNodeCount() { return _nodeCount; }
+
+private:
 	bool _placementNew;
 	int _blockNum;
 	stNODE* _pFreeNode = nullptr;
@@ -36,6 +44,9 @@ CObjectPool<T>::CObjectPool(int blockNum, bool placementNew, Types... args)
 {
 	if (_blockNum <= 0)
 		return;
+
+	_poolSize = blockNum;
+	_nodeCount = blockNum;
 
 	if (_placementNew)
 	{
@@ -101,12 +112,12 @@ template<class T>
 template<typename... Types>
 T* CObjectPool<T>::Alloc(Types... args)
 {
-
 	if (_pFreeNode == nullptr)
 	{
 		// 비어있는 노드가 없다면 생성한 후 Data의 생성자를 호출한다 (최초 생성)
 		stNODE* pNew = (stNODE*)malloc(sizeof(stNODE));
 		new (&(pNew->data)) T(args...);
+		_nodeCount++;
 		return &(pNew->data);
 	}
 
@@ -116,6 +127,7 @@ T* CObjectPool<T>::Alloc(Types... args)
 		stNODE* p = _pFreeNode;
 		_pFreeNode = (stNODE*)_pFreeNode->tail;
 		new (&(p->data)) T(args...);
+		_poolSize--;
 		return &(p->data);
 	}
 	else
@@ -123,6 +135,7 @@ T* CObjectPool<T>::Alloc(Types... args)
 		// 비어있는 노드가 있다면 가져온 후 Data의 생성자를 호출하지 않는다
 		stNODE* p = _pFreeNode;
 		_pFreeNode = (stNODE*)_pFreeNode->tail;
+		_poolSize--;
 		return &(p->data);
 	}
 
@@ -138,6 +151,7 @@ bool CObjectPool<T>::Free(T* pData)
 		pData->~T();
 		((stNODE*)pData)->tail = (size_t)_pFreeNode;
 		_pFreeNode = (stNODE*)pData;
+		_poolSize++;
 		return true;
 	}
 	else
@@ -145,6 +159,7 @@ bool CObjectPool<T>::Free(T* pData)
 		// Data의 소멸자를 호출하지 않고 _pFreeNode에 push한다
 		((stNODE*)pData)->tail = (size_t)_pFreeNode;
 		_pFreeNode = (stNODE*)pData;
+		_poolSize++;
 		return true;
 	}
 

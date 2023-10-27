@@ -68,9 +68,6 @@ protected:
 	inline int GetAcceptTPS() { return _acceptTPS; }
 	inline int GetDisconnectTPS() { return _disconnectTPS; }
 
-protected:
-	// CLockFreePool<CPacket>* _pPacketPool;
-
 	// Called in Network Library
 private:
 	static unsigned int WINAPI AcceptThread(void* arg);
@@ -126,6 +123,5 @@ private:
 	volatile long _disconnectCnt = 0;
 	int _recvMsgCnt = 0;
 	int _sendMsgCnt = 0;
-
 };
 #endif
