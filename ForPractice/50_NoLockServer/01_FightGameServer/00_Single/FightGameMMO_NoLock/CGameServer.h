@@ -50,14 +50,14 @@ private:
 	void ReqSendAroundSector(CPacket* packet, CSector* centerSector, CPlayer* pExpPlayer = nullptr);
 
 private:
-	void SleepForFixedFrame();
+	bool SkipForFixedFrame(DWORD time);
 	void LogicUpdate();
 	void HandleNetwork();
 
 private:
 	bool CheckMovable(short x, short y);
 	void UpdatePlayerMove(CPlayer* pPlayer);
-	void SetPlayerDead(CPlayer* pPlayer, bool timeout);
+	void SetPlayerDead(CPlayer* pPlayer);
 	void UpdateSector(CPlayer* pPlayer, short direction);
 	void SetSectorsAroundInfo();
 
@@ -115,7 +115,6 @@ private:
 
 private:
 	__int64 _playerIDGenerator = 0;
-	vector<CPlayer*> _players;
 	unordered_map<__int64, CPlayer*> _playersMap;
 	CObjectPool<CPlayer>* _playerPool;
 
@@ -128,10 +127,7 @@ private:
 
 private:
 	// For Monitor Thread
-	long _totalSyncCnt = 0;
-	long _totalAcceptCnt = 0;
 	volatile long _logicFPS = 0;
 	volatile long _syncCnt = 0;
 	volatile long _timeoutCnt = 0;
-	volatile long _connectEndCnt = 0;
 };

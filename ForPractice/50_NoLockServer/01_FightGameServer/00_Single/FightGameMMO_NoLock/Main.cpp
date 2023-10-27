@@ -22,8 +22,7 @@ int wmain(int argc, wchar_t* argv[])
     if (!g_GameServer.Initialize()) return 0;
     for(;;)
     {
-        if (GetAsyncKeyState(VK_SPACE))
-            g_GameServer.Terminate();
+        // if (GetAsyncKeyState(VK_SPACE)) g_GameServer.Terminate();
     }
     timeEndPeriod(1);
 

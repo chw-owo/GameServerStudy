@@ -41,32 +41,29 @@ protected:
 	inline void UpdateMonitorData()
 	{
 		long acceptCnt = InterlockedExchange(&_acceptCnt, 0);
+		long releaseCnt = InterlockedExchange(&_releaseCnt, 0);
 		long disconnectCnt = InterlockedExchange(&_disconnectCnt, 0);
 
 		_acceptTotal += acceptCnt;
+		_releaseTotal += releaseCnt;
 		_disconnectTotal += disconnectCnt;
 
 		_acceptTPS = acceptCnt;
+		_releaseTPS = releaseCnt;
 		_disconnectTPS = disconnectCnt;
 		_recvMsgTPS = _recvMsgCnt;
 		_sendMsgTPS = _sendMsgCnt;
 	}
 
-	inline void ResetMonitorData()
-	{
-		_acceptCnt = 0;
-		_disconnectCnt = 0;
-		_recvMsgCnt = 0;
-		_sendMsgCnt = 0;
-	}
-
 	inline int GetAcceptTotal() { return _acceptTotal; }
-	inline int GetDisconnectTotal() { return _disconnectTotal; }
+	inline int GetReleaseTotal() { return _releaseTotal; }
+	inline int GetDisconnectTotal() { return  _disconnectTotal; }
 	inline long GetSessionCount() { return _sessionCnt; }
 
 	inline int GetRecvMsgTPS() { return _recvMsgTPS; }
 	inline int GetSendMsgTPS() { return _sendMsgTPS; }
 	inline int GetAcceptTPS() { return _acceptTPS; }
+	inline int GetReleaseTPS() { return _releaseTPS; }
 	inline int GetDisconnectTPS() { return _disconnectTPS; }
 
 protected:
@@ -115,15 +112,17 @@ private:
 
 private:
 	int _acceptTotal = 0;
+	int _releaseTotal = 0;
 	int _disconnectTotal = 0;
-	int _TryReleaseTotal = 0;
 
 	int _acceptTPS = 0;
+	int _releaseTPS = 0;
 	int _disconnectTPS = 0;
 	int _recvMsgTPS = 0;
 	int _sendMsgTPS = 0;
 
 	volatile long _acceptCnt = 0;
+	volatile long _releaseCnt = 0;
 	volatile long _disconnectCnt = 0;
 	int _recvMsgCnt = 0;
 	int _sendMsgCnt = 0;

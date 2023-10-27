@@ -11,6 +11,7 @@ class CPlayer
 public:
 	inline CPlayer(__int64 sessionID, __int64 playerID)
 	{
+		_alive = true;
 		_sessionID = sessionID;
 		_playerID = playerID;
 
@@ -33,6 +34,7 @@ public:
 	}
 
 public:
+	bool _alive;
 	__int64 _sessionID;
 	__int64 _playerID;
 

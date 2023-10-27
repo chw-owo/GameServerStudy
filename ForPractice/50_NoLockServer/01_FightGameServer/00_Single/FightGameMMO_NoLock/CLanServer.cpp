@@ -230,11 +230,25 @@ bool CLanServer::Disconnect(__int64 sessionID)
 	idx >>= ID_BIT_SIZE;
 	CSession* pSession = _sessions[(short)idx];
 
-	if (pSession->_validFlag._releaseFlag == 1) return false;
-	if (pSession->_ID != sessionID) return false;
+	// ::printf("%lld: Disconnect Req\n", sessionID & _idMask);
+
+	if (pSession->_validFlag._releaseFlag == 1) 
+	{
+		// ::printf("%lld: Disconnect Fail 0\n", sessionID & _idMask);
+		return false;
+	}
+	if (pSession->_ID != sessionID) 
+	{
+		// ::printf("%lld: Disconnect Fail 1\n", sessionID & _idMask);
+		return false;
+	}
 
 	pSession->_disconnect = true;
-	CancelIoEx(&pSession->_sock, nullptr);
+	CancelIoEx((HANDLE)pSession->_sock, (LPOVERLAPPED)&pSession->_recvOvl);
+	CancelIoEx((HANDLE)pSession->_sock, (LPOVERLAPPED)&pSession->_sendOvl);
+
+	InterlockedIncrement(&_disconnectCnt);
+	// ::printf("%lld: Disconnect Success\n", sessionID & _idMask);
 
 	return true;
 }
@@ -419,9 +433,14 @@ bool CLanServer::ReleaseSession(__int64 sessionID)
 
 	if (InterlockedCompareExchange(&pSession->_validFlag._flag, 1, 0) != 0)
 	{
+		// ::printf("%lld: Release Fail 0\n", pSession->_ID & _idMask);
 		return false;
 	}
-	if (pSession->_ID != sessionID) return false;
+	if (pSession->_ID != sessionID) 
+	{
+		// ::printf("%lld: Release Fail 1\n", pSession->_ID & _idMask);
+		return false;
+	}
 
 	debugIdx = InterlockedIncrement(&pSession->_debugIdx);
 	pSession->_debugData[debugIdx % dfSESSION_DEBUG_MAX].LeaveLog(
@@ -431,7 +450,7 @@ bool CLanServer::ReleaseSession(__int64 sessionID)
 
 	closesocket(pSession->_sock);
 	pSession->Terminate();
-	InterlockedIncrement(&_disconnectCnt);
+	InterlockedIncrement(&_releaseCnt);
 
 	_emptyIdx.Push(idx);
 	InterlockedDecrement(&_sessionCnt);

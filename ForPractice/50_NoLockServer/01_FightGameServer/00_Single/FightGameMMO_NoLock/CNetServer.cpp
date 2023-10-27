@@ -234,7 +234,8 @@ bool CNetServer::Disconnect(__int64 sessionID)
 	if (pSession->_ID != sessionID) return false;
 
 	pSession->_disconnect = true;
-	CancelIoEx(&pSession->_sock, nullptr);
+	CancelIoEx((HANDLE)pSession->_sock, (LPOVERLAPPED)&pSession->_recvOvl);
+	CancelIoEx((HANDLE)pSession->_sock, (LPOVERLAPPED)&pSession->_sendOvl);
 
 	return true;
 }

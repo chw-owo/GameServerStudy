@@ -129,9 +129,8 @@ unsigned int __stdcall CGameServer::UpdateThread(void* arg)
 
 	while (pServer->_serverAlive)
 	{
-		pServer->LogicUpdate();
 		pServer->HandleNetwork();
-		pServer->SleepForFixedFrame();
+		pServer->LogicUpdate();
 	}
 
 	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Update Thread Terminate.\n");
@@ -144,21 +143,22 @@ unsigned int __stdcall CGameServer::MonitorThread(void* arg)
 {
 	CGameServer* pServer = (CGameServer*)arg;
 	CreateDirectory(L"MonitorLog", NULL);
+	long totalSyncCnt = 0;
 	Sleep(1000);
 
 	while (pServer->_serverAlive)
 	{
 		pServer->UpdateMonitorData();
-		pServer->_totalSyncCnt += pServer->_syncCnt;
+		totalSyncCnt += pServer->_syncCnt;
 
 		SYSTEMTIME stTime;
 		GetLocalTime(&stTime);
 
 		WCHAR text[dfMONITOR_TEXT_LEN];
 		swprintf_s(text, dfMONITOR_TEXT_LEN,
-			L"[%s %02d:%02d:%02d]\n\nLogic FPS: %d\nTotal Accept: %d\nTotal Disconnect: %d\nConnected Session: %d\nTotal Sync: %d\nDisconnect/1sec: %d\n\n",
-			_T(__DATE__), stTime.wHour, stTime.wMinute, stTime.wSecond, pServer->_logicFPS, pServer->GetAcceptTotal(), 
-			pServer->GetDisconnectTotal(), pServer->GetSessionCount(), pServer->_totalSyncCnt, pServer->GetDisconnectTPS());
+			L"[%s %02d:%02d:%02d]\n\nLogic FPS: %d\nTotal Accept: %d\nTotal Release: %d\nConnected Session: %d\nTotal Sync: %d\nRelease/1sec: %d\nTimeout/1sec: %d\nDisconnect/1sec: %d\n\n",
+			_T(__DATE__), stTime.wHour, stTime.wMinute, stTime.wSecond, pServer->_logicFPS, pServer->GetAcceptTotal(), pServer->GetReleaseTotal(),
+			pServer->GetSessionCount(), totalSyncCnt, pServer->GetReleaseTPS(), pServer->_timeoutCnt, pServer->GetDisconnectTPS());
 		::wprintf(L"%s", text);
 
 		FILE* file;
@@ -183,7 +183,6 @@ unsigned int __stdcall CGameServer::MonitorThread(void* arg)
 		InterlockedExchange(&pServer->_logicFPS, 0);
 		InterlockedExchange(&pServer->_syncCnt, 0);
 		InterlockedExchange(&pServer->_timeoutCnt, 0);
-		InterlockedExchange(&pServer->_connectEndCnt, 0);
 
 		Sleep(1000);
 	}
@@ -196,7 +195,7 @@ unsigned int __stdcall CGameServer::MonitorThread(void* arg)
 
 inline void CGameServer::HandleAccept(__int64 sessionID)
 {
-	if (_players.size() > dfPLAYER_MAX)
+	if (_playersMap.size() > dfPLAYER_MAX)
 	{
 		LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d] player max\n", _T(__FUNCTION__), __LINE__);
 		::wprintf(L"%s[%d] player max\n", _T(__FUNCTION__), __LINE__);
@@ -207,7 +206,6 @@ inline void CGameServer::HandleAccept(__int64 sessionID)
 	__int64 playerID = _playerIDGenerator++;
 	CPlayer* pPlayer = _playerPool->Alloc(sessionID, playerID);
 	_playersMap.insert(make_pair(sessionID, pPlayer));
-	_players.push_back(pPlayer);
 
 	int sectorX = (pPlayer->_x / dfSECTOR_SIZE_X) + 2;
 	int sectorY = (pPlayer->_y / dfSECTOR_SIZE_Y) + 2;
@@ -267,23 +265,13 @@ inline void CGameServer::HandleRelease(__int64 sessionID)
 	CPlayer* pPlayer = iter->second;
 	_playersMap.erase(iter);
 
-	vector<CPlayer*>::iterator vectorIter = _players.begin();
-	for (; vectorIter < _players.end(); vectorIter++)
+	CSector* pSector = pPlayer->_pSector;
+	vector<CPlayer*>::iterator vectorIter = pSector->_players.begin();
+	for (; vectorIter < pSector->_players.end(); vectorIter++)
 	{
 		if (*vectorIter == pPlayer)
 		{
-			_players.erase(vectorIter);
-			break;
-		}
-	}
-
-	CSector* pSector = pPlayer->_pSector;
-	vector<CPlayer*>::iterator sectorIter = pSector->_players.begin();
-	for (; sectorIter < pSector->_players.end(); sectorIter++)
-	{
-		if (*sectorIter == pPlayer)
-		{
-			pSector->_players.erase(sectorIter);
+			pSector->_players.erase(vectorIter);
 			break;
 		}
 	}
@@ -294,7 +282,6 @@ inline void CGameServer::HandleRelease(__int64 sessionID)
 	ReqSendAroundSector(deletePacket, pSector);
 
 	_playerPool->Free(pPlayer);
-	InterlockedIncrement(&_connectEndCnt);
 }
 
 inline void CGameServer::HandleRecv(__int64 sessionID, CPacket* packet)
@@ -345,8 +332,6 @@ inline void CGameServer::HandleRecv(__int64 sessionID, CPacket* packet)
 			::wprintf(L"%s[%d] Undefined Message, %d\n", _T(__FUNCTION__), __LINE__, msgType);
 			break;
 		}
-
-		CPacket::Free(packet);
 	}
 	catch (int packetError)
 	{
@@ -359,25 +344,28 @@ inline void CGameServer::HandleRecv(__int64 sessionID, CPacket* packet)
 	}
 }
 
-void CGameServer::SleepForFixedFrame()
+bool CGameServer::SkipForFixedFrame(DWORD time)
 {
-	if ((timeGetTime() - _oldTick) < _timeGap)
-		Sleep(_timeGap - (timeGetTime() - _oldTick));
+	if ((time - _oldTick) < _timeGap) return true;
 	_oldTick += _timeGap;
+	return false;
 }
 
 void CGameServer::LogicUpdate()
 {
+	DWORD time = timeGetTime();
+	if (SkipForFixedFrame(time)) return;
 	InterlockedIncrement(&_logicFPS);
 
-	vector<CPlayer*>::iterator vectorIter = _players.begin();
-	for (; vectorIter < _players.end(); vectorIter++)
+	unordered_map<__int64, CPlayer*>::iterator iter = _playersMap.begin();
+	for (; iter != _playersMap.end(); iter++)
 	{
-		CPlayer* pPlayer = *vectorIter;
+		CPlayer* pPlayer = iter->second;
+		if (!pPlayer->_alive) continue;
 
-		if ((timeGetTime() - pPlayer->_lastRecvTime) > dfNETWORK_PACKET_RECV_TIMEOUT)
+		if ((time - pPlayer->_lastRecvTime) > dfNETWORK_PACKET_RECV_TIMEOUT)
 		{
-			SetPlayerDead(pPlayer, true);
+			SetPlayerDead(pPlayer);
 			InterlockedIncrement(&_timeoutCnt);
 			continue;
 		}
@@ -652,24 +640,9 @@ void CGameServer::UpdatePlayerMove(CPlayer* pPlayer)
 	}
 }
 
-void CGameServer::SetPlayerDead(CPlayer* pPlayer, bool timeout)
+void CGameServer::SetPlayerDead(CPlayer* pPlayer)
 {
-	CSector* pSector = pPlayer->_pSector;
-	vector<CPlayer*>::iterator vectorIter = pSector->_players.begin();
-	for (; vectorIter < pSector->_players.end(); vectorIter++)
-	{
-		if (*vectorIter == pPlayer)
-		{
-			pSector->_players.erase(vectorIter);
-			break;
-		}
-	}
-
-	CPacket* deletePacket = CPacket::Alloc();
-	deletePacket->Clear();
-	int deleteRet = SetSCPacket_DELETE_CHAR(deletePacket, pPlayer->_playerID);
-	ReqSendAroundSector(deletePacket, pSector);
-
+	pPlayer->_alive = false;
 	Disconnect(pPlayer->_sessionID);
 }
 
@@ -700,7 +673,7 @@ void CGameServer::UpdateSector(CPlayer* pPlayer, short direction)
 	CPacket* deleteMeToOtherPacket = CPacket::Alloc();
 	deleteMeToOtherPacket->Clear();
 	int deleteMeToOtherRet = SetSCPacket_DELETE_CHAR(deleteMeToOtherPacket, pPlayer->_playerID);
-	ReqSendSectors(deleteMeToOtherPacket, inSector, sectorCnt, pPlayer);
+	ReqSendSectors(deleteMeToOtherPacket, outSector, sectorCnt, pPlayer);
 
 	// Send Data About Other Player ==============================================
 
@@ -1134,7 +1107,7 @@ inline bool CGameServer::SetPlayerAttack1(CPlayer* pPlayer, CPlayer*& pDamagedPl
 				{
 					(*iter)->_hp -= dfATTACK1_DAMAGE;
 					pDamagedPlayer = (*iter);
-					if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer, false);
+					if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer);
 					return true;
 				}
 			}
@@ -1154,7 +1127,7 @@ inline bool CGameServer::SetPlayerAttack1(CPlayer* pPlayer, CPlayer*& pDamagedPl
 				{
 					(*iter)->_hp -= dfATTACK1_DAMAGE;
 					pDamagedPlayer = (*iter);
-					if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer, false);
+					if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer);
 					return true;
 				}
 			}
@@ -1173,7 +1146,7 @@ inline bool CGameServer::SetPlayerAttack1(CPlayer* pPlayer, CPlayer*& pDamagedPl
 					{
 						(*iter)->_hp -= dfATTACK1_DAMAGE;
 						pDamagedPlayer = (*iter);
-						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer, false);
+						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer);
 						return true;
 					}
 				}
@@ -1192,7 +1165,7 @@ inline bool CGameServer::SetPlayerAttack1(CPlayer* pPlayer, CPlayer*& pDamagedPl
 					{
 						(*iter)->_hp -= dfATTACK1_DAMAGE;
 						pDamagedPlayer = (*iter);
-						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer, false);
+						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer);
 						return true;
 					}
 				}
@@ -1214,7 +1187,7 @@ inline bool CGameServer::SetPlayerAttack1(CPlayer* pPlayer, CPlayer*& pDamagedPl
 					{
 						(*iter)->_hp -= dfATTACK1_DAMAGE;
 						pDamagedPlayer = (*iter);
-						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer, false);
+						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer);
 						return true;
 					}
 				}
@@ -1233,7 +1206,7 @@ inline bool CGameServer::SetPlayerAttack1(CPlayer* pPlayer, CPlayer*& pDamagedPl
 					{
 						(*iter)->_hp -= dfATTACK1_DAMAGE;
 						pDamagedPlayer = (*iter);
-						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer, false);
+						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer);
 						return true;
 					}
 				}
@@ -1256,7 +1229,7 @@ inline bool CGameServer::SetPlayerAttack1(CPlayer* pPlayer, CPlayer*& pDamagedPl
 				{
 					(*iter)->_hp -= dfATTACK1_DAMAGE;
 					pDamagedPlayer = (*iter);
-					if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer, false);
+					if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer);
 					return true;
 				}
 			}
@@ -1276,7 +1249,7 @@ inline bool CGameServer::SetPlayerAttack1(CPlayer* pPlayer, CPlayer*& pDamagedPl
 				{
 					(*iter)->_hp -= dfATTACK1_DAMAGE;
 					pDamagedPlayer = (*iter);
-					if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer, false);
+					if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer);
 					return true;
 				}
 			}
@@ -1295,7 +1268,7 @@ inline bool CGameServer::SetPlayerAttack1(CPlayer* pPlayer, CPlayer*& pDamagedPl
 					{
 						(*iter)->_hp -= dfATTACK1_DAMAGE;
 						pDamagedPlayer = (*iter);
-						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer, false);
+						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer);
 						return true;
 					}
 				}
@@ -1314,7 +1287,7 @@ inline bool CGameServer::SetPlayerAttack1(CPlayer* pPlayer, CPlayer*& pDamagedPl
 					{
 						(*iter)->_hp -= dfATTACK1_DAMAGE;
 						pDamagedPlayer = (*iter);
-						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer, false);
+						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer);
 						return true;
 					}
 				}
@@ -1336,7 +1309,7 @@ inline bool CGameServer::SetPlayerAttack1(CPlayer* pPlayer, CPlayer*& pDamagedPl
 					{
 						(*iter)->_hp -= dfATTACK1_DAMAGE;
 						pDamagedPlayer = (*iter);
-						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer, false);
+						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer);
 						return true;
 					}
 				}
@@ -1355,7 +1328,7 @@ inline bool CGameServer::SetPlayerAttack1(CPlayer* pPlayer, CPlayer*& pDamagedPl
 					{
 						(*iter)->_hp -= dfATTACK1_DAMAGE;
 						pDamagedPlayer = (*iter);
-						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer, false);
+						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer);
 						return true;
 					}
 				}
@@ -1391,7 +1364,7 @@ inline bool CGameServer::SetPlayerAttack2(CPlayer* pPlayer, CPlayer*& pDamagedPl
 				{
 					(*iter)->_hp -= dfATTACK2_DAMAGE;
 					pDamagedPlayer = (*iter);
-					if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer, false);
+					if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer);
 					return true;
 				}
 			}
@@ -1411,7 +1384,7 @@ inline bool CGameServer::SetPlayerAttack2(CPlayer* pPlayer, CPlayer*& pDamagedPl
 				{
 					(*iter)->_hp -= dfATTACK2_DAMAGE;
 					pDamagedPlayer = (*iter);
-					if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer, false);
+					if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer);
 					return true;
 				}
 			}
@@ -1430,7 +1403,7 @@ inline bool CGameServer::SetPlayerAttack2(CPlayer* pPlayer, CPlayer*& pDamagedPl
 					{
 						(*iter)->_hp -= dfATTACK2_DAMAGE;
 						pDamagedPlayer = (*iter);
-						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer, false);
+						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer);
 						return true;
 					}
 				}
@@ -1449,7 +1422,7 @@ inline bool CGameServer::SetPlayerAttack2(CPlayer* pPlayer, CPlayer*& pDamagedPl
 					{
 						(*iter)->_hp -= dfATTACK2_DAMAGE;
 						pDamagedPlayer = (*iter);
-						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer, false);
+						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer);
 						return true;
 					}
 				}
@@ -1471,7 +1444,7 @@ inline bool CGameServer::SetPlayerAttack2(CPlayer* pPlayer, CPlayer*& pDamagedPl
 					{
 						(*iter)->_hp -= dfATTACK2_DAMAGE;
 						pDamagedPlayer = (*iter);
-						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer, false);
+						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer);
 						return true;
 					}
 				}
@@ -1490,7 +1463,7 @@ inline bool CGameServer::SetPlayerAttack2(CPlayer* pPlayer, CPlayer*& pDamagedPl
 					{
 						(*iter)->_hp -= dfATTACK2_DAMAGE;
 						pDamagedPlayer = (*iter);
-						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer, false);
+						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer);
 						return true;
 					}
 				}
@@ -1513,7 +1486,7 @@ inline bool CGameServer::SetPlayerAttack2(CPlayer* pPlayer, CPlayer*& pDamagedPl
 				{
 					(*iter)->_hp -= dfATTACK2_DAMAGE;
 					pDamagedPlayer = (*iter);
-					if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer, false);
+					if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer);
 					return true;
 				}
 			}
@@ -1533,7 +1506,7 @@ inline bool CGameServer::SetPlayerAttack2(CPlayer* pPlayer, CPlayer*& pDamagedPl
 				{
 					(*iter)->_hp -= dfATTACK2_DAMAGE;
 					pDamagedPlayer = (*iter);
-					if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer, false);
+					if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer);
 					return true;
 				}
 			}
@@ -1552,7 +1525,7 @@ inline bool CGameServer::SetPlayerAttack2(CPlayer* pPlayer, CPlayer*& pDamagedPl
 					{
 						(*iter)->_hp -= dfATTACK2_DAMAGE;
 						pDamagedPlayer = (*iter);
-						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer, false);
+						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer);
 						return true;
 					}
 				}
@@ -1571,7 +1544,7 @@ inline bool CGameServer::SetPlayerAttack2(CPlayer* pPlayer, CPlayer*& pDamagedPl
 					{
 						(*iter)->_hp -= dfATTACK2_DAMAGE;
 						pDamagedPlayer = (*iter);
-						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer, false);
+						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer);
 						return true;
 					}
 				}
@@ -1593,7 +1566,7 @@ inline bool CGameServer::SetPlayerAttack2(CPlayer* pPlayer, CPlayer*& pDamagedPl
 					{
 						(*iter)->_hp -= dfATTACK2_DAMAGE;
 						pDamagedPlayer = (*iter);
-						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer, false);
+						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer);
 						return true;
 					}
 				}
@@ -1612,7 +1585,7 @@ inline bool CGameServer::SetPlayerAttack2(CPlayer* pPlayer, CPlayer*& pDamagedPl
 					{
 						(*iter)->_hp -= dfATTACK2_DAMAGE;
 						pDamagedPlayer = (*iter);
-						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer, false);
+						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer);
 						return true;
 					}
 				}
@@ -1648,7 +1621,7 @@ inline bool CGameServer::SetPlayerAttack3(CPlayer* pPlayer, CPlayer*& pDamagedPl
 				{
 					(*iter)->_hp -= dfATTACK3_DAMAGE;
 					pDamagedPlayer = (*iter);
-					if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer, false);
+					if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer);
 					return true;
 				}
 			}
@@ -1668,7 +1641,7 @@ inline bool CGameServer::SetPlayerAttack3(CPlayer* pPlayer, CPlayer*& pDamagedPl
 				{
 					(*iter)->_hp -= dfATTACK3_DAMAGE;
 					pDamagedPlayer = (*iter);
-					if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer, false);
+					if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer);
 					return true;
 				}
 			}
@@ -1687,7 +1660,7 @@ inline bool CGameServer::SetPlayerAttack3(CPlayer* pPlayer, CPlayer*& pDamagedPl
 					{
 						(*iter)->_hp -= dfATTACK3_DAMAGE;
 						pDamagedPlayer = (*iter);
-						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer, false);
+						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer);
 						return true;
 					}
 				}
@@ -1706,7 +1679,7 @@ inline bool CGameServer::SetPlayerAttack3(CPlayer* pPlayer, CPlayer*& pDamagedPl
 					{
 						(*iter)->_hp -= dfATTACK3_DAMAGE;
 						pDamagedPlayer = (*iter);
-						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer, false);
+						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer);
 						return true;
 					}
 				}
@@ -1728,7 +1701,7 @@ inline bool CGameServer::SetPlayerAttack3(CPlayer* pPlayer, CPlayer*& pDamagedPl
 					{
 						(*iter)->_hp -= dfATTACK3_DAMAGE;
 						pDamagedPlayer = (*iter);
-						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer, false);
+						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer);
 						return true;
 					}
 				}
@@ -1747,7 +1720,7 @@ inline bool CGameServer::SetPlayerAttack3(CPlayer* pPlayer, CPlayer*& pDamagedPl
 					{
 						(*iter)->_hp -= dfATTACK3_DAMAGE;
 						pDamagedPlayer = (*iter);
-						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer, false);
+						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer);
 						return true;
 					}
 				}
@@ -1770,7 +1743,7 @@ inline bool CGameServer::SetPlayerAttack3(CPlayer* pPlayer, CPlayer*& pDamagedPl
 				{
 					(*iter)->_hp -= dfATTACK3_DAMAGE;
 					pDamagedPlayer = (*iter);
-					if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer, false);
+					if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer);
 					return true;
 				}
 			}
@@ -1790,7 +1763,7 @@ inline bool CGameServer::SetPlayerAttack3(CPlayer* pPlayer, CPlayer*& pDamagedPl
 				{
 					(*iter)->_hp -= dfATTACK3_DAMAGE;
 					pDamagedPlayer = (*iter);
-					if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer, false);
+					if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer);
 					return true;
 				}
 			}
@@ -1809,7 +1782,7 @@ inline bool CGameServer::SetPlayerAttack3(CPlayer* pPlayer, CPlayer*& pDamagedPl
 					{
 						(*iter)->_hp -= dfATTACK3_DAMAGE;
 						pDamagedPlayer = (*iter);
-						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer, false);
+						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer);
 						return true;
 					}
 				}
@@ -1828,7 +1801,7 @@ inline bool CGameServer::SetPlayerAttack3(CPlayer* pPlayer, CPlayer*& pDamagedPl
 					{
 						(*iter)->_hp -= dfATTACK3_DAMAGE;
 						pDamagedPlayer = (*iter);
-						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer, false);
+						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer);
 						return true;
 					}
 				}
@@ -1850,7 +1823,7 @@ inline bool CGameServer::SetPlayerAttack3(CPlayer* pPlayer, CPlayer*& pDamagedPl
 					{
 						(*iter)->_hp -= dfATTACK3_DAMAGE;
 						pDamagedPlayer = (*iter);
-						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer, false);
+						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer);
 						return true;
 					}
 				}
@@ -1869,7 +1842,7 @@ inline bool CGameServer::SetPlayerAttack3(CPlayer* pPlayer, CPlayer*& pDamagedPl
 					{
 						(*iter)->_hp -= dfATTACK3_DAMAGE;
 						pDamagedPlayer = (*iter);
-						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer, false);
+						if ((*iter)->_hp <= 0) SetPlayerDead(pDamagedPlayer);
 						return true;
 					}
 				}
