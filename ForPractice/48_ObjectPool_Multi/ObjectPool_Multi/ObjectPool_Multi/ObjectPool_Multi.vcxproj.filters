@@ -14,6 +14,9 @@
     <Filter Include="Main">
       <UniqueIdentifier>{d1cde921-2cbc-4bc5-a474-1cd3e33510c4}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Profiler">
+      <UniqueIdentifier>{ce5b2257-5d87-45b3-a92d-83305ff8da2d}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -21,6 +24,9 @@
     </ClCompile>
     <ClCompile Include="CObjectPoolTester.cpp">
       <Filter>ObjectPoolTester</Filter>
+    </ClCompile>
+    <ClCompile Include="CProfiler.cpp">
+      <Filter>Profiler</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -35,6 +41,9 @@
     </ClInclude>
     <ClInclude Include="CLockFreePool.h">
       <Filter>ObjectPool</Filter>
+    </ClInclude>
+    <ClInclude Include="CProfiler.h">
+      <Filter>Profiler</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -134,6 +134,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="CObjectPoolTester.cpp" />
+    <ClCompile Include="CProfiler.cpp" />
     <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -141,6 +142,7 @@
     <ClInclude Include="CObjectPoolTester.h" />
     <ClInclude Include="CObjectPool_BasicLock.h" />
     <ClInclude Include="CObjectPool_MinLock.h" />
+    <ClInclude Include="CProfiler.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -85,14 +85,15 @@ private:
 	int _threadCnt = 0;
 	int _testCnt = 0;
 
-private:
+private:	
 	volatile long _NewDeleteThreadIdx = -1;
 	volatile long _BasicLockPoolThreadIdx = -1;
 	volatile long _LockFreePoolThreadIdx = -1;
 	volatile long _MinLockPoolThreadIdx = -1;
 
 private:
-	double _freq = 0;
+
+	LARGE_INTEGER _freq;
 	struct RecordTime
 	{
 		double* _NewDeleteTimes;
