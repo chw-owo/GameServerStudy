@@ -1,8 +1,4 @@
-﻿/*
-Broadcast 했을 때 회수가 안된다!
-*/
-
-#include "CChattingServer.h"
+﻿#include "CChattingServer.h"
 #include "CCrashDump.h"
 #include "CSystemLog.h"
 #include <locale.h>
