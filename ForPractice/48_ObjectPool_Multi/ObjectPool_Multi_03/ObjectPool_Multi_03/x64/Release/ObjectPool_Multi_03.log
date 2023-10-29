@@ -1,0 +1,43 @@
+﻿  Main.cpp
+C:\Users\Dell\Desktop\GameServerStudy\ForPractice\48_ObjectPool_Multi\ObjectPool_Multi_03\ObjectPool_Multi_03\Main.cpp(105,88): warning C4312: '형식 캐스트': 'int'에서 더 큰 'void *'(으)로의 변환입니다.
+C:\Users\Dell\Desktop\GameServerStudy\ForPractice\48_ObjectPool_Multi\ObjectPool_Multi_03\ObjectPool_Multi_03\Main.cpp(192,23): warning C4311: '형식 캐스트': 'void *'에서 'int'(으)로 포인터가 잘립니다.
+C:\Users\Dell\Desktop\GameServerStudy\ForPractice\48_ObjectPool_Multi\ObjectPool_Multi_03\ObjectPool_Multi_03\Main.cpp(192,23): warning C4302: '형식 캐스트': 'void *'에서 'int'(으)로 잘립니다.
+C:\Users\Dell\Desktop\GameServerStudy\ForPractice\48_ObjectPool_Multi\ObjectPool_Multi_03\ObjectPool_Multi_03\CTlsObjectPool.h(273,1): warning C4311: '형식 캐스트': 'LPVOID'에서 'int'(으)로 포인터가 잘립니다.
+C:\Users\Dell\Desktop\GameServerStudy\ForPractice\48_ObjectPool_Multi\ObjectPool_Multi_03\ObjectPool_Multi_03\CTlsObjectPool.h(272,1): message : 클래스 템플릿 멤버 함수 'bool CTlsObjectPool<Data>::Free(DATA *)'을(를) 컴파일하는 중입니다.
+          with
+          [
+              DATA=Data
+          ]
+C:\Users\Dell\Desktop\GameServerStudy\ForPractice\48_ObjectPool_Multi\ObjectPool_Multi_03\ObjectPool_Multi_03\Main.cpp(449,23): message : 컴파일되는 함수 템플릿 인스턴스화 'bool CTlsObjectPool<Data>::Free(DATA *)'에 대한 참조를 확인하세요.
+          with
+          [
+              DATA=Data
+          ]
+C:\Users\Dell\Desktop\GameServerStudy\ForPractice\48_ObjectPool_Multi\ObjectPool_Multi_03\ObjectPool_Multi_03\Main.cpp(165,67): message : 컴파일되는 클래스 템플릿 인스턴스화 'CTlsObjectPool<Data>'에 대한 참조를 확인하세요.
+C:\Users\Dell\Desktop\GameServerStudy\ForPractice\48_ObjectPool_Multi\ObjectPool_Multi_03\ObjectPool_Multi_03\CTlsObjectPool.h(273,1): warning C4302: '형식 캐스트': 'LPVOID'에서 'int'(으)로 잘립니다.
+C:\Users\Dell\Desktop\GameServerStudy\ForPractice\48_ObjectPool_Multi\ObjectPool_Multi_03\ObjectPool_Multi_03\CTlsObjectPool.h(279,1): warning C4312: '형식 캐스트': 'int'에서 더 큰 'LPVOID'(으)로의 변환입니다.
+C:\Users\Dell\Desktop\GameServerStudy\ForPractice\48_ObjectPool_Multi\ObjectPool_Multi_03\ObjectPool_Multi_03\CTlsObjectPool.h(64,2): warning C4311: '형식 캐스트': 'LPVOID'에서 'int'(으)로 포인터가 잘립니다.
+C:\Users\Dell\Desktop\GameServerStudy\ForPractice\48_ObjectPool_Multi\ObjectPool_Multi_03\ObjectPool_Multi_03\Main.cpp(165,85): message : 컴파일되는 함수 템플릿 인스턴스화 'CTlsObjectPool<Data>::CTlsObjectPool<>(int,bool)'에 대한 참조를 확인하세요.
+C:\Users\Dell\Desktop\GameServerStudy\ForPractice\48_ObjectPool_Multi\ObjectPool_Multi_03\ObjectPool_Multi_03\Main.cpp(165,41): message : 컴파일되는 함수 템플릿 인스턴스화 'CTlsObjectPool<Data>::CTlsObjectPool<>(int,bool)'에 대한 참조를 확인하세요.
+C:\Users\Dell\Desktop\GameServerStudy\ForPractice\48_ObjectPool_Multi\ObjectPool_Multi_03\ObjectPool_Multi_03\CTlsObjectPool.h(64,2): warning C4302: '형식 캐스트': 'LPVOID'에서 'int'(으)로 잘립니다.
+C:\Users\Dell\Desktop\GameServerStudy\ForPractice\48_ObjectPool_Multi\ObjectPool_Multi_03\ObjectPool_Multi_03\CTlsObjectPool.h(64,2): warning C4312: '형식 캐스트': 'int'에서 더 큰 'LPVOID'(으)로의 변환입니다.
+C:\Users\Dell\Desktop\GameServerStudy\ForPractice\48_ObjectPool_Multi\ObjectPool_Multi_03\ObjectPool_Multi_03\CTlsObjectPool.h(163,1): warning C4311: '형식 캐스트': 'LPVOID'에서 'int'(으)로 포인터가 잘립니다.
+C:\Users\Dell\Desktop\GameServerStudy\ForPractice\48_ObjectPool_Multi\ObjectPool_Multi_03\ObjectPool_Multi_03\Main.cpp(436,38): message : 컴파일되는 함수 템플릿 인스턴스화 'DATA *CTlsObjectPool<DATA>::Alloc<>(void)'에 대한 참조를 확인하세요.
+          with
+          [
+              DATA=Data
+          ]
+C:\Users\Dell\Desktop\GameServerStudy\ForPractice\48_ObjectPool_Multi\ObjectPool_Multi_03\ObjectPool_Multi_03\Main.cpp(436,24): message : 컴파일되는 함수 템플릿 인스턴스화 'DATA *CTlsObjectPool<DATA>::Alloc<>(void)'에 대한 참조를 확인하세요.
+          with
+          [
+              DATA=Data
+          ]
+C:\Users\Dell\Desktop\GameServerStudy\ForPractice\48_ObjectPool_Multi\ObjectPool_Multi_03\ObjectPool_Multi_03\CTlsObjectPool.h(163,1): warning C4302: '형식 캐스트': 'LPVOID'에서 'int'(으)로 잘립니다.
+C:\Users\Dell\Desktop\GameServerStudy\ForPractice\48_ObjectPool_Multi\ObjectPool_Multi_03\ObjectPool_Multi_03\CTlsObjectPool.h(163,1): warning C4312: '형식 캐스트': 'int'에서 더 큰 'LPVOID'(으)로의 변환입니다.
+C:\Users\Dell\Desktop\GameServerStudy\ForPractice\48_ObjectPool_Multi\ObjectPool_Multi_03\ObjectPool_Multi_03\CTlsObjectPool.h(163,1): warning C4267: '초기화 중': 'size_t'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  코드를 생성하고 있습니다.
+  20 of 276 functions ( 7.2%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    0 functions had inline decision re-evaluated but remain unchanged
+  코드를 생성했습니다.
+  ObjectPool_Multi_03.vcxproj -> C:\Users\Dell\Desktop\GameServerStudy\ForPractice\48_ObjectPool_Multi\ObjectPool_Multi_03\x64\Release\ObjectPool_Multi_03.exe

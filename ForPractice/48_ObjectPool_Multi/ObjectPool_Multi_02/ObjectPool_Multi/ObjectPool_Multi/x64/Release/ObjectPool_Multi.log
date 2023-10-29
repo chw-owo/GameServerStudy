@@ -1,0 +1,40 @@
+﻿  Main.cpp
+C:\Users\Dell\Desktop\GameServerStudy\ForPractice\48_ObjectPool_Multi\ObjectPool_Multi_02\ObjectPool_Multi\ObjectPool_Multi\CTlsObjectPool.h(275,1): warning C4311: '형식 캐스트': 'LPVOID'에서 'int'(으)로 포인터가 잘립니다.
+C:\Users\Dell\Desktop\GameServerStudy\ForPractice\48_ObjectPool_Multi\ObjectPool_Multi_02\ObjectPool_Multi\ObjectPool_Multi\CTlsObjectPool.h(274,1): message : 클래스 템플릿 멤버 함수 'bool CTlsObjectPool<Data5>::Free(DATA *)'을(를) 컴파일하는 중입니다.
+          with
+          [
+              DATA=Data5
+          ]
+C:\Users\Dell\Desktop\GameServerStudy\ForPractice\48_ObjectPool_Multi\ObjectPool_Multi_02\ObjectPool_Multi\ObjectPool_Multi\Main.cpp(310,28): message : 컴파일되는 함수 템플릿 인스턴스화 'bool CTlsObjectPool<Data5>::Free(DATA *)'에 대한 참조를 확인하세요.
+          with
+          [
+              DATA=Data5
+          ]
+C:\Users\Dell\Desktop\GameServerStudy\ForPractice\48_ObjectPool_Multi\ObjectPool_Multi_02\ObjectPool_Multi\ObjectPool_Multi\Main.cpp(142,70): message : 컴파일되는 클래스 템플릿 인스턴스화 'CTlsObjectPool<Data5>'에 대한 참조를 확인하세요.
+C:\Users\Dell\Desktop\GameServerStudy\ForPractice\48_ObjectPool_Multi\ObjectPool_Multi_02\ObjectPool_Multi\ObjectPool_Multi\CTlsObjectPool.h(275,1): warning C4302: '형식 캐스트': 'LPVOID'에서 'int'(으)로 잘립니다.
+C:\Users\Dell\Desktop\GameServerStudy\ForPractice\48_ObjectPool_Multi\ObjectPool_Multi_02\ObjectPool_Multi\ObjectPool_Multi\CTlsObjectPool.h(281,1): warning C4312: '형식 캐스트': 'int'에서 더 큰 'LPVOID'(으)로의 변환입니다.
+C:\Users\Dell\Desktop\GameServerStudy\ForPractice\48_ObjectPool_Multi\ObjectPool_Multi_02\ObjectPool_Multi\ObjectPool_Multi\CTlsObjectPool.h(66,2): warning C4311: '형식 캐스트': 'LPVOID'에서 'int'(으)로 포인터가 잘립니다.
+C:\Users\Dell\Desktop\GameServerStudy\ForPractice\48_ObjectPool_Multi\ObjectPool_Multi_02\ObjectPool_Multi\ObjectPool_Multi\Main.cpp(142,88): message : 컴파일되는 함수 템플릿 인스턴스화 'CTlsObjectPool<Data5>::CTlsObjectPool<>(int,bool)'에 대한 참조를 확인하세요.
+C:\Users\Dell\Desktop\GameServerStudy\ForPractice\48_ObjectPool_Multi\ObjectPool_Multi_02\ObjectPool_Multi\ObjectPool_Multi\Main.cpp(142,43): message : 컴파일되는 함수 템플릿 인스턴스화 'CTlsObjectPool<Data5>::CTlsObjectPool<>(int,bool)'에 대한 참조를 확인하세요.
+C:\Users\Dell\Desktop\GameServerStudy\ForPractice\48_ObjectPool_Multi\ObjectPool_Multi_02\ObjectPool_Multi\ObjectPool_Multi\CTlsObjectPool.h(66,2): warning C4302: '형식 캐스트': 'LPVOID'에서 'int'(으)로 잘립니다.
+C:\Users\Dell\Desktop\GameServerStudy\ForPractice\48_ObjectPool_Multi\ObjectPool_Multi_02\ObjectPool_Multi\ObjectPool_Multi\CTlsObjectPool.h(66,2): warning C4312: '형식 캐스트': 'int'에서 더 큰 'LPVOID'(으)로의 변환입니다.
+C:\Users\Dell\Desktop\GameServerStudy\ForPractice\48_ObjectPool_Multi\ObjectPool_Multi_02\ObjectPool_Multi\ObjectPool_Multi\CTlsObjectPool.h(165,1): warning C4311: '형식 캐스트': 'LPVOID'에서 'int'(으)로 포인터가 잘립니다.
+C:\Users\Dell\Desktop\GameServerStudy\ForPractice\48_ObjectPool_Multi\ObjectPool_Multi_02\ObjectPool_Multi\ObjectPool_Multi\Main.cpp(302,45): message : 컴파일되는 함수 템플릿 인스턴스화 'DATA *CTlsObjectPool<DATA>::Alloc<>(void)'에 대한 참조를 확인하세요.
+          with
+          [
+              DATA=Data5
+          ]
+C:\Users\Dell\Desktop\GameServerStudy\ForPractice\48_ObjectPool_Multi\ObjectPool_Multi_02\ObjectPool_Multi\ObjectPool_Multi\Main.cpp(302,26): message : 컴파일되는 함수 템플릿 인스턴스화 'DATA *CTlsObjectPool<DATA>::Alloc<>(void)'에 대한 참조를 확인하세요.
+          with
+          [
+              DATA=Data5
+          ]
+C:\Users\Dell\Desktop\GameServerStudy\ForPractice\48_ObjectPool_Multi\ObjectPool_Multi_02\ObjectPool_Multi\ObjectPool_Multi\CTlsObjectPool.h(165,1): warning C4302: '형식 캐스트': 'LPVOID'에서 'int'(으)로 잘립니다.
+C:\Users\Dell\Desktop\GameServerStudy\ForPractice\48_ObjectPool_Multi\ObjectPool_Multi_02\ObjectPool_Multi\ObjectPool_Multi\CTlsObjectPool.h(165,1): warning C4312: '형식 캐스트': 'int'에서 더 큰 'LPVOID'(으)로의 변환입니다.
+C:\Users\Dell\Desktop\GameServerStudy\ForPractice\48_ObjectPool_Multi\ObjectPool_Multi_02\ObjectPool_Multi\ObjectPool_Multi\CTlsObjectPool.h(165,1): warning C4267: '초기화 중': 'size_t'에서 'int'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  코드를 생성하고 있습니다.
+  156 of 601 functions (26.0%) were compiled, the rest were copied from previous compilation.
+    155 functions were new in current compilation
+    0 functions had inline decision re-evaluated but remain unchanged
+  코드를 생성했습니다.
+  ObjectPool_Multi.vcxproj -> C:\Users\Dell\Desktop\GameServerStudy\ForPractice\48_ObjectPool_Multi\ObjectPool_Multi_02\ObjectPool_Multi\x64\Release\ObjectPool_Multi.exe
