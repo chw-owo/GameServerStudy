@@ -5,14 +5,14 @@
 #include "CLockFreePool.h"
 #include "CTlsObjectPool.h"
 
-#define BLOCK 16
-struct Data { int data[BLOCK]; };
+#define BLOCK 1000
+struct Data { char data[BLOCK]; };
 
 #define POOL_CNT 4
 #define THREAD_CNT 8
-#define TEST_CNT 10000
-#define TOTAL_CNT 80000
-#define LOOP_CNT 10
+#define TEST_CNT 100000
+#define TOTAL_CNT 800000
+#define LOOP_CNT 1
 #define MS_PER_SEC 1000000
 
 long g_profileComplete = 0;
@@ -34,12 +34,13 @@ struct argForThread
 int main()
 {
     // Setting =========================================
-
+    /*
     for (int i = 0; i < TOTAL_CNT; i++)
     {
         Data* data = new Data;
         delete data;
     }
+    */
 
     g_printComplete = CreateEvent(NULL, true, false, nullptr);
     if (g_printComplete == NULL) return 0;
@@ -48,6 +49,7 @@ int main()
 
     // Single New-Delete Test =========================================
 
+    /*
     LARGE_INTEGER freq;
     LARGE_INTEGER start;
     LARGE_INTEGER end;
@@ -96,6 +98,7 @@ int main()
     ::printf("\n");
 
     delete[] tmp;
+    */
 
     // Multi New-Delete Test =========================================
 
@@ -425,6 +428,7 @@ unsigned __stdcall TlsLockPoolThread(void* arg)
     double interval = 0;
     QueryPerformanceFrequency(&freq);
 
+    pool->RegisterThread(true);
     Data** tmp = new Data * [TEST_CNT];
     WaitForSingleObject(g_beginThreadComplete, INFINITE);
 

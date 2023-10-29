@@ -589,17 +589,13 @@ bool CNetServer::HandleSendCP(__int64 sessionID, int sendBytes)
 
 bool CNetServer::SendPost(CSession* pSession)
 {
-	for (;;)
+	if (pSession->_disconnect) return false;
+	if (pSession->_sendBuf.GetUseSize() == 0) return false;
+	if (InterlockedExchange(&pSession->_sendFlag, 1) == 1) return false;
+	if (pSession->_sendBuf.GetUseSize() == 0)
 	{
-		if (pSession->_disconnect) return false;
-		if (pSession->_sendBuf.GetUseSize() == 0) return false;
-		if (InterlockedExchange(&pSession->_sendFlag, 1) == 1) continue;
-		if (pSession->_sendBuf.GetUseSize() == 0)
-		{
-			InterlockedExchange(&pSession->_sendFlag, 0);
-			return false;
-		}
-		break;
+		InterlockedExchange(&pSession->_sendFlag, 0);
+		return false;
 	}
 	
 	int idx = 0;

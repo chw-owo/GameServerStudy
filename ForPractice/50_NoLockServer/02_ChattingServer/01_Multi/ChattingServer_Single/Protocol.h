@@ -17,6 +17,9 @@
 #define dfNICKNAME_LEN			20
 #define dfSESSIONKEY_LEN		64
 
+#define dfTHREAD_NUM			5
+#define dfPLAYER_PER_THREAD		2000
+
 enum en_PACKET_TYPE
 {
 	////////////////////////////////////////////////////////

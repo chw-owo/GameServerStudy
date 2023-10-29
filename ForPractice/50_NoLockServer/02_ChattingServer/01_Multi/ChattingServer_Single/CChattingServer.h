@@ -1,16 +1,14 @@
 #pragma once
 #include "CNetServer.h"
-#include "CObjectPool.h"
-#include "CLockFreePool.h"
-#include "CLockFreeQueue.h"
-
 #include "CSector.h"
 #include "CPlayer.h"
+
+#include "CLockFreeStack.h"
+#include "CLockFreePool.h"
 #include "CJob.h"
 
 #include "Protocol.h"
 #include "ErrorCode.h"
-
 #include <unordered_map>
 using namespace std;
 
@@ -41,10 +39,7 @@ private:
 	void OnSend(__int64 sessionID, int sendSize);
 
 private:
-	void HandleTimeout();
-	void HandleAccept(__int64 sessionID);
-	void HandleRelease(__int64 sessionID);
-	void HandleRecv(__int64 sessionID, CPacket* packet);
+	void HandleRecv(CPlayer* pPlayer, CPacket* packet);
 
 private:
 	static unsigned int WINAPI UpdateThread(void* arg);
@@ -72,8 +67,19 @@ private:
 	inline void SetSCPacket_RES_MESSAGE(CPacket* packet, __int64 accountNo, wchar_t* ID, wchar_t* nickname, WORD messageLen, wchar_t* message);
 
 private:
+	class ThreadArg
+	{
+	public:
+		ThreadArg(CChattingServer* pServer, int threadIdx)
+			:_pServer(pServer), _threadIdx(threadIdx) {};
+	public:
+		CChattingServer* _pServer;
+		int _threadIdx;
+	};
+
+private:
 	bool _serverAlive = true;
-	HANDLE _updateThread;
+	HANDLE _updateThread[dfTHREAD_NUM];
 	HANDLE _monitorThread; 
 	HANDLE _timeoutThread;
 
@@ -83,11 +89,12 @@ private:
 private:
 	__int64 _playerIDGenerator = 0;
 	unordered_map<__int64, CPlayer*> _playersMap;
-	CObjectPool<CPlayer>* _pPlayerPool;
+	CPlayer* _players[dfTHREAD_NUM][dfPLAYER_PER_THREAD];
+	CLockFreeStack<int> _usablePlayerIdx;
+	SRWLOCK _playersLock;
 
 private:
-	long _signal = 0;
-	CLockFreeQueue<CJob*>* _pJobQueue;
+	long _signal[dfTHREAD_NUM] = { 0, };
 	CLockFreePool<CJob>* _pJobPool;
 
 private: // For Monitor

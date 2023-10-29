@@ -19,14 +19,17 @@ private:
 	};
 
 public:
-	template<typename... Types>
-	CTlsObjectPool(int blockNum, bool placementNew, Types... args);
+	CTlsObjectPool(int blockNum, bool placementNew);
 	virtual	~CTlsObjectPool();
 
 public:
 	template<typename... Types>
 	inline DATA* Alloc(Types... args);
 	inline bool Free(DATA* pData);
+
+public:
+	template<typename... Types>
+	inline int RegisterThread(bool alloc, Types... args);
 
 private:
 	bool _placementNew;
@@ -59,8 +62,7 @@ private:
 };
 
 template<class DATA>
-template<typename... Types>
-CTlsObjectPool<DATA>::CTlsObjectPool(int blockNum, bool placementNew, Types... args)
+CTlsObjectPool<DATA>::CTlsObjectPool(int blockNum, bool placementNew)
 	:_placementNew(placementNew), _blockNum(blockNum)
 {
 	InitializeSRWLock(&_lock);
@@ -71,59 +73,7 @@ CTlsObjectPool<DATA>::CTlsObjectPool(int blockNum, bool placementNew, Types... a
 	_pFreeNodes.push_back((stNODE*)nullptr);
 	_freeNodeCnts.push_back(idx0Node);
 	_locks.push_back((SRWLOCK*)nullptr);
-
 	_tlsIdx = TlsAlloc();
-	int threadIdx = (int)TlsGetValue(_tlsIdx);
-
-	if (threadIdx == 0)
-	{
-		AcquireSRWLockExclusive(&_lock);
-
-		threadIdx = InterlockedIncrement(&_threadIdx);
-		TlsSetValue(_tlsIdx, (LPVOID)threadIdx);
-
-		FreeNodeCnt* node = new FreeNodeCnt(blockNum, threadIdx);
-		SRWLOCK* lock = new SRWLOCK;
-		InitializeSRWLock(lock);
-
-		_heapHandles.push_back(HeapCreate(HEAP_NO_SERIALIZE, 8192, 0));
-		_pFreeNodes.push_back((stNODE*)nullptr);
-		_freeNodeCnts.push_back(node);
-		_locks.push_back(lock);
-
-		ReleaseSRWLockExclusive(&_lock);
-	}
-
-	if (_blockNum <= 0)
-		return;
-
-	AcquireSRWLockExclusive(_locks[threadIdx]);
-
-	if (_placementNew)
-	{
-		// Alloc 시 Data의 생성자를 호출하므로 이때 호출하면 안된다
-		for (int i = 0; i < _blockNum; i++)
-		{
-			stNODE* p = (stNODE*)HeapAlloc(
-				_heapHandles[threadIdx], HEAP_NO_SERIALIZE, sizeof(stNODE));
-			p->tail = (size_t)_pFreeNodes[threadIdx];
-			_pFreeNodes[threadIdx] = p;
-		}
-	}
-	else
-	{
-		// Alloc 시 Data의 생성자를 호출하지 않으므로 이때 호출해야 된다
-		for (int i = 0; i < _blockNum; i++)
-		{
-			stNODE* p = (stNODE*)HeapAlloc(
-				_heapHandles[threadIdx], HEAP_NO_SERIALIZE, sizeof(stNODE));
-			p->tail = (size_t)_pFreeNodes[threadIdx];
-			new (&(p->data)) DATA(args...);
-			_pFreeNodes[threadIdx] = p;
-		}
-	}
-
-	ReleaseSRWLockExclusive(_locks[threadIdx]);
 
 	return;
 }
@@ -162,40 +112,20 @@ template<typename... Types>
 DATA* CTlsObjectPool<DATA>::Alloc(Types... args)
 {
 	int threadIdx = (int)TlsGetValue(_tlsIdx);
-	if (threadIdx == 0)
-	{
-		AcquireSRWLockExclusive(&_lock);
-
-		threadIdx = InterlockedIncrement(&_threadIdx);
-		TlsSetValue(_tlsIdx, (LPVOID)threadIdx);
-
-		FreeNodeCnt* node = new FreeNodeCnt(0, threadIdx);
-		SRWLOCK* lock = new SRWLOCK;
-		InitializeSRWLock(lock);
-
-		_heapHandles.push_back(HeapCreate(HEAP_NO_SERIALIZE, 8192, 0));
-		_pFreeNodes.push_back((stNODE*)nullptr);
-		_freeNodeCnts.push_back(node);
-		_locks.push_back(lock);
-
-		ReleaseSRWLockExclusive(&_lock);
-	}
+	if (threadIdx == 0) threadIdx = RegisterThread(true, args...);
 
 	AcquireSRWLockExclusive(_locks[threadIdx]);
 
 	if (_pFreeNodes[threadIdx] == nullptr)
 	{
 		// 노드가 없다면 타 스레드의 노드를 탐색한다. 
-		bool flag = false;
 		AcquireSRWLockExclusive(&_lock);
-
+		bool flag = false;
 		int threadMax = _freeNodeCnts.size();
-
 		vector<FreeNodeCnt*> freeNodeCnts;
 		freeNodeCnts.resize(threadMax);
 		std::copy(_freeNodeCnts.begin(), _freeNodeCnts.end(), freeNodeCnts.begin());
 		sort(freeNodeCnts.begin(), freeNodeCnts.end());
-
 		ReleaseSRWLockExclusive(&_lock);
 
 		for (int i = 0; i < threadMax; i++)
@@ -271,30 +201,12 @@ template<class DATA>
 bool CTlsObjectPool<DATA>::Free(DATA* pData)
 {
 	int threadIdx = (int)TlsGetValue(_tlsIdx);
-	if (threadIdx == 0)
-	{
-		AcquireSRWLockExclusive(&_lock);
+	if (threadIdx == 0) threadIdx = RegisterThread(false);
 
-		threadIdx = InterlockedIncrement(&_threadIdx);
-		TlsSetValue(_tlsIdx, (LPVOID)threadIdx);
-
-		FreeNodeCnt* node = new FreeNodeCnt(0, threadIdx);
-		SRWLOCK* lock = new SRWLOCK;
-		InitializeSRWLock(lock);
-
-		_heapHandles.push_back(HeapCreate(HEAP_NO_SERIALIZE, 8192, 0));
-		_pFreeNodes.push_back((stNODE*)nullptr);
-		_freeNodeCnts.push_back(node);
-		_locks.push_back(lock);
-
-		ReleaseSRWLockExclusive(&_lock);
-	}
-
+	AcquireSRWLockExclusive(_locks[threadIdx]);
 	if (_placementNew)
 	{
 		// Data의 소멸자를 호출한 후 _pFreeNodes에 push한다
-		AcquireSRWLockExclusive(_locks[threadIdx]);
-
 		pData->~DATA();
 		((stNODE*)pData)->tail = (size_t)_pFreeNodes[threadIdx];
 		_pFreeNodes[threadIdx] = (stNODE*)pData;
@@ -306,8 +218,6 @@ bool CTlsObjectPool<DATA>::Free(DATA* pData)
 	else
 	{
 		// Data의 소멸자를 호출하지 않고 _pFreeNodes에 push한다
-		AcquireSRWLockExclusive(_locks[threadIdx]);
-
 		((stNODE*)pData)->tail = (size_t)_pFreeNodes[threadIdx];
 		_pFreeNodes[threadIdx] = (stNODE*)pData;
 		_freeNodeCnts[threadIdx]->_nodeCnt++;
@@ -316,4 +226,61 @@ bool CTlsObjectPool<DATA>::Free(DATA* pData)
 		return true;
 	}
 	return false;
+}
+
+template<class DATA>
+template<typename... Types>
+inline int CTlsObjectPool<DATA>::RegisterThread(bool alloc, Types... args)
+{
+	int threadIdx = (int)TlsGetValue(_tlsIdx);
+
+	if (threadIdx == 0)
+	{
+		AcquireSRWLockExclusive(&_lock);
+
+		threadIdx = InterlockedIncrement(&_threadIdx);
+		TlsSetValue(_tlsIdx, (LPVOID)threadIdx);
+
+		FreeNodeCnt* node = new FreeNodeCnt(_blockNum, threadIdx);
+		SRWLOCK* lock = new SRWLOCK;
+		InitializeSRWLock(lock);
+
+		_heapHandles.push_back(HeapCreate(HEAP_NO_SERIALIZE, 8192, 0));
+		_pFreeNodes.push_back((stNODE*)nullptr);
+		_freeNodeCnts.push_back(node);
+		_locks.push_back(lock);
+
+		ReleaseSRWLockExclusive(&_lock);
+	}
+
+	if (_blockNum <= 0 || !alloc) return threadIdx;
+
+	AcquireSRWLockExclusive(_locks[threadIdx]);
+	if (_placementNew)
+	{
+		// Alloc 시 Data의 생성자를 호출하므로 이때 호출하면 안된다
+		for (int i = 0; i < _blockNum; i++)
+		{
+			stNODE* p = (stNODE*)HeapAlloc(
+				_heapHandles[threadIdx], HEAP_NO_SERIALIZE, sizeof(stNODE));
+			p->tail = (size_t)_pFreeNodes[threadIdx];
+			_pFreeNodes[threadIdx] = p;
+		}
+	}
+	else
+	{
+		// Alloc 시 Data의 생성자를 호출하지 않으므로 이때 호출해야 된다
+		for (int i = 0; i < _blockNum; i++)
+		{
+			stNODE* p = (stNODE*)HeapAlloc(
+				_heapHandles[threadIdx], HEAP_NO_SERIALIZE, sizeof(stNODE));
+			p->tail = (size_t)_pFreeNodes[threadIdx];
+			new (&(p->data)) DATA(args...);
+			_pFreeNodes[threadIdx] = p;
+		}
+	}
+
+	ReleaseSRWLockExclusive(_locks[threadIdx]);
+
+	return threadIdx;
 }

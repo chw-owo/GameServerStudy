@@ -7,10 +7,22 @@
 
 bool CChattingServer::Initialize()
 {
-	// Set Queue & Pool
-	_pJobQueue = new CLockFreeQueue<CJob*>;
+	// Set Job
 	_pJobPool = new CLockFreePool<CJob>(dfJOB_DEF, true);
-	_pPlayerPool = new CObjectPool<CPlayer>(dfPLAYER_MAX, true);
+
+	// Set Player
+	int idx = 0;
+	for (int i = 0; i < dfTHREAD_NUM; i++)
+	{
+		for (int j = 0; j < dfPLAYER_PER_THREAD; j++)
+		{
+			CPlayer* pPlayer = new CPlayer(idx);
+			_players[i][j] = pPlayer;
+			_usablePlayerIdx.Push(idx);
+			idx++;
+		}
+	}
+	InitializeSRWLock(&_playersLock);
 
 	// Set Sector
 	for (int i = 0; i < dfSECTOR_CNT_Y; i++)
@@ -34,12 +46,16 @@ bool CChattingServer::Initialize()
 	} 
 	
 	// Set Logic Thread
-	_updateThread = (HANDLE)_beginthreadex(NULL, 0, UpdateThread, this, 0, nullptr);
-	if (_updateThread == NULL)
+	for (int i = 0; i < dfTHREAD_NUM; i++)
 	{
-		LOG(L"FightGame", CSystemLog::ERROR_LEVEL, L"%s[%d]: Begin Logic Thread Error\n", _T(__FUNCTION__), __LINE__);
-		::wprintf(L"%s[%d]: Begin Logic Thread Error\n", _T(__FUNCTION__), __LINE__);
-		return false;
+		ThreadArg* arg = new ThreadArg(this, i);
+		_updateThread[i] = (HANDLE)_beginthreadex(NULL, 0, UpdateThread, arg, 0, nullptr);
+		if (_updateThread[i] == NULL)
+		{
+			LOG(L"FightGame", CSystemLog::ERROR_LEVEL, L"%s[%d]: Begin Logic Thread Error\n", _T(__FUNCTION__), __LINE__);
+			::wprintf(L"%s[%d]: Begin Logic Thread Error\n", _T(__FUNCTION__), __LINE__);
+			return false;
+		}
 	}
 
 	// Set Network Library
@@ -86,12 +102,12 @@ void CChattingServer::Terminate()
 	NetworkTerminate();
 	_serverAlive = false;
 
-	CJob* job = _pJobPool->Alloc();
-	job->Setting(JOB_TYPE::SYSTEM, SYS_TYPE::TERMINATE, 0, nullptr);
-	_pJobQueue->Enqueue(job);
-	InterlockedExchange(&_signal, 1);
-	WakeByAddressSingle(&_signal);
-	WaitForSingleObject(_updateThread, INFINITE);
+	for (int i = 0; i < dfTHREAD_NUM; i++)
+	{
+		InterlockedExchange(&_signal[i], 1);
+		WakeByAddressSingle(&_signal[i]);
+	}
+	WaitForMultipleObjects(dfTHREAD_NUM, _updateThread, true, INFINITE);
 
 #ifdef _MONITOR
 	WaitForSingleObject(_monitorThread, INFINITE);
@@ -136,93 +152,64 @@ bool CChattingServer::OnConnectRequest()
 
 void CChattingServer::OnAcceptClient(__int64 sessionID)
 {
-	CJob* job = _pJobPool->Alloc();
-	job->Setting(JOB_TYPE::SYSTEM, SYS_TYPE::ACCEPT, sessionID, nullptr);
-	_pJobQueue->Enqueue(job);
+	AcquireSRWLockExclusive(&_playersLock);
 
-	InterlockedExchange(&_signal, 1);
-	WakeByAddressSingle(&_signal);
-}
-
-void CChattingServer::OnReleaseClient(__int64 sessionID)
-{
-	CJob* job = _pJobPool->Alloc();
-	job->Setting(JOB_TYPE::SYSTEM, SYS_TYPE::RELEASE, sessionID, nullptr);
-	_pJobQueue->Enqueue(job);
-
-	InterlockedExchange(&_signal, 1);
-	WakeByAddressSingle(&_signal);
-}
-
-void CChattingServer::OnRecv(__int64 sessionID, CPacket* packet)
-{
-	packet->AddUsageCount(1);
-	CJob* job = _pJobPool->Alloc();
-	job->Setting(JOB_TYPE::CONTENT, SYS_TYPE::NONE, sessionID, packet);
-	_pJobQueue->Enqueue(job);
-
-	InterlockedExchange(&_signal, 1);
-	WakeByAddressSingle(&_signal);
-}
-
-void CChattingServer::OnSend(__int64 sessionID, int sendSize)
-{
-}
-
-void CChattingServer::HandleTimeout()
-{
-	unordered_map<__int64, CPlayer*>::iterator iter = _playersMap.begin();
-	for (; iter != _playersMap.end();)
-	{
-		CPlayer* player = (*iter).second;
-
-		if ((timeGetTime() - player->_lastRecvTime) >= dfTIMEOUT)
-		{
-			Disconnect(player->_sessionID);
-			iter = _playersMap.erase(iter);
-		}
-		else
-		{
-			iter++;
-		}
-	}
-}
-
-void CChattingServer::HandleAccept(__int64 sessionID)
-{
-	if (_playersMap.size() >= dfPLAYER_MAX)
+	if (_usablePlayerIdx.GetUseSize() == 0)
 	{
 		LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d] player max\n", _T(__FUNCTION__), __LINE__);
 		::wprintf(L"%s[%d] player max\n", _T(__FUNCTION__), __LINE__);
 		Disconnect(sessionID);
+		ReleaseSRWLockExclusive(&_playersLock);
 		return;
 	}
+	int idx = _usablePlayerIdx.Pop();
+	if (idx == 0)
+	{
+		LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d] player max\n", _T(__FUNCTION__), __LINE__);
+		::wprintf(L"%s[%d] player max\n", _T(__FUNCTION__), __LINE__);
+		Disconnect(sessionID);
+		ReleaseSRWLockExclusive(&_playersLock);
+		return;
+	}
+	CPlayer* pPlayer = _players[idx / dfPLAYER_PER_THREAD][idx % dfPLAYER_PER_THREAD];
 
-	CPlayer* pPlayer = _pPlayerPool->Alloc(sessionID, _playerIDGenerator++);
+	AcquireSRWLockExclusive(&pPlayer->_lock);
+	pPlayer->Initialize(sessionID, _playerIDGenerator++);
+	ReleaseSRWLockExclusive(&pPlayer->_lock);
+
 	_playersMap.insert(make_pair(sessionID, pPlayer));
 
-	// ::printf("%lld (%d): Handle Accept\n", (_sessionID & _idMask), GetCurrentThreadId());
-
-	return;
+	ReleaseSRWLockExclusive(&_playersLock);
 }
 
-void CChattingServer::HandleRelease(__int64 sessionID)
+void CChattingServer::OnReleaseClient(__int64 sessionID)
 {
-	// Delete From SessionID-Player Map
+	AcquireSRWLockExclusive(&_playersLock);
 	unordered_map<__int64, CPlayer*>::iterator mapIter = _playersMap.find(sessionID);
 	if (mapIter == _playersMap.end())
 	{
 		LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d]: No Session %lld\n", _T(__FUNCTION__), __LINE__, sessionID);
 		::wprintf(L"%s[%d]: No Session %lld\n", _T(__FUNCTION__), __LINE__, sessionID);
+		ReleaseSRWLockExclusive(&_playersLock);
 		return;
 	}
 	CPlayer* pPlayer = mapIter->second;
+
+	AcquireSRWLockExclusive(&pPlayer->_lock);
+	DWORD x = pPlayer->_sectorX;
+	DWORD y = pPlayer->_sectorY;
+	int idx = pPlayer->CleanUp();
+	ReleaseSRWLockExclusive(&pPlayer->_lock);
+
 	_playersMap.erase(mapIter);
+	_usablePlayerIdx.Push(idx);
+	ReleaseSRWLockExclusive(&_playersLock);
 
 	// Delete From Sector
-	if (pPlayer->_sectorX != -1 && pPlayer->_sectorY != -1)
+	if (x < dfSECTOR_CNT_X && y < dfSECTOR_CNT_Y)
 	{
-		CSector* sector = &_sectors[pPlayer->_sectorY][pPlayer->_sectorX];
+		CSector* sector = &_sectors[y][x];
+		AcquireSRWLockExclusive(&sector->_lock);
 		vector<CPlayer*>::iterator vectorIter = sector->_players.begin();
 		for (; vectorIter < sector->_players.end(); vectorIter++)
 		{
@@ -232,116 +219,116 @@ void CChattingServer::HandleRelease(__int64 sessionID)
 				break;
 			}
 		}
+		ReleaseSRWLockExclusive(&sector->_lock);
 	}
-
-	// Delete Player
-	_pPlayerPool->Free(pPlayer);
-	// ::printf("%lld (%d): Handle Release\n", (_sessionID & _idMask), GetCurrentThreadId());
-
 }
 
-
-void CChattingServer::HandleRecv(__int64 sessionID, CPacket* packet)
+void CChattingServer::OnRecv(__int64 sessionID, CPacket* packet)
 {
-	try
+	packet->AddUsageCount(1);
+	CJob* job = _pJobPool->Alloc();
+	job->Setting(sessionID, packet);
+
+	AcquireSRWLockShared(&_playersLock);
+	unordered_map<__int64, CPlayer*>::iterator mapIter = _playersMap.find(sessionID);
+	if (mapIter == _playersMap.end())
 	{
-		unordered_map<__int64, CPlayer*>::iterator iter = _playersMap.find(sessionID);
-		if (iter == _playersMap.end())
-		{
-			LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d]: No Session\n", _T(__FUNCTION__), __LINE__);
-			::wprintf(L"%s[%d]: No Session\n", _T(__FUNCTION__), __LINE__);
-			return;
-		}
-
-		// ::printf("%lld (%d): Handle Recv\n", (_sessionID & _idMask), GetCurrentThreadId());
-
-		CPlayer* pPlayer = iter->second;
-		pPlayer->_lastRecvTime = timeGetTime();
-		short msgType = -1;
-		*packet >> msgType;
-
-		switch (msgType)
-		{
-		case en_PACKET_CS_CHAT_REQ_LOGIN:
-			HandleCSPacket_REQ_LOGIN(packet, pPlayer);
-			break;
-
-		case en_PACKET_CS_CHAT_REQ_SECTOR_MOVE:
-			HandleCSPacket_REQ_SECTOR_MOVE(packet, pPlayer);
-			break;
-
-		case en_PACKET_CS_CHAT_REQ_MESSAGE:
-			HandleCSPacket_REQ_MESSAGE(packet, pPlayer);
-			break;
-
-		case en_PACKET_CS_CHAT_REQ_HEARTBEAT:
-			HandleCSPacket_REQ_HEARTBEAT(pPlayer);
-			break;
-
-		default:
-			LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d] Undefined Message, %d\n", _T(__FUNCTION__), __LINE__, msgType);
-			::wprintf(L"%s[%d] Undefined Message, %d\n", _T(__FUNCTION__), __LINE__, msgType);
-			break;
-		}
+		LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d]: No Session %lld\n", _T(__FUNCTION__), __LINE__, sessionID);
+		::wprintf(L"%s[%d]: No Session %lld\n", _T(__FUNCTION__), __LINE__, sessionID);
+		CPacket::Free(packet);
+		ReleaseSRWLockExclusive(&_playersLock);
+		return;
 	}
-	catch (int packetError)
+	CPlayer* pPlayer = mapIter->second;
+	pPlayer->_jobQ.Enqueue(job);
+	int threadIdx = pPlayer->_idx._threadIdx;
+	ReleaseSRWLockShared(&_playersLock);
+
+	InterlockedIncrement(&_signal[threadIdx]);
+	WakeByAddressSingle(&_signal[threadIdx]);
+}
+
+void CChattingServer::OnSend(__int64 sessionID, int sendSize)
+{
+}
+
+void CChattingServer::HandleRecv(CPlayer* pPlayer, CPacket* packet)
+{
+	pPlayer->_lastRecvTime = timeGetTime();
+	short msgType = -1;
+	*packet >> msgType;
+
+	switch (msgType)
 	{
-		if (packetError == ERR_PACKET)
-		{
-			LOG(L"FightGame", CSystemLog::DEBUG_LEVEL,L"%s[%d] Packet Error\n", _T(__FUNCTION__), __LINE__);
-			::wprintf(L"%s[%d] Packet Error\n", _T(__FUNCTION__), __LINE__);
-			Disconnect(sessionID);
-		}
+	case en_PACKET_CS_CHAT_REQ_LOGIN:
+		HandleCSPacket_REQ_LOGIN(packet, pPlayer);
+		break;
+
+	case en_PACKET_CS_CHAT_REQ_SECTOR_MOVE:
+		HandleCSPacket_REQ_SECTOR_MOVE(packet, pPlayer);
+		break;
+
+	case en_PACKET_CS_CHAT_REQ_MESSAGE:
+		HandleCSPacket_REQ_MESSAGE(packet, pPlayer);
+		break;
+
+	case en_PACKET_CS_CHAT_REQ_HEARTBEAT:
+		HandleCSPacket_REQ_HEARTBEAT(pPlayer);
+		break;
+
+	default:
+		LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d] Undefined Message, %d\n", _T(__FUNCTION__), __LINE__, msgType);
+		::wprintf(L"%s[%d] Undefined Message, %d\n", _T(__FUNCTION__), __LINE__, msgType);
+		break;
 	}
 }
 
 unsigned int __stdcall CChattingServer::UpdateThread(void* arg)
 {
-	CChattingServer* pServer = (CChattingServer*)arg;
-	CLockFreeQueue<CJob*>* pJobQueue = pServer->_pJobQueue;
-	DWORD oldTick = timeGetTime();
+	ThreadArg* threadArg = (ThreadArg*)arg;
+	CChattingServer* pServer = threadArg->_pServer;
+	int idx = threadArg->_threadIdx;
 	long undesired = 0;
-	
+
 	while (pServer->_serverAlive)
 	{
-		WaitOnAddress(&pServer->_signal, &undesired, sizeof(long), INFINITE);
+		WaitOnAddress(&pServer->_signal[idx], &undesired, sizeof(long), INFINITE);
 
-		while(pJobQueue->GetUseSize() > 0)
+		for (int i = 0; i < dfPLAYER_PER_THREAD; i++)
 		{
-			CJob* job = pJobQueue->Dequeue();
-			if (job == nullptr) break;
+			CPlayer* pPlayer = pServer->_players[idx][i];
+			AcquireSRWLockExclusive(&pPlayer->_lock);
+			
+			while (pPlayer->_jobQ.GetUseSize() > 0)
+			{
+				CJob* job = pPlayer->_jobQ.Dequeue();
+				if (job == nullptr) break;
 
-			if (job->_type == JOB_TYPE::SYSTEM)
-			{
-				if (job->_sysType == SYS_TYPE::ACCEPT)
+				if (job->_sessionID == pPlayer->_sessionID)
 				{
-					pServer->HandleAccept(job->_sessionID);
+					try 
+					{
+						pServer->HandleRecv(pPlayer, job->_packet);
+					}
+					catch (int packetError)
+					{
+						if (packetError == ERR_PACKET)
+						{
+							LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d] Packet Error\n", _T(__FUNCTION__), __LINE__);
+							::wprintf(L"%s[%d] Packet Error\n", _T(__FUNCTION__), __LINE__);
+							pServer->Disconnect(job->_sessionID);
+						}
+					}	
 				}
-				else if (job->_sysType == SYS_TYPE::RELEASE)
-				{
-					pServer->HandleRelease(job->_sessionID);
-				}
-				else if (job->_sysType == SYS_TYPE::TIMEOUT)
-				{
-					pServer->HandleTimeout();
-				}
-				else if (job->_sysType == SYS_TYPE::TERMINATE)
-				{
-					break;
-				}
-			}
-			else if (job->_type == JOB_TYPE::CONTENT)
-			{
-				pServer->HandleRecv(job->_sessionID, job->_packet);
+
 				CPacket::Free(job->_packet);
-			}
+				pServer->_pJobPool->Free(job);
+				InterlockedDecrement(&pServer->_signal[idx]);
+			}	
 
-			pServer->_pJobPool->Free(job);
+			ReleaseSRWLockExclusive(&pPlayer->_lock);
 		}
-
-		InterlockedExchange(&pServer->_signal, undesired);
 	}
-
 	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Update Thread (%d) Terminate\n", GetCurrentThreadId());
 	::wprintf(L"Update Thread (%d) Terminate\n", GetCurrentThreadId());
 
@@ -360,9 +347,8 @@ unsigned int __stdcall CChattingServer::MonitorThread(void* arg)
 		SYSTEMTIME stTime;
 		GetLocalTime(&stTime);
 		WCHAR text[dfMONITOR_TEXT_LEN];
-		swprintf_s(text, dfMONITOR_TEXT_LEN, L"[%s %02d:%02d:%02d]\n\nTotal Accept: %d\nTotal Disconnect: %d\nConnected Session: %d\nRecv/1sec: %d\nSend/1sec: %d\nAccept/1sec: %d\nDisconnect/1sec: %d\n\nPacket Pool: %d/%d\nPlayer Pool:%d/%d\nJob Pool: %d/%d\n\n",
-			_T(__DATE__), stTime.wHour, stTime.wMinute, stTime.wSecond, pServer->GetAcceptTotal(), pServer->GetDisconnectTotal(), pServer->GetSessionCount(), pServer->GetRecvMsgTPS(), pServer->GetSendMsgTPS(), pServer->GetAcceptTPS(), pServer->GetDisconnectTPS(),
-			CPacket::GetPoolSize(), CPacket::GetNodeCount(), pServer->_pPlayerPool->GetPoolSize(), pServer->_pPlayerPool->GetNodeCount(), pServer->_pJobPool->GetPoolSize(), pServer->_pJobPool->GetNodeCount());
+		swprintf_s(text, dfMONITOR_TEXT_LEN, L"[%s %02d:%02d:%02d]\n\nTotal Accept: %d\nTotal Disconnect: %d\nConnected Session: %d\nRecv/1sec: %d\nSend/1sec: %d\nAccept/1sec: %d\nDisconnect/1sec: %d\nPacket Pool: %d/%d\n\n",
+			_T(__DATE__), stTime.wHour, stTime.wMinute, stTime.wSecond, pServer->GetAcceptTotal(), pServer->GetDisconnectTotal(), pServer->GetSessionCount(), pServer->GetRecvMsgTPS(), pServer->GetSendMsgTPS(), pServer->GetAcceptTPS(), pServer->GetDisconnectTPS(), CPacket::GetPoolSize(), CPacket::GetNodeCount());
 		::wprintf(L"%s", text);
 
 		pServer->ResetMonitorData();
@@ -399,14 +385,21 @@ unsigned int __stdcall CChattingServer::TimeoutThread(void* arg)
 
 	while (pServer->_serverAlive)
 	{
-		CJob* job = pServer->_pJobPool->Alloc();
-		job->Setting(JOB_TYPE::SYSTEM, SYS_TYPE::TIMEOUT, 0, nullptr);
-		pServer->_pJobQueue->Enqueue(job);
-
-		InterlockedExchange(&pServer->_signal, 1);
-		WakeByAddressSingle(&pServer->_signal);
-
 		Sleep(dfTIMEOUT);
+		for (int i = 0; i < dfTHREAD_NUM; i++)
+		{
+			for (int j = 0; j < dfPLAYER_PER_THREAD; j++)
+			{
+				CPlayer* pPlayer = pServer->_players[i][j];
+				AcquireSRWLockShared(&pPlayer->_lock);
+				DWORD lastRecvTime = pPlayer->_lastRecvTime;
+				__int64 sessionID = pPlayer->_sessionID;
+				ReleaseSRWLockShared(&pPlayer->_lock);
+
+				if ((timeGetTime() - lastRecvTime) >= dfTIMEOUT)
+					pServer->Disconnect(sessionID);
+			}
+		}
 	}
 
 	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Timeout Thread (%d) Terminate\n", GetCurrentThreadId());
@@ -433,43 +426,47 @@ void CChattingServer::ReqSendAroundSector(CPacket* packet, CSector* centerSector
 		vector<CSector*>::iterator iter = centerSector->_around.begin();
 		for (; iter < centerSector->_around.end(); iter++)
 		{
+			AcquireSRWLockShared(&(*iter)->_lock);
 			vector<CPlayer*>::iterator playerIter = (*iter)->_players.begin();
 			for (; playerIter < (*iter)->_players.end(); playerIter++)
 			{
-				// ::wprintf(L"%lld (%d): Message Recv (%lld, [%d][%d])\n", ((*playerIter)->_sessionID & _idMask), GetCurrentThreadId(), (*playerIter)->_accountNo, (*iter)->_y, (*iter)->_x);
 				sendID.push_back((*playerIter)->_sessionID);
 			}
+			ReleaseSRWLockShared(&(*iter)->_lock);
 		}
 
+		AcquireSRWLockShared(&centerSector->_lock);
 		vector<CPlayer*>::iterator playerIter = centerSector->_players.begin();
 		for (; playerIter < centerSector->_players.end(); playerIter++)
 		{
-			// ::wprintf(L"%lld (%d): Message Recv (%lld, [%d][%d])\n", ((*playerIter)->_sessionID & _idMask), GetCurrentThreadId(), (*playerIter)->_accountNo, (*playerIter)->_sectorY, (*playerIter)->_sectorX);
 			sendID.push_back((*playerIter)->_sessionID);
 		}
+		ReleaseSRWLockShared(&centerSector->_lock);
 	}
 	else
 	{
 		vector<CSector*>::iterator iter = centerSector->_around.begin();
 		for (; iter < centerSector->_around.end(); iter++)
 		{
+			AcquireSRWLockShared(&(*iter)->_lock);
 			vector<CPlayer*>::iterator playerIter = (*iter)->_players.begin();
 			for (; playerIter < (*iter)->_players.end(); playerIter++)
 			{
-				// ::wprintf(L"%lld (%d): Message Recv (%lld, [%d][%d])\n", ((*playerIter)->_sessionID & _idMask), GetCurrentThreadId(), (*playerIter)->_accountNo, (*iter)->_y, (*iter)->_x);
 				sendID.push_back((*playerIter)->_sessionID);
 			}
+			ReleaseSRWLockShared(&(*iter)->_lock);
 		}
 
+		AcquireSRWLockShared(&centerSector->_lock);
 		vector<CPlayer*>::iterator playerIter = centerSector->_players.begin();
 		for (; playerIter < centerSector->_players.end(); playerIter++)
 		{
 			if (*playerIter != pExpPlayer)
 			{
-				// ::wprintf(L"%lld (%d): Message Recv (%lld, [%d][%d])\n", ((*playerIter)->_sessionID & _idMask), GetCurrentThreadId(), (*playerIter)->_accountNo, (*playerIter)->_sectorY, (*playerIter)->_sectorX);
 				sendID.push_back((*playerIter)->_sessionID);
 			}
 		}
+		ReleaseSRWLockShared(&centerSector->_lock);
 	}
 
 	packet->AddUsageCount(sendID.size());
@@ -523,7 +520,7 @@ inline void CChattingServer::HandleCSPacket_REQ_SECTOR_MOVE(CPacket* CSpacket, C
 		return;
 	}
 
-	if (sectorX < 0 && sectorX > dfSECTOR_CNT_X && sectorY < 0 && sectorY > dfSECTOR_CNT_Y)
+	if (sectorX > dfSECTOR_CNT_X && sectorY > dfSECTOR_CNT_Y)
 	{
 		LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d] Sector Val is Wrong\n", _T(__FUNCTION__), __LINE__);
 		::wprintf(L"%s[%d] Sector Val is Wrong\n", _T(__FUNCTION__), __LINE__);
@@ -532,25 +529,29 @@ inline void CChattingServer::HandleCSPacket_REQ_SECTOR_MOVE(CPacket* CSpacket, C
 
 	// ::printf("%lld (%d): Sector Move (%lld, [%d][%d]->[%d][%d])\n", (player->_sessionID & _idMask), GetCurrentThreadId(), accountNo, player->_sectorY, player->_sectorX, sectorY, sectorX);
 
-	if (player->_sectorX != -1 && player->_sectorY != -1)
+	if (player->_sectorX < dfSECTOR_CNT_X && player->_sectorY < dfSECTOR_CNT_Y)
 	{
-		CSector* sector = &_sectors[player->_sectorY][player->_sectorX];
-		vector<CPlayer*>::iterator iter = sector->_players.begin();
-		for (; iter < sector->_players.end(); iter++)
+		CSector* outSector = &_sectors[player->_sectorY][player->_sectorX];
+		AcquireSRWLockExclusive(&outSector->_lock);
+		vector<CPlayer*>::iterator iter = outSector->_players.begin();
+		for (; iter < outSector->_players.end(); iter++)
 		{
 			if ((*iter) == player)
 			{
-				sector->_players.erase(iter);
+				outSector->_players.erase(iter);
 				break;
 			}
 		}
-
-		// 로그 상으로는 erase가 잘 됐는데 Req 시에는 주변 섹터에 자신도 들어간 적 있었다면 전송을 한다...
+		ReleaseSRWLockExclusive(&outSector->_lock);
 	}
 
 	player->_sectorX = sectorX;
 	player->_sectorY = sectorY;
-	_sectors[player->_sectorY][player->_sectorX]._players.push_back(player);
+
+	CSector* inSector = &_sectors[player->_sectorY][player->_sectorX];
+	AcquireSRWLockExclusive(&inSector->_lock);
+	inSector->_players.push_back(player);
+	ReleaseSRWLockExclusive(&inSector->_lock);
 
 	CPacket* SCpacket = CPacket::Alloc();
 	SCpacket->Clear();
