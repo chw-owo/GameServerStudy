@@ -1,7 +1,4 @@
 #pragma once
-//#ifndef __GODDAMNBUG_ONLINE_PROTOCOL__
-//#define __GODDAMNBUG_ONLINE_PROTOCOL__
-
 // ºΩ≈Õ 50 x 50
 #define dfSERVER_IP				L"0.0.0.0"
 #define dfSERVER_PORT			11650

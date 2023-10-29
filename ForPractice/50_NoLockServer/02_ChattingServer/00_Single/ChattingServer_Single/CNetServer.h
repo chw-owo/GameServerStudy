@@ -35,6 +35,7 @@ protected:
 	virtual void OnRecv(__int64 sessionID, CPacket* packet) = 0;
 	virtual void OnSend(__int64 sessionID, int sendSize) = 0;
 	virtual void OnError(int errorCode, wchar_t* errorMsg) = 0;
+	virtual void OnDebug(int debugCode, wchar_t* debugMsg) = 0;
 
 protected:
 	inline void UpdateMonitorData()

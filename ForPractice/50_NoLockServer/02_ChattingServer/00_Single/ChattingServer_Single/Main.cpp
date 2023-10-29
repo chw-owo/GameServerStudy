@@ -18,14 +18,14 @@ int wmain(int argc, wchar_t* argv[])
     _wsetlocale(LC_ALL, L"korean");
 
     SYSLOG_DIRECTORY(L"SystemLog");
-    SYSLOG_LEVEL(CSystemLog::DEBUG_LEVEL);
+    SYSLOG_LEVEL(CSystemLog::ERROR_LEVEL);
     LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Main Thread Start\n");
 
     timeBeginPeriod(1);
     if (!g_Server.Initialize()) return 0;
     for (;;)
     {
-        if (GetAsyncKeyState(VK_SPACE)) g_Server.Terminate();
+       // if (GetAsyncKeyState(VK_SPACE)) g_Server.Terminate();
     }
     timeEndPeriod(1);
 

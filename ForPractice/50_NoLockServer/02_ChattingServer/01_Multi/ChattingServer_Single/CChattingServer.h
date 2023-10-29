@@ -100,5 +100,8 @@ private:
 private: // For Monitor
 	long _totalAccept = 0;
 	long _totalDisconnect = 0;
+	long _updateThreadWakeTPS = 0;
+	long _handlePacketTPS = 0;
+	long _jobQSize = 0;
 };
 

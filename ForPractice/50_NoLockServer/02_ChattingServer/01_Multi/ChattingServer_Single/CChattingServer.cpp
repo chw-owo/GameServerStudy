@@ -104,8 +104,8 @@ void CChattingServer::Terminate()
 
 	for (int i = 0; i < dfTHREAD_NUM; i++)
 	{
-		InterlockedExchange(&_signal[i], 1);
-		WakeByAddressSingle(&_signal[i]);
+		long ret = InterlockedIncrement(&_signal[i]);
+		if (ret == 1) WakeByAddressSingle(&_signal[i]);
 	}
 	WaitForMultipleObjects(dfTHREAD_NUM, _updateThread, true, INFINITE);
 
@@ -196,9 +196,16 @@ void CChattingServer::OnReleaseClient(__int64 sessionID)
 	CPlayer* pPlayer = mapIter->second;
 
 	AcquireSRWLockExclusive(&pPlayer->_lock);
+	
+	while (pPlayer->_jobQ.GetUseSize() > 0)
+	{
+		CJob* job = pPlayer->_jobQ.Dequeue();
+		_pJobPool->Free(job);
+	}
 	DWORD x = pPlayer->_sectorX;
 	DWORD y = pPlayer->_sectorY;
 	int idx = pPlayer->CleanUp();
+
 	ReleaseSRWLockExclusive(&pPlayer->_lock);
 
 	_playersMap.erase(mapIter);
@@ -241,11 +248,12 @@ void CChattingServer::OnRecv(__int64 sessionID, CPacket* packet)
 	}
 	CPlayer* pPlayer = mapIter->second;
 	pPlayer->_jobQ.Enqueue(job);
+	InterlockedIncrement(&_jobQSize);
 	int threadIdx = pPlayer->_idx._threadIdx;
 	ReleaseSRWLockShared(&_playersLock);
 
-	InterlockedIncrement(&_signal[threadIdx]);
-	WakeByAddressSingle(&_signal[threadIdx]);
+	long ret = InterlockedIncrement(&_signal[threadIdx]);
+	if (ret == 1) WakeByAddressSingle(&_signal[threadIdx]);
 }
 
 void CChattingServer::OnSend(__int64 sessionID, int sendSize)
@@ -281,6 +289,8 @@ void CChattingServer::HandleRecv(CPlayer* pPlayer, CPacket* packet)
 		::wprintf(L"%s[%d] Undefined Message, %d\n", _T(__FUNCTION__), __LINE__, msgType);
 		break;
 	}
+
+	InterlockedIncrement(&_handlePacketTPS);
 }
 
 unsigned int __stdcall CChattingServer::UpdateThread(void* arg)
@@ -293,6 +303,7 @@ unsigned int __stdcall CChattingServer::UpdateThread(void* arg)
 	while (pServer->_serverAlive)
 	{
 		WaitOnAddress(&pServer->_signal[idx], &undesired, sizeof(long), INFINITE);
+		InterlockedIncrement(&pServer->_updateThreadWakeTPS);
 
 		for (int i = 0; i < dfPLAYER_PER_THREAD; i++)
 		{
@@ -347,11 +358,18 @@ unsigned int __stdcall CChattingServer::MonitorThread(void* arg)
 		SYSTEMTIME stTime;
 		GetLocalTime(&stTime);
 		WCHAR text[dfMONITOR_TEXT_LEN];
-		swprintf_s(text, dfMONITOR_TEXT_LEN, L"[%s %02d:%02d:%02d]\n\nTotal Accept: %d\nTotal Disconnect: %d\nConnected Session: %d\nRecv/1sec: %d\nSend/1sec: %d\nAccept/1sec: %d\nDisconnect/1sec: %d\nPacket Pool: %d/%d\n\n",
-			_T(__DATE__), stTime.wHour, stTime.wMinute, stTime.wSecond, pServer->GetAcceptTotal(), pServer->GetDisconnectTotal(), pServer->GetSessionCount(), pServer->GetRecvMsgTPS(), pServer->GetSendMsgTPS(), pServer->GetAcceptTPS(), pServer->GetDisconnectTPS(), CPacket::GetPoolSize(), CPacket::GetNodeCount());
+		swprintf_s(text, dfMONITOR_TEXT_LEN, L"[%s %02d:%02d:%02d]\n\nConnected Session: %d\nPacket Pool: %d/%d\n\nUpdate TPS: %d\nRequested Packet: %d\nHandled Packet: %d\nJob Pool: %d/%d\n\nPlayer Count: %d\nPlayer Pool: None\n\nTotal Accept: %d\nTotal Disconnect: %d\nRecv/1sec: %d\nSend/1sec: %d\nAccept/1sec: %d\nDisconnect/1sec: %d\n\n",
+			_T(__DATE__), stTime.wHour, stTime.wMinute, stTime.wSecond,
+			pServer->GetSessionCount(), CPacket::GetPoolSize(), CPacket::GetNodeCount(),
+			pServer->_updateThreadWakeTPS, pServer->_jobQSize, pServer->_handlePacketTPS, pServer->_pJobPool->GetPoolSize(), pServer->_pJobPool->GetNodeCount(), pServer->_playersMap.size(),
+			pServer->GetAcceptTotal(), pServer->GetDisconnectTotal(), pServer->GetRecvMsgTPS(), pServer->GetSendMsgTPS(), pServer->GetAcceptTPS(), pServer->GetDisconnectTPS());
+
 		::wprintf(L"%s", text);
 
 		pServer->ResetMonitorData();
+		pServer->_updateThreadWakeTPS = 0;
+		pServer->_handlePacketTPS = 0;
+		pServer->_jobQSize = 0;
 
 		FILE* file;
 		errno_t openRet = _wfopen_s(&file, L"MonitorLog/MonitorLog.txt", L"a+");

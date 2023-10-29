@@ -32,6 +32,7 @@ private:
 	void OnTerminate();
 	void OnThreadTerminate(wchar_t* threadName);
 	void OnError(int errorCode, wchar_t* errorMsg);
+	void OnDebug(int debugCode, wchar_t* debugMsg);
 
 private:
 	bool OnConnectRequest();
@@ -93,5 +94,8 @@ private:
 private: // For Monitor
 	long _totalAccept = 0;
 	long _totalDisconnect = 0;
+	long _updateThreadWakeTPS = 0;
+	long _handlePacketTPS = 0;
+	long _jobQSize = 0;
 };
 

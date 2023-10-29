@@ -114,11 +114,7 @@ public:
 		}
 
 		checkSum = checkSum % 256;
-		if (header._checkSum != checkSum) 
-		{
-			::printf("%02x != %02x\n", header._checkSum, checkSum);
-			return false;
-		}
+		if (header._checkSum != checkSum) return false;
 
 		return true;
 	}
