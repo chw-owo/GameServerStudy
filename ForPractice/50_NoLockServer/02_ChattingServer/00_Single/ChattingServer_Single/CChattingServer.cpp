@@ -3,7 +3,7 @@
 #include <tchar.h>
 
 #define _MONITOR
-#define _TIMEOUT
+// #define _TIMEOUT
 
 bool CChattingServer::Initialize()
 {
@@ -45,8 +45,15 @@ bool CChattingServer::Initialize()
 	// Set Network Library
 	SYSTEM_INFO si;
 	GetSystemInfo(&si);
-	int threadCnt = (int)si.dwNumberOfProcessors / 2;
-	if (!NetworkInitialize(dfSERVER_IP, dfSERVER_PORT, threadCnt, false))
+
+	int cpuCount = (int)si.dwNumberOfProcessors;
+	int networkThreadCnt = 0;
+
+	::wprintf(L"CPU total: %d\n", cpuCount);
+	::wprintf(L"Network Thread Count (Except Accept Thread) (recommend under %d): ", cpuCount - 1);
+	::scanf_s("%d", &networkThreadCnt);
+
+	if (!NetworkInitialize(dfSERVER_IP, dfSERVER_PORT, networkThreadCnt, false))
 	{
 		Terminate();
 		return false;

@@ -1,0 +1,12 @@
+﻿  CChattingServer.cpp
+C:\Users\user\Desktop\GameServerStudy\ForPractice\50_NoLockServer\02_ChattingServer\01_Multi\ChattingServer_Single\CSession.h(97,3): warning C4091: 'typedef ': 변수를 선언하지 않으면 'CSession::ValidFlag' 왼쪽은 무시됩니다.
+C:\Users\user\Desktop\GameServerStudy\ForPractice\50_NoLockServer\02_ChattingServer\01_Multi\ChattingServer_Single\CChattingServer.cpp(413,40): warning C4477: 'swprintf_s' : 서식 문자열 '%d'에 'int' 형식의 인수가 필요하지만 variadic 인수 13의 형식이 'unsigned __int64'입니다.
+C:\Users\user\Desktop\GameServerStudy\ForPractice\50_NoLockServer\02_ChattingServer\01_Multi\ChattingServer_Single\CChattingServer.cpp(413,40): message : 서식 문자열에서 '%zd'을(를) 사용하는 것이 좋습니다.
+C:\Users\user\Desktop\GameServerStudy\ForPractice\50_NoLockServer\02_ChattingServer\01_Multi\ChattingServer_Single\CChattingServer.cpp(542,35): warning C4267: '인수': 'size_t'에서 'long'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+  코드를 생성하고 있습니다.
+C:\Users\user\Desktop\GameServerStudy\ForPractice\50_NoLockServer\02_ChattingServer\01_Multi\ChattingServer_Single\CNetServer.cpp(206): warning C4715: 'CNetServer::NetworkTerminate': 모든 제어 경로에서 값을 반환하지는 않습니다.
+  15 of 718 functions ( 2.1%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    13 functions had inline decision re-evaluated but remain unchanged
+  코드를 생성했습니다.
+  ChattingServer_Single.vcxproj -> C:\Users\user\Desktop\GameServerStudy\ForPractice\50_NoLockServer\02_ChattingServer\01_Multi\x64\Release\ChattingServer_Single.exe

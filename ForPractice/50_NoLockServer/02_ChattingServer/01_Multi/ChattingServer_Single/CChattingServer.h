@@ -30,6 +30,7 @@ private:
 	void OnTerminate();
 	void OnThreadTerminate(wchar_t* threadName);
 	void OnError(int errorCode, wchar_t* errorMsg);
+	void OnDebug(int debugCode, wchar_t* debugMsg);
 
 private:
 	bool OnConnectRequest();
@@ -79,22 +80,24 @@ private:
 
 private:
 	bool _serverAlive = true;
-	HANDLE _updateThread[dfTHREAD_NUM];
+	int _updateThreadCnt = 0;
+	int _playerPerThread = 0;
+	HANDLE* _updateThread;
 	HANDLE _monitorThread; 
 	HANDLE _timeoutThread;
-
+	
 private:
 	CSector _sectors[dfSECTOR_CNT_Y][dfSECTOR_CNT_X];
 
 private:
 	__int64 _playerIDGenerator = 0;
 	unordered_map<__int64, CPlayer*> _playersMap;
-	CPlayer* _players[dfTHREAD_NUM][dfPLAYER_PER_THREAD];
+	CPlayer** _players;
 	CLockFreeStack<int> _usablePlayerIdx;
 	SRWLOCK _playersLock;
 
 private:
-	long _signal[dfTHREAD_NUM] = { 0, };
+	long* _signal;
 	CLockFreePool<CJob>* _pJobPool;
 
 private: // For Monitor

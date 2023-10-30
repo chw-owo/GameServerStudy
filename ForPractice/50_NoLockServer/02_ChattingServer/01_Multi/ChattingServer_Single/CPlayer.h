@@ -7,10 +7,10 @@ class PLAYER_IDX
 {
 public:
 	PLAYER_IDX() {};
-	PLAYER_IDX(int idx)
+	PLAYER_IDX(int idx, int playerPerThread)
 		: _idx(idx),
-		_threadIdx(idx / dfPLAYER_PER_THREAD),
-		_playerIdx(idx% dfPLAYER_PER_THREAD) {};
+		_threadIdx(idx / playerPerThread),
+		_playerIdx(idx % playerPerThread) {};
 
 public:
 	int _idx;
@@ -21,8 +21,11 @@ public:
 class CPlayer
 {
 public:
-	CPlayer(int idx) : _idx(idx)
+	CPlayer() {}
+
+	void Setting(int idx, int playerPerThread)  
 	{
+		_idx = PLAYER_IDX(idx, playerPerThread);
 		InitializeSRWLock(&_lock);
 	}
 

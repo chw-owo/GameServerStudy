@@ -5,7 +5,7 @@
 
 #define dfSECTOR_CNT_Y			50
 #define dfSECTOR_CNT_X			50
-#define dfPLAYER_MAX			10000
+#define dfPLAYER_MAX			6000
 #define dfTIMEOUT				40000
 #define dfMONITOR_TEXT_LEN		1024
 #define dfJOB_DEF				10000
@@ -13,9 +13,6 @@
 #define dfID_LEN				20
 #define dfNICKNAME_LEN			20
 #define dfSESSIONKEY_LEN		64
-
-#define dfTHREAD_NUM			5
-#define dfPLAYER_PER_THREAD		2000
 
 enum en_PACKET_TYPE
 {

@@ -35,6 +35,7 @@ protected:
 	virtual void OnRecv(__int64 sessionID, CPacket* packet) = 0;
 	virtual void OnSend(__int64 sessionID, int sendSize) = 0;
 	virtual void OnError(int errorCode, wchar_t* errorMsg) = 0;
+	virtual void OnDebug(int debugCode, wchar_t* debugMsg) = 0;
 
 protected:
 	inline void UpdateMonitorData()
@@ -104,7 +105,7 @@ private:
 	CLockFreeStack<__int64> _emptyIdx;
 	volatile long _sessionCnt = 0;
 
-private: 
+private:
 	volatile __int64 _sessionID = 0;
 	unsigned __int64 _indexMask = 0;
 	unsigned __int64 _idMask = 0;
