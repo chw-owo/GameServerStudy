@@ -41,7 +41,7 @@ unsigned __stdcall TlsLockPoolThread(void* arg);
 set<unsigned __int64> address[6][THREAD_CNT];
 inline unsigned __int64 GetAddress(Data* p)
 {
-    return ((unsigned __int64)p) & 0x7fffffffffc0;
+    return ((unsigned __int64)p) & 0xffffffffffffffc0;
 }
 
 struct argForThread
@@ -222,7 +222,7 @@ void SingleNewDelete()
     deleteCall--;
 
     ::printf("Single New-Delete Test\n");
-    ::printf("delay: %lld, %lld\n", newDelay, deleteDelay);
+    //::printf("delay: %lld, %lld\n", newDelay, deleteDelay);
     ::printf("Max: %.4lfms, %.4lfms\n", newMax * MS_PER_SEC, deleteMax * MS_PER_SEC);
     ::printf("Address Cnt: %lld\n", address[0][0].size());
     ::printf("new time: %.4lfms\n", newTime * MS_PER_SEC);
@@ -293,7 +293,7 @@ void SingleBasicPool()
     deleteCall--;
 
     ::printf("Single Object Pool Test\n");
-    ::printf("delay: %lld, %lld\n", newDelay, deleteDelay);
+    //::printf("delay: %lld, %lld\n", newDelay, deleteDelay);
     ::printf("Max: %.4lfms, %.4lfms\n", newMax * MS_PER_SEC, deleteMax * MS_PER_SEC);
     ::printf("Address Cnt: %lld\n", address[1][0].size());
     ::printf("new time: %.4lfms\n", newTime * MS_PER_SEC);
@@ -430,7 +430,7 @@ unsigned __stdcall NewDeleteThread(void* arg)
         int deleteCall = 0;
         double newTime = 0;
         double deleteTime = 0;
-        __int64 addressSize = 0;
+        set<unsigned __int64> addressTmp;
 
         for (int i = 0; i < THREAD_CNT; i++)
         {
@@ -438,7 +438,12 @@ unsigned __stdcall NewDeleteThread(void* arg)
             deleteCall += deleteCalls[0][i];
             newTime += newTimes[0][i];
             deleteTime += deleteTimes[0][i];
-            addressSize += address[2][i].size();
+
+            set<unsigned __int64>::iterator it = address[2][i].begin();
+            for (; it != address[2][i].end(); it++)
+            {
+                addressTmp.insert(*it);
+            }
         }
 
         newTime -= newMax;
@@ -447,9 +452,9 @@ unsigned __stdcall NewDeleteThread(void* arg)
         deleteCall--;
 
         ::printf("Multi New-Delete Test\n");
-        ::printf("delay: %lld, %lld\n", newDelay, deleteDelay);
+        //::printf("delay: %lld, %lld\n", newDelay, deleteDelay);
         ::printf("Max: %.4lfms, %.4lfms\n", newMax * MS_PER_SEC, deleteMax * MS_PER_SEC);
-        ::printf("Address Cnt: %lld\n", addressSize);
+        ::printf("Address Cnt: %lld\n", addressTmp.size());
         ::printf("new time: %.4lfms\n", newTime * MS_PER_SEC);
         ::printf("new average: %.4lfms\n", newTime * MS_PER_SEC / newCall);
         ::printf("delete time: %.4lfms\n", deleteTime * MS_PER_SEC);
@@ -526,7 +531,7 @@ unsigned __stdcall BasicLockPoolThread(void* arg)
         int deleteCall = 0;
         double newTime = 0;
         double deleteTime = 0;
-        __int64 addressSize = 0;
+        set<unsigned __int64> addressTmp;
 
         for (int i = 0; i < THREAD_CNT; i++)
         {
@@ -534,7 +539,11 @@ unsigned __stdcall BasicLockPoolThread(void* arg)
             deleteCall += deleteCalls[1][i];
             newTime += newTimes[1][i];
             deleteTime += deleteTimes[1][i];
-            addressSize += address[3][i].size();
+            set<unsigned __int64>::iterator it = address[3][i].begin();
+            for (; it != address[3][i].end(); it++)
+            {
+                addressTmp.insert(*it);
+            }
         }
 
         newTime -= newMax;
@@ -543,9 +552,9 @@ unsigned __stdcall BasicLockPoolThread(void* arg)
         deleteCall--;
 
         ::printf("Basic Object Pool Test\n");
-        ::printf("delay: %lld, %lld\n", newDelay, deleteDelay);
+        //::printf("delay: %lld, %lld\n", newDelay, deleteDelay);
         ::printf("Max: %.4lfms, %.4lfms\n", newMax * MS_PER_SEC, deleteMax * MS_PER_SEC);
-        ::printf("Address Cnt: %lld\n", addressSize);
+        ::printf("Address Cnt: %lld\n", addressTmp.size());
         ::printf("new time: %.4lfms\n", newTime * MS_PER_SEC);
         ::printf("new average: %.4lfms\n", newTime * MS_PER_SEC / newCall);
         ::printf("delete time: %.4lfms\n", deleteTime * MS_PER_SEC);
@@ -622,7 +631,7 @@ unsigned __stdcall LockFreePoolThread(void* arg)
         int deleteCall = 0;
         double newTime = 0;
         double deleteTime = 0;
-        __int64 addressSize = 0;
+        set<unsigned __int64> addressTmp;
 
         for (int i = 0; i < THREAD_CNT; i++)
         {
@@ -630,7 +639,11 @@ unsigned __stdcall LockFreePoolThread(void* arg)
             deleteCall += deleteCalls[2][i];
             newTime += newTimes[2][i];
             deleteTime += deleteTimes[2][i];
-            addressSize += address[4][i].size();
+            set<unsigned __int64>::iterator it = address[3][i].begin();
+            for (; it != address[3][i].end(); it++)
+            {
+                addressTmp.insert(*it);
+            }
         }
 
         newTime -= newMax;
@@ -639,9 +652,9 @@ unsigned __stdcall LockFreePoolThread(void* arg)
         deleteCall--;
 
         ::printf("Lock Free Pool Test\n");
-        ::printf("delay: %lld, %lld\n", newDelay, deleteDelay);
+        //::printf("delay: %lld, %lld\n", newDelay, deleteDelay);
         ::printf("Max: %.4lfms, %.4lfms\n", newMax * MS_PER_SEC, deleteMax * MS_PER_SEC);
-        ::printf("Address Cnt: %lld\n", addressSize);
+        ::printf("Address Cnt: %lld\n", addressTmp.size());
         ::printf("new time: %.4lfms\n", newTime * MS_PER_SEC);
         ::printf("new average: %.4lfms\n", newTime * MS_PER_SEC / newCall);
         ::printf("delete time: %.4lfms\n", deleteTime * MS_PER_SEC);
@@ -719,7 +732,7 @@ unsigned __stdcall TlsLockPoolThread(void* arg)
         int deleteCall = 0;
         double newTime = 0;
         double deleteTime = 0;
-        __int64 addressSize = 0;
+        set<unsigned __int64> addressTmp;
 
         for (int i = 0; i < THREAD_CNT; i++)
         {
@@ -727,7 +740,11 @@ unsigned __stdcall TlsLockPoolThread(void* arg)
             deleteCall += deleteCalls[3][i];
             newTime += newTimes[3][i];
             deleteTime += deleteTimes[3][i];
-            addressSize += address[5][i].size();
+            set<unsigned __int64>::iterator it = address[3][i].begin();
+            for (; it != address[3][i].end(); it++)
+            {
+                addressTmp.insert(*it);
+            }
         }
 
         newTime -= newMax;
@@ -736,9 +753,9 @@ unsigned __stdcall TlsLockPoolThread(void* arg)
         deleteCall--;
 
         ::printf("Tls Object Pool Test\n");
-        ::printf("delay: %lld, %lld\n", newDelay, deleteDelay);
+        //::printf("delay: %lld, %lld\n", newDelay, deleteDelay);
         ::printf("Max: %.4lfms, %.4lfms\n", newMax * MS_PER_SEC, deleteMax * MS_PER_SEC);
-        ::printf("Address Cnt: %lld\n", addressSize);
+        ::printf("Address Cnt: %lld\n", addressTmp.size());
         ::printf("new time: %.4lfms\n", newTime * MS_PER_SEC);
         ::printf("new average: %.4lfms\n", newTime * MS_PER_SEC / newCall);
         ::printf("delete time: %.4lfms\n", deleteTime * MS_PER_SEC);
