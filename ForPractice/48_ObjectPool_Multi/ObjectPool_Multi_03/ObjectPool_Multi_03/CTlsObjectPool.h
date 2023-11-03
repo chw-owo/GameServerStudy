@@ -5,16 +5,15 @@
 #include <vector>
 #include <algorithm>
 using namespace std;
-
 #define NODE_MIN 16
 
-template <class DATA>
+template <class T>
 class CTlsObjectPool
 {
 private:
 	struct stNODE
 	{
-		DATA data;
+		T data;
 		size_t tail = nullptr;
 	};
 
@@ -24,8 +23,8 @@ public:
 
 public:
 	template<typename... Types>
-	inline DATA* Alloc(Types... args);
-	inline bool Free(DATA* pData);
+	inline T* Alloc(Types... args);
+	inline bool Free(T* pData);
 
 public:
 	template<typename... Types>
@@ -53,16 +52,16 @@ private:
 	};
 
 private:
-	vector<HANDLE> _heapHandles;	// 스레드 별 힙으로 alloc 경합 최소화
-	vector<stNODE*> _pFreeNodes;	// Free된 노드는 스레드 별로 관리	
-	vector<FreeNodeCnt*> _freeNodeCnts;		// 각 스레드가 지닌 Free Node 개수
-	vector<SRWLOCK*> _locks;		// for freeNodeCnt & pFreeNode
+	vector<HANDLE> _heapHandles;		// 스레드 별 힙으로 alloc 경합 최소화
+	vector<stNODE*> _pFreeNodes;		// Free된 노드는 스레드 별로 관리	
+	vector<FreeNodeCnt*> _freeNodeCnts;	// 각 스레드가 지닌 Free Node 개수
+	vector<SRWLOCK*> _locks;			// for freeNodeCnt & pFreeNode
 	SRWLOCK _lock;
 
 };
 
-template<class DATA>
-CTlsObjectPool<DATA>::CTlsObjectPool(int blockNum, bool placementNew)
+template<class T>
+CTlsObjectPool<T>::CTlsObjectPool(int blockNum, bool placementNew)
 	:_placementNew(placementNew), _blockNum(blockNum)
 {
 	InitializeSRWLock(&_lock);
@@ -78,8 +77,8 @@ CTlsObjectPool<DATA>::CTlsObjectPool(int blockNum, bool placementNew)
 	return;
 }
 
-template<class DATA>
-CTlsObjectPool<DATA>::~CTlsObjectPool()
+template<class T>
+CTlsObjectPool<T>::~CTlsObjectPool()
 {
 	if (_placementNew)
 	{
@@ -94,12 +93,14 @@ CTlsObjectPool<DATA>::~CTlsObjectPool()
 		// Free 시 Data의 소멸자를 호출하지 않으므로 이때 호출한다
 		for (int i = 1; i <= _threadIdx; i++)
 		{
+			/*
 			while (_pFreeNodes[i] != nullptr)
 			{
 				size_t next = _pFreeNodes[i]->tail;
-				(_pFreeNodes[i]->data).~DATA();
+				(_pFreeNodes[i]->data).~T();
 				_pFreeNodes[i] = (stNODE*)next;
 			}
+			*/
 			HeapDestroy(_heapHandles[i]);
 		}
 	}
@@ -107,9 +108,9 @@ CTlsObjectPool<DATA>::~CTlsObjectPool()
 	TlsFree(_tlsIdx);
 }
 
-template<class DATA>
+template<class T>
 template<typename... Types>
-DATA* CTlsObjectPool<DATA>::Alloc(Types... args)
+T* CTlsObjectPool<T>::Alloc(Types... args)
 {
 	int threadIdx = (int)TlsGetValue(_tlsIdx);
 	if (threadIdx == 0) threadIdx = RegisterThread(true, args...);
@@ -165,7 +166,7 @@ DATA* CTlsObjectPool<DATA>::Alloc(Types... args)
 			// 타 스레드에도 노드가 없다면 노드 생성, Data 생성자를 호출한다 (최초 생성)
 			stNODE* pNew = (stNODE*)HeapAlloc(
 				_heapHandles[threadIdx], HEAP_NO_SERIALIZE, sizeof(stNODE));
-			new (&(pNew->data)) DATA(args...);
+			new (&(pNew->data)) T(args...);
 
 			ReleaseSRWLockExclusive(_locks[threadIdx]);
 			return &(pNew->data);
@@ -177,7 +178,7 @@ DATA* CTlsObjectPool<DATA>::Alloc(Types... args)
 		// 노드를 가져온 후 Data의 생성자를 호출한다
 		stNODE* p = _pFreeNodes[threadIdx];
 		_pFreeNodes[threadIdx] = (stNODE*)p->tail;
-		new (&(p->data)) DATA(args...);
+		new (&(p->data)) T(args...);
 		_freeNodeCnts[threadIdx]->_nodeCnt--;
 
 		ReleaseSRWLockExclusive(_locks[threadIdx]);
@@ -197,8 +198,8 @@ DATA* CTlsObjectPool<DATA>::Alloc(Types... args)
 	return nullptr;
 }
 
-template<class DATA>
-bool CTlsObjectPool<DATA>::Free(DATA* pData)
+template<class T>
+bool CTlsObjectPool<T>::Free(T* pData)
 {
 	int threadIdx = (int)TlsGetValue(_tlsIdx);
 	if (threadIdx == 0) threadIdx = RegisterThread(false);
@@ -207,7 +208,7 @@ bool CTlsObjectPool<DATA>::Free(DATA* pData)
 	if (_placementNew)
 	{
 		// Data의 소멸자를 호출한 후 _pFreeNodes에 push한다
-		pData->~DATA();
+		pData->~T();
 		((stNODE*)pData)->tail = (size_t)_pFreeNodes[threadIdx];
 		_pFreeNodes[threadIdx] = (stNODE*)pData;
 		_freeNodeCnts[threadIdx]->_nodeCnt++;
@@ -228,9 +229,9 @@ bool CTlsObjectPool<DATA>::Free(DATA* pData)
 	return false;
 }
 
-template<class DATA>
+template<class T>
 template<typename... Types>
-inline int CTlsObjectPool<DATA>::RegisterThread(bool alloc, Types... args)
+inline int CTlsObjectPool<T>::RegisterThread(bool alloc, Types... args)
 {
 	int threadIdx = (int)TlsGetValue(_tlsIdx);
 
@@ -261,8 +262,7 @@ inline int CTlsObjectPool<DATA>::RegisterThread(bool alloc, Types... args)
 		// Alloc 시 Data의 생성자를 호출하므로 이때 호출하면 안된다
 		for (int i = 0; i < _blockNum; i++)
 		{
-			stNODE* p = (stNODE*)HeapAlloc(
-				_heapHandles[threadIdx], HEAP_NO_SERIALIZE, sizeof(stNODE));
+			stNODE* p = (stNODE*)HeapAlloc(_heapHandles[threadIdx], HEAP_NO_SERIALIZE, sizeof(stNODE));
 			p->tail = (size_t)_pFreeNodes[threadIdx];
 			_pFreeNodes[threadIdx] = p;
 		}
@@ -272,14 +272,12 @@ inline int CTlsObjectPool<DATA>::RegisterThread(bool alloc, Types... args)
 		// Alloc 시 Data의 생성자를 호출하지 않으므로 이때 호출해야 된다
 		for (int i = 0; i < _blockNum; i++)
 		{
-			stNODE* p = (stNODE*)HeapAlloc(
-				_heapHandles[threadIdx], HEAP_NO_SERIALIZE, sizeof(stNODE));
+			stNODE* p = (stNODE*)HeapAlloc(_heapHandles[threadIdx], HEAP_NO_SERIALIZE, sizeof(stNODE));
 			p->tail = (size_t)_pFreeNodes[threadIdx];
-			new (&(p->data)) DATA(args...);
+			new (&(p->data)) T(args...);
 			_pFreeNodes[threadIdx] = p;
 		}
 	}
-
 	ReleaseSRWLockExclusive(_locks[threadIdx]);
 
 	return threadIdx;

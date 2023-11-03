@@ -296,6 +296,7 @@ void CChattingServer::OnRecv(__int64 sessionID, CPacket* packet)
 		ReleaseSRWLockExclusive(&_playersLock);
 		return;
 	}
+
 	CPlayer* pPlayer = mapIter->second;
 	pPlayer->_jobQ.Enqueue(job);
 	InterlockedIncrement(&_jobQSize);

@@ -3,13 +3,13 @@
 #include <stdlib.h>
 #include <windows.h>
 
-template <class DATA>
+template <class T>
 class CObjectPool
 {
 private:
 	struct stNODE
 	{
-		DATA data;
+		T data;
 		size_t tail = NULL;
 	};
 
@@ -20,25 +20,20 @@ public:
 
 public:
 	template<typename... Types>
-	inline DATA* Alloc(Types... args);
-	inline bool Free(DATA* pData);
+	inline T* Alloc(Types... args);
+	inline bool Free(T* pData);
 
 private:
 	bool _placementNew;
 	int _blockNum;
 	stNODE* _pFreeNode = nullptr;
-
-private:
-	SRWLOCK _lock;
 };
 
-template<class DATA>
+template<class T>
 template<typename... Types>
-CObjectPool<DATA>::CObjectPool(int blockNum, bool placementNew, Types... args)
+CObjectPool<T>::CObjectPool(int blockNum, bool placementNew, Types... args)
 	:_placementNew(placementNew), _blockNum(blockNum), _pFreeNode(nullptr)
 {
-	InitializeSRWLock(&_lock);
-
 	if (_blockNum <= 0)
 		return;
 
@@ -62,17 +57,17 @@ CObjectPool<DATA>::CObjectPool(int blockNum, bool placementNew, Types... args)
 		_pFreeNode->tail = (size_t)nullptr;
 		for (int i = 1; i < _blockNum; i++)
 		{
-			new (&(_pFreeNode->data)) DATA(args...);
+			new (&(_pFreeNode->data)) T(args...);
 			stNODE* p = (stNODE*)malloc(sizeof(stNODE));
 			p->tail = (size_t)_pFreeNode;
 			_pFreeNode = p;
 		}
-		new (&(_pFreeNode->data)) DATA(args...);
+		new (&(_pFreeNode->data)) T(args...);
 	}
 }
 
-template<class DATA>
-CObjectPool<DATA>::~CObjectPool()
+template<class T>
+CObjectPool<T>::~CObjectPool()
 {
 	if (_pFreeNode == nullptr)
 		return;
@@ -94,27 +89,25 @@ CObjectPool<DATA>::~CObjectPool()
 		while (_pFreeNode->tail != NULL)
 		{
 			size_t next = _pFreeNode->tail;
-			(_pFreeNode->data).~DATA();
+			(_pFreeNode->data).~T();
 			free(_pFreeNode);
 			_pFreeNode = (stNODE*)next;
 		}
-		(_pFreeNode->data).~DATA();
+		(_pFreeNode->data).~T();
 		free(_pFreeNode);
 	}
 }
 
-template<class DATA>
+template<class T>
 template<typename... Types>
-DATA* CObjectPool<DATA>::Alloc(Types... args)
+T* CObjectPool<T>::Alloc(Types... args)
 {
-	AcquireSRWLockExclusive(&_lock);
 
 	if (_pFreeNode == nullptr)
 	{
 		// 비어있는 노드가 없다면 생성한 후 Data의 생성자를 호출한다 (최초 생성)
 		stNODE* pNew = (stNODE*)malloc(sizeof(stNODE));
-		new (&(pNew->data)) DATA(args...);
-		ReleaseSRWLockExclusive(&_lock);
+		new (&(pNew->data)) T(args...);
 		return &(pNew->data);
 	}
 
@@ -123,8 +116,7 @@ DATA* CObjectPool<DATA>::Alloc(Types... args)
 		// 비어있는 노드가 있다면 가져온 후 Data의 생성자를 호출한다
 		stNODE* p = _pFreeNode;
 		_pFreeNode = (stNODE*)_pFreeNode->tail;
-		new (&(p->data)) DATA(args...);
-		ReleaseSRWLockExclusive(&_lock);
+		new (&(p->data)) T(args...);
 		return &(p->data);
 	}
 	else
@@ -132,26 +124,21 @@ DATA* CObjectPool<DATA>::Alloc(Types... args)
 		// 비어있는 노드가 있다면 가져온 후 Data의 생성자를 호출하지 않는다
 		stNODE* p = _pFreeNode;
 		_pFreeNode = (stNODE*)_pFreeNode->tail;
-		ReleaseSRWLockExclusive(&_lock);
 		return &(p->data);
 	}
 
-	ReleaseSRWLockExclusive(&_lock);
 	return nullptr;
 }
 
-template<class DATA>
-bool CObjectPool<DATA>::Free(DATA* pData)
+template<class T>
+bool CObjectPool<T>::Free(T* pData)
 {
-	AcquireSRWLockExclusive(&_lock);
-
 	if (_placementNew)
 	{
 		// Data의 소멸자를 호출한 후 _pFreeNode에 push한다
-		pData->~DATA();
+		pData->~T();
 		((stNODE*)pData)->tail = (size_t)_pFreeNode;
 		_pFreeNode = (stNODE*)pData;
-		ReleaseSRWLockExclusive(&_lock);
 		return true;
 	}
 	else
@@ -159,10 +146,8 @@ bool CObjectPool<DATA>::Free(DATA* pData)
 		// Data의 소멸자를 호출하지 않고 _pFreeNode에 push한다
 		((stNODE*)pData)->tail = (size_t)_pFreeNode;
 		_pFreeNode = (stNODE*)pData;
-		ReleaseSRWLockExclusive(&_lock);
 		return true;
 	}
 
-	ReleaseSRWLockExclusive(&_lock);
 	return false;
 }

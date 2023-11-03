@@ -32,7 +32,7 @@ public:
 private:
 	bool _placementNew;
 	int _blockNum;
-	_int64 _pTop = NULL;
+	__int64 _pTop = NULL;
 };
 
 template<class T>
@@ -122,6 +122,7 @@ CLockFreePool<T>::~CLockFreePool()
 		(pTop->_data).~T();
 		free(pTop);
 	}
+
 }
 
 template<class T>
@@ -130,18 +131,20 @@ T* CLockFreePool<T>::Alloc(Types... args) // Pop
 {
 	if (_placementNew)
 	{
-		// 비어있는 노드가 있다면 가져온 후 Data의 생성자를 호출한다
 		for (;;)
 		{
 			__int64 pPrevTop = _pTop;
 			if (pPrevTop == NULL)
 			{
+				__debugbreak();
+
 				// 비어있는 노드가 없다면 생성한 후 Data의 생성자를 호출한다 (최초 생성)
 				PoolNode* pNewNode = (PoolNode*)malloc(sizeof(PoolNode));
 				new (&(pNewNode->_data)) T(args...);
 				return &(pNewNode->_data);
 			}
 
+			// 비어있는 노드가 있다면 가져온 후 Data의 생성자를 호출한다
 			__int64 pNextTop = ((PoolNode*)(pPrevTop & _addressMask))->_next;
 			if (InterlockedCompareExchange64(&_pTop, pNextTop, pPrevTop) == pPrevTop)
 			{
@@ -151,19 +154,21 @@ T* CLockFreePool<T>::Alloc(Types... args) // Pop
 		}
 	}
 	else
-	{
-		// 비어있는 노드가 있다면 가져온 후 Data의 생성자를 호출하지 않는다
+	{	
 		for (;;)
 		{
 			__int64 pPrevTop = _pTop;
 			if (pPrevTop == NULL)
 			{
+				__debugbreak();
+
 				// 비어있는 노드가 없다면 생성한 후 Data의 생성자를 호출한다 (최초 생성)
 				PoolNode* pNewNode = (PoolNode*)malloc(sizeof(PoolNode));
 				new (&(pNewNode->_data)) T(args...);
 				return &(pNewNode->_data);
 			}
 
+			// 비어있는 노드가 있다면 가져온 후 Data의 생성자를 호출하지 않는다
 			__int64 pNextTop = ((PoolNode*)(pPrevTop & _addressMask))->_next;
 			if (InterlockedCompareExchange64(&_pTop, pNextTop, pPrevTop) == pPrevTop)
 			{
@@ -193,7 +198,9 @@ bool CLockFreePool<T>::Free(T* pData) // Push
 			__int64 pPrevTop = _pTop;
 			((PoolNode*)pData)->_next = pPrevTop;
 			if (InterlockedCompareExchange64(&_pTop, pNewTop, pPrevTop) == pPrevTop)
+			{
 				return true;
+			}
 		}
 	}
 	else
@@ -204,7 +211,9 @@ bool CLockFreePool<T>::Free(T* pData) // Push
 			__int64 pPrevTop = _pTop;
 			((PoolNode*)pData)->_next = pPrevTop;
 			if (InterlockedCompareExchange64(&_pTop, pNewTop, pPrevTop) == pPrevTop)
+			{
 				return true;
+			}
 		}
 	}
 	return false;

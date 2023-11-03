@@ -18,13 +18,16 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="CObjectPool.h">
+    <ClInclude Include="CLockPool.h">
       <Filter>Pool</Filter>
     </ClInclude>
     <ClInclude Include="CLockFreePool.h">
       <Filter>Pool</Filter>
     </ClInclude>
     <ClInclude Include="CTlsObjectPool.h">
+      <Filter>Pool</Filter>
+    </ClInclude>
+    <ClInclude Include="CObjectPool.h">
       <Filter>Pool</Filter>
     </ClInclude>
   </ItemGroup>

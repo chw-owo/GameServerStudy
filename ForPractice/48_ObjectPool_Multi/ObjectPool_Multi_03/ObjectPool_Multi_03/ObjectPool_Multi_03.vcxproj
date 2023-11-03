@@ -137,6 +137,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CLockFreePool.h" />
+    <ClInclude Include="CLockPool.h" />
     <ClInclude Include="CObjectPool.h" />
     <ClInclude Include="CTlsObjectPool.h" />
   </ItemGroup>
