@@ -3,8 +3,19 @@
 int main()
 {
     ProfileTlsLockPool();
-    ProfileTlsLockPoolUpgrade();
+    // ProfileTlsLockPoolUpgrade();
     
+    /*
+    SetTest();
+    SingleNewDelete();
+    SingleTlsLockPoolUpgrade();
+    SingleTlsLockPool();
+
+    SetMultiTest();
+    MultiNewDelete();
+    MultiTlsLockPool();
+    */
+
     /*
     SetTest();
     SingleNewDelete();

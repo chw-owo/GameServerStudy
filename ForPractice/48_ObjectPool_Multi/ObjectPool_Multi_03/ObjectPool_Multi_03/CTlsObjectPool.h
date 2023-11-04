@@ -58,6 +58,15 @@ private:
 	vector<SRWLOCK*> _locks;			// for freeNodeCnt & pFreeNode
 	SRWLOCK _lock;
 
+public:// For Profiling
+#define THREAD_CNT 1
+	double newLockTimes[THREAD_CNT] = { 0, };
+	double newTimes[THREAD_CNT] = { 0, };
+	int newWaitCnt[THREAD_CNT] = { 0, };
+	double deleteLockTimes[THREAD_CNT] = { 0, };
+	double deleteTimes[THREAD_CNT] = { 0, };
+	int deleteWaitCnt[THREAD_CNT] = { 0, };
+	double getIdxTimes[THREAD_CNT] = { 0, };
 };
 
 template<class T>
@@ -112,13 +121,38 @@ template<class T>
 template<typename... Types>
 T* CTlsObjectPool<T>::Alloc(Types... args)
 {
-	int threadIdx = (int)TlsGetValue(_tlsIdx);
-	if (threadIdx == 0) threadIdx = RegisterThread(true, args...);
+	double interval = 0;
+	LARGE_INTEGER freq;
+	LARGE_INTEGER start;
+	LARGE_INTEGER end;
+	QueryPerformanceFrequency(&freq);
 
-	AcquireSRWLockExclusive(_locks[threadIdx]);
+	QueryPerformanceCounter(&start);
+	int threadIdx = (int)TlsGetValue(_tlsIdx);
+	if (threadIdx == 0) 
+	{
+		__debugbreak();
+		threadIdx = RegisterThread(true, args...);
+	}
+	QueryPerformanceCounter(&end);
+	interval = (end.QuadPart - start.QuadPart) / (double)freq.QuadPart;
+	getIdxTimes[threadIdx - 1] += interval;
+
+	QueryPerformanceCounter(&start);
+	int ret = TryAcquireSRWLockExclusive(_locks[threadIdx]);
+	while (ret == 0)
+	{
+		newWaitCnt[threadIdx - 1]++;
+		ret = TryAcquireSRWLockExclusive(_locks[threadIdx]);
+	}
+	QueryPerformanceCounter(&end);
+	interval = (end.QuadPart - start.QuadPart) / (double)freq.QuadPart;
+	newLockTimes[threadIdx - 1] += interval;
 
 	if (_pFreeNodes[threadIdx] == nullptr)
 	{
+		__debugbreak();
+
 		// 노드가 없다면 타 스레드의 노드를 탐색한다. 
 		AcquireSRWLockExclusive(&_lock);
 		bool flag = false;
@@ -187,9 +221,16 @@ T* CTlsObjectPool<T>::Alloc(Types... args)
 	else
 	{
 		// 노드를 가져온 후 Data의 생성자를 호출하지 않는다
+
+		QueryPerformanceCounter(&start);
+
 		stNODE* p = _pFreeNodes[threadIdx];
 		_pFreeNodes[threadIdx] = (stNODE*)p->tail;
 		_freeNodeCnts[threadIdx]->_nodeCnt--;
+
+		QueryPerformanceCounter(&end);
+		interval = (end.QuadPart - start.QuadPart) / (double)freq.QuadPart;
+		newTimes[threadIdx - 1] += interval;
 
 		ReleaseSRWLockExclusive(_locks[threadIdx]);
 		return &(p->data);
@@ -201,10 +242,35 @@ T* CTlsObjectPool<T>::Alloc(Types... args)
 template<class T>
 bool CTlsObjectPool<T>::Free(T* pData)
 {
-	int threadIdx = (int)TlsGetValue(_tlsIdx);
-	if (threadIdx == 0) threadIdx = RegisterThread(false);
+	double interval = 0;
+	LARGE_INTEGER freq;
+	LARGE_INTEGER start;
+	LARGE_INTEGER end;
+	QueryPerformanceFrequency(&freq);
 
-	AcquireSRWLockExclusive(_locks[threadIdx]);
+	QueryPerformanceCounter(&start);
+	int threadIdx = (int)TlsGetValue(_tlsIdx);
+	if (threadIdx == 0)
+	{
+		__debugbreak();
+		threadIdx = RegisterThread(false);
+	}
+	QueryPerformanceCounter(&end);
+	interval = (end.QuadPart - start.QuadPart) / (double)freq.QuadPart;
+	getIdxTimes[threadIdx - 1] += interval;
+
+	QueryPerformanceCounter(&start);
+	int ret = TryAcquireSRWLockExclusive(_locks[threadIdx]);
+	while(ret == 0)
+	{
+		deleteWaitCnt[threadIdx - 1]++;
+		ret = TryAcquireSRWLockExclusive(_locks[threadIdx]);
+	}
+	QueryPerformanceCounter(&end);
+	interval = (end.QuadPart - start.QuadPart) / (double)freq.QuadPart;
+	deleteLockTimes[threadIdx - 1] += interval;
+
+
 	if (_placementNew)
 	{
 		// Data의 소멸자를 호출한 후 _pFreeNodes에 push한다
@@ -219,9 +285,16 @@ bool CTlsObjectPool<T>::Free(T* pData)
 	else
 	{
 		// Data의 소멸자를 호출하지 않고 _pFreeNodes에 push한다
+
+		QueryPerformanceCounter(&start);
+
 		((stNODE*)pData)->tail = (size_t)_pFreeNodes[threadIdx];
 		_pFreeNodes[threadIdx] = (stNODE*)pData;
 		_freeNodeCnts[threadIdx]->_nodeCnt++;
+
+		QueryPerformanceCounter(&end);
+		interval = (end.QuadPart - start.QuadPart) / (double)freq.QuadPart;
+		deleteTimes[threadIdx - 1] += interval;
 
 		ReleaseSRWLockExclusive(_locks[threadIdx]);
 		return true;
