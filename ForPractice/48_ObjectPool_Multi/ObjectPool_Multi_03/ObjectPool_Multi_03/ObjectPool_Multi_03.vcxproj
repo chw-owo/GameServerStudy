@@ -134,12 +134,15 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp" />
+    <ClCompile Include="PoolTest.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CLockFreePool.h" />
     <ClInclude Include="CLockPool.h" />
     <ClInclude Include="CObjectPool.h" />
     <ClInclude Include="CTlsObjectPool.h" />
+    <ClInclude Include="CTlsObjectPool_Upgrade.h" />
+    <ClInclude Include="PoolTest.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

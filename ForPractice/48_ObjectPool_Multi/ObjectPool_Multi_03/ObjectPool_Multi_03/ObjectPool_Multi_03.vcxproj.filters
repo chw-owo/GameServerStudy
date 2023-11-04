@@ -11,10 +11,16 @@
     <Filter Include="Pool">
       <UniqueIdentifier>{82a1f6e4-6922-4223-af89-c3d1286f2f01}</UniqueIdentifier>
     </Filter>
+    <Filter Include="PoolTest">
+      <UniqueIdentifier>{0a5d2f33-b6de-4e28-82fb-1fe542239941}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
       <Filter>Main</Filter>
+    </ClCompile>
+    <ClCompile Include="PoolTest.cpp">
+      <Filter>PoolTest</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -29,6 +35,12 @@
     </ClInclude>
     <ClInclude Include="CObjectPool.h">
       <Filter>Pool</Filter>
+    </ClInclude>
+    <ClInclude Include="CTlsObjectPool_Upgrade.h">
+      <Filter>Pool</Filter>
+    </ClInclude>
+    <ClInclude Include="PoolTest.h">
+      <Filter>PoolTest</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
