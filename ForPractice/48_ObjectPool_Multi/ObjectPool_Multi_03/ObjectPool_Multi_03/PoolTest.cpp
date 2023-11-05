@@ -192,6 +192,7 @@ unsigned __stdcall ProfileTlsLockPoolThread(void* arg)
     delete[] tmp;
     return 0;
 }
+
 void ProfileTlsLockPoolUpgrade()
 {
 }
