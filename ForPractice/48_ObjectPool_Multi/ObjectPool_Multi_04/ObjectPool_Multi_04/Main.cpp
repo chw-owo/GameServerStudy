@@ -6,7 +6,6 @@ int main()
 
     SetMultiTest();
     NewDeletelTest();
-    TlsLockPoolTest();
     TlsLockPoolUpgradeTest();
 
 }

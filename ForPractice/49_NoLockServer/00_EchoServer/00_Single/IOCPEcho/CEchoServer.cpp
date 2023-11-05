@@ -10,7 +10,7 @@ void CEchoServer::Initialize()
 {
 	SYSTEM_INFO si;
 	GetSystemInfo(&si);
-	int threadCnt = (int)si.dwNumberOfProcessors / 2;
+	int threadCnt = 1; // (int)si.dwNumberOfProcessors;
 
 	if (!NetworkInitialize(dfSERVER_IP, dfSERVER_PORT, threadCnt, false))
 		Terminate();

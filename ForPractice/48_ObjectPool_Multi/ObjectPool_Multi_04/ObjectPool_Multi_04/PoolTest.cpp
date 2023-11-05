@@ -286,7 +286,7 @@ void TlsLockPoolUpgradeTest()
 void TlsLockPoolUpgrade_SingleTest()
 {
     Data** tmp = new Data * [TEST_CNT];
-    CTlsPool<Data>* pool = new CTlsPool<Data>(TOTAL_CNT * 2, false);
+    CTlsPool<Data>* pool = new CTlsPool<Data>(TOTAL_CNT, false);
 
     for (int j = 0; j < LOOP_CNT; j++)
     {
@@ -307,7 +307,7 @@ unsigned __stdcall TlsLockPoolUpgradeTestThread(void* arg)
 {
     argForThread* input = (argForThread*)arg;
     CTlsPool<Data>* pool = (CTlsPool<Data>*)input->_pool;
-    pool->Initialize();
+    //pool->Initialize();
 
     int idx = input->_idx;
     int poolIdx = 2;

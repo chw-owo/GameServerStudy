@@ -1,5 +1,5 @@
 #pragma once
-#include "CLockFreePool.h"
+#include "CTlsPool.h"
 
 template <typename T>
 class CLockFreeQueue
@@ -7,7 +7,7 @@ class CLockFreeQueue
 public:
     CLockFreeQueue()
     {
-        _pPool = new CLockFreePool<QueueNode>(0, true);
+        _pPool = new CTlsPool<QueueNode>(0, true);
         _keyMask = 0b11111111111111111;
         _addressMask = 0b11111111111111111;
         _addressMask <<= __USESIZE_64BIT__;
@@ -44,7 +44,7 @@ private:
 
 private:
     long _size;
-    CLockFreePool<QueueNode>* _pPool;
+    CTlsPool<QueueNode>* _pPool;
 
 private: // For protect ABA
 #define __USESIZE_64BIT__ 47

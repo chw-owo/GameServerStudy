@@ -1,10 +1,15 @@
 #pragma once
+#ifndef _WINSOCKAPI_
+#define _WINSOCKAPI_
+#endif
+
 #include <new.h>
 #include <stdlib.h>
 #include <windows.h>
 #include <vector>
 using namespace std;
 #define BUCKET_SIZE 200
+#define THREAD_MAX 20
 
 template <class T>
 class CTlsPool
@@ -27,7 +32,7 @@ public:
 		template<typename... Types>
 		inline T* Alloc(Types... args);
 		inline void Free(T* pData);
-		
+
 	public:
 		inline void ReturnBucket();
 		template<typename... Types>
@@ -55,7 +60,7 @@ public:
 	template<typename... Types>
 	inline void Initialize(Types... args);
 	inline void Free(T* pData);
-	
+
 public: // For protect ABA
 #define __USESIZE_64BIT__ 47
 	unsigned __int64 _addressMask = 0;
@@ -67,11 +72,12 @@ public:
 	bool _placementNew;
 	int _bucketNum;
 	DWORD _tlsIdx = 0;
-	vector<CPool*> _pools; // For Destruct
+	CPool* _pools[THREAD_MAX]; // For Destruct
+	long _poolIdx = 0;
 };
 
 template<class T>
-inline CTlsPool<T>::CPool::CPool(CTlsPool<T>* mainPool, bool placementNew): _mainPool(mainPool), _placementNew(placementNew)
+inline CTlsPool<T>::CPool::CPool(CTlsPool<T>* mainPool, bool placementNew) : _mainPool(mainPool), _placementNew(placementNew)
 {
 	_return = new stBucket;
 }
@@ -82,7 +88,7 @@ inline CTlsPool<T>::CPool::~CPool()
 	if (_placementNew)
 	{
 		// Free 시 Data의 소멸자를 호출하므로 이때는 호출하면 안된다
-		for(int i = 0; i < _returnIdx; i++)
+		for (int i = 0; i < _returnIdx; i++)
 		{
 			T* data = _return->_datas[i];
 			free(data);
@@ -264,11 +270,9 @@ inline CTlsPool<T>::CTlsPool(int blockNum, bool placementNew, Types ...args)
 template<class T>
 inline CTlsPool<T>::~CTlsPool()
 {
-	typename vector<CPool*>::iterator it;
-	for(it = _pools.begin(); it != _pools.end(); it++)
-	{
-		delete *it;
-	}
+	for (int i = 0; i < _poolIdx; i++)
+		delete _pools[i];
+
 	if (_buckets == NULL) return;
 
 	if (_placementNew)
@@ -322,8 +326,11 @@ inline T* CTlsPool<T>::Alloc(Types ...args)
 	if (pool == nullptr)
 	{
 		pool = new CPool(this, _placementNew);
+		if (pool == nullptr) __debugbreak();
 		TlsSetValue(_tlsIdx, (LPVOID)pool);
-		_pools.push_back(pool);
+		long idx = InterlockedIncrement(&_poolIdx);
+		if (idx >= THREAD_MAX) __debugbreak();
+		_pools[idx] = pool;
 	}
 	return pool->Alloc(args...);
 }
@@ -337,7 +344,9 @@ inline void CTlsPool<T>::Initialize(Types ...args)
 	{
 		pool = new CPool(this, _placementNew);
 		TlsSetValue(_tlsIdx, (LPVOID)pool);
-		_pools.push_back(pool);
+		long idx = InterlockedIncrement(&_poolIdx);
+		if (idx >= THREAD_MAX) __debugbreak();
+		_pools[idx] = pool;
 	}
 	pool->GetBucket(args...);
 }
@@ -350,7 +359,9 @@ inline void CTlsPool<T>::Free(T* data)
 	{
 		pool = new CPool(this, _placementNew);
 		TlsSetValue(_tlsIdx, (LPVOID)pool);
-		_pools.push_back(pool);
-	}
+		long idx = InterlockedIncrement(&_poolIdx);
+		if (idx >= THREAD_MAX) __debugbreak();
+		_pools[idx] = pool;       		
+	}  
 	pool->Free(data);
 }

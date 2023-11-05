@@ -87,7 +87,7 @@
     <ClInclude Include="CSystemLog.h">
       <Filter>EchoServer\DebugTool</Filter>
     </ClInclude>
-    <ClInclude Include="CLockFreePool.h">
+    <ClInclude Include="CTlsPool.h">
       <Filter>Commons</Filter>
     </ClInclude>
     <ClInclude Include="CLockFreeQueue.h">

@@ -1,8 +1,7 @@
 #pragma once
 #include "Config.h"
-#ifdef LANSERVER
+#ifdef NETSERVER
 
-#include "CLockFreePool.h"
 #include "CLockFreeStack.h"
 #include "CSession.h"
 
@@ -10,11 +9,11 @@
 #include <process.h>
 #pragma comment(lib, "ws2_32.lib")
 
-class CLanServer
+class CNetServer
 {
 protected:
-	CLanServer();
-	~CLanServer() {};
+	CNetServer();
+	~CNetServer() {};
 
 protected:
 	bool NetworkInitialize(const wchar_t* IP, short port, int numOfThreads, bool nagle);
@@ -68,9 +67,6 @@ protected:
 	inline int GetSendMsgTPS() { return _sendMsgTPS; }
 	inline int GetAcceptTPS() { return _acceptTPS; }
 	inline int GetDisconnectTPS() { return _disconnectTPS; }
-
-protected:
-	// CLockFreePool<CPacket>* _pPacketPool;
 
 	// Called in Network Library
 private:
@@ -129,5 +125,4 @@ private:
 	int _sendMsgCnt = 0;
 
 };
-
 #endif

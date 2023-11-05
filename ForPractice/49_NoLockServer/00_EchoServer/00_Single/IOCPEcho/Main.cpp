@@ -1,11 +1,6 @@
 ﻿#include "CEchoServer.h"
 #include "CSystemLog.h"
 
-/*
-TO-DO
-1. 동일한 패킷을 두번 보내는 상황 발생!
-*/
-
 CEchoServer g_Server;
 int wmain(int argc, wchar_t* argv[])
 {
@@ -17,11 +12,13 @@ int wmain(int argc, wchar_t* argv[])
 	for(;;)
 	{
 		Sleep(1000);
+		/*
 		if (GetAsyncKeyState(VK_SPACE))
 		{
 			g_Server.Terminate();
 			break;
 		}
+		*/
 	}
 
 	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Main Thread Terminate\n");

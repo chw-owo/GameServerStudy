@@ -1,6 +1,6 @@
 #include "CPacket.h"
 
-CLockFreePool<CPacket> CPacket::_pool = CLockFreePool<CPacket>(0, false);
+CTlsPool<CPacket> CPacket::_pool = CTlsPool<CPacket>(0, false);
 
 void CPacket::Clear(void)
 {

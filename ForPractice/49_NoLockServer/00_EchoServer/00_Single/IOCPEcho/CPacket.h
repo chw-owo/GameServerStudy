@@ -14,7 +14,7 @@
 #define _WINSOCKAPI_
 #endif
 
-#include "CLockFreePool.h"
+#include "CTlsPool.h"
 #include "ErrorCode.h"
 #include "Config.h"
 #include <windows.h>
@@ -22,10 +22,10 @@
 
 class CPacket
 {
-	friend CLockFreePool<CPacket>;
+	friend CTlsPool<CPacket>;
 
 public:
-	static CLockFreePool<CPacket> _pool;
+	static CTlsPool<CPacket> _pool;
 
 	static CPacket* Alloc()
 	{

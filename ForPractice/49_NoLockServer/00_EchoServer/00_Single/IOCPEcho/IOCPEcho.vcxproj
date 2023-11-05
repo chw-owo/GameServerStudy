@@ -152,7 +152,7 @@
     <ClInclude Include="CProfiler.h" />
     <ClInclude Include="CSystemLog.h" />
     <ClInclude Include="ErrorCode.h" />
-    <ClInclude Include="CLockFreePool.h" />
+    <ClInclude Include="CTlsPool.h" />
     <ClInclude Include="CLockFreeQueue.h" />
     <ClInclude Include="CEchoServer.h" />
     <ClInclude Include="Protocol.h" />

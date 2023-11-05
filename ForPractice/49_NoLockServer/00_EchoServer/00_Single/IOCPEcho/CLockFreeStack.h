@@ -1,5 +1,5 @@
 #pragma once
-#include "CLockFreePool.h"
+#include "CTlsPool.h"
 
 template<typename T>
 class CLockFreeStack
@@ -31,7 +31,7 @@ private: // For protect ABA
 public:
 	CLockFreeStack()
 	{
-		_pPool = new CLockFreePool<StackNode>(0, false);
+		_pPool = new CTlsPool<StackNode>(0, false);
 		_keyMask = 0b11111111111111111;
 		_addressMask = 0b11111111111111111;
 		_addressMask <<= __USESIZE_64BIT__;
@@ -40,7 +40,7 @@ public:
 
 private:
 	__int64 _pTop = NULL;
-	CLockFreePool<StackNode>* _pPool = nullptr;
+	CTlsPool<StackNode>* _pPool = nullptr;
 
 private:
 	volatile long _useSize = 0;
