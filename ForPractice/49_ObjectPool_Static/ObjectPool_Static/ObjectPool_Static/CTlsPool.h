@@ -55,10 +55,10 @@ public:
 
 public:
 	template<typename... Types>
-	inline T* Alloc(int line, Types... args);
+	inline T* Alloc(Types... args);
 	template<typename... Types>
 	inline void Initialize(Types... args);
-	inline void Free(int line, T* pData);
+	inline void Free(T* pData);
 
 public: // For protect ABA
 #define __USESIZE_64BIT__ 47
@@ -321,7 +321,7 @@ inline CTlsPool<T>::~CTlsPool()
 
 template<class T>
 template<typename ...Types>
-inline T* CTlsPool<T>::Alloc(int line, Types ...args)
+inline T* CTlsPool<T>::Alloc(Types ...args)
 {
 	CPool* pool = (CPool*)TlsGetValue(_tlsIdx);
 	if (pool == nullptr)
@@ -360,7 +360,7 @@ inline void CTlsPool<T>::Initialize(Types ...args)
 }
 
 template<class T>
-inline void CTlsPool<T>::Free(int line, T* data)
+inline void CTlsPool<T>::Free(T* data)
 {
 	CPool* pool = (CPool*)TlsGetValue(_tlsIdx);
 	if (pool == nullptr)

@@ -50,7 +50,7 @@ public:
 public:
 	void Push(T data)
 	{
-		StackNode* pNewNode = _pPool->Alloc(5);
+		StackNode* pNewNode = _pPool->Alloc();
 		pNewNode->_data = data;
 
 		// For Protect ABA
@@ -85,7 +85,7 @@ public:
 			if (InterlockedCompareExchange64(&_pTop, pNextTop, pPrevTop) == pPrevTop)
 			{
 				T data = ((StackNode*)(pPrevTop & _addressMask))->_data;
-				_pPool->Free(6, (StackNode*)(pPrevTop & _addressMask));
+				_pPool->Free((StackNode*)(pPrevTop & _addressMask));
 				InterlockedDecrement(&_useSize);
 				return data;
 			}

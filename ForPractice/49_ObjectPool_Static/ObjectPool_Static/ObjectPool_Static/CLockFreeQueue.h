@@ -7,13 +7,16 @@ class CLockFreeQueue
 public:
     CLockFreeQueue()
     {
+        _QID = InterlockedIncrement(&_IDSupplier);
+
         _keyMask = 0b11111111111111111;
         _addressMask = 0b11111111111111111;
         _addressMask <<= __USESIZE_64BIT__;
         _addressMask = ~_addressMask;
 
-        QueueNode* node = _pPool->Alloc(3);
+        QueueNode* node = _pPool->Alloc();
         node->_next = 0;
+        node->_ID = _QID;
 
         //For Protect ABA 
         unsigned __int64 ret = (unsigned __int64)InterlockedIncrement64(&_key);
@@ -36,9 +39,14 @@ private:
     private:
         T _data = 0;
         __int64 _next = 0;
+        long _ID = 0;
     };
 
 private:
+    long _QID;
+
+public:
+    static long _IDSupplier;
     static CTlsPool<QueueNode>* _pPool;
 
 private:
@@ -55,7 +63,23 @@ private: // For protect ABA
 public:
     void Enqueue(T data)
     {
-        QueueNode* node = _pPool->Alloc(3);
+        QueueNode* node = nullptr;
+        for (;;)
+        {
+            // 당장 문제는 안나는데 지금 접근하는 큐가 얘밖에 없으면 무한 루프...
+            // static TLS 풀이 뭐가 문제였는지 종이에 정리하고 다시 수정하자
+
+            node = _pPool->Alloc();
+            if (node->_ID == _QID) break;
+            if (node->_ID == 0)
+            {
+                node->_ID = _QID;
+                break;
+            }
+            _pPool->Free(node);
+        }  
+         
+        //QueueNode* node = _pPool->Alloc();
         node->_data = data;
         node->_next = NULL;
 
@@ -126,7 +150,7 @@ public:
             {
                 data = ((QueueNode*)(next & _addressMask))->_data;
                 LeaveLog(6, size, next, head, 0, (__int64)data);
-                _pPool->Free(4, headNode);
+                _pPool->Free(headNode);
                 break;
             }
         }
@@ -211,4 +235,7 @@ private:
 };
 
 template<typename T>
-CTlsPool<typename CLockFreeQueue<T>::QueueNode>* CLockFreeQueue<T>::_pPool = new CTlsPool<CLockFreeQueue<T>::QueueNode>(0, true);
+long CLockFreeQueue<T>::_IDSupplier = 0;
+
+template<typename T>
+CTlsPool<typename CLockFreeQueue<T>::QueueNode>* CLockFreeQueue<T>::_pPool = new CTlsPool<CLockFreeQueue<T>::QueueNode>(0, false);

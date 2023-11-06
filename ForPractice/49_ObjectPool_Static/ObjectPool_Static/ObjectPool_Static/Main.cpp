@@ -1,30 +1,44 @@
 ﻿#include "CLockFreeQueue.h"
 #include "CLockFreeStack.h"
-
 #include <windows.h>
 #include <process.h>
 #include <stdio.h>
 
-#define TEST_CNT 1000
-#define LOOP_CNT 20
-#define THREAD_CNT 8
+#define TEST_CNT 3
+#define LOOP_CNT 100000
+#define STRUCT_CNT 3
+#define THREAD_CNT 16
 
 HANDLE g_ready;
 HANDLE g_allComplete;
-long g_completeCnt = 0;
+CLockFreeStack<int>* stacks[STRUCT_CNT];
+CLockFreeQueue<int>* queues[STRUCT_CNT];
 
+long g_completeCnt = 0;
+void Setting();
 void StackTest();
 void QueueTest();
 
 int main()
+{ 
+   Setting();
+   // StackTest();
+   QueueTest();
+   __debugbreak();
+}
+
+void Setting()
 {
+    for (int i = 0; i < STRUCT_CNT; i++)
+    {
+        stacks[i] = new CLockFreeStack<int>;
+        queues[i] = new CLockFreeQueue<int>;
+    }
+
     g_ready = CreateEvent(NULL, true, false, nullptr);
     if (g_ready == NULL) __debugbreak();
     g_allComplete = CreateEvent(NULL, true, false, nullptr);
     if (g_ready == NULL) __debugbreak();
-
-   // StackTest();
-   QueueTest();
 }
 
 unsigned __stdcall StackTestThread(void* arg);
@@ -37,7 +51,7 @@ void StackTest()
     HANDLE threads[THREAD_CNT];
     for (int i = 0; i < THREAD_CNT; i++)
     {
-        threads[i] = (HANDLE)_beginthreadex(NULL, 0, StackTestThread, (void*)(i + 1), 0, nullptr);
+        threads[i] = (HANDLE)_beginthreadex(NULL, 0, StackTestThread, (void*)i, 0, nullptr);
         if (threads[i] == NULL)
         {
             ::printf(" Error! %s(%d)\n", __func__, __LINE__);
@@ -51,23 +65,28 @@ void StackTest()
 
 unsigned __stdcall StackTestThread(void* arg)
 {
-    int tmp[TEST_CNT];
-    for (int i = 0; i < TEST_CNT; i++)
-        tmp[i] = (int)arg;
-    CLockFreeStack<int> stack;
+    int threadIdx = (int)arg;
     WaitForSingleObject(g_ready, INFINITE);
 
-    for (int j = 0; j < LOOP_CNT; j++)
+    for (int i = 0; i < LOOP_CNT; i++)
     {
-        for (int i = 0; i < TEST_CNT; i++)
-            stack.Push(tmp[i]);
+        for (int k = 0; k < STRUCT_CNT; k++)
+        {
+            for (int j = 0; j < TEST_CNT; j++)
+            {
+                stacks[k]->Push(k + 1);
+            }
+        }
 
-        for (int i = 0; i < TEST_CNT; i++)
-            tmp[i] = stack.Pop();
+        for (int j = 0; j < TEST_CNT; j++)
+        {
+            for (int k = 0; k < STRUCT_CNT; k++)
+            {
+                int ret = stacks[k]->Pop();
+                if (ret != k + 1 && ret != 0) __debugbreak();
+            }
+        }
     }
-
-    for (int i = 0; i < TEST_CNT; i++)
-        if (tmp[i] != (int)arg) __debugbreak();
 
     long ret = InterlockedIncrement(&g_completeCnt);
     if (ret == THREAD_CNT)
@@ -92,7 +111,7 @@ void QueueTest()
     HANDLE threads[THREAD_CNT];
     for (int i = 0; i < THREAD_CNT; i++)
     {
-        threads[i] = (HANDLE)_beginthreadex(NULL, 0, QueueTestThread, (void*)(i + 1), 0, nullptr);
+        threads[i] = (HANDLE)_beginthreadex(NULL, 0, QueueTestThread, (void*)i, 0, nullptr);
         if (threads[i] == NULL)
         {
             ::printf(" Error! %s(%d)\n", __func__, __LINE__);
@@ -106,23 +125,29 @@ void QueueTest()
 
 unsigned __stdcall QueueTestThread(void* arg)
 {
-    int tmp[TEST_CNT];
-    for (int i = 0; i < TEST_CNT; i++)
-        tmp[i] = (int)arg;
-    CLockFreeQueue<int> queue;
+    int threadIdx = (int)arg;
     WaitForSingleObject(g_ready, INFINITE);
 
-    for (int j = 0; j < LOOP_CNT; j++)
-    {
-        for (int i = 0; i < TEST_CNT; i++)
-            queue.Enqueue(tmp[i]);
+    for (int i = 0; i < LOOP_CNT; i++)
+    {    
+        for (int k = 0; k < STRUCT_CNT; k++)
+        {
+            for (int j = 0; j < TEST_CNT; j++)
+            {
+                queues[k]->Enqueue(k + 1);
+            }
+        }
 
-        for (int i = 0; i < TEST_CNT; i++)
-            tmp[i] = queue.Dequeue();
+        for (int j = 0; j < TEST_CNT; j++)
+        {
+            for (int k = 0; k < STRUCT_CNT; k++)
+            {
+                int ret = queues[k]->Dequeue();
+                if (ret != k + 1 && ret != 0) __debugbreak();
+                // 아~~~ 드디어 에러 난다~~~
+            }
+        }
     }
-
-    for (int i = 0; i < TEST_CNT; i++)
-        if (tmp[i] != (int)arg) __debugbreak();
 
     long ret = InterlockedIncrement(&g_completeCnt);
     if (ret == THREAD_CNT)
