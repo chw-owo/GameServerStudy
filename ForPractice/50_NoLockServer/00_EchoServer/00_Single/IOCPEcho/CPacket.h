@@ -29,7 +29,7 @@ public:
 
 	static CPacket* Alloc()
 	{
-		CPacket* packet = _pool.Alloc();
+		CPacket* packet = _pool.Alloc(1);
 		return packet;
 	}
 
@@ -37,7 +37,7 @@ public:
 	{
 		if (InterlockedDecrement(&packet->_usageCount) == 0)
 		{
-			_pool.Free(packet);
+			_pool.Free(2, packet);
 			return true;
 		}
 		return false;

@@ -6,6 +6,7 @@
 #include <new.h>
 #include <stdlib.h>
 #include <windows.h>
+#include <stdio.h>
 #define BUCKET_SIZE 200
 #define THREAD_MAX 20
 
@@ -54,10 +55,10 @@ public:
 
 public:
 	template<typename... Types>
-	inline T* Alloc(Types... args);
+	inline T* Alloc(int line, Types... args);
 	template<typename... Types>
 	inline void Initialize(Types... args);
-	inline void Free(T* pData);
+	inline void Free(int line, T* pData);
 
 public: // For protect ABA
 #define __USESIZE_64BIT__ 47
@@ -210,14 +211,21 @@ inline CTlsPool<T>::CTlsPool(int blockNum, bool placementNew, Types ...args)
 {
 	_tlsIdx = TlsAlloc();
 
+	if (_tlsIdx == TLS_OUT_OF_INDEXES)
+	{
+		int err = GetLastError();
+		::printf("%d\n", err);
+		__debugbreak();
+	}
+
 	_keyMask = 0b11111111111111111;
 	_addressMask = 0b11111111111111111;
 	_addressMask <<= __USESIZE_64BIT__;
 	_addressMask = ~_addressMask;
 
 	if (blockNum <= 0) return;
-	_bucketNum = (blockNum / BUCKET_SIZE) + 1;
 
+	_bucketNum = (blockNum / BUCKET_SIZE) + 1;
 	if (_placementNew)
 	{
 		// Alloc 시 Data의 생성자를 호출하므로 이때 호출하면 안된다
@@ -313,7 +321,7 @@ inline CTlsPool<T>::~CTlsPool()
 
 template<class T>
 template<typename ...Types>
-inline T* CTlsPool<T>::Alloc(Types ...args)
+inline T* CTlsPool<T>::Alloc(int line, Types ...args)
 {
 	CPool* pool = (CPool*)TlsGetValue(_tlsIdx);
 	if (pool == nullptr)
@@ -324,7 +332,7 @@ inline T* CTlsPool<T>::Alloc(Types ...args)
 		if (ret == 0)
 		{
 			int err = GetLastError();
-			::printf("%d\n", err);
+			printf("%d\n", err);
 			__debugbreak();
 		}
 	}
@@ -339,6 +347,7 @@ inline void CTlsPool<T>::Initialize(Types ...args)
 	if (pool == nullptr)
 	{
 		pool = new CPool(this, _placementNew);
+		if (pool == nullptr) __debugbreak();
 		bool ret = TlsSetValue(_tlsIdx, (LPVOID)pool);
 		if (ret == 0)
 		{
@@ -351,17 +360,18 @@ inline void CTlsPool<T>::Initialize(Types ...args)
 }
 
 template<class T>
-inline void CTlsPool<T>::Free(T* data)
+inline void CTlsPool<T>::Free(int line, T* data)
 {
 	CPool* pool = (CPool*)TlsGetValue(_tlsIdx);
 	if (pool == nullptr)
 	{
 		pool = new CPool(this, _placementNew);
+		if (pool == nullptr) __debugbreak();
 		bool ret = TlsSetValue(_tlsIdx, (LPVOID)pool);
 		if (ret == 0)
 		{
 			int err = GetLastError();
-			::printf("%d\n", err);
+			printf("%d\n", err);
 			__debugbreak();
 		}
 	}

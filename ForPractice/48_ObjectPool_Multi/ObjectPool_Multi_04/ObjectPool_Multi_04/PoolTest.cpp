@@ -13,7 +13,7 @@ using namespace std;
 #define TEST_CNT 10000
 #define TOTAL_CNT 40000
 #define LOOP_CNT 10
-#define MS_PER_SEC 1000000
+#define MS_PER_SEC 1000000000
 
 long g_profileComplete = 0;
 HANDLE g_beginThreadComplete = nullptr;
@@ -259,6 +259,26 @@ unsigned __stdcall TlsLockPoolTestThread(void* arg)
     return 0;
 }
 
+void TlsLockPoolUpgrade_SingleTest()
+{
+    Data** tmp = new Data * [TEST_CNT];
+    CTlsPool<Data>* pool = new CTlsPool<Data>(0, false);
+
+    for (int j = 0; j < LOOP_CNT; j++)
+    {
+        for (int i = 0; i < TEST_CNT; i++)
+        {
+            Data* data = pool->Alloc();
+            tmp[i] = data;
+        }
+
+        for (int i = 0; i < TEST_CNT; i++)
+        {
+            pool->Free(tmp[i]);
+        }
+    }
+}
+
 void TlsLockPoolUpgradeTest()
 {
     g_profileComplete = 0;
@@ -283,31 +303,11 @@ void TlsLockPoolUpgradeTest()
     delete pool;
 }
 
-void TlsLockPoolUpgrade_SingleTest()
-{
-    Data** tmp = new Data * [TEST_CNT];
-    CTlsPool<Data>* pool = new CTlsPool<Data>(TOTAL_CNT, false);
-
-    for (int j = 0; j < LOOP_CNT; j++)
-    {
-        for (int i = 0; i < TEST_CNT; i++)
-        {
-            Data* data = pool->Alloc();
-            tmp[i] = data;
-        }
-
-        for (int i = 0; i < TEST_CNT; i++)
-        {
-            pool->Free(tmp[i]);
-        }
-    }
-}
-
 unsigned __stdcall TlsLockPoolUpgradeTestThread(void* arg)
 {
     argForThread* input = (argForThread*)arg;
     CTlsPool<Data>* pool = (CTlsPool<Data>*)input->_pool;
-    //pool->Initialize();
+    pool->Initialize();
 
     int idx = input->_idx;
     int poolIdx = 2;

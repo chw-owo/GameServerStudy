@@ -6,8 +6,6 @@
 #include <new.h>
 #include <stdlib.h>
 #include <windows.h>
-#include <vector>
-using namespace std;
 #define BUCKET_SIZE 200
 #define THREAD_MAX 20
 
@@ -56,10 +54,10 @@ public:
 
 public:
 	template<typename... Types>
-	inline T* Alloc(Types... args);
+	inline T* Alloc(int line, Types... args);
 	template<typename... Types>
 	inline void Initialize(Types... args);
-	inline void Free(T* pData);
+	inline void Free(int line, T* pData);
 
 public: // For protect ABA
 #define __USESIZE_64BIT__ 47
@@ -71,9 +69,7 @@ public: // For protect ABA
 public:
 	bool _placementNew;
 	int _bucketNum;
-	DWORD _tlsIdx = 0;
-	CPool* _pools[THREAD_MAX]; // For Destruct
-	long _poolIdx = 0;
+	DWORD _tlsIdx = 0;	
 };
 
 template<class T>
@@ -214,14 +210,23 @@ inline CTlsPool<T>::CTlsPool(int blockNum, bool placementNew, Types ...args)
 {
 	_tlsIdx = TlsAlloc();
 
+	if (_tlsIdx == TLS_OUT_OF_INDEXES)
+	{
+		int err = GetLastError();
+		::printf("%d\n", err);
+		__debugbreak();
+		// 오~~~ 저장경로 부족~~~
+		// 확인해보니 TlsAlloc이 1000번 이상 호출된 후 에러 발생
+	}
+
 	_keyMask = 0b11111111111111111;
 	_addressMask = 0b11111111111111111;
 	_addressMask <<= __USESIZE_64BIT__;
 	_addressMask = ~_addressMask;
 
 	if (blockNum <= 0) return;
-	_bucketNum = (blockNum / BUCKET_SIZE) + 1;
 
+	_bucketNum = (blockNum / BUCKET_SIZE) + 1;
 	if (_placementNew)
 	{
 		// Alloc 시 Data의 생성자를 호출하므로 이때 호출하면 안된다
@@ -270,9 +275,6 @@ inline CTlsPool<T>::CTlsPool(int blockNum, bool placementNew, Types ...args)
 template<class T>
 inline CTlsPool<T>::~CTlsPool()
 {
-	for (int i = 0; i < _poolIdx; i++)
-		delete _pools[i];
-
 	if (_buckets == NULL) return;
 
 	if (_placementNew)
@@ -320,17 +322,20 @@ inline CTlsPool<T>::~CTlsPool()
 
 template<class T>
 template<typename ...Types>
-inline T* CTlsPool<T>::Alloc(Types ...args)
+inline T* CTlsPool<T>::Alloc(int line, Types ...args)
 {
 	CPool* pool = (CPool*)TlsGetValue(_tlsIdx);
 	if (pool == nullptr)
 	{
 		pool = new CPool(this, _placementNew);
 		if (pool == nullptr) __debugbreak();
-		TlsSetValue(_tlsIdx, (LPVOID)pool);
-		long idx = InterlockedIncrement(&_poolIdx);
-		if (idx >= THREAD_MAX) __debugbreak();
-		_pools[idx] = pool;
+		bool ret = TlsSetValue(_tlsIdx, (LPVOID)pool);
+		if (ret == 0)
+		{
+			int err = GetLastError();
+			::printf("%d\n", err);
+			__debugbreak();
+		}
 	}
 	return pool->Alloc(args...);
 }
@@ -343,25 +348,31 @@ inline void CTlsPool<T>::Initialize(Types ...args)
 	if (pool == nullptr)
 	{
 		pool = new CPool(this, _placementNew);
-		TlsSetValue(_tlsIdx, (LPVOID)pool);
-		long idx = InterlockedIncrement(&_poolIdx);
-		if (idx >= THREAD_MAX) __debugbreak();
-		_pools[idx] = pool;
+		bool ret = TlsSetValue(_tlsIdx, (LPVOID)pool);
+		if (ret == 0)
+		{
+			int err = GetLastError();
+			::printf("%d\n", err);
+			__debugbreak();
+		}
 	}
 	pool->GetBucket(args...);
 }
 
 template<class T>
-inline void CTlsPool<T>::Free(T* data)
+inline void CTlsPool<T>::Free(int line, T* data)
 {
 	CPool* pool = (CPool*)TlsGetValue(_tlsIdx);
 	if (pool == nullptr)
 	{
 		pool = new CPool(this, _placementNew);
-		TlsSetValue(_tlsIdx, (LPVOID)pool);
-		long idx = InterlockedIncrement(&_poolIdx);
-		if (idx >= THREAD_MAX) __debugbreak();
-		_pools[idx] = pool;       		
-	}  
+		bool ret = TlsSetValue(_tlsIdx, (LPVOID)pool);
+		if (ret == 0)
+		{
+			int err = GetLastError();
+			::printf("%d\n", err);
+			__debugbreak();
+		}
+	}
 	pool->Free(data);
 }

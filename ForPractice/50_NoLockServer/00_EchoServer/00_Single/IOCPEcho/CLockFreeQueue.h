@@ -13,7 +13,7 @@ public:
         _addressMask <<= __USESIZE_64BIT__;
         _addressMask = ~_addressMask;
 
-        QueueNode* node = _pPool->Alloc();
+        QueueNode* node = _pPool->Alloc(3);
         node->_next = 0;
 
         //For Protect ABA 
@@ -55,7 +55,7 @@ private: // For protect ABA
 public:
     void Enqueue(T data)
     {
-        QueueNode* node = _pPool->Alloc();
+        QueueNode* node = _pPool->Alloc(3);
         node->_data = data;
         node->_next = NULL;
 
@@ -126,7 +126,7 @@ public:
             {
                 data = ((QueueNode*)(next & _addressMask))->_data;
                 LeaveLog(6, size, next, head, 0, (__int64)data);
-                _pPool->Free(headNode);
+                _pPool->Free(4, headNode);
                 break;
             }
         }

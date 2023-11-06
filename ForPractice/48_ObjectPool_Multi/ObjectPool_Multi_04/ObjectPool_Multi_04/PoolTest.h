@@ -1,5 +1,5 @@
 #pragma once
-#define BLOCK 8
+#define BLOCK 256
 void SetMultiTest();
 
 void NewDeletelTest();
