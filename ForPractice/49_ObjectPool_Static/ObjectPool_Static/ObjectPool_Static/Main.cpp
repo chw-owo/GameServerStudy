@@ -5,9 +5,9 @@
 #include <stdio.h>
 
 #define TEST_CNT 3
-#define LOOP_CNT 100000
+#define LOOP_CNT 200000
 #define STRUCT_CNT 3
-#define THREAD_CNT 16
+#define THREAD_CNT 4
 
 HANDLE g_ready;
 HANDLE g_allComplete;
@@ -21,6 +21,8 @@ void QueueTest();
 
 int main()
 { 
+    CTlsPool<CLockFreeQueue<int>::QueueNode>* pool = CLockFreeQueue<int>::_pPool;
+
    Setting();
    // StackTest();
    QueueTest();
@@ -143,7 +145,7 @@ unsigned __stdcall QueueTestThread(void* arg)
             for (int k = 0; k < STRUCT_CNT; k++)
             {
                 int ret = queues[k]->Dequeue();
-                if (ret != k + 1 && ret != 0) __debugbreak();
+                // if (ret != k + 1 && ret != 0) __debugbreak();
                 // 아~~~ 드디어 에러 난다~~~
             }
         }

@@ -71,6 +71,68 @@ public:
 	bool _placementNew;
 	int _bucketNum;
 	DWORD _tlsIdx = 0;
+
+
+public: // Debug
+#define dfPOOL_DEBUG_MAX 100000
+
+	class PoolDebugData
+	{
+	public:
+		PoolDebugData() : _line(-1), _threadID(-1), _size(-1), _QID(-1), _nodeQID(-1),
+			_compKey(-1), _exchKey(-1), _realKey(-1), _compAddress(-1), _exchAddress(-1), _realAddress(-1) {};
+
+		void SetData(int line, int threadID, int size, int QID, int nodeQID,
+			int exchKey, __int64 exchAddress,
+			int compKey, __int64 compAddress,
+			int realKey, __int64 realAddress)
+		{
+			_line = line;
+			_size = size;
+			_threadID = threadID;
+			_QID = QID;
+			_nodeQID = nodeQID;
+
+			_exchKey = exchKey;
+			_exchAddress = exchAddress;
+			_compKey = compKey;
+			_compAddress = compAddress;
+			_realKey = realKey;
+			_realAddress = realAddress;
+		}
+
+		int _threadID;
+		int _QID;
+		int _line;
+		int _nodeQID;
+		int _size;
+
+		int _compKey;
+		__int64 _compAddress;
+		int _exchKey;
+		__int64 _exchAddress;
+		int _realKey;
+		__int64 _realAddress;
+
+	};
+
+	inline void LeaveLog(int line, int threadID, int size, int QID, int nodeQID,
+		unsigned __int64 exchange, unsigned __int64 comperand, unsigned __int64 real)
+	{
+		LONG idx = InterlockedIncrement(&_poolDebugIdx);
+
+		int exchKey = (exchange >> __USESIZE_64BIT__) & _keyMask;
+		int compKey = (comperand >> __USESIZE_64BIT__) & _keyMask;
+		int realKey = (real >> __USESIZE_64BIT__) & _keyMask;
+		__int64 exchAddress = exchange & _addressMask;
+		__int64 compAddress = comperand & _addressMask;
+		__int64 realAddress = real & _addressMask;
+
+		_poolDebugArray[idx % dfPOOL_DEBUG_MAX].SetData(line, threadID, size, QID, nodeQID,
+			exchKey, exchAddress, compKey, compAddress, realKey, realAddress);
+	}
+	PoolDebugData _poolDebugArray[dfPOOL_DEBUG_MAX];
+	volatile long _poolDebugIdx = -1;
 };
 
 template<class T>

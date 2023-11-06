@@ -6,9 +6,9 @@ class CLockFreeQueue
 {
 public:
     CLockFreeQueue()
-    {
+    { 
         _QID = InterlockedIncrement(&_IDSupplier);
-
+        
         _keyMask = 0b11111111111111111;
         _addressMask = 0b11111111111111111;
         _addressMask <<= __USESIZE_64BIT__;
@@ -31,7 +31,7 @@ public:
         _size = 0;
     }
 
-private:
+public:
     class QueueNode
     {
         friend CLockFreeQueue;
@@ -63,25 +63,14 @@ private: // For protect ABA
 public:
     void Enqueue(T data)
     {
-        QueueNode* node = nullptr;
-        for (;;)
-        {
-            // 당장 문제는 안나는데 지금 접근하는 큐가 얘밖에 없으면 무한 루프...
-            // static TLS 풀이 뭐가 문제였는지 종이에 정리하고 다시 수정하자
+        int threadID = GetCurrentThreadId();
 
-            node = _pPool->Alloc();
-            if (node->_ID == _QID) break;
-            if (node->_ID == 0)
-            {
-                node->_ID = _QID;
-                break;
-            }
-            _pPool->Free(node);
-        }  
-         
-        //QueueNode* node = _pPool->Alloc();
+        QueueNode* node = _pPool->Alloc();
+        _pPool->LeaveLog(0, threadID, 0, _QID, _QID, (unsigned __int64)node, 0, 0);
+
         node->_data = data;
         node->_next = NULL;
+        node->_ID = _QID;
 
         unsigned __int64 key = (unsigned __int64)InterlockedIncrement64(&_key);
         key <<= __USESIZE_64BIT__;
@@ -99,15 +88,21 @@ public:
             if (next != NULL)
             {
                 InterlockedCompareExchange64(&_tail, next, tail);
+                // _pPool->LeaveLog(0, threadID, size, _QID, node->_ID, next, tail, 0);
                 LeaveLog(0, size, next, tail, 0, 0);
             }
             else
             {
                 if (InterlockedCompareExchange64(&tailNode->_next, newNode, next) == next)
                 {
+                    // _pPool->LeaveLog(1, threadID, size, _QID, node->_ID, newNode, next, 0);
                     LeaveLog(1, size, newNode, next, 0, (__int64)data);
+                    
                     InterlockedCompareExchange64(&_tail, newNode, tail);
+
+                    _pPool->LeaveLog(2, threadID, size, _QID, node->_ID, newNode, tail, 0);
                     LeaveLog(2, size, newNode, tail, 0, (__int64)data);
+
                     break;
                 }
             }
@@ -118,10 +113,13 @@ public:
 
     T Dequeue()
     {
+        int threadID = GetCurrentThreadId();
+
         T data = 0;
         int size = _size;
         if (size == 0)
         {
+            // _pPool->LeaveLog(3, threadID, size, _QID, 0, 0, 0, 0);
             LeaveLog(3, size, 0, 0, 0, 0);
             return data;
         }
@@ -136,6 +134,7 @@ public:
 
             if (next == NULL)
             {
+                // _pPool->LeaveLog(4, threadID, size, _QID, 0, 0, 0, 0);
                 LeaveLog(4, size, 0, 0, 0, 0);
                 return data;
             }
@@ -143,14 +142,25 @@ public:
             if (head == tail)
             {
                 InterlockedCompareExchange64(&_tail, next, tail);
+
+                _pPool->LeaveLog(5, threadID, size, _QID, 0, next, tail, 0);
                 LeaveLog(5, size, next, tail, 0, 0);
             }
 
             if (InterlockedCompareExchange64(&_head, next, head) == head)
             {
-                data = ((QueueNode*)(next & _addressMask))->_data;
-                LeaveLog(6, size, next, head, 0, (__int64)data);
+                QueueNode* node = (QueueNode*)(next & _addressMask);
+                data = node->_data;
+
+                _pPool->LeaveLog(6, threadID, size, _QID, node->_ID, next, head, 0);
+                LeaveLog(6, size, next, head, 0, (__int64)data);               
                 _pPool->Free(headNode);
+                if (data != _QID) 
+                {
+                    _pPool->LeaveLog(0, 0, 0, 0, 0, 0, 0, 0);
+                    __debugbreak();
+                }
+
                 break;
             }
         }
@@ -212,7 +222,7 @@ private: // For Log
     };
 
 private:
-#define dfQUEUE_DEBUG_MAX 100
+#define dfQUEUE_DEBUG_MAX 100000
 
     inline void LeaveLog(int line, int size,
         unsigned __int64 exchange, unsigned __int64 comperand, unsigned __int64 real, unsigned __int64 data)
