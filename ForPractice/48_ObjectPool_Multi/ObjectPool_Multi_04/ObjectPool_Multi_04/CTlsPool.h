@@ -141,6 +141,8 @@ template<class T>
 template<typename ...Types>
 inline void CTlsPool<T>::CPool::GetBucket(Types ...args)
 {
+	_bucketIdx = 0;
+
 	for (;;)
 	{
 		__int64 pCur = _mainPool->_buckets;
@@ -156,7 +158,6 @@ inline void CTlsPool<T>::CPool::GetBucket(Types ...args)
 			if (InterlockedCompareExchange64(&_mainPool->_buckets, pNext, pCur) == pCur)
 			{
 				_bucket = bucket;
-				_bucketIdx = 0;
 				return;
 			}
 		}
@@ -185,8 +186,6 @@ inline void CTlsPool<T>::CPool::CreateBucket(Types ...args)
 			new (_bucket->_datas[i]) T(args...);
 		}
 	}
-
-	_bucketIdx = 0;
 }
 
 template<class T>
@@ -201,7 +200,7 @@ template<class T>
 inline void CTlsPool<T>::CPool::Free(T* data)
 {
 	if (_returnIdx == BUCKET_SIZE) ReturnBucket();
-	_return->_datas[_returnIdx++] = data; // Error
+	_return->_datas[_returnIdx++] = data; 
 }
 
 template<class T>
