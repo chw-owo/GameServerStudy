@@ -6,20 +6,37 @@
 #define TEST_CNT 3
 #define LOOP_CNT 200000
 #define STRUCT_CNT 3
-#define THREAD_CNT 4
+#define THREAD_CNT 12
 
 HANDLE g_ready;
 HANDLE g_allComplete;
 CLockFreeQueue<int>* queues[STRUCT_CNT];
+int TPS[THREAD_CNT] = { 0, };
 
 long g_completeCnt = 0;
 void Setting();
 void QueueTest();
+void Monitor();
 
 int main()
 { 
    Setting();
    QueueTest();
+   Monitor();
+}
+
+void Monitor()
+{
+    for (;;)
+    {
+        Sleep(0);
+        for (int i = 0; i < THREAD_CNT; i++)
+        {
+            ::printf("%d\n", TPS[i]);
+            TPS[i] = 0;
+        }
+        ::printf("\n");
+    }
 }
 
 void Setting()
@@ -53,8 +70,8 @@ void QueueTest()
         }
     }
     SetEvent(g_ready);
-    WaitForMultipleObjects(THREAD_CNT, threads, true, INFINITE);
-    ::printf("Queue Test Complete!\n");
+    // WaitForMultipleObjects(THREAD_CNT, threads, true, INFINITE);
+    // ::printf("Queue Test Complete!\n");
 }
 
 unsigned __stdcall QueueTestThread(void* arg)
@@ -69,6 +86,7 @@ unsigned __stdcall QueueTestThread(void* arg)
             for (int j = 0; j < TEST_CNT; j++)
             {
                 queues[k]->Enqueue(k + 1);
+                TPS[threadIdx]++;
             }
         }
 
@@ -78,6 +96,7 @@ unsigned __stdcall QueueTestThread(void* arg)
             {
                 int ret = queues[k]->Dequeue();
                 if (ret != k + 1 && ret != 0) __debugbreak();
+                TPS[threadIdx]++;
             }
         }
     }
