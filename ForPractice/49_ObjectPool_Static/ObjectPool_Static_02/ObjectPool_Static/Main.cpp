@@ -6,7 +6,7 @@
 #define TEST_CNT 3
 #define LOOP_CNT 200000
 #define STRUCT_CNT 3
-#define THREAD_CNT 4
+#define THREAD_CNT 10
 
 HANDLE g_ready;
 HANDLE g_allComplete;

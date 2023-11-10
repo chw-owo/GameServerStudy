@@ -167,7 +167,7 @@ inline void CTlsPool<T>::CPool::GetBucket(Types ...args)
 template<class T>
 template<typename ...Types>
 inline void CTlsPool<T>::CPool::CreateBucket(Types ...args)
-{
+{ 
 	_bucket = new stBucket;
 	if (_placementNew)
 	{
@@ -192,7 +192,10 @@ template<class T>
 template<typename ...Types>
 inline T* CTlsPool<T>::CPool::Alloc(Types ...args)
 {
-	if (_bucketIdx == BUCKET_SIZE) GetBucket(args...);
+	if (_bucketIdx == BUCKET_SIZE) 
+	{
+		GetBucket(args...);
+	}
 
 	T* data = _bucket->_datas[_bucketIdx++];
 	if (_placementNew) new (data) T(args...);
