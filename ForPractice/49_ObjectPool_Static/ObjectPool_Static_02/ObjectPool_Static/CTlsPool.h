@@ -73,7 +73,8 @@ public:
 };
 
 template<class T>
-inline CTlsPool<T>::CPool::CPool(CTlsPool<T>* mainPool, bool placementNew) : _mainPool(mainPool), _placementNew(placementNew)
+inline CTlsPool<T>::CPool::CPool(CTlsPool<T>* mainPool, bool placementNew) 
+	: _mainPool(mainPool), _placementNew(placementNew)
 {
 	_return = new stBucket;
 }
@@ -90,7 +91,6 @@ inline CTlsPool<T>::CPool::~CPool()
 			free(data);
 		}
 
-		// 초기 할당 시 생성자를 호출하지 않으므로 이때 소멸자를 호출하면 안된다. 
 		for (int i = 0; i < _bucketIdx; i++)
 		{
 			T* data = _bucket->_datas[i];
@@ -107,7 +107,6 @@ inline CTlsPool<T>::CPool::~CPool()
 			free(data);
 		}
 
-		// 초기 할당 시 생성자를 호출했으므로 이때 소멸자를 호출해야 된다. 
 		for (int i = 0; i < _bucketIdx; i++)
 		{
 			T* data = _bucket->_datas[i];
@@ -209,7 +208,7 @@ inline void CTlsPool<T>::CPool::Free(T* data)
 
 template<class T>
 template<typename ...Types>
-inline CTlsPool<T>::CTlsPool(int blockNum, bool placementNew, Types ...args)
+inline CTlsPool<T>::CTlsPool(int blockNum, bool placementNew, Types ...args): _placementNew(placementNew)
 {
 	_tlsIdx = TlsAlloc();
 
