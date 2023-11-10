@@ -60,7 +60,7 @@ public:
 	inline void Free(T* pData);
 
 public: // For protect ABA
-#define __USESIZE_64BIT__ 47
+#define __ADDRESS_BIT__ 47
 	unsigned __int64 _addressMask = 0;
 	unsigned int _keyMask = 0;
 	volatile __int64 _key = 0;
@@ -73,7 +73,8 @@ public:
 };
 
 template<class T>
-inline CTlsPool<T>::CPool::CPool(CTlsPool<T>* mainPool, bool placementNew) : _mainPool(mainPool), _placementNew(placementNew)
+inline CTlsPool<T>::CPool::CPool(CTlsPool<T>* mainPool, bool placementNew)
+	: _mainPool(mainPool), _placementNew(placementNew)
 {
 	_return = new stBucket;
 }
@@ -90,7 +91,6 @@ inline CTlsPool<T>::CPool::~CPool()
 			free(data);
 		}
 
-		// 초기 할당 시 생성자를 호출하지 않으므로 이때 소멸자를 호출하면 안된다. 
 		for (int i = 0; i < _bucketIdx; i++)
 		{
 			T* data = _bucket->_datas[i];
@@ -107,7 +107,6 @@ inline CTlsPool<T>::CPool::~CPool()
 			free(data);
 		}
 
-		// 초기 할당 시 생성자를 호출했으므로 이때 소멸자를 호출해야 된다. 
 		for (int i = 0; i < _bucketIdx; i++)
 		{
 			T* data = _bucket->_datas[i];
@@ -121,7 +120,7 @@ template<class T>
 inline void CTlsPool<T>::CPool::ReturnBucket()
 {
 	unsigned __int64 key = (unsigned __int64)InterlockedIncrement64(&_mainPool->_key);
-	key <<= __USESIZE_64BIT__;
+	key <<= __ADDRESS_BIT__;
 	__int64 pNew = (__int64)_return;
 	pNew &= _mainPool->_addressMask;
 	pNew |= key;
@@ -142,6 +141,7 @@ template<typename ...Types>
 inline void CTlsPool<T>::CPool::GetBucket(Types ...args)
 {
 	_bucketIdx = 0;
+	free(_bucket);
 
 	for (;;)
 	{
@@ -193,30 +193,34 @@ template<typename ...Types>
 inline T* CTlsPool<T>::CPool::Alloc(Types ...args)
 {
 	if (_bucketIdx == BUCKET_SIZE) GetBucket(args...);
-	return _bucket->_datas[_bucketIdx++];
+
+	T* data = _bucket->_datas[_bucketIdx++];
+	if (_placementNew) new (data) T(args...);
+	return data;
 }
 
 template<class T>
 inline void CTlsPool<T>::CPool::Free(T* data)
 {
 	if (_returnIdx == BUCKET_SIZE) ReturnBucket();
-	_return->_datas[_returnIdx++] = data; 
+	if (_placementNew) data->~T();
+	_return->_datas[_returnIdx++] = data;
 }
 
 template<class T>
 template<typename ...Types>
-inline CTlsPool<T>::CTlsPool(int blockNum, bool placementNew, Types ...args)
+inline CTlsPool<T>::CTlsPool(int blockNum, bool placementNew, Types ...args) : _placementNew(placementNew)
 {
 	_tlsIdx = TlsAlloc();
 
 	_keyMask = 0b11111111111111111;
 	_addressMask = 0b11111111111111111;
-	_addressMask <<= __USESIZE_64BIT__;
+	_addressMask <<= __ADDRESS_BIT__;
 	_addressMask = ~_addressMask;
 
 	if (blockNum <= 0) return;
-	_bucketNum = (blockNum / BUCKET_SIZE) + 1;
 
+	_bucketNum = (blockNum / BUCKET_SIZE) + 1;
 	if (_placementNew)
 	{
 		// Alloc 시 Data의 생성자를 호출하므로 이때 호출하면 안된다
@@ -230,7 +234,7 @@ inline CTlsPool<T>::CTlsPool(int blockNum, bool placementNew, Types ...args)
 			}
 
 			__int64 key = (__int64)InterlockedIncrement64(&_key);
-			key <<= __USESIZE_64BIT__;
+			key <<= __ADDRESS_BIT__;
 			__int64 pBuckets = (__int64)bucket;
 			pBuckets &= _addressMask;
 			pBuckets |= key;
@@ -252,7 +256,7 @@ inline CTlsPool<T>::CTlsPool(int blockNum, bool placementNew, Types ...args)
 			}
 
 			__int64 key = (__int64)InterlockedIncrement64(&_key);
-			key <<= __USESIZE_64BIT__;
+			key <<= __ADDRESS_BIT__;
 			__int64 pBuckets = (__int64)bucket;
 			pBuckets &= _addressMask;
 			pBuckets |= key;

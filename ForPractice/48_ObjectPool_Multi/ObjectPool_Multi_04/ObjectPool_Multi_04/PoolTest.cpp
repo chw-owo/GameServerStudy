@@ -284,7 +284,7 @@ void TlsLockPoolUpgradeTest()
     g_profileComplete = 0;
     ResetEvent(g_printComplete);
     ResetEvent(g_beginThreadComplete);
-    CTlsPool<Data>* pool = new CTlsPool<Data>(TOTAL_CNT * 2, false);
+    CTlsPool<Data>* pool = new CTlsPool<Data>(TOTAL_CNT, false);
 
     HANDLE threads[THREAD_CNT];
     for (int i = 0; i < THREAD_CNT; i++)

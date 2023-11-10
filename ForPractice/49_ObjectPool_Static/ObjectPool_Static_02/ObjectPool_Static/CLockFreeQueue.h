@@ -11,10 +11,7 @@ public:
 
     public:
         QueueNode() { __debugbreak(); }
-        QueueNode(T data, __int64 next, long QID) : _data(data), _next(next), _nodeID(QID) 
-        {
-            LeaveLog(999, QID, _nodeID);
-        }
+        QueueNode(T data, __int64 next, long QID) : _data(data), _next(next), _nodeID(QID) {}
         ~QueueNode()
         {
             _data = 0;

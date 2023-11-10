@@ -141,6 +141,7 @@ template<typename ...Types>
 inline void CTlsPool<T>::CPool::GetBucket(Types ...args)
 {
 	_bucketIdx = 0;
+	free(_bucket);
 
 	for (;;)
 	{
