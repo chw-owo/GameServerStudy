@@ -10,13 +10,13 @@ public:
         friend CLockFreeQueue;
 
     public:
-        QueueNode() { }
+        QueueNode() { __debugbreak(); }
         QueueNode(T data, __int64 next, short QID) : _data(data), _next(next), _QID(QID) {}
         ~QueueNode()
         {
             _data = 0;
             _next = 0;
-            _QID = 0;
+            _QID = -999;
         }
 
     private:
@@ -114,20 +114,19 @@ public:
             QueueNode* tailNode = (QueueNode*)(tail & _addressMask); 
             __int64 next = tailNode->_next;
 
-            if (next != NULL)
+            if (tailNode->_QID != _QID)
+            {
+                tailNode->LeaveLog(9999999999, _QID);
+                LeaveLog(2, tailNode);
+                continue;
+            }
+            else if (next != NULL)
             {
                 InterlockedCompareExchange64(&_tail, next, tail); 
                 // LeaveLog(1);
             }
             else
             {
-                if (tailNode->_QID != _QID) 
-                {
-                    tailNode->LeaveLog(9999999999, _QID);
-                    LeaveLog(2, tailNode);                   
-                    continue;
-                }
-
                 if (InterlockedCompareExchange64(&tailNode->_next, newNode, next) == next)
                 {
                     // LeaveLog(3);
@@ -208,11 +207,12 @@ private: // For Log
     };
 
 private:
-#define dfQUEUE_DEBUG_MAX 10000
+#define dfQUEUE_DEBUG_MAX 3
 
     inline void LeaveLog(int line, QueueNode* node = nullptr)
     {
-        LONG idx = InterlockedIncrement(&_queueDebugIdx);       
+        LONG idx = InterlockedIncrement(&_queueDebugIdx);
+        if (idx >= dfQUEUE_DEBUG_MAX) __debugbreak();
         _queueDebugArray[idx % dfQUEUE_DEBUG_MAX].SetData(GetCurrentThreadId(), line, node);
     }
 
