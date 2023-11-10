@@ -41,9 +41,9 @@ public:
 	private:
 		CTlsPool<T>* _mainPool;
 		bool _placementNew;
-		stBucket* _bucket;
+		stBucket* _bucket = nullptr;
 		int _bucketIdx = BUCKET_SIZE;
-		stBucket* _return;
+		stBucket* _return = nullptr;
 		int _returnIdx = 0;
 	};
 
@@ -141,7 +141,7 @@ template<typename ...Types>
 inline void CTlsPool<T>::CPool::GetBucket(Types ...args)
 {
 	_bucketIdx = 0;
-	free(_bucket);
+	if(_bucket != nullptr) free(_bucket);
 
 	for (;;)
 	{

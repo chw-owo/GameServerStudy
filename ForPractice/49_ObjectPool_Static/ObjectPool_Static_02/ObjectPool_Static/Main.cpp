@@ -106,7 +106,7 @@ void Monitor()
 {
     for (;;)
     {
-        Sleep(2000);
+        Sleep(1000);
         for (int i = 0; i < THREAD_CNT; i++)
         {
             ::printf("%d\n", TPS[i]);
