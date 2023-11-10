@@ -23,10 +23,26 @@ private:
 		__int64 _next = NULL;
 	};
 
+public:
+	static CTlsPool<StackNode>* _pStackPool;
+
 private: // For protect ABA
 	unsigned __int64 _addressMask = 0;
 	unsigned int _keyMask = 0;
 	volatile __int64 _key = 0;
+
+private:
+	// 17 bit key + 47 bit address
+	__int64 CreateAddress(QueueNode* node)
+	{
+		unsigned __int64 key = (unsigned __int64)InterlockedIncrement64(&_key);
+		key <<= __ADDRESS_BIT__;
+		__int64 address = (__int64)node;
+		address &= _addressMask;
+		address |= key;
+
+		return address;
+	}
 
 public:
 	CLockFreeStack()
@@ -40,10 +56,8 @@ public:
 
 private:
 	__int64 _pTop = NULL;
-	CTlsPool<StackNode>* _pPool = nullptr;
-
-private:
 	volatile long _useSize = 0;
+	
 public:
 	long GetUseSize()
 	{
@@ -53,17 +67,9 @@ public:
 public:
 	void Push(T data)
 	{
-		StackNode* pNewNode = _pPool->Alloc(5);
+		StackNode* pNewNode = _pPool->Alloc();
 		pNewNode->_data = data;
-
-		// For Protect ABA
-		unsigned __int64 ret = (unsigned __int64)InterlockedIncrement64(&_key);
-		unsigned __int64 key = ret;
-		key <<= __USESIZE_64BIT__;
-		__int64 pNewTop = (__int64)pNewNode;
-		pNewTop &= _addressMask;
-		unsigned __int64 tmp = pNewTop;
-		pNewTop |= key;
+		__int64 newTop = CreateAddress(pNewNode);
 
 		for (;;)
 		{
@@ -87,8 +93,9 @@ public:
 
 			if (InterlockedCompareExchange64(&_pTop, pNextTop, pPrevTop) == pPrevTop)
 			{
-				T data = ((StackNode*)(pPrevTop & _addressMask))->_data;
-				_pPool->Free(6, (StackNode*)(pPrevTop & _addressMask));
+				StackNode* pPrevNode = (StackNode*)(pPrevTop & _addressMask);
+				T data = pPrevNode->_data;
+				_pPool->Free(pPrevNode);
 				InterlockedDecrement(&_useSize);
 				return data;
 			}
@@ -105,20 +112,16 @@ private:
 		StackDebugData() : _idx(-1), _threadID(-1), _line(-1),
 			_compKey(-1), _exchKey(-1), _compAddress(-1), _exchAddress(-1) {}
 
-		void SetData(int idx, int threadID, int line, int exchKey, int compKey,
-			__int64 exchAddress, __int64 compAddress, T exchVal, T compVal)
+		void SetData(int idx, int threadID, int line, 
+			int exchKey, int compKey, __int64 exchAddress, __int64 compAddress)
 		{
-			_exchVal = exchVal;
-			_exchKey = exchKey;
-			_exchAddress = exchAddress;
-
-			_compVal = compVal;
-			_compKey = compKey;
-			_compAddress = compAddress;
-
 			_idx = idx;
 			_threadID = threadID;
 			_line = line;
+			_exchKey = exchKey;			
+			_compKey = compKey; 
+			_exchAddress = exchAddress;
+			_compAddress = compAddress;
 		}
 
 	private:
@@ -129,9 +132,9 @@ private:
 		int _exchKey;
 		__int64 _compAddress;
 		__int64 _exchAddress;
-		T _compVal;
-		T _exchVal;
 	};
 
 };
 
+template<typename T>
+CTlsPool<typename CLockFreeStack<T>::StackNode>* CLockFreeStack<T>::_pStackPool = new CTlsPool<CLockFreeStack<T>::StackNode>(0, false);

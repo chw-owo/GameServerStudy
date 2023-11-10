@@ -6,7 +6,7 @@
 #define TEST_CNT 3
 #define LOOP_CNT 200000
 #define STRUCT_CNT 3
-#define THREAD_CNT 12
+#define THREAD_CNT 4
 
 HANDLE g_ready;
 HANDLE g_allComplete;
@@ -23,20 +23,6 @@ int main()
    Setting();
    QueueTest();
    Monitor();
-}
-
-void Monitor()
-{
-    for (;;)
-    {
-        Sleep(0);
-        for (int i = 0; i < THREAD_CNT; i++)
-        {
-            ::printf("%d\n", TPS[i]);
-            TPS[i] = 0;
-        }
-        ::printf("\n");
-    }
 }
 
 void Setting()
@@ -70,6 +56,7 @@ void QueueTest()
         }
     }
     SetEvent(g_ready);
+
     // WaitForMultipleObjects(THREAD_CNT, threads, true, INFINITE);
     // ::printf("Queue Test Complete!\n");
 }
@@ -113,4 +100,18 @@ unsigned __stdcall QueueTestThread(void* arg)
     }
 
     return 0;
+}
+
+void Monitor()
+{
+    for (;;)
+    {
+        Sleep(2000);
+        for (int i = 0; i < THREAD_CNT; i++)
+        {
+            ::printf("%d\n", TPS[i]);
+            TPS[i] = 0;
+        }
+        ::printf("\n");
+    }
 }

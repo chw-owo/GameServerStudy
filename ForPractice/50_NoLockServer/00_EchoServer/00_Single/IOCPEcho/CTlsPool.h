@@ -54,13 +54,13 @@ public:
 
 public:
 	template<typename... Types>
-	inline T* Alloc(int line, Types... args);
+	inline T* Alloc(Types... args);
 	template<typename... Types>
 	inline void Initialize(Types... args);
-	inline void Free(int line, T* pData);
+	inline void Free(T* pData);
 
 public: // For protect ABA
-#define __USESIZE_64BIT__ 47
+#define __ADDRESS_BIT__ 47
 	unsigned __int64 _addressMask = 0;
 	unsigned int _keyMask = 0;
 	volatile __int64 _key = 0;
@@ -69,7 +69,7 @@ public: // For protect ABA
 public:
 	bool _placementNew;
 	int _bucketNum;
-	DWORD _tlsIdx = 0;	
+	DWORD _tlsIdx = 0;
 };
 
 template<class T>
@@ -121,7 +121,7 @@ template<class T>
 inline void CTlsPool<T>::CPool::ReturnBucket()
 {
 	unsigned __int64 key = (unsigned __int64)InterlockedIncrement64(&_mainPool->_key);
-	key <<= __USESIZE_64BIT__;
+	key <<= __ADDRESS_BIT__;
 	__int64 pNew = (__int64)_return;
 	pNew &= _mainPool->_addressMask;
 	pNew |= key;
@@ -141,6 +141,8 @@ template<class T>
 template<typename ...Types>
 inline void CTlsPool<T>::CPool::GetBucket(Types ...args)
 {
+	_bucketIdx = 0;
+
 	for (;;)
 	{
 		__int64 pCur = _mainPool->_buckets;
@@ -156,7 +158,6 @@ inline void CTlsPool<T>::CPool::GetBucket(Types ...args)
 			if (InterlockedCompareExchange64(&_mainPool->_buckets, pNext, pCur) == pCur)
 			{
 				_bucket = bucket;
-				_bucketIdx = 0;
 				return;
 			}
 		}
@@ -185,8 +186,6 @@ inline void CTlsPool<T>::CPool::CreateBucket(Types ...args)
 			new (_bucket->_datas[i]) T(args...);
 		}
 	}
-
-	_bucketIdx = 0;
 }
 
 template<class T>
@@ -201,7 +200,7 @@ template<class T>
 inline void CTlsPool<T>::CPool::Free(T* data)
 {
 	if (_returnIdx == BUCKET_SIZE) ReturnBucket();
-	_return->_datas[_returnIdx++] = data; // Error
+	_return->_datas[_returnIdx++] = data;
 }
 
 template<class T>
@@ -210,23 +209,14 @@ inline CTlsPool<T>::CTlsPool(int blockNum, bool placementNew, Types ...args)
 {
 	_tlsIdx = TlsAlloc();
 
-	if (_tlsIdx == TLS_OUT_OF_INDEXES)
-	{
-		int err = GetLastError();
-		::printf("%d\n", err);
-		__debugbreak();
-		// 오~~~ 저장경로 부족~~~
-		// 확인해보니 TlsAlloc이 1000번 이상 호출된 후 에러 발생
-	}
-
 	_keyMask = 0b11111111111111111;
 	_addressMask = 0b11111111111111111;
-	_addressMask <<= __USESIZE_64BIT__;
+	_addressMask <<= __ADDRESS_BIT__;
 	_addressMask = ~_addressMask;
 
 	if (blockNum <= 0) return;
-
 	_bucketNum = (blockNum / BUCKET_SIZE) + 1;
+
 	if (_placementNew)
 	{
 		// Alloc 시 Data의 생성자를 호출하므로 이때 호출하면 안된다
@@ -240,7 +230,7 @@ inline CTlsPool<T>::CTlsPool(int blockNum, bool placementNew, Types ...args)
 			}
 
 			__int64 key = (__int64)InterlockedIncrement64(&_key);
-			key <<= __USESIZE_64BIT__;
+			key <<= __ADDRESS_BIT__;
 			__int64 pBuckets = (__int64)bucket;
 			pBuckets &= _addressMask;
 			pBuckets |= key;
@@ -262,7 +252,7 @@ inline CTlsPool<T>::CTlsPool(int blockNum, bool placementNew, Types ...args)
 			}
 
 			__int64 key = (__int64)InterlockedIncrement64(&_key);
-			key <<= __USESIZE_64BIT__;
+			key <<= __ADDRESS_BIT__;
 			__int64 pBuckets = (__int64)bucket;
 			pBuckets &= _addressMask;
 			pBuckets |= key;
@@ -322,7 +312,7 @@ inline CTlsPool<T>::~CTlsPool()
 
 template<class T>
 template<typename ...Types>
-inline T* CTlsPool<T>::Alloc(int line, Types ...args)
+inline T* CTlsPool<T>::Alloc(Types ...args)
 {
 	CPool* pool = (CPool*)TlsGetValue(_tlsIdx);
 	if (pool == nullptr)
@@ -360,7 +350,7 @@ inline void CTlsPool<T>::Initialize(Types ...args)
 }
 
 template<class T>
-inline void CTlsPool<T>::Free(int line, T* data)
+inline void CTlsPool<T>::Free(T* data)
 {
 	CPool* pool = (CPool*)TlsGetValue(_tlsIdx);
 	if (pool == nullptr)
