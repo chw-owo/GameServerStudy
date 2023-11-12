@@ -18,6 +18,7 @@ using namespace std;
 long g_profileComplete = 0;
 HANDLE g_beginThreadComplete = nullptr;
 HANDLE g_printComplete = nullptr;
+
 struct Data { char data[BLOCK]; };
 
 int newCalls[POOL_CNT][THREAD_CNT];
@@ -264,19 +265,58 @@ void TlsLockPoolUpgrade_SingleTest()
     Data** tmp = new Data * [TEST_CNT];
     CTlsPool<Data>* pool = new CTlsPool<Data>(0, false);
 
+    LARGE_INTEGER freq;
+    LARGE_INTEGER start;
+    LARGE_INTEGER end;
+    QueryPerformanceFrequency(&freq);
+
+    double newMax = 0;
+    double deleteMax = 0;
+    double interval = 0;
+
+    int newCall = 0;
+    int deleteCall = 0;
+    double newTotalTime = 0;
+    double deleteTotalTime = 0;
+
     for (int j = 0; j < LOOP_CNT; j++)
     {
         for (int i = 0; i < TEST_CNT; i++)
         {
+            QueryPerformanceCounter(&start);
             Data* data = pool->Alloc();
+            QueryPerformanceCounter(&end);
+
+            interval = (end.QuadPart - start.QuadPart) / (double)freq.QuadPart;
+            if (interval > newMax) newMax = interval;
+            newTotalTime += interval;
+            newCall++;
+
             tmp[i] = data;
         }
 
         for (int i = 0; i < TEST_CNT; i++)
         {
+            QueryPerformanceCounter(&start);
             pool->Free(tmp[i]);
+            QueryPerformanceCounter(&end);
+
+            interval = (end.QuadPart - start.QuadPart) / (double)freq.QuadPart;
+            if (interval > deleteMax) deleteMax = interval;
+            deleteTotalTime += interval;
+            deleteCall++;
         }
     }
+
+    newTotalTime -= newMax;
+    deleteTotalTime -= deleteMax;
+    newCall--;
+    deleteCall--;
+
+    ::printf("Tls Object Pool Single\n");
+    ::printf("new total average: %.4lfms\n", newTotalTime * MS_PER_SEC / newCall);
+    ::printf("delete total average: %.4lfms\n", deleteTotalTime * MS_PER_SEC / deleteCall);
+    ::printf("\n");
 }
 
 void TlsLockPoolUpgradeTest()
@@ -374,7 +414,7 @@ unsigned __stdcall TlsLockPoolUpgradeTestThread(void* arg)
         newCall--;
         deleteCall--;
 
-        ::printf("Tls Object Pool Upgrade\n");
+        ::printf("Tls Object Pool Multi\n");
         ::printf("new total average: %.4lfms\n", newTotalTime * MS_PER_SEC / newCall);
         ::printf("delete total average: %.4lfms\n", deleteTotalTime * MS_PER_SEC / deleteCall);
         ::printf("\n");

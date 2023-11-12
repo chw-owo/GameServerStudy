@@ -19,10 +19,10 @@ void QueueTest();
 void Monitor();
 
 int main()
-{ 
-   Setting();
-   QueueTest();
-   Monitor();
+{
+    Setting();
+    QueueTest();
+    Monitor();
 }
 
 void Setting()
@@ -67,7 +67,7 @@ unsigned __stdcall QueueTestThread(void* arg)
     WaitForSingleObject(g_ready, INFINITE);
 
     for (;;) //(int i = 0; i < LOOP_CNT; i++)
-    {    
+    {
         for (int k = 0; k < STRUCT_CNT; k++)
         {
             for (int j = 0; j < TEST_CNT; j++)

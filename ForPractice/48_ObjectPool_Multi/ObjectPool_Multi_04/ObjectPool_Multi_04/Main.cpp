@@ -2,10 +2,10 @@
 
 int main()
 {
-    // TlsLockPoolUpgrade_SingleTest();
-
     SetMultiTest();
+
     NewDeletelTest();
+    TlsLockPoolUpgrade_SingleTest();
     TlsLockPoolUpgradeTest();
 
 }

@@ -73,7 +73,7 @@ public:
 };
 
 template<class T>
-inline CTlsPool<T>::CPool::CPool(CTlsPool<T>* mainPool, bool placementNew) 
+inline CTlsPool<T>::CPool::CPool(CTlsPool<T>* mainPool, bool placementNew)
 	: _mainPool(mainPool), _placementNew(placementNew)
 {
 	_return = new stBucket;
@@ -141,7 +141,7 @@ template<typename ...Types>
 inline void CTlsPool<T>::CPool::GetBucket(Types ...args)
 {
 	_bucketIdx = 0;
-	if(_bucket != nullptr) free(_bucket);
+	if (_bucket != nullptr) free(_bucket);
 
 	for (;;)
 	{
@@ -192,7 +192,10 @@ template<class T>
 template<typename ...Types>
 inline T* CTlsPool<T>::CPool::Alloc(Types ...args)
 {
-	if (_bucketIdx == BUCKET_SIZE) GetBucket(args...);
+	if (_bucketIdx == BUCKET_SIZE)
+	{
+		GetBucket(args...);
+	}
 
 	T* data = _bucket->_datas[_bucketIdx++];
 	if (_placementNew) new (data) T(args...);
@@ -209,7 +212,7 @@ inline void CTlsPool<T>::CPool::Free(T* data)
 
 template<class T>
 template<typename ...Types>
-inline CTlsPool<T>::CTlsPool(int blockNum, bool placementNew, Types ...args): _placementNew(placementNew)
+inline CTlsPool<T>::CTlsPool(int blockNum, bool placementNew, Types ...args) : _placementNew(placementNew)
 {
 	_tlsIdx = TlsAlloc();
 
