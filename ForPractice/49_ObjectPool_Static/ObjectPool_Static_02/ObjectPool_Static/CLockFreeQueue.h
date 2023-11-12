@@ -23,18 +23,26 @@ public:
     public:
         QueueNode()
         {
-            __debugbreak();
+            //__debugbreak();
         }
 
-        QueueNode(T data, __int64 next, long QID) : _data(data)
+        //QueueNode(T data, __int64 next, long QID)
+        void Initailze(T data, long QID)
         {
+            _data = data;
             unsigned __int64 nodeID = (unsigned __int64)QID;
             nodeID <<= (__KEY_BIT__ + __ADDRESS_BIT__);
             nodeID &= _QIDMask;
-            next = nodeID;
+            _next = nodeID;
         }
 
         ~QueueNode()
+        {
+            _data = 0;
+            _next = 0;
+        }
+
+        void Terminate()
         {
             _data = 0;
             _next = 0;
@@ -49,15 +57,17 @@ public:
         class NodeDebugData
         {
         public:
-            NodeDebugData() : _threadID(-1), _line(-1), _QID(-1), _nodeID(-1){}
+            NodeDebugData() : _threadID(-1), _line(-1), _QID(-1), _nodeID(-1), _QIdx(-1), _front(nullptr){}
 
-            void SetData(int threadID, int line, int QID, __int64 next)
+            void SetData(int QIdx, int threadID, int line, int QID, __int64 next, QueueNode* front)
             {
                 _threadID = threadID;
                 _line = line;
                 _QID = QID;
                 _nodeID = (unsigned __int64)next >> (__KEY_BIT__ + __ADDRESS_BIT__);
                 _nodeID &= 0b11111111;
+                _QIdx = QIdx;
+                _front = front;
             }
 
         private:
@@ -65,14 +75,16 @@ public:
             int _line;
             int _QID;
             unsigned __int64 _nodeID;
+            int _QIdx;
+            QueueNode* _front;
         };
 
     private:
 #define dfNODE_DEBUG_MAX 100
-        inline void LeaveLog(int line, int QID, __int64 next)
+        inline void LeaveLog(int QIdx, int line, int QID, __int64 next, QueueNode* front = nullptr)
         {
             LONG idx = InterlockedIncrement(&_nodeDebugIdx);
-            _nodeDebugArray[idx % dfNODE_DEBUG_MAX].SetData(GetCurrentThreadId(), line, QID, next);
+            _nodeDebugArray[idx % dfNODE_DEBUG_MAX].SetData(QIdx, GetCurrentThreadId(), line, QID, next, front);
         }
         NodeDebugData _nodeDebugArray[dfNODE_DEBUG_MAX];
         volatile long _nodeDebugIdx = -1;
@@ -112,8 +124,9 @@ public:
         _addressMask <<= __ADDRESS_BIT__;
         _addressMask = ~_addressMask;
 
-        QueueNode* node = _pPool->Alloc(0, 0, _QID);
-        node->LeaveLog(777, _QID, node->_next);
+        QueueNode* node = _pPool->Alloc(); //(0, _QID);
+        node->Initailze(0, _QID);
+        node->LeaveLog(_queueDebugIdx, 777, _QID, node->_next);
         _head = CreateAddress(node);
         _tail = _head;
         _size = 0;
@@ -132,8 +145,9 @@ private:
 public:
     void Enqueue(T data)
     {
-        QueueNode* node = _pPool->Alloc(data, NULL, _QID);
-        node->LeaveLog(1, _QID, node->_next);
+        QueueNode* node = _pPool->Alloc(); //(data, NULL, _QID);
+        node->Initailze(data, _QID);
+        node->LeaveLog(_queueDebugIdx, 0, _QID, node->_next);
         __int64 newNode = CreateAddress(node);
 
         while (true)
@@ -145,16 +159,23 @@ public:
 
             if ((next & _keyAddressMask) != NULL)
             {                
-                InterlockedCompareExchange64(&_tail, next, tail);
-                LeaveLog(1, tailNode, (QueueNode*)(next & _addressMask));
+                if (InterlockedCompareExchange64(&_tail, next, tail) == tail)
+                {
+                    int ret = LeaveLog(1, tailNode, (QueueNode*)(next & _addressMask));
+                    node->LeaveLog(ret, 1, _QID, tailNode->_next, tailNode);
+                }             
             }
             else
             {
                 if (InterlockedCompareExchange64(&tailNode->_next, newNode, next) == next)
                 {   
-                    LeaveLog(2, (QueueNode*)(next & _addressMask), node);
-                    InterlockedCompareExchange64(&_tail, newNode, tail);
-                    LeaveLog(3, tailNode, node);
+                    int ret = LeaveLog(2, (QueueNode*)(next & _addressMask), node);
+                    node->LeaveLog(ret, 2, _QID, tailNode->_next, tailNode);
+                    if (InterlockedCompareExchange64(&_tail, newNode, tail) == tail)
+                    {
+                        int ret = LeaveLog(3, tailNode, node);
+                        node->LeaveLog(ret, 3, _QID, tailNode->_next, tailNode);
+                    }                 
                     break;                   
                 }
             } 
@@ -187,7 +208,8 @@ public:
 
             if (head == tail)
             {
-                LeaveLog(6, headNode, (QueueNode*)(next & _addressMask));
+                int ret = LeaveLog(6, headNode, (QueueNode*)(next & _addressMask));
+                headNode->LeaveLog(ret, 6, _QID, headNode->_next, headNode);
                 InterlockedCompareExchange64(&_tail, next, tail);
             }
 
@@ -196,10 +218,11 @@ public:
                 QueueNode* dataNode = ((QueueNode*)(next & _addressMask));
                 data = dataNode->_data;    
 
-                dataNode->LeaveLog(7, _QID, dataNode->_next);
-                LeaveLog(7, headNode, dataNode);
+                int ret = LeaveLog(7, headNode, dataNode);
+                dataNode->LeaveLog(ret, 7, _QID, dataNode->_next, headNode);
 
-                _pPool->Free(headNode);                
+                headNode->Terminate();
+                _pPool->Free(headNode);       
                 break;
             }
         }
@@ -239,13 +262,14 @@ private: // For Log
     };
 
 private:
-#define dfQUEUE_DEBUG_MAX 100
+#define dfQUEUE_DEBUG_MAX 20000
 
-    inline void LeaveLog(int line, QueueNode* node1, QueueNode* node2)
+    inline int LeaveLog(int line, QueueNode* node1, QueueNode* node2)
     {
         LONG idx = InterlockedIncrement(&_queueDebugIdx);
         // if (idx >= dfQUEUE_DEBUG_MAX) __debugbreak();
         _queueDebugArray[idx % dfQUEUE_DEBUG_MAX].SetData(idx, GetCurrentThreadId(), line, node1, node2);
+        return idx;
     }
 
     QueueDebugData _queueDebugArray[dfQUEUE_DEBUG_MAX];
@@ -263,4 +287,4 @@ template<typename T>
 volatile short CLockFreeQueue<T>::_IDSupplier = 0;
 
 template<typename T>
-CTlsPool<typename CLockFreeQueue<T>::QueueNode>* CLockFreeQueue<T>::_pPool = new CTlsPool<CLockFreeQueue<T>::QueueNode>(0, true);
+CTlsPool<typename CLockFreeQueue<T>::QueueNode>* CLockFreeQueue<T>::_pPool = new CTlsPool<CLockFreeQueue<T>::QueueNode>(0, false);
