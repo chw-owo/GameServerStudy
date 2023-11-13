@@ -1,7 +1,7 @@
 #pragma once
 #include "CTlsPool.h"
 
-// #define __QUEUE_DEBUG
+#define __QUEUE_DEBUG
 
 #ifdef __QUEUE_DEBUG
 template <typename T>
@@ -79,7 +79,7 @@ public:
         };
 
     private:
-#define dfNODE_DEBUG_MAX 100
+#define dfNODE_DEBUG_MAX 30
         inline void LeaveLog(int QIdx, int line, int QID, __int64 next, QueueNode* front = nullptr)
         {
             LONG idx = InterlockedIncrement(&_nodeDebugIdx);
@@ -220,6 +220,8 @@ public:
                 int ret = LeaveLog(8, headNode, dataNode);
                 dataNode->LeaveLog(ret, 8, _QID, dataNext, headNode);
                 headNode->LeaveLog(ret, 7, _QID, headNext);
+                if (_QID != data) __debugbreak();
+
                 headNode->Terminate();
                 _pPool->Free(headNode);
                 break;
