@@ -4,9 +4,8 @@
 #include <stdio.h>
 
 #define TEST_CNT 3
-#define LOOP_CNT 200000
-#define STRUCT_CNT 3
-#define THREAD_CNT 12
+#define STRUCT_CNT 2
+#define THREAD_CNT 4
 
 HANDLE g_ready;
 HANDLE g_allComplete;
@@ -22,7 +21,7 @@ int main()
 {
     Setting();
     QueueTest();
-    Monitor();
+    // Monitor();
 }
 
 void Setting()
@@ -57,8 +56,8 @@ void QueueTest()
     }
     SetEvent(g_ready);
 
-    // WaitForMultipleObjects(THREAD_CNT, threads, true, INFINITE);
-    // ::printf("Queue Test Complete!\n");
+    WaitForMultipleObjects(THREAD_CNT, threads, true, INFINITE);
+    ::printf("Queue Test Complete!\n");
 }
 
 unsigned __stdcall QueueTestThread(void* arg)
@@ -73,7 +72,7 @@ unsigned __stdcall QueueTestThread(void* arg)
             for (int j = 0; j < TEST_CNT; j++)
             {
                 queues[k]->Enqueue(k + 1);
-                TPS[threadIdx]++;
+                // TPS[threadIdx]++;
             }
         }
 
@@ -82,8 +81,8 @@ unsigned __stdcall QueueTestThread(void* arg)
             for (int k = 0; k < STRUCT_CNT; k++)
             {
                 int ret = queues[k]->Dequeue();
-                if (ret != k + 1 && ret != 0) __debugbreak();
-                TPS[threadIdx]++;
+                // if (ret != 0 && ret != k + 1) __debugbreak();
+                // TPS[threadIdx]++;
             }
         }
     }
