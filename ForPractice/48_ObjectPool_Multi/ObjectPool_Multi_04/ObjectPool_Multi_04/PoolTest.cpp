@@ -9,7 +9,7 @@
 using namespace std;
 
 #define POOL_CNT 3
-#define THREAD_CNT 4
+#define THREAD_CNT 2
 #define TEST_CNT 10000
 #define TOTAL_CNT 40000
 #define LOOP_CNT 10
@@ -364,7 +364,7 @@ unsigned __stdcall TlsLockPoolUpgradeTestThread(void* arg)
     Data** tmp = new Data * [TEST_CNT];
     WaitForSingleObject(g_beginThreadComplete, INFINITE);
 
-    for (int j = 0; j < LOOP_CNT; j++)
+    for (;;) // (int j = 0; j < LOOP_CNT; j++)
     {
         for (int i = 0; i < TEST_CNT; i++)
         {

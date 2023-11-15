@@ -4,8 +4,8 @@ int main()
 {
     SetMultiTest();
 
-    NewDeletelTest();
-    TlsLockPoolUpgrade_SingleTest();
+    //NewDeletelTest();
+    //TlsLockPoolUpgrade_SingleTest();
     TlsLockPoolUpgradeTest();
 
 }
