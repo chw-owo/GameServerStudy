@@ -130,7 +130,7 @@ public:
 
             if (InterlockedCompareExchange64(&_head, next, head) == head)
             {
-                data = headNode->_data;              
+                data = ((QueueNode*)(next & _addressMask))->_data;
                 _pPool->Free(headNode);
                 break;
             }

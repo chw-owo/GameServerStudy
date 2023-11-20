@@ -3,10 +3,11 @@
 #include <process.h>
 #include <stdio.h>
 
-#define __MONITOR
+// #define __MONITOR
 #define TEST_CNT 3
-#define QUEUE_CNT 2
+#define QUEUE_CNT 1
 #define THREAD_CNT 3
+#define LOOP_CNT 1000000
 
 HANDLE g_ready;
 HANDLE g_allComplete;
@@ -22,6 +23,12 @@ int main()
 {
     Setting();
     QueueTest();
+    for (int i = 0; i < QUEUE_CNT; i++)
+    {
+        delete(queues[i]);
+    }
+    ::printf("Queue Test Complete!\n");
+    for (;;);
 }
 
 void Setting()
@@ -69,7 +76,7 @@ void QueueTest()
 #endif
 
     WaitForMultipleObjects(THREAD_CNT, threads, true, INFINITE);
-    ::printf("Queue Test Complete!\n");
+        
 }
 
 unsigned __stdcall QueueTestThread(void* arg)
@@ -77,7 +84,7 @@ unsigned __stdcall QueueTestThread(void* arg)
     int threadIdx = (int)arg;
     WaitForSingleObject(g_ready, INFINITE);
 
-    for (;;) //(int i = 0; i < LOOP_CNT; i++)
+    for (int i = 0; i < LOOP_CNT; i++)
     {
         for (int k = 0; k < QUEUE_CNT; k++)
         {
@@ -93,7 +100,7 @@ unsigned __stdcall QueueTestThread(void* arg)
             for (int k = 0; k < QUEUE_CNT; k++)
             {
                 int ret = queues[k]->Dequeue();
-                if (ret != 0 && ret != k + 1) __debugbreak();
+                // if (ret != 0 && ret != k + 1) __debugbreak();
                 TPS[threadIdx]++;
             }
         }

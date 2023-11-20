@@ -55,8 +55,7 @@ public:
 		pNewNode->_data = data;
 
 		// For Protect ABA
-		unsigned __int64 ret = (unsigned __int64) InterlockedIncrement64(&_key);
-		unsigned __int64 key = ret;
+		__int64 key = InterlockedIncrement64(&_key);
 		key <<= __USESIZE_64BIT__;
 		__int64 pNewTop = (__int64)pNewNode;
 		pNewTop &= _addressMask;

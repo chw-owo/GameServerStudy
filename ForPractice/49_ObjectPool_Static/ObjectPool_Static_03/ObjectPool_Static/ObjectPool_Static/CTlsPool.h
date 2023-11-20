@@ -42,7 +42,7 @@ public:
 		CTlsPool<T>* _mainPool;
 		bool _placementNew;
 		stBucket* _bucket = nullptr;
-		int _bucketIdx = BUCKET_SIZE;
+		int _bucketIdx = BUCKET_SIZE + 1;
 		stBucket* _return = nullptr;
 		int _returnIdx = 0;
 	};
@@ -69,14 +69,25 @@ public: // For protect ABA
 public:
 	bool _placementNew;
 	int _bucketNum;
+	long _curBucketCnt = 0;
 	DWORD _tlsIdx = 0;
+
+private:
+	CPool* _pools[THREAD_MAX] = { nullptr, };
+	long _poolIdx = -1;
+
+public: // Debug
+	long _getCnt = 0;
+	long _createCnt = 0;
+	long _returnCnt = 0;
+	long _newCnt = 0;
 };
 
 template<class T>
 inline CTlsPool<T>::CPool::CPool(CTlsPool<T>* mainPool, bool placementNew)
 	: _mainPool(mainPool), _placementNew(placementNew)
 {
-	_return = new stBucket;
+	_return = new stBucket;	
 }
 
 template<class T>
@@ -91,10 +102,13 @@ inline CTlsPool<T>::CPool::~CPool()
 			free(data);
 		}
 
-		for (int i = 0; i < _bucketIdx; i++)
+		if (_bucketIdx <= BUCKET_SIZE);
 		{
-			T* data = _bucket->_datas[i];
-			free(data);
+			for (int i = 0; i < _bucketIdx; i++)
+			{
+				T* data = _bucket->_datas[i];
+				free(data);
+			}
 		}
 	}
 	else
@@ -107,11 +121,14 @@ inline CTlsPool<T>::CPool::~CPool()
 			free(data);
 		}
 
-		for (int i = 0; i < _bucketIdx; i++)
+		if (_bucketIdx <= BUCKET_SIZE);
 		{
-			T* data = _bucket->_datas[i];
-			data->~T();
-			free(data);
+			for (int i = 0; i < _bucketIdx; i++)
+			{
+				T* data = _bucket->_datas[i];
+				data->~T();
+				free(data);
+			}
 		}
 	}
 }
@@ -119,7 +136,7 @@ inline CTlsPool<T>::CPool::~CPool()
 template<class T>
 inline void CTlsPool<T>::CPool::ReturnBucket()
 {
-	unsigned __int64 key = (unsigned __int64)InterlockedIncrement64(&_mainPool->_key);
+	__int64 key = InterlockedIncrement64(&_mainPool->_key);
 	key <<= __ADDRESS_BIT__;
 	__int64 pNew = (__int64)_return;
 	pNew &= _mainPool->_addressMask;
@@ -129,11 +146,14 @@ inline void CTlsPool<T>::CPool::ReturnBucket()
 	{
 		__int64 pCur = _mainPool->_buckets;
 		_return->_tail = pCur;
-		if (InterlockedCompareExchange64(&_mainPool->_buckets, pNew, pCur) == pCur) break;
+		if (InterlockedCompareExchange64(&_mainPool->_buckets, pNew, pCur) == pCur)
+		{
+			InterlockedIncrement(&_mainPool->_returnCnt);
+			_return = new stBucket;
+			_returnIdx = 0;
+			return;
+		}
 	}
-
-	_return = new stBucket;
-	_returnIdx = 0;
 }
 
 template<class T>
@@ -146,6 +166,7 @@ inline void CTlsPool<T>::CPool::GetBucket(Types ...args)
 	for (;;)
 	{
 		__int64 pCur = _mainPool->_buckets;
+
 		if (pCur == NULL)
 		{
 			CreateBucket(args...);
@@ -157,6 +178,7 @@ inline void CTlsPool<T>::CPool::GetBucket(Types ...args)
 			__int64 pNext = bucket->_tail;
 			if (InterlockedCompareExchange64(&_mainPool->_buckets, pNext, pCur) == pCur)
 			{
+				InterlockedIncrement(&_mainPool->_getCnt);
 				_bucket = bucket;
 				return;
 			}
@@ -168,6 +190,8 @@ template<class T>
 template<typename ...Types>
 inline void CTlsPool<T>::CPool::CreateBucket(Types ...args)
 {
+	InterlockedIncrement(&_mainPool->_createCnt);
+
 	_bucket = new stBucket;
 	if (_placementNew)
 	{
@@ -192,8 +216,7 @@ template<class T>
 template<typename ...Types>
 inline T* CTlsPool<T>::CPool::Alloc(Types ...args)
 {
-	if (_bucketIdx == BUCKET_SIZE) GetBucket(args...);
-
+	if (_bucketIdx >= BUCKET_SIZE) GetBucket(args...);
 	T* data = _bucket->_datas[_bucketIdx++];
 	if (_placementNew) new (data) T(args...);
 	return data;
@@ -202,7 +225,7 @@ inline T* CTlsPool<T>::CPool::Alloc(Types ...args)
 template<class T>
 inline void CTlsPool<T>::CPool::Free(T* data)
 {
-	if (_returnIdx == BUCKET_SIZE) ReturnBucket();
+	if (_returnIdx >= BUCKET_SIZE) ReturnBucket();
 	if (_placementNew) data->~T();
 	_return->_datas[_returnIdx++] = data;
 }
@@ -221,6 +244,8 @@ inline CTlsPool<T>::CTlsPool(int blockNum, bool placementNew, Types ...args) : _
 	if (blockNum <= 0) return;
 
 	_bucketNum = (blockNum / BUCKET_SIZE) + 1;
+	_curBucketCnt = _bucketNum;
+
 	if (_placementNew)
 	{
 		// Alloc 시 Data의 생성자를 호출하므로 이때 호출하면 안된다
@@ -233,7 +258,7 @@ inline CTlsPool<T>::CTlsPool(int blockNum, bool placementNew, Types ...args) : _
 				bucket->_datas[j] = (T*)malloc(sizeof(T));
 			}
 
-			__int64 key = (__int64)InterlockedIncrement64(&_key);
+			__int64 key = InterlockedIncrement64(&_key);
 			key <<= __ADDRESS_BIT__;
 			__int64 pBuckets = (__int64)bucket;
 			pBuckets &= _addressMask;
@@ -255,7 +280,7 @@ inline CTlsPool<T>::CTlsPool(int blockNum, bool placementNew, Types ...args) : _
 				new (bucket->_datas[j]) T(args...);
 			}
 
-			__int64 key = (__int64)InterlockedIncrement64(&_key);
+			__int64 key = InterlockedIncrement64(&_key);
 			key <<= __ADDRESS_BIT__;
 			__int64 pBuckets = (__int64)bucket;
 			pBuckets &= _addressMask;
@@ -269,6 +294,10 @@ inline CTlsPool<T>::CTlsPool(int blockNum, bool placementNew, Types ...args) : _
 template<class T>
 inline CTlsPool<T>::~CTlsPool()
 {
+	for (int i = 0; i < _poolIdx; i++)
+		delete(_pools[i]);
+	TlsFree(_tlsIdx);
+
 	if (_buckets == NULL) return;
 
 	if (_placementNew)
@@ -310,8 +339,6 @@ inline CTlsPool<T>::~CTlsPool()
 		}
 		free(bucket);
 	}
-
-	TlsFree(_tlsIdx);
 }
 
 template<class T>
@@ -323,6 +350,8 @@ inline T* CTlsPool<T>::Alloc(Types ...args)
 	{
 		pool = new CPool(this, _placementNew);
 		if (pool == nullptr) __debugbreak();
+		long idx = InterlockedIncrement(&_poolIdx);
+		_pools[idx] = pool;
 		bool ret = TlsSetValue(_tlsIdx, (LPVOID)pool);
 		if (ret == 0)
 		{
@@ -342,6 +371,9 @@ inline void CTlsPool<T>::Initialize(Types ...args)
 	if (pool == nullptr)
 	{
 		pool = new CPool(this, _placementNew);
+		if (pool == nullptr) __debugbreak();
+		long idx = InterlockedIncrement(&_poolIdx);
+		_pools[idx] = pool;
 		bool ret = TlsSetValue(_tlsIdx, (LPVOID)pool);
 		if (ret == 0)
 		{
@@ -360,6 +392,9 @@ inline void CTlsPool<T>::Free(T* data)
 	if (pool == nullptr)
 	{
 		pool = new CPool(this, _placementNew);
+		if (pool == nullptr) __debugbreak();
+		long idx = InterlockedIncrement(&_poolIdx);
+		_pools[idx] = pool;
 		bool ret = TlsSetValue(_tlsIdx, (LPVOID)pool);
 		if (ret == 0)
 		{
