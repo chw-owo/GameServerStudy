@@ -5,7 +5,7 @@
 
 // #define __MONITOR
 #define TEST_CNT 3
-#define QUEUE_CNT 1
+#define QUEUE_CNT 2
 #define THREAD_CNT 3
 #define LOOP_CNT 1000000
 
@@ -84,7 +84,7 @@ unsigned __stdcall QueueTestThread(void* arg)
     int threadIdx = (int)arg;
     WaitForSingleObject(g_ready, INFINITE);
 
-    for (int i = 0; i < LOOP_CNT; i++)
+    for (;;) // (int i = 0; i < LOOP_CNT; i++)
     {
         for (int k = 0; k < QUEUE_CNT; k++)
         {
@@ -100,7 +100,7 @@ unsigned __stdcall QueueTestThread(void* arg)
             for (int k = 0; k < QUEUE_CNT; k++)
             {
                 int ret = queues[k]->Dequeue();
-                // if (ret != 0 && ret != k + 1) __debugbreak();
+                if (ret != 0 && ret != k + 1) __debugbreak();
                 TPS[threadIdx]++;
             }
         }

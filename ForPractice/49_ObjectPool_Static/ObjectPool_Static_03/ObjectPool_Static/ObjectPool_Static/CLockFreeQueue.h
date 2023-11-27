@@ -91,12 +91,6 @@ public:
         _size = 0;
     }
 
-    ~CLockFreeQueue()
-    {
-        ::printf("Get: %d\nReturn: %d\nCreate: %d\n\n",
-            _pPool->_getCnt, _pPool->_returnCnt, _pPool->_createCnt);
-    }
-
 public:
     void Enqueue(T data)
     {
