@@ -168,6 +168,7 @@ inline void CTlsPool<T>::CPool::GetBucket(Types ...args)
 		else
 		{
 			stBucket* bucket = (stBucket*)(pCur & _mainPool->_addressMask);
+			if (bucket == nullptr) __debugbreak();
 			__int64 pNext = bucket->_tail;
 			if (InterlockedCompareExchange64(&_mainPool->_buckets, pNext, pCur) == pCur)
 			{
@@ -242,6 +243,7 @@ inline CTlsPool<T>::CTlsPool(int blockNum, bool placementNew, Types ...args) : _
 		for (int i = 0; i < _bucketNum; i++)
 		{
 			stBucket* bucket = (stBucket*)malloc(sizeof(stBucket));
+			if (bucket == nullptr) __debugbreak();
 			bucket->_tail = (__int64)_buckets;
 			for (int j = 0; j < BUCKET_SIZE; j++)
 			{
@@ -263,6 +265,7 @@ inline CTlsPool<T>::CTlsPool(int blockNum, bool placementNew, Types ...args) : _
 		for (int i = 0; i < _bucketNum; i++)
 		{
 			stBucket* bucket = (stBucket*)malloc(sizeof(stBucket));
+			if (bucket == nullptr) __debugbreak();
 			bucket->_tail = (__int64)_buckets;
 			for (int j = 0; j < BUCKET_SIZE; j++)
 			{

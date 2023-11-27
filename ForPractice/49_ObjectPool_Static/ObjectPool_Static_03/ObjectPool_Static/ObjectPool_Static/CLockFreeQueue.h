@@ -102,8 +102,8 @@ public:
             __int64 tail = _tail;
             QueueNode* tailNode = (QueueNode*)(tail & _addressMask);
             __int64 next = tailNode->_next;
-            if (GetQID(next) != _QID) continue;
-
+               
+            if (GetQID(next) != _QID) continue; // Check where tailNode is alloced
             if ((next & _addressMask) != NULL)
             {
                 InterlockedCompareExchange64(&_tail, next, tail);
@@ -132,7 +132,9 @@ public:
             __int64 next = headNode->_next;
 
             if (_size == 0) return 0;
+            if (GetQID(next) != _QID) continue; // Check where tailNode is alloced          
             if ((next & _addressMask) == NULL) return 0;
+            
             if (head == tail)
             {
                 InterlockedCompareExchange64(&_tail, next, tail);

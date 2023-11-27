@@ -3,10 +3,10 @@
 #include <process.h>
 #include <stdio.h>
 
-// #define __MONITOR
+#define __MONITOR
 #define TEST_CNT 3
-#define QUEUE_CNT 2
-#define THREAD_CNT 3
+#define QUEUE_CNT 3
+#define THREAD_CNT 14
 #define LOOP_CNT 1000000
 
 HANDLE g_ready;
@@ -63,7 +63,9 @@ void QueueTest()
     SetEvent(g_ready);
 
 #ifdef __MONITOR
-    for (;;) 
+
+    int sum[QUEUE_CNT] = { 0,};
+    for (;;)
     {
         Sleep(1000);
         for (int i = 0; i < THREAD_CNT; i++)
@@ -104,6 +106,8 @@ unsigned __stdcall QueueTestThread(void* arg)
                 TPS[threadIdx]++;
             }
         }
+
+        if (GetAsyncKeyState(VK_SPACE)) break;
     }
 
     long ret = InterlockedIncrement(&g_completeCnt);
