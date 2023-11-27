@@ -7,7 +7,7 @@
 bool CGameServer::Initialize()
 {
 	_pJobQueue = new CLockFreeQueue<CJob*>;
-	_pJobPool = new CLockFreePool<CJob>(0, false);
+	_pJobPool = new CTlsPool<CJob>(0, false);
 	_playerPool = new CObjectPool<CPlayer>(0, true);
 
 	int sectorIdx = 0;

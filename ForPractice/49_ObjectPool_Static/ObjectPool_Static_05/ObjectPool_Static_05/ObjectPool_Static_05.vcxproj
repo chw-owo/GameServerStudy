@@ -21,8 +21,8 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
-    <ProjectGuid>{8068291b-669c-49da-a289-481a658708cd}</ProjectGuid>
-    <RootNamespace>FightGameMMONoLock</RootNamespace>
+    <ProjectGuid>{5209fd8a-f92f-47cf-b692-debd1d22610b}</ProjectGuid>
+    <RootNamespace>ObjectPoolStatic05</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
@@ -129,35 +129,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="CGameServer.cpp" />
-    <ClCompile Include="CLanServer.cpp" />
-    <ClCompile Include="CNetServer.cpp" />
-    <ClCompile Include="CPacket.cpp" />
-    <ClCompile Include="CProfiler.cpp" />
-    <ClCompile Include="CRingBuffer.cpp" />
-    <ClCompile Include="CSystemLog.cpp" />
     <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="CCrashDump.h" />
-    <ClInclude Include="CGameServer.h" />
-    <ClInclude Include="CJob.h" />
-    <ClInclude Include="CLanServer.h" />
     <ClInclude Include="CLockFreeQueue.h" />
-    <ClInclude Include="CLockFreeStack.h" />
-    <ClInclude Include="CNetServer.h" />
-    <ClInclude Include="CObjectPool.h" />
-    <ClInclude Include="Config.h" />
-    <ClInclude Include="CPacket.h" />
-    <ClInclude Include="CPlayer.h" />
-    <ClInclude Include="CProfiler.h" />
-    <ClInclude Include="CRingBuffer.h" />
-    <ClInclude Include="CSector.h" />
-    <ClInclude Include="CSession.h" />
-    <ClInclude Include="CSystemLog.h" />
     <ClInclude Include="CTlsPool.h" />
-    <ClInclude Include="ErrorCode.h" />
-    <ClInclude Include="Protocol.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -1,9 +1,10 @@
 #pragma once
-#include "CLockFreePool.h"
+#include "CTlsPool.h"
 
 template<typename T>
 class CLockFreeStack
 {
+#define __ADDRESS_BIT__ 47
 private:
 	class StackNode
 	{
@@ -31,16 +32,16 @@ private: // For protect ABA
 public:
 	CLockFreeStack()
 	{
-		_pPool = new CLockFreePool<StackNode>(0, false);
+		_pPool = new CTlsPool<StackNode>(0, false);
 		_keyMask = 0b11111111111111111;
 		_addressMask = 0b11111111111111111;
-		_addressMask <<= __USESIZE_64BIT__;
+		_addressMask <<= __ADDRESS_BIT__;
 		_addressMask = ~_addressMask;
 	}
 
 private:
 	__int64 _pTop = NULL;
-	CLockFreePool<StackNode>* _pPool = nullptr;
+	CTlsPool<StackNode>* _pPool = nullptr;
 
 private:
 	volatile long _useSize = 0;
@@ -59,7 +60,7 @@ public:
 		// For Protect ABA
 		unsigned __int64 ret = (unsigned __int64)InterlockedIncrement64(&_key);
 		unsigned __int64 key = ret;
-		key <<= __USESIZE_64BIT__;
+		key <<= __ADDRESS_BIT__;
 		__int64 pNewTop = (__int64)pNewNode;
 		pNewTop &= _addressMask;
 		unsigned __int64 tmp = pNewTop;

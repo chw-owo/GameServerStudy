@@ -240,7 +240,7 @@ bool CLanServer::Disconnect(__int64 sessionID)
 
 bool CLanServer::SendPacket(__int64 sessionID, CPacket* packet)
 {
-	// ::printf("%lld (%d): Request Send Packet\n", (sessionID & _idMask), GetCurrentThreadId());
+	//::printf("%lld (%d): Request Send Packet\n", (sessionID & _idMask), GetCurrentThreadId());
 
 	unsigned __int64 idx = sessionID & _indexMask;
 	idx >>= ID_BIT_SIZE;
@@ -377,7 +377,7 @@ unsigned int __stdcall CLanServer::NetworkThread(void* arg)
 		}
 		else if (pNetOvl->_type == NET_TYPE::RELEASE)
 		{
-			// ::printf("%lld (%d): Release Request\n", (pSession->_ID & pNetServer->_idMask), GetCurrentThreadId());
+			//::printf("%lld (%d): Release Request\n", (pSession->_ID & pNetServer->_idMask), GetCurrentThreadId());
 			pNetServer->ReleaseSession(pSession->_ID);
 			continue;
 		}
@@ -426,7 +426,7 @@ bool CLanServer::ReleaseSession(__int64 sessionID)
 	pSession->_debugData[debugIdx % dfSESSION_DEBUG_MAX].LeaveLog(
 		1, GetCurrentThreadId(), pSession->_validFlag._IOCount, pSession->_validFlag._releaseFlag, pSession->_ID, sessionID);
 
-	//::printf("%lld (%d): Release Success\n", (pSession->_ID & _idMask), GetCurrentThreadId());
+	////::printf("%lld (%d): Release Success\n", (pSession->_ID & _idMask), GetCurrentThreadId());
 
 	closesocket(pSession->_sock);
 	pSession->Terminate();
@@ -576,6 +576,7 @@ bool CLanServer::HandleSendCP(__int64 sessionID, int sendBytes)
 
 bool CLanServer::SendPost(CSession* pSession)
 {
+	//::printf("SendPost first line\n");
 	if (pSession->_sendBuf.GetUseSize() == 0) return false;
 	if (InterlockedExchange(&pSession->_sendFlag, 1) == 1) return false;
 	if (pSession->_sendBuf.GetUseSize() == 0)
@@ -584,23 +585,9 @@ bool CLanServer::SendPost(CSession* pSession)
 		return false;
 	}
 
-	/*
-	for (;;)
-	{
-		if (pSession->_sendBuf.GetUseSize() == 0) return false;
-		if (InterlockedExchange(&pSession->_sendFlag, 1) == 1) continue;
-		if (pSession->_sendBuf.GetUseSize() == 0)
-		{
-			InterlockedExchange(&pSession->_sendFlag, 0);
-			return false;
-		}
-		break;
-	}
-	*/
-
 	int idx = 0;
 	int useSize = pSession->_sendBuf.GetUseSize();
-
+	//::printf("SendPost Size: %d\n", useSize);
 	for (; idx < useSize; idx++)
 	{
 		if (idx == dfWSASENDBUF_CNT) break;

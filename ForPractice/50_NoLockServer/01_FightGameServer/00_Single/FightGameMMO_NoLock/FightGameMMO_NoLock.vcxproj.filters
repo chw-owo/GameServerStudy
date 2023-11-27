@@ -108,7 +108,7 @@
     <ClInclude Include="CPacket.h">
       <Filter>NetLib\Packet</Filter>
     </ClInclude>
-    <ClInclude Include="CLockFreePool.h">
+    <ClInclude Include="CTlsPool.h">
       <Filter>Common</Filter>
     </ClInclude>
     <ClInclude Include="CLockFreeQueue.h">

@@ -2,7 +2,7 @@
 #include "Config.h"
 #ifdef LANSERVER
 
-#include "CLockFreePool.h"
+#include "CTlsPool.h"
 #include "CLockFreeStack.h"
 #include "CSession.h"
 
@@ -67,7 +67,7 @@ protected:
 	inline int GetDisconnectTPS() { return _disconnectTPS; }
 
 protected:
-	// CLockFreePool<CPacket>* _pPacketPool;
+	// CTlsPool<CPacket>* _pPacketPool;
 
 	// Called in Network Library
 private:

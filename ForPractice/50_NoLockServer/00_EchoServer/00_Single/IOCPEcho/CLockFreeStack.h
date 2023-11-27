@@ -4,6 +4,7 @@
 template<typename T>
 class CLockFreeStack
 {
+#define __ADDRESS_BIT__ 47
 private:
 	class StackNode
 	{
@@ -33,7 +34,7 @@ private: // For protect ABA
 
 private:
 	// 17 bit key + 47 bit address
-	__int64 CreateAddress(QueueNode* node)
+	__int64 CreateAddress(StackNode* node)
 	{
 		unsigned __int64 key = (unsigned __int64)InterlockedIncrement64(&_key);
 		key <<= __ADDRESS_BIT__;
@@ -47,10 +48,10 @@ private:
 public:
 	CLockFreeStack()
 	{
-		_pPool = new CTlsPool<StackNode>(0, false);
+		_pStackPool = new CTlsPool<StackNode>(0, false);
 		_keyMask = 0b11111111111111111;
 		_addressMask = 0b11111111111111111;
-		_addressMask <<= __USESIZE_64BIT__;
+		_addressMask <<= __ADDRESS_BIT__;
 		_addressMask = ~_addressMask;
 	}
 
@@ -59,15 +60,12 @@ private:
 	volatile long _useSize = 0;
 	
 public:
-	long GetUseSize()
-	{
-		return _useSize;
-	}
+	long GetUseSize() { return _useSize; }
 
 public:
 	void Push(T data)
 	{
-		StackNode* pNewNode = _pPool->Alloc();
+		StackNode* pNewNode = _pStackPool->Alloc();
 		pNewNode->_data = data;
 		__int64 newTop = CreateAddress(pNewNode);
 
@@ -76,7 +74,7 @@ public:
 			__int64 pPrevTop = _pTop;
 			pNewNode->_next = pPrevTop;
 
-			if (InterlockedCompareExchange64(&_pTop, pNewTop, pPrevTop) == pPrevTop)
+			if (InterlockedCompareExchange64(&_pTop, newTop, pPrevTop) == pPrevTop)
 			{
 				InterlockedIncrement(&_useSize);
 				return;
@@ -95,7 +93,7 @@ public:
 			{
 				StackNode* pPrevNode = (StackNode*)(pPrevTop & _addressMask);
 				T data = pPrevNode->_data;
-				_pPool->Free(pPrevNode);
+				_pStackPool->Free(pPrevNode);
 				InterlockedDecrement(&_useSize);
 				return data;
 			}

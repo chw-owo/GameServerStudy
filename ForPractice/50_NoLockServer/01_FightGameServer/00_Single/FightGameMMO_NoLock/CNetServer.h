@@ -2,7 +2,7 @@
 #include "Config.h"
 #ifdef NETSERVER
 
-#include "CLockFreePool.h"
+#include "CTlsPool.h"
 #include "CLockFreeStack.h"
 #include "CSession.h"
 #include <ws2tcpip.h>
@@ -69,7 +69,7 @@ protected:
 	inline int GetDisconnectTPS() { return _disconnectTPS; }
 
 protected:
-	// CLockFreePool<CPacket>* _pPacketPool;
+	// CTlsPool<CPacket>* _pPacketPool;
 
 	// Called in Network Library
 private:

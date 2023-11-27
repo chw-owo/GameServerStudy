@@ -29,7 +29,7 @@ public:
 
 	static CPacket* Alloc()
 	{
-		CPacket* packet = _pool.Alloc(1);
+		CPacket* packet = _pool.Alloc();
 		return packet;
 	}
 
@@ -37,7 +37,7 @@ public:
 	{
 		if (InterlockedDecrement(&packet->_usageCount) == 0)
 		{
-			_pool.Free(2, packet);
+			_pool.Free(packet);
 			return true;
 		}
 		return false;
@@ -526,7 +526,7 @@ public:
 	}
 
 private:
-	volatile long _usageCount;
+	volatile long _usageCount = 0;
 
 private:
 	char* _chpBuffer;
@@ -541,5 +541,5 @@ private:
 	int _iHeaderWritePos;
 
 private:
-	int _errCode;
+	int _errCode = 0;
 };

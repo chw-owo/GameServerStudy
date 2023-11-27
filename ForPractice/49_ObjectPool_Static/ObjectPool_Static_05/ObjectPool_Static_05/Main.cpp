@@ -3,7 +3,7 @@
 #include <process.h>
 #include <stdio.h>
 
-#define __MONITOR
+// #define __MONITOR
 #define TEST_CNT 3
 #define QUEUE_CNT 2
 #define THREAD_CNT 4
@@ -12,7 +12,8 @@
 HANDLE g_ready;
 HANDLE g_allComplete;
 long g_completeCnt = 0;
-int TPS[THREAD_CNT] = { 0, };
+int enqTPS[THREAD_CNT] = { 0, };
+int deqTPS[THREAD_CNT] = { 0, };
 CLockFreeQueue<int>* queues[QUEUE_CNT];
 
 void Setting();
@@ -64,21 +65,24 @@ void QueueTest()
 
 #ifdef __MONITOR
 
-    int sum[QUEUE_CNT] = { 0,};
+    int sum[QUEUE_CNT] = { 0, };
     for (;;)
     {
         Sleep(1000);
+
         for (int i = 0; i < THREAD_CNT; i++)
         {
-            ::printf("%d\n", TPS[i]);
-            TPS[i] = 0;
+            ::printf("%d - %d\n", enqTPS[i], deqTPS[i]);
+            enqTPS[i] = 0;
+            deqTPS[i] = 0;
         }
+
         ::printf("\n");
     }
 #endif
 
     WaitForMultipleObjects(THREAD_CNT, threads, true, INFINITE);
-        
+
 }
 
 unsigned __stdcall QueueTestThread(void* arg)
@@ -93,7 +97,7 @@ unsigned __stdcall QueueTestThread(void* arg)
             for (int j = 0; j < TEST_CNT; j++)
             {
                 queues[k]->Enqueue(k + 1);
-                TPS[threadIdx]++;
+                enqTPS[threadIdx]++;
             }
         }
 
@@ -103,7 +107,7 @@ unsigned __stdcall QueueTestThread(void* arg)
             {
                 int ret = queues[k]->Dequeue();
                 if (ret != 0 && ret != k + 1) __debugbreak();
-                TPS[threadIdx]++;
+                if (ret != 0) deqTPS[threadIdx]++;
             }
         }
 

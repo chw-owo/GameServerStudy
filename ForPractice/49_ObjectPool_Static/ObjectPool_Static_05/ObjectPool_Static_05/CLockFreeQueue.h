@@ -58,7 +58,7 @@ private:
 
         unsigned __int64 nodeID = (unsigned __int64)InterlockedIncrement(&_nodeID);
         nodeID <<= __ADDRESS_BIT__;
-        nodeID &= CLockFreeQueue::_keyMask;
+        nodeID &= CLockFreeQueue::_keyMask;        
         address |= nodeID;
 
         return address;
@@ -81,7 +81,7 @@ public:
         if (_QID > __QUEUE_MAX__) __debugbreak();
         QueueNode* node = _pQueuePool->Alloc(_QID);
 
-        _addressMask = ~CLockFreeQueue::_keyMask;
+        _addressMask = ~CLockFreeQueue::_keyMask; 
         _head = CreateAddress(node);
         _tail = _head;
         _useSize = 0;
@@ -130,12 +130,12 @@ public:
             QueueNode* headNode = (QueueNode*)(head & _addressMask);
             __int64 next = headNode->_next;
 
-            if (_useSize == 0)
+            if (_useSize == 0) 
             {
                 return 0;
             }
 
-            if ((next & _addressMask) == NULL)
+            if ((next & _addressMask) == NULL) 
             {
                 long QID = GetQID(next);
                 if (QID != _QID) continue; // Check where tailNode is allocated

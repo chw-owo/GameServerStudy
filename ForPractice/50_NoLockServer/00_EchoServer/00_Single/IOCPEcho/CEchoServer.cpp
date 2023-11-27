@@ -10,7 +10,7 @@ void CEchoServer::Initialize()
 {
 	SYSTEM_INFO si;
 	GetSystemInfo(&si);
-	int threadCnt = 1; // (int)si.dwNumberOfProcessors;
+	int threadCnt = (int)si.dwNumberOfProcessors;
 
 	if (!NetworkInitialize(dfSERVER_IP, dfSERVER_PORT, threadCnt, false))
 		Terminate();
@@ -42,7 +42,7 @@ void CEchoServer::OnRecv(__int64 sessionID, CPacket* packet)
 		__int64 echo;
 		*packet >> echo;
 
-		//::printf("%llu\n", echo);
+		// ::printf("%llu\n", echo);
 
 		CPacket* sendPacket = CPacket::Alloc();
 		sendPacket->Clear();
@@ -50,6 +50,7 @@ void CEchoServer::OnRecv(__int64 sessionID, CPacket* packet)
 		*sendPacket << echo;
 		if (!SendPacket(sessionID, sendPacket))
 		{
+			// ::printf("Fail to Send Packet\n");
 			CPacket::Free(packet);
 		}
 	}

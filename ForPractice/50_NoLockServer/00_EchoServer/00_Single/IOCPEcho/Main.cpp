@@ -11,8 +11,8 @@ int wmain(int argc, wchar_t* argv[])
 	g_Server.Initialize();
 	for(;;)
 	{
-		Sleep(1000);
 		/*
+		Sleep(1000);
 		if (GetAsyncKeyState(VK_SPACE))
 		{
 			g_Server.Terminate();

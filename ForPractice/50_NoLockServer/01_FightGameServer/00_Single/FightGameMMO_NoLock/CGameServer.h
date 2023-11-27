@@ -1,5 +1,5 @@
 #pragma once
-#include "CLockFreePool.h"
+#include "CTlsPool.h"
 #include "CLockFreeQueue.h"
 #include "CObjectPool.h"
 #include "CLanServer.h"
@@ -123,7 +123,7 @@ private:
 	DWORD _oldTick;
 	int _timeGap = 1000 / dfFPS;
 	CLockFreeQueue<CJob*>* _pJobQueue;
-	CLockFreePool<CJob>* _pJobPool;
+	CTlsPool<CJob>* _pJobPool;
 
 private:
 	// For Monitor Thread

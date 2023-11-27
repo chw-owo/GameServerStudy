@@ -64,7 +64,7 @@ void QueueTest()
 
 #ifdef __MONITOR
 
-    int sum[QUEUE_CNT] = { 0,};
+    int sum[QUEUE_CNT] = { 0, };
     for (;;)
     {
         Sleep(1000);
@@ -78,7 +78,7 @@ void QueueTest()
 #endif
 
     WaitForMultipleObjects(THREAD_CNT, threads, true, INFINITE);
-        
+
 }
 
 unsigned __stdcall QueueTestThread(void* arg)

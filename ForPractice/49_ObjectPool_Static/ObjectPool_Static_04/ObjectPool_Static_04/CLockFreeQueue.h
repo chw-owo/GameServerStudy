@@ -4,16 +4,17 @@
 #include <cstdarg>
 using namespace std;
 
-
 template <typename T>
 class CLockFreeQueue
 {
 private: // For protect ABA
-#define __QUEUE_MAX__ 131071
+    // QID 13 bit (max 8192), Key 4 bit (max 16), Address 47 bit
+#define __KEY_BIT__ 4
 #define __ADDRESS_BIT__ 47
-    long _nodeID = 0;
-    static unsigned __int64 _keyMask;
+    static unsigned __int64 _QIDMask;
+    unsigned __int64 _keyAddressMask = 0;
     unsigned __int64 _addressMask = 0;
+    short _key = 0;
 
 public:
     class QueueNode
@@ -22,11 +23,11 @@ public:
 
     public:
         QueueNode() { __debugbreak(); }
-        QueueNode(long QID)
+        QueueNode(short QID)
         {
             _next = (__int64)QID;
-            _next <<= __ADDRESS_BIT__;
-            _next &= CLockFreeQueue::_keyMask;
+            _next <<= (__KEY_BIT__ + __ADDRESS_BIT__);
+            _next &= CLockFreeQueue::_QIDMask;
         }
 
         ~QueueNode()
@@ -41,33 +42,37 @@ public:
     };
 
 public:
-    long _QID;
-    static long _QIDSupplier;
+    static short _QIDSupplier;
     static CTlsPool<QueueNode>* _pQueuePool;
 
 private:
     __int64 _head;
     __int64 _tail;
     long _useSize;
+    short _QID;
 
 private:
     inline __int64 CreateAddress(QueueNode* node)
     {
+        unsigned __int64 QID = (unsigned __int64)_QID;
+        QID <<= (__KEY_BIT__ + __ADDRESS_BIT__);
+        QID &= _QIDMask;
+
+        unsigned __int64 key = (unsigned __int64)InterlockedIncrement16(&_key);
+        key <<= __ADDRESS_BIT__;
+        key &= _keyAddressMask;
+        key |= QID;
+
         __int64 address = (__int64)node;
         address &= _addressMask;
-
-        unsigned __int64 nodeID = (unsigned __int64)InterlockedIncrement(&_nodeID);
-        nodeID <<= __ADDRESS_BIT__;
-        nodeID &= CLockFreeQueue::_keyMask;
-        address |= nodeID;
-
+        address |= key;
         return address;
     }
 
-    inline long GetQID(__int64 next)
+    inline short GetQID(__int64 next)
     {
-        long QID = (((unsigned __int64)next) >> __ADDRESS_BIT__);
-        QID &= 0b11111111111111111;
+        short QID = (((unsigned __int64)next) >> (__KEY_BIT__ + __ADDRESS_BIT__));
+        QID &= 0b1111111111111;
         return QID;
     }
 
@@ -77,11 +82,15 @@ public:
 public:
     CLockFreeQueue()
     {
-        _QID = InterlockedIncrement(&_QIDSupplier);
-        if (_QID > __QUEUE_MAX__) __debugbreak();
-        QueueNode* node = _pQueuePool->Alloc(_QID);
+        _QID = InterlockedIncrement16(&_QIDSupplier);
 
-        _addressMask = ~CLockFreeQueue::_keyMask;
+        _keyAddressMask = ~_QIDMask;
+        _addressMask = 0b11111111111111111;
+        _addressMask <<= __ADDRESS_BIT__;
+        _addressMask = ~_addressMask;
+
+        _QID &= 0b1111111111111;
+        QueueNode* node = _pQueuePool->Alloc(_QID);
         _head = CreateAddress(node);
         _tail = _head;
         _useSize = 0;
@@ -100,15 +109,15 @@ public:
             QueueNode* tailNode = (QueueNode*)(tail & _addressMask);
             __int64 next = tailNode->_next;
 
+            short QID = GetQID(next);
+            if (QID != _QID) continue; // Check where tailNode is allocated
+
             if ((next & _addressMask) != NULL)
             {
                 InterlockedCompareExchange64(&_tail, next, tail);
             }
             else
             {
-                long QID = GetQID(next);
-                if (QID != _QID) continue; // Check where tailNode is allocated
-
                 if (InterlockedCompareExchange64(&tailNode->_next, newNode, next) == next)
                 {
                     InterlockedCompareExchange64(&_tail, newNode, tail);
@@ -130,17 +139,12 @@ public:
             QueueNode* headNode = (QueueNode*)(head & _addressMask);
             __int64 next = headNode->_next;
 
-            if (_useSize == 0)
-            {
-                return 0;
-            }
+            if (_useSize == 0) return 0;
 
-            if ((next & _addressMask) == NULL)
-            {
-                long QID = GetQID(next);
-                if (QID != _QID) continue; // Check where tailNode is allocated
-                return 0;
-            }
+            short QID = GetQID(next);
+            if (QID != _QID) continue; // Check where tailNode is allocated     
+            
+            if ((next & _addressMask) == NULL) return 0;
 
             if (head == tail)
             {
@@ -164,8 +168,8 @@ public:
 
 
 template<typename T>
-long CLockFreeQueue<T>::_QIDSupplier = 0;
+short CLockFreeQueue<T>::_QIDSupplier = 0;
 template<typename T>
-unsigned __int64 CLockFreeQueue<T>::_keyMask = 0b1111111111111111100000000000000000000000000000000000000000000000;
+unsigned __int64 CLockFreeQueue<T>::_QIDMask = 0b1111111111111111100000000000000000000000000000000000000000000000;
 template<typename T>
 CTlsPool<typename CLockFreeQueue<T>::QueueNode>* CLockFreeQueue<T>::_pQueuePool = new CTlsPool<CLockFreeQueue<T>::QueueNode>(0, true);

@@ -30,7 +30,7 @@ bool CNetServer::NetworkInitialize(const wchar_t* IP, short port, int numOfThrea
 
 	// Network Setting ===================================================
 
-	// _pPacketPool = new CLockFreePool<CPacket>(0, false);
+	// _pPacketPool = new CTlsPool<CPacket>(0, false);
 
 	// Initialize Winsock
 	WSADATA wsa;
