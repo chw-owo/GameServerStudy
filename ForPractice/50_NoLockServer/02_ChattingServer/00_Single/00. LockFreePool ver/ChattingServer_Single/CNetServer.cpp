@@ -212,7 +212,6 @@ bool CNetServer::Disconnect(__int64 sessionID)
 	unsigned __int64 idx = sessionID & _indexMask;
 	idx >>= ID_BIT_SIZE;
 	CSession* pSession = _sessions[(long)idx];
-	__int64 ID = pSession->_ID;
 
 	if (!IncrementUseCount(pSession))
 	{
@@ -222,7 +221,7 @@ bool CNetServer::Disconnect(__int64 sessionID)
 	{
 		return false;
 	}
-	if (ID != sessionID)
+	if (pSession->_ID != sessionID)
 	{
 		DecrementUseCount(pSession);
 		return false;
@@ -248,7 +247,7 @@ bool CNetServer::SendPacket(__int64 sessionID, CPacket* packet)
 	unsigned __int64 idx = sessionID & _indexMask;
 	idx >>= ID_BIT_SIZE;
 	CSession* pSession = _sessions[(long)idx];
-	__int64 ID = pSession->_ID;
+
 	if (!IncrementUseCount(pSession))
 	{
 		return false;
@@ -257,7 +256,7 @@ bool CNetServer::SendPacket(__int64 sessionID, CPacket* packet)
 	{
 		return false;
 	}
-	if (ID != sessionID)
+	if (pSession->_ID != sessionID)
 	{
 		DecrementUseCount(pSession);
 		return false;
@@ -339,13 +338,27 @@ unsigned int __stdcall CNetServer::AcceptThread(void* arg)
 		CSession* pSession = pNetServer->_sessions[(long)idx];
 		pSession->Initialize(sessionID, client_sock, clientaddr);
 
+		if (!pNetServer->IncrementUseCount(pSession))
+		{
+			continue;
+		}
+		if (pSession->_validFlag._releaseFlag == 1)
+		{
+			continue;
+		}
+		if (pSession->_ID != sessionID)
+		{
+			pNetServer->DecrementUseCount(pSession);
+			continue;
+		}
+
 		// ::printf("%lld (%d): Accept Success\n", (sessionID & pNetServer->_idMask), GetCurrentThreadId());
 
 		// Connect Session to IOCP and Post Recv                                      
 		CreateIoCompletionPort((HANDLE)pSession->_sock, pNetServer->_hNetworkCP, (ULONG_PTR)pSession->_ID, 0);
-
 		pNetServer->RecvPost(pSession);
 		pNetServer->OnAcceptClient(pSession->_ID);
+		pNetServer->DecrementUseCount(pSession);
 	}
 
 	swprintf_s(stErrMsg, dfMSG_MAX, L"Accept Thread (%d)", GetCurrentThreadId());
@@ -369,6 +382,7 @@ unsigned int __stdcall CNetServer::NetworkThread(void* arg)
 			&cbTransferred, (PULONG_PTR)&sessionID, (LPOVERLAPPED*)&pNetOvl, INFINITE);
 
 		if (pNetServer->_networkAlive == 1) break;
+
 		if (sessionID == -1) continue;
 		if (pNetOvl->_type == NET_TYPE::RELEASE)
 		{
@@ -380,14 +394,13 @@ unsigned int __stdcall CNetServer::NetworkThread(void* arg)
 		unsigned __int64 idx = sessionID & pNetServer->_indexMask;
 		idx >>= ID_BIT_SIZE;
 		CSession* pSession = pNetServer->_sessions[(long)idx];
-		__int64 ID = pSession->_ID;
 
 		bool connected = pNetServer->IncrementUseCount(pSession, false);
 		if (pSession->_validFlag._releaseFlag == 1)
 		{
 			continue;
 		}
-		if (ID != sessionID)
+		if (pSession->_ID != sessionID)
 		{
 			pNetServer->DecrementUseCount(pSession);
 			continue;
@@ -434,13 +447,12 @@ bool CNetServer::ReleaseSession(__int64 sessionID)
 	unsigned __int64 idx = sessionID & _indexMask;
 	idx >>= ID_BIT_SIZE;
 	CSession* pSession = _sessions[(long)idx];
-	__int64 ID = pSession->_ID;
 
 	if (InterlockedCompareExchange(&pSession->_validFlag._flag, 1, 0) != 0)
 	{
 		return false;
 	}
-	if (ID != sessionID)
+	if (pSession->_ID != sessionID)
 	{
 		InterlockedExchange16(&pSession->_validFlag._releaseFlag, 0);
 		return false;
@@ -448,10 +460,11 @@ bool CNetServer::ReleaseSession(__int64 sessionID)
 
 	// ::printf("%lld (%d): Release Success\n", (pSession->_ID & _idMask), GetCurrentThreadId());
 
-	closesocket(pSession->_sock);
+	SOCKET sock = pSession->_sock;
 	pSession->Terminate();
-	_emptyIdx.Push((long)idx);
 
+	closesocket(sock);
+	_emptyIdx.Push((long)idx);
 	InterlockedIncrement(&_disconnectCnt);
 	InterlockedDecrement(&_sessionCnt);
 
@@ -605,14 +618,6 @@ bool CNetServer::SendPost(CSession* pSession)
 		return false;
 	}
 
-	/*
-	if (pSession->_sendBuf.GetUseSize() > dfPACKET_MAX)
-	{
-		Disconnect(pSession->_ID);
-		return false;
-	}
-	*/
-
 	int idx = 0;
 	int useSize = pSession->_sendBuf.GetUseSize();
 
@@ -666,7 +671,6 @@ bool CNetServer::SendPost(CSession* pSession)
 bool CNetServer::IncrementUseCount(CSession* pSession, bool check)
 {
 	bool ret = true;
-
 	if (pSession->_disconnect == 1)
 	{
 		if (check) return false;

@@ -34,8 +34,8 @@ public:
 	void Initialize(__int64 ID, SOCKET sock, SOCKADDR_IN addr)
 	{
 		InterlockedExchange16(&_disconnect, 0);
-		InterlockedExchange(&_sendFlag, 0);
 		InterlockedExchange(&_validFlag._flag, 0);
+		InterlockedExchange(&_sendFlag, 0);
 
 		_ID = ID;
 		_sock = sock;
@@ -85,6 +85,8 @@ public:
 	NetworkOverlapped _recvOvl;
 	NetworkOverlapped _sendOvl;
 	NetworkOverlapped _releaseOvl;
+
+
 
 public:
 	typedef union ValidFlag
