@@ -4,11 +4,11 @@
 
 // ºΩ≈Õ 50 x 50
 #define dfSERVER_IP				L"0.0.0.0"
-#define dfSERVER_PORT			11650
+#define dfSERVER_PORT			12050
 
 #define dfSECTOR_CNT_Y			50
 #define dfSECTOR_CNT_X			50
-#define dfPLAYER_MAX			10000
+#define dfPLAYER_MAX			20000
 #define dfTIMEOUT				40000
 #define dfMONITOR_TEXT_LEN		1024
 #define dfJOB_DEF				10000

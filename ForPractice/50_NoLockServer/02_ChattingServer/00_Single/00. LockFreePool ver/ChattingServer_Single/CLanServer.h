@@ -1,6 +1,6 @@
 #pragma once
 #include "Config.h"
-#ifdef NETSERVER
+#ifdef LANSERVER
 
 #include "CLockFreePool.h"
 #include "CLockFreeStack.h"
@@ -9,11 +9,11 @@
 #include <process.h>
 #pragma comment(lib, "ws2_32.lib")
 
-class CNetServer
+class CLanServer
 {
 protected:
-	CNetServer();
-	~CNetServer() {};
+	CLanServer();
+	~CLanServer() {};
 
 protected:
 	bool NetworkInitialize(const wchar_t* IP, short port, int numOfThreads, bool nagle);
@@ -82,8 +82,8 @@ private:
 	bool SendPost(CSession* pSession);
 
 private:
-	bool DecrementIOCount(CSession* pSession, int line, int sessionID);
-	bool IncrementIOCount(CSession* pSession, int line, int sessionID);
+	bool DecrementUseCount(CSession* pSession, int line, int sessionID);
+	bool IncrementUseCount(CSession* pSession, int line, int sessionID);
 
 private:
 	wchar_t _IP[10];
@@ -105,7 +105,7 @@ private:
 	CLockFreeStack<__int64> _emptyIdx;
 	volatile long _sessionCnt = 0;
 
-private: 
+private:
 	volatile __int64 _sessionID = 0;
 	unsigned __int64 _indexMask = 0;
 	unsigned __int64 _idMask = 0;
@@ -124,5 +124,6 @@ private:
 	volatile long _disconnectCnt = 0;
 	int _recvMsgCnt = 0;
 	int _sendMsgCnt = 0;
+
 };
 #endif

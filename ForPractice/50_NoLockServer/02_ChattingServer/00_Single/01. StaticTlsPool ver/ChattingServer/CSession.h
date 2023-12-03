@@ -33,12 +33,13 @@ public:
 public:
 	void Initialize(__int64 ID, SOCKET sock, SOCKADDR_IN addr)
 	{
-		_disconnect = false;
+		InterlockedExchange16(&_disconnect, 0);
+		InterlockedExchange(&_sendFlag, 0);
+		InterlockedExchange(&_validFlag._flag, 0);
+
 		_ID = ID;
 		_sock = sock;
 		_addr = addr;
-		_sendFlag = 0;
-		_validFlag._flag = 0;
 
 		ZeroMemory(&_recvOvl._ovl, sizeof(_recvOvl._ovl));
 		ZeroMemory(&_sendOvl._ovl, sizeof(_sendOvl._ovl));
@@ -47,12 +48,11 @@ public:
 
 	void Terminate()
 	{
-		_disconnect = true;
+		InterlockedExchange16(&_disconnect, 1);
+		InterlockedExchange(&_validFlag._flag, 1);
+
 		_ID = -1;
 		_sock = INVALID_SOCKET;
-		_sendFlag = 0;
-		_validFlag._IOCount = 0;
-		_validFlag._releaseFlag = 1;
 
 		_recvBuf.ClearBuffer();
 		while (_sendBuf.GetUseSize() > 0)
@@ -68,8 +68,11 @@ public:
 	}
 
 public:
-	bool _disconnect = true;
-	__int64 _ID;
+	__int64 _ID = -1;	
+	volatile short _disconnect = 1;
+	volatile long _sendFlag;
+	volatile long _sendCount;
+
 	SOCKET _sock;
 	SOCKADDR_IN _addr;
 
@@ -82,8 +85,8 @@ public:
 	NetworkOverlapped _recvOvl;
 	NetworkOverlapped _sendOvl;
 	NetworkOverlapped _releaseOvl;
-	volatile long _sendFlag;
-	volatile long _sendCount;
+
+
 
 public:
 	typedef union ValidFlag
@@ -91,38 +94,10 @@ public:
 		struct
 		{
 			short _releaseFlag;
-			short _IOCount;
+			short _useCount;
 		};
 		long _flag;
 	};
 	volatile ValidFlag _validFlag;
-
-public:
-#define dfSESSION_DEBUG_MAX 1000
-	class SessionDebugData // Debug For Initial & Release
-	{
-	public:
-		void LeaveLog(int line, int threadID, short IOCount, short releaseFlag, __int64 sessionID, __int64 reqID)
-		{
-			_line = line;
-			_threadID = threadID;
-			_IOCount = IOCount;
-			_releaseFlag = releaseFlag;
-			_sessionID = sessionID;
-			_reqID = reqID;
-		}
-
-	private:
-		int _line = -1;
-		int _threadID = -1;
-		short _IOCount = -1;
-		short _releaseFlag = -1;
-		__int64 _sessionID = -1;
-		__int64 _reqID = -1;
-	};
-
-public:
-	SessionDebugData _debugData[dfSESSION_DEBUG_MAX];
-	volatile long _debugIdx = -1;
 };
 

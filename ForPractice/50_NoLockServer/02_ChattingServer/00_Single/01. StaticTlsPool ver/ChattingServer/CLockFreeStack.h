@@ -1,9 +1,10 @@
 #pragma once
-#include "CLockFreePool.h"
+#include "CTlsPool.h"
 
 template<typename T>
 class CLockFreeStack
 {
+#define __ADDRESS_BIT__ 47
 private:
 	class StackNode
 	{
@@ -31,22 +32,24 @@ private: // For protect ABA
 public:
 	CLockFreeStack()
 	{
-		_pPool = new CLockFreePool<StackNode>(0, false);
+		_pPool = new CTlsPool<StackNode>(0, false);
 		_keyMask = 0b11111111111111111;
 		_addressMask = 0b11111111111111111;
-		_addressMask <<= __USESIZE_64BIT__;
+		_addressMask <<= __ADDRESS_BIT__;
 		_addressMask = ~_addressMask;
 	}
 
 private:
 	__int64 _pTop = NULL;
-	CLockFreePool<StackNode>* _pPool = nullptr;
+	CTlsPool<StackNode>* _pPool = nullptr;
 
 private:
 	volatile long _useSize = 0;
-
 public:
-	long GetUseSize(){ return _useSize; }
+	long GetUseSize()
+	{
+		return _useSize;
+	}
 
 public:
 	void Push(T data)
@@ -57,7 +60,7 @@ public:
 		// For Protect ABA
 		unsigned __int64 ret = (unsigned __int64)InterlockedIncrement64(&_key);
 		unsigned __int64 key = ret;
-		key <<= __USESIZE_64BIT__;
+		key <<= __ADDRESS_BIT__;
 		__int64 pNewTop = (__int64)pNewNode;
 		pNewTop &= _addressMask;
 		unsigned __int64 tmp = pNewTop;
@@ -92,44 +95,5 @@ public:
 			}
 		}
 	}
-
-
-private:
-	class StackDebugData
-	{
-		friend CLockFreeStack;
-
-	private:
-		StackDebugData() : _idx(-1), _threadID(-1), _line(-1),
-			_compKey(-1), _exchKey(-1), _compAddress(-1), _exchAddress(-1) {}
-
-		void SetData(int idx, int threadID, int line, int exchKey, int compKey,
-			__int64 exchAddress, __int64 compAddress, T exchVal, T compVal)
-		{
-			_exchVal = exchVal;
-			_exchKey = exchKey;
-			_exchAddress = exchAddress;
-
-			_compVal = compVal;
-			_compKey = compKey;
-			_compAddress = compAddress;
-
-			_idx = idx;
-			_threadID = threadID;
-			_line = line;
-		}
-
-	private:
-		int _idx;
-		int _threadID;
-		int _line;
-		int _compKey;
-		int _exchKey;
-		__int64 _compAddress;
-		__int64 _exchAddress;
-		T _compVal;
-		T _exchVal;
-	};
-
 };
 
