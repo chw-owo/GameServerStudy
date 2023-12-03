@@ -1,0 +1,79 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="리소스 파일">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="NetLib">
+      <UniqueIdentifier>{6a4819df-15e8-4426-8c65-f5c3e8f0bfbb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GameServer">
+      <UniqueIdentifier>{a7efce97-c29b-445f-8c74-0d31551dbabc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GameServer\DebugTool">
+      <UniqueIdentifier>{0e72d55e-c43f-402c-b33b-cb6c7ecb435d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GameServer\GameServer">
+      <UniqueIdentifier>{1209e54d-6977-4c3e-88f5-f267cdedc3e2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Network">
+      <UniqueIdentifier>{a183bd8a-00a4-4502-9603-6f6d10ebe283}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Group">
+      <UniqueIdentifier>{6a64da46-d97c-48e0-8991-08acee19047c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GameServer\GameServer\MainServer">
+      <UniqueIdentifier>{45f6741a-0621-4b1c-afc5-1b2ffd10bc9c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="GameServer\GameServer\DungeonServer">
+      <UniqueIdentifier>{1d4ebfce-ae3c-4f92-9589-0b970c76e3bc}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Main.cpp">
+      <Filter>GameServer</Filter>
+    </ClCompile>
+    <ClCompile Include="CSystemLog.cpp">
+      <Filter>GameServer\DebugTool</Filter>
+    </ClCompile>
+    <ClCompile Include="CNetServer.cpp">
+      <Filter>NetLib\Network</Filter>
+    </ClCompile>
+    <ClCompile Include="CGroup.cpp">
+      <Filter>NetLib\Group</Filter>
+    </ClCompile>
+    <ClCompile Include="CDungeonServer.cpp">
+      <Filter>GameServer\GameServer\DungeonServer</Filter>
+    </ClCompile>
+    <ClCompile Include="CMainServer.cpp">
+      <Filter>GameServer\GameServer\MainServer</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="CSystemLog.h">
+      <Filter>GameServer\DebugTool</Filter>
+    </ClInclude>
+    <ClInclude Include="CCrashDump.h">
+      <Filter>GameServer\DebugTool</Filter>
+    </ClInclude>
+    <ClInclude Include="CNetServer.h">
+      <Filter>NetLib\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="Config.h">
+      <Filter>NetLib</Filter>
+    </ClInclude>
+    <ClInclude Include="ErrorCode.h">
+      <Filter>NetLib</Filter>
+    </ClInclude>
+    <ClInclude Include="CGroup.h">
+      <Filter>NetLib\Group</Filter>
+    </ClInclude>
+    <ClInclude Include="CDungeonServer.h">
+      <Filter>GameServer\GameServer\DungeonServer</Filter>
+    </ClInclude>
+    <ClInclude Include="CMainServer.h">
+      <Filter>GameServer\GameServer\MainServer</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
