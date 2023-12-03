@@ -354,7 +354,7 @@ unsigned int __stdcall CNetServer::AcceptThread(void* arg)
 
 		// ::printf("%lld (%d): Accept Success\n", (sessionID & pNetServer->_idMask), GetCurrentThreadId());
 
-		// Connect Session to IOCP and Post Recv                                      
+		// Connect Session to IOCP and Post Recv
 		CreateIoCompletionPort((HANDLE)pSession->_sock, pNetServer->_hNetworkCP, (ULONG_PTR)pSession->_ID, 0);
 		pNetServer->RecvPost(pSession);
 		pNetServer->OnAcceptClient(pSession->_ID);
@@ -406,7 +406,7 @@ unsigned int __stdcall CNetServer::NetworkThread(void* arg)
 			continue;
 		}
 
-		// Check Exception		
+		// Check Exception
 		if (GQCSRet == 0 || cbTransferred == 0)
 		{
 			if (GQCSRet == 0)
@@ -461,14 +461,13 @@ bool CNetServer::ReleaseSession(__int64 sessionID)
 	// ::printf("%lld (%d): Release Success\n", (pSession->_ID & _idMask), GetCurrentThreadId());
 
 	SOCKET sock = pSession->_sock;
+	OnReleaseClient(pSession->_ID);
 	pSession->Terminate();
 
 	closesocket(sock);
 	_emptyIdx.Push((long)idx);
 	InterlockedIncrement(&_disconnectCnt);
 	InterlockedDecrement(&_sessionCnt);
-
-	OnReleaseClient(sessionID);
 	return true;
 }
 
@@ -687,4 +686,4 @@ void CNetServer::DecrementUseCount(CSession* pSession)
 		PostQueuedCompletionStatus(_hNetworkCP, 1, (ULONG_PTR)pSession->_ID, (LPOVERLAPPED)&pSession->_releaseOvl);
 	}
 }
-#endif
+#endif 
