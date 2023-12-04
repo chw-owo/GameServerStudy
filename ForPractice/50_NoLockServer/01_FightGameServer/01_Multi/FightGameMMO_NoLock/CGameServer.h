@@ -1,5 +1,4 @@
 #pragma once
-#include "CLockFreePool.h"
 #include "CLanServer.h"
 #include "CSector.h"
 #include "CPlayer.h"
@@ -25,25 +24,26 @@ private:
 	void OnTerminate();
 	void OnThreadTerminate(wchar_t* threadName);
 	void OnError(int errorCode, wchar_t* errorMsg);
+	void OnDebug(int debugCode, wchar_t* debugMsg);
 
 private:
 	bool OnConnectRequest();
-	void OnAcceptClient(__int64 sessionID);
-	void OnReleaseClient(__int64 sessionID);
-	void OnRecv(__int64 sessionID, CPacket* packet);
-	void OnSend(__int64 sessionID, int sendSize);
+	void OnAcceptClient(unsigned __int64 sessionID);
+	void OnReleaseClient(unsigned __int64 sessionID);
+	void OnRecv(unsigned __int64 sessionID, CPacket* packet);
+	void OnSend(unsigned __int64 sessionID, int sendSize);
 
 private:
 	static unsigned int WINAPI UpdateThread(void* arg);
 	static unsigned int WINAPI MonitorThread(void* arg);
 
 private:
-	void HandleAccept(__int64 sessionID);
-	void HandleRelease(__int64 sessionID);
-	void HandleRecv(__int64 sessionID, CPacket* packet);
+	void HandleAccept(unsigned __int64 sessionID);
+	void HandleRelease(unsigned __int64 sessionID);
+	void HandleRecv(unsigned __int64 sessionID, CPacket* packet);
 
 private:
-	void ReqSendUnicast(CPacket* packet, __int64 sessionID);
+	void ReqSendUnicast(CPacket* packet, unsigned __int64 sessionID);
 	void ReqSendSectors(CPacket* packet, CSector** sector, int sectorCnt, CPlayer* pExpPlayer = nullptr);
 	void ReqSendAroundSector(CPacket* packet, CSector* centerSector, CPlayer* pExpPlayer = nullptr);
 
@@ -124,7 +124,7 @@ private:
 private:
 	CPlayer* _playersArray[dfLOGIC_THREAD_NUM][dfPLAYER_PER_THREAD];
 
-	unordered_map<__int64, CPlayer*> _playersMap;
+	unordered_map<unsigned __int64, CPlayer*> _playersMap;
 	SRWLOCK _playersMapLock;
 	__int64 _playerIDGenerator = 0;
 	SRWLOCK _IDGeneratorLock;

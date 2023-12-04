@@ -146,7 +146,7 @@
     <ClInclude Include="CChattingServer.h" />
     <ClInclude Include="CCrashDump.h" />
     <ClInclude Include="CJob.h" />
-    <ClInclude Include="CLockFreePool.h" />
+    <ClInclude Include="CTlsPool.h" />
     <ClInclude Include="CLockFreeQueue.h" />
     <ClInclude Include="CLockFreeStack.h" />
     <ClInclude Include="CObjectPool.h" />

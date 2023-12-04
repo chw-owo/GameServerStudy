@@ -32,17 +32,17 @@ private:
 
 private:
 	bool OnConnectRequest();
-	void OnAcceptClient(__int64 sessionID);
-	void OnReleaseClient(__int64 sessionID);
-	void OnRecv(__int64 sessionID, CPacket* packet);
-	void OnSend(__int64 sessionID, int sendSize);
+	void OnAcceptClient(unsigned __int64 sessionID);
+	void OnReleaseClient(unsigned __int64 sessionID);
+	void OnRecv(unsigned __int64 sessionID, CPacket* packet);
+	void OnSend(unsigned __int64 sessionID, int sendSize);
 
 private:
 	static unsigned int WINAPI MonitorThread(void* arg);
 	static unsigned int WINAPI TimeoutThread(void* arg);
 
 private:
-	void ReqSendUnicast(CPacket* packet, __int64 sessionID);
+	void ReqSendUnicast(CPacket* packet, unsigned __int64 sessionID);
 
 private:
 	void GetDataFromMysql();
@@ -67,7 +67,7 @@ private:
 
 private:
 	SRWLOCK _lock;
-	unordered_map<__int64, CUser*> _usersMap;
+	unordered_map<unsigned __int64, CUser*> _usersMap;
 	unordered_set<__int64> _accountNos;
 	CTlsPool<CUser>* _pUserPool;
 

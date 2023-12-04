@@ -8,8 +8,6 @@
 2. SendPacket으로 전송 요청 하기 전 AddUsageCount(n)으로 목적지 수 설정
    Unicast의 경우 1, Multicast의 경우 목적지 수를 n으로 입력한다.
 
-3. 잡큐잉 방식을 사용할 경우 OnRecv에서 AddUsageCount(1),
-   HandleRecv에서 CPacket::Free... 아 관리 방법이 너무 애매한데...
 */
 
 #ifndef _WINSOCKAPI_
@@ -32,6 +30,10 @@ public:
 	static CPacket* Alloc()
 	{
 		CPacket* packet = _pool.Alloc();
+
+		int* a = (int*)malloc(sizeof(int));
+		int* b = new int;
+
 		return packet;
 	}
 
@@ -43,6 +45,16 @@ public:
 			return true;
 		}
 		return false;
+	}
+
+	static int GetPoolSize()
+	{
+		return _pool.GetPoolSize();
+	}
+
+	static int GetNodeCount()
+	{
+		return _pool.GetNodeCount();
 	}
 
 	void AddUsageCount(long usageCount)
@@ -82,7 +94,6 @@ private:
 
 public:
 	volatile long _encode = 0;
-
 #ifdef NETSERVER
 	bool Decode(stHeader& header)
 	{
@@ -107,11 +118,7 @@ public:
 		}
 
 		checkSum = checkSum % 256;
-		if (header._checkSum != checkSum)
-		{
-			::printf("%02x != %02x\n", header._checkSum, checkSum);
-			return false;
-		}
+		if (header._checkSum != checkSum) return false;
 
 		return true;
 	}

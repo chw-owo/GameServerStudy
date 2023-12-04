@@ -1,9 +1,6 @@
 #pragma once
 #include "CTlsPool.h"
-#include <iostream>
-#include <cstdarg>
 using namespace std;
-
 
 template <typename T>
 class CLockFreeQueue

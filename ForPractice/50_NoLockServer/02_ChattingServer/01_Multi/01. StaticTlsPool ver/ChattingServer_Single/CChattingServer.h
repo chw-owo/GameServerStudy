@@ -4,7 +4,7 @@
 #include "CPlayer.h"
 
 #include "CLockFreeStack.h"
-#include "CLockFreePool.h"
+#include "CTlsPool.h"
 #include "CJob.h"
 
 #include "Protocol.h"
@@ -34,10 +34,10 @@ private:
 
 private:
 	bool OnConnectRequest();
-	void OnAcceptClient(__int64 sessionID);
-	void OnReleaseClient(__int64 sessionID);
-	void OnRecv(__int64 sessionID, CPacket* packet);
-	void OnSend(__int64 sessionID, int sendSize);
+	void OnAcceptClient(unsigned __int64 sessionID);
+	void OnReleaseClient(unsigned __int64 sessionID);
+	void OnRecv(unsigned __int64 sessionID, CPacket* packet);
+	void OnSend(unsigned __int64 sessionID, int sendSize);
 
 private:
 	void HandleRecv(CPlayer* pPlayer, CPacket* packet);
@@ -48,7 +48,7 @@ private:
 	static unsigned int WINAPI TimeoutThread(void* arg);
 
 private:
-	void ReqSendUnicast(CPacket* packet, __int64 sessionID);
+	void ReqSendUnicast(CPacket* packet, unsigned __int64 sessionID);
 	void ReqSendAroundSector(CPacket* packet, CSector* centerSector, CPlayer* pExpPlayer = nullptr);
 	
 private:
@@ -91,14 +91,14 @@ private:
 
 private:
 	__int64 _playerIDGenerator = 0;
-	unordered_map<__int64, CPlayer*> _playersMap;
+	unordered_map<unsigned __int64, CPlayer*> _playersMap;
 	CPlayer** _players;
 	CLockFreeStack<int> _usablePlayerIdx;
 	SRWLOCK _playersLock;
 
 private:
 	long* _signal;
-	CLockFreePool<CJob>* _pJobPool;
+	CTlsPool<CJob>* _pJobPool;
 
 private: // For Monitor
 	long _totalAccept = 0;

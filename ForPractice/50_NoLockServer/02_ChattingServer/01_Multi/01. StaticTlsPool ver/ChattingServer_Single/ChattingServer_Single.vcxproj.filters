@@ -114,7 +114,7 @@
     <ClInclude Include="CNetServer.h">
       <Filter>NetLib\Network</Filter>
     </ClInclude>
-    <ClInclude Include="CLockFreePool.h">
+    <ClInclude Include="CTlsPool.h">
       <Filter>Common\Utils</Filter>
     </ClInclude>
     <ClInclude Include="CLockFreeQueue.h">

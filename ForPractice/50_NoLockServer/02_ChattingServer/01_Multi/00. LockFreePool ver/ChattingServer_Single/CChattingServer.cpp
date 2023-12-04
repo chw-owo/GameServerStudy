@@ -200,7 +200,7 @@ bool CChattingServer::OnConnectRequest()
 	return false;
 }
 
-void CChattingServer::OnAcceptClient(__int64 sessionID)
+void CChattingServer::OnAcceptClient(unsigned __int64 sessionID)
 {
 	AcquireSRWLockExclusive(&_playersLock);
 
@@ -232,10 +232,10 @@ void CChattingServer::OnAcceptClient(__int64 sessionID)
 	ReleaseSRWLockExclusive(&_playersLock);
 }
 
-void CChattingServer::OnReleaseClient(__int64 sessionID)
+void CChattingServer::OnReleaseClient(unsigned __int64 sessionID)
 {
 	AcquireSRWLockExclusive(&_playersLock);
-	unordered_map<__int64, CPlayer*>::iterator mapIter = _playersMap.find(sessionID);
+	unordered_map<unsigned __int64, CPlayer*>::iterator mapIter = _playersMap.find(sessionID);
 	if (mapIter == _playersMap.end())
 	{
 		LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d]: No Session %lld\n", _T(__FUNCTION__), __LINE__, sessionID);
@@ -280,14 +280,14 @@ void CChattingServer::OnReleaseClient(__int64 sessionID)
 	}
 }
 
-void CChattingServer::OnRecv(__int64 sessionID, CPacket* packet)
+void CChattingServer::OnRecv(unsigned __int64 sessionID, CPacket* packet)
 {
 	packet->AddUsageCount(1);
 	CJob* job = _pJobPool->Alloc();
 	job->Setting(sessionID, packet);
 
 	AcquireSRWLockShared(&_playersLock);
-	unordered_map<__int64, CPlayer*>::iterator mapIter = _playersMap.find(sessionID);
+	unordered_map<unsigned __int64, CPlayer*>::iterator mapIter = _playersMap.find(sessionID);
 	if (mapIter == _playersMap.end())
 	{
 		LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d]: No Session %lld\n", _T(__FUNCTION__), __LINE__, sessionID);
@@ -307,7 +307,7 @@ void CChattingServer::OnRecv(__int64 sessionID, CPacket* packet)
 	if (ret == 1) WakeByAddressSingle(&_signal[threadIdx]);
 }
 
-void CChattingServer::OnSend(__int64 sessionID, int sendSize)
+void CChattingServer::OnSend(unsigned __int64 sessionID, int sendSize)
 {
 }
 
@@ -478,7 +478,7 @@ unsigned int __stdcall CChattingServer::TimeoutThread(void* arg)
 	return 0;
 }
 
-void CChattingServer::ReqSendUnicast(CPacket* packet, __int64 sessionID)
+void CChattingServer::ReqSendUnicast(CPacket* packet, unsigned __int64 sessionID)
 {
 	packet->AddUsageCount(1);
 	if (!SendPacket(sessionID, packet))

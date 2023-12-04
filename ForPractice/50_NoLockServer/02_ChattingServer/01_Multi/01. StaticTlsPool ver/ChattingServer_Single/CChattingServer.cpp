@@ -35,11 +35,14 @@ bool CChattingServer::Initialize()
 	::scanf_s("%d", &_updateThreadCnt);
 
 	_playerPerThread = dfPLAYER_MAX / _updateThreadCnt; 
+	if (dfPLAYER_MAX % _updateThreadCnt != 0)
+		_playerPerThread++;
+
 	// TO-DO: 나누어 떨어지지 않는 경우에 대한 처리 필요
 
 	// Set Job ===========================================================================================
 
-	_pJobPool = new CLockFreePool<CJob>(dfJOB_DEF, true);
+	_pJobPool = new CTlsPool<CJob>(dfJOB_DEF, true);
 
 	// Set Player ========================================================================================
 
@@ -200,7 +203,7 @@ bool CChattingServer::OnConnectRequest()
 	return false;
 }
 
-void CChattingServer::OnAcceptClient(__int64 sessionID)
+void CChattingServer::OnAcceptClient(unsigned __int64 sessionID)
 {
 	AcquireSRWLockExclusive(&_playersLock);
 
@@ -232,10 +235,10 @@ void CChattingServer::OnAcceptClient(__int64 sessionID)
 	ReleaseSRWLockExclusive(&_playersLock);
 }
 
-void CChattingServer::OnReleaseClient(__int64 sessionID)
+void CChattingServer::OnReleaseClient(unsigned __int64 sessionID)
 {
 	AcquireSRWLockExclusive(&_playersLock);
-	unordered_map<__int64, CPlayer*>::iterator mapIter = _playersMap.find(sessionID);
+	unordered_map<unsigned __int64, CPlayer*>::iterator mapIter = _playersMap.find(sessionID);
 	if (mapIter == _playersMap.end())
 	{
 		LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d]: No Session %lld\n", _T(__FUNCTION__), __LINE__, sessionID);
@@ -280,14 +283,14 @@ void CChattingServer::OnReleaseClient(__int64 sessionID)
 	}
 }
 
-void CChattingServer::OnRecv(__int64 sessionID, CPacket* packet)
+void CChattingServer::OnRecv(unsigned __int64 sessionID, CPacket* packet)
 {
 	packet->AddUsageCount(1);
 	CJob* job = _pJobPool->Alloc();
 	job->Setting(sessionID, packet);
 
 	AcquireSRWLockShared(&_playersLock);
-	unordered_map<__int64, CPlayer*>::iterator mapIter = _playersMap.find(sessionID);
+	unordered_map<unsigned __int64, CPlayer*>::iterator mapIter = _playersMap.find(sessionID);
 	if (mapIter == _playersMap.end())
 	{
 		LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d]: No Session %lld\n", _T(__FUNCTION__), __LINE__, sessionID);
@@ -307,7 +310,7 @@ void CChattingServer::OnRecv(__int64 sessionID, CPacket* packet)
 	if (ret == 1) WakeByAddressSingle(&_signal[threadIdx]);
 }
 
-void CChattingServer::OnSend(__int64 sessionID, int sendSize)
+void CChattingServer::OnSend(unsigned __int64 sessionID, int sendSize)
 {
 }
 
@@ -478,7 +481,7 @@ unsigned int __stdcall CChattingServer::TimeoutThread(void* arg)
 	return 0;
 }
 
-void CChattingServer::ReqSendUnicast(CPacket* packet, __int64 sessionID)
+void CChattingServer::ReqSendUnicast(CPacket* packet, unsigned __int64 sessionID)
 {
 	packet->AddUsageCount(1);
 	if (!SendPacket(sessionID, packet))

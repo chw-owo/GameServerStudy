@@ -30,6 +30,10 @@ public:
 	static CPacket* Alloc()
 	{
 		CPacket* packet = _pool.Alloc();
+
+		int* a = (int*)malloc(sizeof(int));
+		int* b = new int;
+
 		return packet;
 	}
 
@@ -92,15 +96,15 @@ public:
 	volatile long _encode = 0;
 #ifdef NETSERVER
 	bool Decode(stHeader& header)
-	{	
+	{
 		unsigned char checkSum = 0;
-		unsigned char* payload = (unsigned char*) GetPayloadPtr();
+		unsigned char* payload = (unsigned char*)GetPayloadPtr();
 
 		char e_cur = header._checkSum;
 		char p_cur = e_cur ^ (dfPACKET_KEY + 1);
 		header._checkSum = p_cur ^ (header._randKey + 1);
 		char e_prev = e_cur;
-		char p_prev = p_cur;	
+		char p_prev = p_cur;
 
 		for (int i = 0; i < header._len; i++)
 		{
@@ -119,7 +123,7 @@ public:
 		return true;
 	}
 
-	bool Encode(stHeader& header) 
+	bool Encode(stHeader& header)
 	{
 		if (InterlockedExchange(&_encode, 1) == 1) return false;
 		// 콘텐츠를 멀티로 제작할 경우 event를 통한 완료 확인 및 대기 필요
@@ -144,7 +148,7 @@ public:
 			e = p ^ (e + dfPACKET_KEY + 2 + i);
 			payload[i] = e;
 		}
-		
+
 		return true;
 	}
 #endif

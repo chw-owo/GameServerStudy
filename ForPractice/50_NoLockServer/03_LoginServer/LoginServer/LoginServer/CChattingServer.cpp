@@ -2,6 +2,7 @@
 #include "CSystemLog.h"
 #include <tchar.h>
 #include <wchar.h>
+
 #define _MONITOR
 // #define _TIMEOUT
 
@@ -147,7 +148,7 @@ bool CChattingServer::OnConnectRequest()
 	return false;
 }
 
-void CChattingServer::OnAcceptClient(__int64 sessionID)
+void CChattingServer::OnAcceptClient(unsigned __int64 sessionID)
 {
 	CJob* job = _pJobPool->Alloc();
 	job->Setting(JOB_TYPE::SYSTEM, SYS_TYPE::ACCEPT, sessionID, nullptr);
@@ -157,7 +158,7 @@ void CChattingServer::OnAcceptClient(__int64 sessionID)
 	WakeByAddressSingle(&_signal);
 }
 
-void CChattingServer::OnReleaseClient(__int64 sessionID)
+void CChattingServer::OnReleaseClient(unsigned __int64 sessionID)
 {
 	CJob* job = _pJobPool->Alloc();
 	job->Setting(JOB_TYPE::SYSTEM, SYS_TYPE::RELEASE, sessionID, nullptr);
@@ -167,7 +168,7 @@ void CChattingServer::OnReleaseClient(__int64 sessionID)
 	WakeByAddressSingle(&_signal);
 }
 
-void CChattingServer::OnRecv(__int64 sessionID, CPacket* packet)
+void CChattingServer::OnRecv(unsigned __int64 sessionID, CPacket* packet)
 {
 	packet->AddUsageCount(1);
 	CJob* job = _pJobPool->Alloc();
@@ -179,13 +180,13 @@ void CChattingServer::OnRecv(__int64 sessionID, CPacket* packet)
 	WakeByAddressSingle(&_signal);
 }
 
-void CChattingServer::OnSend(__int64 sessionID, int sendSize)
+void CChattingServer::OnSend(unsigned __int64 sessionID, int sendSize)
 {
 }
 
 void CChattingServer::HandleTimeout()
 {
-	unordered_map<__int64, CPlayer*>::iterator iter = _playersMap.begin();
+	unordered_map<unsigned __int64, CPlayer*>::iterator iter = _playersMap.begin();
 	for (; iter != _playersMap.end();)
 	{
 		CPlayer* player = (*iter).second;
@@ -202,7 +203,7 @@ void CChattingServer::HandleTimeout()
 	}
 }
 
-void CChattingServer::HandleAccept(__int64 sessionID)
+void CChattingServer::HandleAccept(unsigned __int64 sessionID)
 {
 	if (_playersMap.size() >= dfPLAYER_MAX)
 	{
@@ -225,14 +226,16 @@ void CChattingServer::HandleAccept(__int64 sessionID)
 	return;
 }
 
-void CChattingServer::HandleRelease(__int64 sessionID)
+void CChattingServer::HandleRelease(unsigned __int64 sessionID)
 {
 	// Delete From SessionID-Player Map
-	unordered_map<__int64, CPlayer*>::iterator mapIter = _playersMap.find(sessionID);
+	unordered_map<unsigned __int64, CPlayer*>::iterator mapIter = _playersMap.find(sessionID);
 	if (mapIter == _playersMap.end())
 	{
-		LOG(L"FightGame", CSystemLog::ERROR_LEVEL, L"%s[%d]: No Session %lld\n", _T(__FUNCTION__), __LINE__, sessionID);
-		::wprintf(L"%s[%d]: No Session %lld\n", _T(__FUNCTION__), __LINE__, sessionID);
+		int idx = (sessionID & _indexMask) >> __ID_BIT__;
+		LOG(L"FightGame", CSystemLog::ERROR_LEVEL, L"%s[%d]: No Session %lld (%d)\n", _T(__FUNCTION__), __LINE__, sessionID, idx);
+		::wprintf(L"%s[%d]: No Session %lld (%d)\n", _T(__FUNCTION__), __LINE__, sessionID, idx);
+		__debugbreak();
 		return;
 	}
 	CPlayer* pPlayer = mapIter->second;
@@ -259,9 +262,9 @@ void CChattingServer::HandleRelease(__int64 sessionID)
 }
 
 
-void CChattingServer::HandleRecv(__int64 sessionID, CPacket* packet)
+void CChattingServer::HandleRecv(unsigned __int64 sessionID, CPacket* packet)
 {
-	unordered_map<__int64, CPlayer*>::iterator iter = _playersMap.find(sessionID);
+	unordered_map<unsigned __int64, CPlayer*>::iterator iter = _playersMap.find(sessionID);
 	if (iter == _playersMap.end())
 	{
 		Disconnect(sessionID);
@@ -382,11 +385,11 @@ unsigned int __stdcall CChattingServer::MonitorThread(void* arg)
 		GetLocalTime(&stTime);
 		WCHAR text[dfMONITOR_TEXT_LEN];
 
-		swprintf_s(text, dfMONITOR_TEXT_LEN, L"[%s %02d:%02d:%02d]\n\nConnected Session: %d\nPacket Pool: %d/%d\n\nUpdate TPS: %d\nRequested Packet: %d\nHandled Packet: %d\nJob Pool: %d/%d\n\nPlayer Count: %d\nPlayer Pool: %d/%d\n\nTotal Accept: %d\nTotal Disconnect: %d\nRecv/1sec: %d\nSend/1sec: %d\nAccept/1sec: %d\nDisconnect/1sec: %d\n\n",
+		swprintf_s(text, dfMONITOR_TEXT_LEN, L"[%s %02d:%02d:%02d]\n\nConnected Session: %d\nUpdate TPS: %d\n\nPacket Pool: %d/%d\nRequested Packet: %d\nHandled Packet: %d\nJob Pool: %d/%d\n\nPlayer Count: %d\nPlayer Pool: %d/%d\n\nTotal Accept: %d\nTotal Disconnect: %d\nRecv/1sec: %d\nSend/1sec: %d\nAccept/1sec: %d\nDisconnect/1sec: %d\n\n",
 			_T(__DATE__), stTime.wHour, stTime.wMinute, stTime.wSecond,
-			pServer->GetSessionCount(), CPacket::GetPoolSize(), CPacket::GetNodeCount(),
-			pServer->_updateThreadWakeTPS, pServer->_jobQSize, pServer->_handlePacketTPS, pServer->_pJobPool->GetPoolSize(), pServer->_pJobPool->GetNodeCount(),
-			pServer->_playersMap.size(), pServer->_pPlayerPool->GetPoolSize(), pServer->_pPlayerPool->GetNodeCount(),
+			pServer->GetSessionCount(), pServer->_updateThreadWakeTPS,
+			CPacket::GetNodeCount(), CPacket::GetPoolSize(), pServer->_jobQSize, pServer->_handlePacketTPS, pServer->_pJobPool->GetNodeCount(), pServer->_pJobPool->GetPoolSize(),
+			pServer->_playersMap.size(), pServer->_pPlayerPool->GetNodeCount(), pServer->_pPlayerPool->GetPoolSize(),
 			pServer->GetAcceptTotal(), pServer->GetDisconnectTotal(), pServer->GetRecvMsgTPS(), pServer->GetSendMsgTPS(), pServer->GetAcceptTPS(), pServer->GetDisconnectTPS());
 
 		::wprintf(L"%s", text);
@@ -517,7 +520,7 @@ inline void CChattingServer::HandleCSPacket_REQ_LOGIN(CPacket* CSpacket, CPlayer
 
 	// ::printf("%lld (%d): Login (%lld)\n", (player->_sessionID & _idMask), GetCurrentThreadId(), accountNo);
 
-	if (accountNo < 0 || accountNo > 95000)
+	if (accountNo < 0)
 	{
 		Disconnect(player->_sessionID);
 		// LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d] Account No is Wrong: %lld\n", _T(__FUNCTION__), __LINE__, accountNo);

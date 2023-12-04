@@ -6,7 +6,7 @@
 1. CPacket::Alloc()로 할당, 데이터 삽입 전 Clear()로 초기화.
 
 2. SendPacket으로 전송 요청 하기 전 AddUsageCount(n)으로 목적지 수 설정
-   Unicast의 경우 1, Multicast의 경우 목적지 수를 n으로 입력한다. 
+   Unicast의 경우 1, Multicast의 경우 목적지 수를 n으로 입력한다.
 
 */
 
@@ -30,6 +30,10 @@ public:
 	static CPacket* Alloc()
 	{
 		CPacket* packet = _pool.Alloc();
+
+		int* a = (int*)malloc(sizeof(int));
+		int* b = new int;
+
 		return packet;
 	}
 
@@ -41,6 +45,16 @@ public:
 			return true;
 		}
 		return false;
+	}
+
+	static int GetPoolSize()
+	{
+		return _pool.GetPoolSize();
+	}
+
+	static int GetNodeCount()
+	{
+		return _pool.GetNodeCount();
 	}
 
 	void AddUsageCount(long usageCount)
@@ -80,7 +94,6 @@ private:
 
 public:
 	volatile long _encode = 0;
-
 #ifdef NETSERVER
 	bool Decode(stHeader& header)
 	{
@@ -105,11 +118,7 @@ public:
 		}
 
 		checkSum = checkSum % 256;
-		if (header._checkSum != checkSum)
-		{
-			::printf("%02x != %02x\n", header._checkSum, checkSum);
-			return false;
-		}
+		if (header._checkSum != checkSum) return false;
 
 		return true;
 	}
@@ -272,7 +281,7 @@ public:
 		_iPayloadWritePos += sizeof(lValue);
 		return *this;
 	}
-	inline CPacket& operator << (__int64 iValue) 
+	inline CPacket& operator << (__int64 iValue)
 	{
 		if (_iBufferSize - _iPayloadWritePos < sizeof(iValue))
 			Resize((int)(_iBufferSize * 1.5f));
@@ -526,7 +535,7 @@ public:
 	}
 
 private:
-	volatile long _usageCount = 0;
+	volatile long _usageCount;
 
 private:
 	char* _chpBuffer;
@@ -541,5 +550,5 @@ private:
 	int _iHeaderWritePos;
 
 private:
-	int _errCode = 0;
+	int _errCode;
 };

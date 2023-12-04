@@ -89,27 +89,31 @@ void CGameServer::OnError(int errorCode, wchar_t* errorMsg)
 	::wprintf(L"%s (%d)\n", errorMsg, errorCode);
 }
 
+void CGameServer::OnDebug(int debugCode, wchar_t* debugMsg)
+{
+}
+
 
 bool CGameServer::OnConnectRequest()
 {
 	return true;
 }
 
-void CGameServer::OnAcceptClient(__int64 sessionID)
+void CGameServer::OnAcceptClient(unsigned __int64 sessionID)
 {
 	CJob* job = _pJobPool->Alloc();
 	job->Setting(JOB_TYPE::SYSTEM, SYS_TYPE::ACCEPT, sessionID, nullptr);
 	_pJobQueue->Enqueue(job);
 }
 
-void CGameServer::OnReleaseClient(__int64 sessionID)
+void CGameServer::OnReleaseClient(unsigned __int64 sessionID)
 {
 	CJob* job = _pJobPool->Alloc();
 	job->Setting(JOB_TYPE::SYSTEM, SYS_TYPE::RELEASE, sessionID, nullptr);
 	_pJobQueue->Enqueue(job);
 }
 
-void CGameServer::OnRecv(__int64 sessionID, CPacket* packet)
+void CGameServer::OnRecv(unsigned __int64 sessionID, CPacket* packet)
 {
 	packet->AddUsageCount(1);
 
@@ -118,7 +122,7 @@ void CGameServer::OnRecv(__int64 sessionID, CPacket* packet)
 	_pJobQueue->Enqueue(job);
 }
 
-void CGameServer::OnSend(__int64 sessionID, int sendSize)
+void CGameServer::OnSend(unsigned __int64 sessionID, int sendSize)
 {
 	
 }
@@ -157,8 +161,8 @@ unsigned int __stdcall CGameServer::MonitorThread(void* arg)
 		WCHAR text[dfMONITOR_TEXT_LEN];
 		swprintf_s(text, dfMONITOR_TEXT_LEN,
 			L"[%s %02d:%02d:%02d]\n\nLogic FPS: %d\nTotal Accept: %d\nTotal Release: %d\nConnected Session: %d\nTotal Sync: %d\nRelease/1sec: %d\nTimeout/1sec: %d\nDisconnect/1sec: %d\n\n",
-			_T(__DATE__), stTime.wHour, stTime.wMinute, stTime.wSecond, pServer->_logicFPS, pServer->GetAcceptTotal(), pServer->GetReleaseTotal(),
-			pServer->GetSessionCount(), totalSyncCnt, pServer->GetReleaseTPS(), pServer->_timeoutCnt, pServer->GetDisconnectTPS());
+			_T(__DATE__), stTime.wHour, stTime.wMinute, stTime.wSecond, pServer->_logicFPS, pServer->GetAcceptTotal(), pServer->GetDisconnectTotal(),
+			pServer->GetSessionCount(), totalSyncCnt, pServer->GetDisconnectTPS(), pServer->_timeoutCnt, pServer->GetDisconnectTPS());
 		::wprintf(L"%s", text);
 
 		FILE* file;
@@ -193,7 +197,7 @@ unsigned int __stdcall CGameServer::MonitorThread(void* arg)
 	return 0;
 }
 
-inline void CGameServer::HandleAccept(__int64 sessionID)
+inline void CGameServer::HandleAccept(unsigned __int64 sessionID)
 {
 	if (_playersMap.size() > dfPLAYER_MAX)
 	{
@@ -253,9 +257,9 @@ inline void CGameServer::HandleAccept(__int64 sessionID)
 	}
 }
 
-inline void CGameServer::HandleRelease(__int64 sessionID)
+inline void CGameServer::HandleRelease(unsigned __int64 sessionID)
 {
-	unordered_map<__int64, CPlayer*>::iterator iter = _playersMap.find(sessionID);
+	unordered_map<unsigned __int64, CPlayer*>::iterator iter = _playersMap.find(sessionID);
 	if (iter == _playersMap.end())
 	{
 		LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d]: No Session\n", _T(__FUNCTION__), __LINE__);
@@ -284,11 +288,11 @@ inline void CGameServer::HandleRelease(__int64 sessionID)
 	_playerPool->Free(pPlayer);
 }
 
-inline void CGameServer::HandleRecv(__int64 sessionID, CPacket* packet)
+inline void CGameServer::HandleRecv(unsigned __int64 sessionID, CPacket* packet)
 {
 	try
 	{
-		unordered_map<__int64, CPlayer*>::iterator iter = _playersMap.find(sessionID);
+		unordered_map<unsigned __int64, CPlayer*>::iterator iter = _playersMap.find(sessionID);
 		if (iter == _playersMap.end())
 		{
 			LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d]: No Session\n", _T(__FUNCTION__), __LINE__);
@@ -357,7 +361,7 @@ void CGameServer::LogicUpdate()
 	if (SkipForFixedFrame(time)) return;
 	InterlockedIncrement(&_logicFPS);
 
-	unordered_map<__int64, CPlayer*>::iterator iter = _playersMap.begin();
+	unordered_map<unsigned __int64, CPlayer*>::iterator iter = _playersMap.begin();
 	for (; iter != _playersMap.end(); iter++)
 	{
 		CPlayer* pPlayer = iter->second;

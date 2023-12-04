@@ -2,7 +2,6 @@
 #include "Config.h"
 #ifdef NETSERVER
 
-#include "CTlsPool.h"
 #include "CLockFreeStack.h"
 #include "CSession.h"
 #include <ws2tcpip.h>
@@ -106,8 +105,7 @@ public: // TO-DO private
 	unsigned __int64 _idMask = 0;
 
 public:
-	const long _compareFlag = 0b00000000000000000000000000000001;
-	const long _releaseFlag = 0b10000000000000000000000000000000;
+	ValidFlag _releaseFlag;
 
 private:
 	int _acceptTotal = 0;

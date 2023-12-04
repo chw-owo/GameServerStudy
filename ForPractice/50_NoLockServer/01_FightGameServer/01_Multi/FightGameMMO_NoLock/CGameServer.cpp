@@ -121,23 +121,27 @@ void CGameServer::OnError(int errorCode, wchar_t* errorMsg)
 	::wprintf(L"%s (%d)\n", errorMsg, errorCode);
 }
 
+void CGameServer::OnDebug(int debugCode, wchar_t* debugMsg)
+{
+}
+
 
 bool CGameServer::OnConnectRequest()
 {
 	return true;
 }
 
-void CGameServer::OnAcceptClient(__int64 sessionID)
+void CGameServer::OnAcceptClient(unsigned __int64 sessionID)
 {
 	HandleAccept(sessionID);
 }
 
-void CGameServer::OnReleaseClient(__int64 sessionID)
+void CGameServer::OnReleaseClient(unsigned __int64 sessionID)
 {
 	HandleRelease(sessionID);
 }
 
-void CGameServer::OnRecv(__int64 sessionID, CPacket* packet)
+void CGameServer::OnRecv(unsigned __int64 sessionID, CPacket* packet)
 {
 	try
 	{
@@ -150,7 +154,7 @@ void CGameServer::OnRecv(__int64 sessionID, CPacket* packet)
 	}
 }
 
-void CGameServer::OnSend(__int64 sessionID, int sendSize)
+void CGameServer::OnSend(unsigned __int64 sessionID, int sendSize)
 {
 
 }
@@ -235,7 +239,7 @@ unsigned int __stdcall CGameServer::MonitorThread(void* arg)
 	return 0;
 }
 
-inline void CGameServer::HandleAccept(__int64 sessionID)
+inline void CGameServer::HandleAccept(unsigned __int64 sessionID)
 {
 	AcquireSRWLockExclusive(&_usableIdxLock);
 	if (_usablePlayerIdx.empty())
@@ -376,10 +380,10 @@ inline void CGameServer::HandleAccept(__int64 sessionID)
 
 }
 
-inline void CGameServer::HandleRelease(__int64 sessionID)
+inline void CGameServer::HandleRelease(unsigned __int64 sessionID)
 {
 	AcquireSRWLockExclusive(&_playersMapLock);
-	unordered_map<__int64, CPlayer*>::iterator iter = _playersMap.find(sessionID);
+	unordered_map<unsigned __int64, CPlayer*>::iterator iter = _playersMap.find(sessionID);
 	if (iter == _playersMap.end())
 	{
 		ReleaseSRWLockExclusive(&_playersMapLock);
@@ -468,10 +472,10 @@ inline void CGameServer::HandleRelease(__int64 sessionID)
 
 }
 
-inline void CGameServer::HandleRecv(__int64 sessionID, CPacket* packet)
+inline void CGameServer::HandleRecv(unsigned __int64 sessionID, CPacket* packet)
 {
 	AcquireSRWLockShared(&_playersMapLock);
-	unordered_map<__int64, CPlayer*>::iterator iter = _playersMap.find(sessionID);
+	unordered_map<unsigned __int64, CPlayer*>::iterator iter = _playersMap.find(sessionID);
 	if (iter == _playersMap.end())
 	{
 		ReleaseSRWLockShared(&_playersMapLock);
@@ -579,7 +583,7 @@ void CGameServer::LogicUpdate(int threadNum)
 
 }
 
-void CGameServer::ReqSendUnicast(CPacket* packet, __int64 sessionID)
+void CGameServer::ReqSendUnicast(CPacket* packet, unsigned __int64 sessionID)
 {
 	packet->AddUsageCount(1);
 	if (!SendPacket(sessionID, packet))

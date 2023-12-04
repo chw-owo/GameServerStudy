@@ -14,6 +14,11 @@ CNetServer::CNetServer()
 	_indexMask = 0b11111111111111111;
 	_indexMask <<= __ID_BIT__;
 	_idMask = ~_indexMask;
+
+	//_compareFlag._useCount = 1;
+	//_compareFlag._releaseFlag = 0;
+	_releaseFlag._useCount = 0;
+	_releaseFlag._releaseFlag = 1;
 }
 
 bool CNetServer::NetworkInitialize(const wchar_t* IP, short port, int numOfThreads, bool nagle)
@@ -208,9 +213,9 @@ bool CNetServer::Disconnect(unsigned __int64 sessionID)
 	CSession* pSession = AcquireSessionUsage(sessionID, __LINE__);
 	if (pSession == nullptr) return false;
 
+	// pSession->LeaveLog(200, sessionID, pSession->_validFlag._useCount, pSession->_validFlag._releaseFlag);
 	// ::printf("%d: Disconnect (%016llx - %016llx)\n", GetCurrentThreadId(), sessionID, pSession->GetID());
-
-	pSession->LeaveLog(200, sessionID, pSession->_flag & pSession->_useCountMask, pSession->_flag & pSession->_releaseMask);
+	
 	pSession->_disconnect = true;
 	CancelIoEx((HANDLE)pSession->_sock, (LPOVERLAPPED)&pSession->_recvOvl);
 	CancelIoEx((HANDLE)pSession->_sock, (LPOVERLAPPED)&pSession->_sendOvl);
@@ -346,8 +351,8 @@ unsigned int __stdcall CNetServer::NetworkThread(void* arg)
 			if (GQCSRet == 0)
 			{
 				int err = WSAGetLastError();
-				if (err != WSAECONNRESET && err != WSAECONNABORTED && 
-					err != ERROR_NETNAME_DELETED && err != ERROR_OPERATION_ABORTED)
+				if (err != WSAECONNRESET && err != WSAECONNABORTED && err != WSAENOTSOCK && err != WSAEINTR &&
+					err != ERROR_CONNECTION_ABORTED && err != ERROR_NETNAME_DELETED && err != ERROR_OPERATION_ABORTED)
 				{
 					swprintf_s(stErrMsg, dfMSG_MAX, L"%s[%d]: GQCS return 0, %d\n", _T(__FUNCTION__), __LINE__, err);
 					pNetServer->OnError(ERR_GQCS_RET0, stErrMsg);
@@ -474,7 +479,7 @@ bool CNetServer::RecvPost(CSession* pSession)
 	IncrementUseCount(pSession, __LINE__);
 	int recvRet = WSARecv(pSession->_sock, pSession->_wsaRecvbuf,
 		dfWSARECVBUF_CNT, &recvBytes, &flags, (LPOVERLAPPED)&pSession->_recvOvl, NULL);
-	
+
 	// ::printf("%d: Recv Request (%016llx)\n", GetCurrentThreadId(), pSession->GetID());
 
 	if (recvRet == SOCKET_ERROR)
@@ -482,7 +487,7 @@ bool CNetServer::RecvPost(CSession* pSession)
 		int err = WSAGetLastError();
 		if (err != ERROR_IO_PENDING)
 		{
-			if (err != WSAECONNRESET && err != WSAECONNABORTED)
+			if (err != WSAECONNRESET && err != WSAECONNABORTED && err != WSAEINTR)
 			{
 				swprintf_s(stErrMsg, dfMSG_MAX, L"%s[%d]: Recv Error, %d\n", _T(__FUNCTION__), __LINE__, err);
 				OnError(ERR_RECV, stErrMsg);
@@ -562,7 +567,7 @@ bool CNetServer::SendPost(CSession* pSession)
 		int err = WSAGetLastError();
 		if (err != ERROR_IO_PENDING)
 		{
-			if (err != WSAECONNRESET && err != WSAECONNABORTED)
+			if (err != WSAECONNRESET && err != WSAECONNABORTED && err != WSAEINTR)
 			{
 				swprintf_s(stErrMsg, dfMSG_MAX, L"%s[%d]: Send Error, %d\n", _T(__FUNCTION__), __LINE__, err);
 				OnError(ERR_SEND, stErrMsg);
@@ -596,16 +601,16 @@ CSession* CNetServer::AcquireSessionUsage(unsigned __int64 sessionID, int line)
 
 	IncrementUseCount(pSession, line);
 
-	if ((pSession->_flag & pSession->_releaseMask) != 0)
+	if (pSession->_validFlag._releaseFlag == 1)
 	{
-		pSession->LeaveLog(98, sessionID, pSession->_flag & pSession->_useCountMask, pSession->_flag & pSession->_releaseMask);
+		// pSession->LeaveLog(98, sessionID, pSession->_validFlag._useCount, pSession->_validFlag._releaseFlag);
 		DecrementUseCount(pSession, line);
 		return nullptr;
 	}
 
 	if (pSession->GetID() != sessionID)
 	{
-		pSession->LeaveLog(99, sessionID, pSession->_flag & pSession->_useCountMask, pSession->_flag & pSession->_releaseMask);
+		// pSession->LeaveLog(99, sessionID, pSession->_validFlag._useCount, pSession->_validFlag._releaseFlag);
 		DecrementUseCount(pSession, line);
 		return nullptr;
 	}
@@ -621,22 +626,26 @@ void CNetServer::ReleaseSessionUsage(CSession* pSession, int line)
 
 void CNetServer::IncrementUseCount(CSession* pSession, int line)
 {
-	long cnt = InterlockedIncrement(&pSession->_flag);
-	pSession->LeaveLog(0, pSession->GetID(), cnt & pSession->_useCountMask, pSession->_flag & pSession->_releaseMask, line);
+	InterlockedIncrement16(&pSession->_validFlag._useCount);
+	// pSession->LeaveLog(0, pSession->GetID(), ret, pSession->_validFlag._releaseFlag, line);
 }
 
 void CNetServer::DecrementUseCount(CSession* pSession, int line)
 {
-	if (InterlockedCompareExchange(&pSession->_flag, _releaseFlag,_compareFlag) == _compareFlag)
+	// TO-DO
+	short ret = InterlockedDecrement16(&pSession->_validFlag._useCount);
+	if (ret == 0)
 	{
-		// ::printf("%d: Release Post (%016llx)\n", GetCurrentThreadId(), pSession->GetID());
-		pSession->LeaveLog(2, pSession->GetID(), 0, pSession->_flag & pSession->_releaseMask, line);
-		PostQueuedCompletionStatus(_hNetworkCP, 1, (ULONG_PTR)pSession->GetID(), (LPOVERLAPPED)&pSession->_releaseOvl);
-		return;
+		if (InterlockedCompareExchange(&pSession->_validFlag._flag, _releaseFlag._flag, 0) == 0)
+		{
+			// pSession->LeaveLog(2, pSession->GetID(), 0, pSession->_validFlag._releaseFlag, line);
+			// ::printf("%d: Release Post (%016llx)\n", GetCurrentThreadId(), pSession->GetID());
+			PostQueuedCompletionStatus(_hNetworkCP, 1, (ULONG_PTR)pSession->GetID(), (LPOVERLAPPED)&pSession->_releaseOvl);
+			return;
+		}
 	}
 
-	long cnt = InterlockedDecrement(&pSession->_flag);
-	pSession->LeaveLog(1, pSession->GetID(), cnt & pSession->_useCountMask, pSession->_flag & pSession->_releaseMask, line);
+	// pSession->LeaveLog(1, pSession->GetID(), ret, pSession->_validFlag._releaseFlag, line);
 }
 
 void CNetServer::HandleRelease(unsigned __int64 sessionID)
@@ -644,13 +653,12 @@ void CNetServer::HandleRelease(unsigned __int64 sessionID)
 	unsigned __int64 idx = sessionID & _indexMask;
 	idx >>= __ID_BIT__;
 	CSession* pSession = _sessions[(long)idx];
-	
-	pSession->LeaveLog(201, sessionID, pSession->_flag & pSession->_useCountMask, pSession->_flag & pSession->_releaseMask);
 
+	// pSession->LeaveLog(201, sessionID, pSession->_validFlag._useCount, pSession->_validFlag._releaseFlag);
 	// ::printf("%d: Release Success (%016llx - %016llx)\n", GetCurrentThreadId(), sessionID, ID);
 
 	SOCKET sock = pSession->_sock;
-	pSession->Terminate(); 
+	pSession->Terminate();
 
 	closesocket(sock);
 	_emptyIdx.Push(idx);
@@ -659,4 +667,5 @@ void CNetServer::HandleRelease(unsigned __int64 sessionID)
 
 	OnReleaseClient(sessionID);
 }
-#endif 
+#endif
+

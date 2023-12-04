@@ -31,11 +31,11 @@ bool CEchoServer::OnConnectRequest()
 	return true;
 }
 
-void CEchoServer::OnAcceptClient(__int64 sessionID)
+void CEchoServer::OnAcceptClient(unsigned __int64 sessionID)
 {
 }
 
-void CEchoServer::OnRecv(__int64 sessionID, CPacket* packet)
+void CEchoServer::OnRecv(unsigned __int64 sessionID, CPacket* packet)
 {
 	try
 	{
@@ -64,12 +64,12 @@ void CEchoServer::OnRecv(__int64 sessionID, CPacket* packet)
 	}
 }
 
-void CEchoServer::OnSend(__int64 sessionID, int sendSize)
+void CEchoServer::OnSend(unsigned __int64 sessionID, int sendSize)
 {
 
 }
 
-void CEchoServer::OnReleaseClient(__int64 sessionID)
+void CEchoServer::OnReleaseClient(unsigned __int64 sessionID)
 {
 
 }
@@ -87,6 +87,10 @@ void CEchoServer::OnThreadTerminate(wchar_t* threadName)
 }
 
 void CEchoServer::OnError(int errorCode, wchar_t* errorMsg)
+{
+}
+
+void CEchoServer::OnDebug(int debugCode, wchar_t* debugMsg)
 {
 }
 

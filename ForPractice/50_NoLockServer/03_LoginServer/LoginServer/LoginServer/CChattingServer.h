@@ -12,7 +12,6 @@
 #include "ErrorCode.h"
 
 #include <unordered_map>
-#include <unordered_set>
 using namespace std;
 
 #include <synchapi.h>
@@ -21,7 +20,7 @@ using namespace std;
 class CChattingServer : public CNetServer
 {
 public:
-	CChattingServer() {}
+	CChattingServer() {};
 	~CChattingServer() { Terminate(); };
 
 public:
@@ -37,16 +36,16 @@ private:
 
 private:
 	bool OnConnectRequest();
-	void OnAcceptClient(__int64 sessionID);
-	void OnReleaseClient(__int64 sessionID);
-	void OnRecv(__int64 sessionID, CPacket* packet);
-	void OnSend(__int64 sessionID, int sendSize);
+	void OnAcceptClient(unsigned __int64 sessionID);
+	void OnReleaseClient(unsigned __int64 sessionID);
+	void OnRecv(unsigned __int64 sessionID, CPacket* packet);
+	void OnSend(unsigned __int64 sessionID, int sendSize);
 
 private:
 	void HandleTimeout();
-	void HandleAccept(__int64 sessionID);
-	void HandleRelease(__int64 sessionID);
-	void HandleRecv(__int64 sessionID, CPacket* packet);
+	void HandleAccept(unsigned __int64 sessionID);
+	void HandleRelease(unsigned __int64 sessionID);
+	void HandleRecv(unsigned __int64 sessionID, CPacket* packet);
 
 private:
 	static unsigned int WINAPI UpdateThread(void* arg);
@@ -56,10 +55,6 @@ private:
 private:
 	void ReqSendUnicast(CPacket* packet, __int64 sessionID);
 	void ReqSendAroundSector(CPacket* packet, CSector* centerSector, CPlayer* pExpPlayer = nullptr);
-
-private:
-	BYTE CheckAccountNoValid(__int64 accountNo);
-	unordered_set<__int64> _accountNos;
 
 private:
 	inline void HandleCSPacket_REQ_LOGIN(CPacket* CSpacket, CPlayer* player);
@@ -88,7 +83,7 @@ private:
 
 private:
 	__int64 _playerIDGenerator = 0;
-	unordered_map<__int64, CPlayer*> _playersMap;
+	unordered_map<unsigned __int64, CPlayer*> _playersMap;
 	CObjectPool<CPlayer>* _pPlayerPool;
 
 private:

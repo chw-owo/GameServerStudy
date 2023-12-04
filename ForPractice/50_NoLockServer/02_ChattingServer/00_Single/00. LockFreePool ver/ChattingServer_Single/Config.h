@@ -7,7 +7,7 @@
 #pragma pack (push, 1)
 struct stHeader
 {
-	unsigned short	_len;			
+	unsigned short	_len;
 };
 #pragma pack (pop)
 #define dfHEADER_LEN				sizeof(stHeader)
@@ -22,7 +22,7 @@ struct stHeader
 struct stHeader
 {
 	unsigned char _code = dfPACKET_CODE;
-	unsigned short _len;			
+	unsigned short _len;
 	unsigned char _randKey;
 	unsigned char _checkSum;
 };
@@ -30,7 +30,7 @@ struct stHeader
 #define dfHEADER_LEN				sizeof(stHeader)
 #endif
 
-#define dfSESSION_MAX				30000
+#define dfSESSION_MAX				40000
 #define dfPACKET_DEF				10000
 #define dfPACKET_MAX				2048
 

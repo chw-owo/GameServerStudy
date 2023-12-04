@@ -1,3 +1,4 @@
+
 #pragma once
 #include "Config.h"
 #include "CPacket.h"
@@ -20,12 +21,22 @@ struct NetworkOverlapped
 	NET_TYPE _type;
 };
 
+union ValidFlag
+{
+	struct
+	{
+		volatile short _releaseFlag;
+		volatile short _useCount;
+	};
+	volatile long _flag;
+};
+
 class CSession
 {
 public:
 	CSession()
 	{
-		_flag = 0;
+		_validFlag._flag = 0;
 		_recvOvl._type = NET_TYPE::RECV;
 		_sendOvl._type = NET_TYPE::SEND;
 		_releaseOvl._type = NET_TYPE::RELEASE;
@@ -35,13 +46,13 @@ public:
 	unsigned __int64 GetID() { return _ID; }
 
 	void Initialize(unsigned __int64 ID, SOCKET sock, SOCKADDR_IN addr)
-	{		
+	{
 		InterlockedExchange(&_sendFlag, 0);
-		InterlockedExchange(&_flag, _releaseMask);
+		InterlockedExchange16(&_validFlag._releaseFlag, 0);
 
 		// ::printf("%d: Session Initialize (%016llx - %016llx)\n", GetCurrentThreadId(), _ID, ID);
 		_ID = ID;
-		LeaveLog(100, ID, (_flag & _useCountMask), (_flag & _releaseMask));
+		// LeaveLog(100, ID, _validFlag._useCount, _validFlag._releaseFlag);
 
 		_disconnect = false;
 		_sock = sock;
@@ -92,11 +103,9 @@ public:
 	NetworkOverlapped _sendOvl;
 	NetworkOverlapped _releaseOvl;
 
-public:
-	const long _useCountMask = 0b01111111111111111111111111111111;
-	const long _releaseMask = 0b10000000000000000000000000000000;
-	volatile long _flag;
+	volatile ValidFlag _validFlag;
 
+	/*
 public:
 #define DEBUG_MAX 1000
 
@@ -120,5 +129,5 @@ public:
 		debugs[idx % DEBUG_MAX]._releaseFlag = releaseFlag;
 		debugs[idx % DEBUG_MAX]._call = call;
 	}
+	*/
 };
-

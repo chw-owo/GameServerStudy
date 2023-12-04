@@ -1,3 +1,4 @@
+
 #pragma once
 #include "Config.h"
 #include "CPacket.h"
@@ -20,29 +21,42 @@ struct NetworkOverlapped
 	NET_TYPE _type;
 };
 
+union ValidFlag
+{
+	struct
+	{
+		volatile short _releaseFlag;
+		volatile short _useCount;
+	};
+	volatile long _flag;
+};
+
 class CSession
 {
 public:
 	CSession()
 	{
+		_validFlag._flag = 0;
 		_recvOvl._type = NET_TYPE::RECV;
 		_sendOvl._type = NET_TYPE::SEND;
 		_releaseOvl._type = NET_TYPE::RELEASE;
 	}
 
 public:
-	void Initialize(__int64 ID, SOCKET sock, SOCKADDR_IN addr)
+	unsigned __int64 GetID() { return _ID; }
+
+	void Initialize(unsigned __int64 ID, SOCKET sock, SOCKADDR_IN addr)
 	{
-		_disconnect = false;
+		InterlockedExchange(&_sendFlag, 0);
+		InterlockedExchange16(&_validFlag._releaseFlag, 0);
+
+		// ::printf("%d: Session Initialize (%016llx - %016llx)\n", GetCurrentThreadId(), _ID, ID);
 		_ID = ID;
+		// LeaveLog(100, ID, _validFlag._useCount, _validFlag._releaseFlag);
+
+		_disconnect = false;
 		_sock = sock;
 		_addr = addr;
-		_sendFlag = 0;
-		_validFlag._flag = 0;
-
-		_recvBuf.ClearBuffer();
-		while (_sendBuf.GetUseSize() > 0) _sendBuf.Dequeue();
-		while (_tempBuf.GetUseSize() > 0) _tempBuf.Dequeue();
 
 		ZeroMemory(&_recvOvl._ovl, sizeof(_recvOvl._ovl));
 		ZeroMemory(&_sendOvl._ovl, sizeof(_sendOvl._ovl));
@@ -51,17 +65,31 @@ public:
 
 	void Terminate()
 	{
+		// ::printf("%d: Session Terminate (%016llx - %016llx)\n", GetCurrentThreadId(), _ID, (__int64)-1);
+		_ID = MAXULONGLONG;
 		_disconnect = true;
-		_ID = -1;
 		_sock = INVALID_SOCKET;
-		_sendFlag = 0;
-		_validFlag._IOCount = 0;
-		_validFlag._releaseFlag = 1;
+		_recvBuf.ClearBuffer();
+		while (_sendBuf.GetUseSize() > 0)
+		{
+			CPacket* packet = _sendBuf.Dequeue();
+			CPacket::Free(packet);
+		}
+		while (_tempBuf.GetUseSize() > 0)
+		{
+			CPacket* packet = _tempBuf.Dequeue();
+			CPacket::Free(packet);
+		}
 	}
+
+private:
+	unsigned __int64 _ID = MAXULONGLONG;
 
 public:
 	bool _disconnect = true;
-	__int64 _ID;
+	volatile long _sendFlag;
+	volatile long _sendCount;
+
 	SOCKET _sock;
 	SOCKADDR_IN _addr;
 
@@ -74,47 +102,32 @@ public:
 	NetworkOverlapped _recvOvl;
 	NetworkOverlapped _sendOvl;
 	NetworkOverlapped _releaseOvl;
-	volatile long _sendFlag;
-	volatile long _sendCount;
 
-public:
-	typedef union ValidFlag
-	{
-		struct
-		{
-			short _releaseFlag;
-			short _IOCount;
-		};
-		long _flag;
-	};
 	volatile ValidFlag _validFlag;
 
+	/*
 public:
-#define dfSESSION_DEBUG_MAX 1000
-	class SessionDebugData // Debug For Initial & Release
-	{
-	public:
-		void LeaveLog(int line, int threadID, short IOCount, short releaseFlag, __int64 sessionID, __int64 reqID)
-		{
-			_line = line;
-			_threadID = threadID;
-			_IOCount = IOCount;
-			_releaseFlag = releaseFlag;
-			_sessionID = sessionID;
-			_reqID = reqID;
-		}
+#define DEBUG_MAX 1000
 
-	private:
-		int _line = -1;
-		int _threadID = -1;
-		short _IOCount = -1;
-		short _releaseFlag = -1;
-		__int64 _sessionID = -1;
-		__int64 _reqID = -1;
+	struct DebugData
+	{
+		int _line = 0;
+		__int64 _reqID = 0;
+		short _useCount = 0;
+		short _releaseFlag = 0;
+		int _call = 0;
 	};
 
-public:
-	SessionDebugData _debugData[dfSESSION_DEBUG_MAX];
-	volatile long _debugIdx = -1;
+	volatile long g_idx = -1;
+	DebugData debugs[DEBUG_MAX];
+	void LeaveLog(int line, __int64 reqID, short useCount, short releaseFlag, int call = 0)
+	{
+		long idx = InterlockedIncrement(&g_idx);
+		debugs[idx % DEBUG_MAX]._line = line;
+		debugs[idx % DEBUG_MAX]._reqID = reqID;
+		debugs[idx % DEBUG_MAX]._useCount = useCount;
+		debugs[idx % DEBUG_MAX]._releaseFlag = releaseFlag;
+		debugs[idx % DEBUG_MAX]._call = call;
+	}
+	*/
 };
-

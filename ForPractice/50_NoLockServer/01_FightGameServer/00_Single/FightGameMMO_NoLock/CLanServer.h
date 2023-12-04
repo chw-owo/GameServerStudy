@@ -5,7 +5,6 @@
 #include "CTlsPool.h"
 #include "CLockFreeStack.h"
 #include "CSession.h"
-
 #include <ws2tcpip.h>
 #include <process.h>
 #pragma comment(lib, "ws2_32.lib")
@@ -21,8 +20,8 @@ protected:
 	bool NetworkTerminate();
 
 protected:
-	bool Disconnect(__int64 sessionID);
-	bool SendPacket(__int64 sessionID, CPacket* packet);
+	bool Disconnect(unsigned __int64 sessionID);
+	bool SendPacket(unsigned __int64 sessionID, CPacket* packet);
 
 protected:
 	virtual void OnInitialize() = 0;
@@ -31,43 +30,38 @@ protected:
 
 protected:
 	virtual bool OnConnectRequest() = 0;
-	virtual void OnAcceptClient(__int64 sessionID) = 0;
-	virtual void OnReleaseClient(__int64 sessionID) = 0;
-	virtual void OnRecv(__int64 sessionID, CPacket* packet) = 0;
-	virtual void OnSend(__int64 sessionID, int sendSize) = 0;
+	virtual void OnAcceptClient(unsigned __int64 sessionID) = 0;
+	virtual void OnReleaseClient(unsigned __int64 sessionID) = 0;
+	virtual void OnRecv(unsigned __int64 sessionID, CPacket* packet) = 0;
+	virtual void OnSend(unsigned __int64 sessionID, int sendSize) = 0;
 	virtual void OnError(int errorCode, wchar_t* errorMsg) = 0;
+	virtual void OnDebug(int debugCode, wchar_t* debugMsg) = 0;
 
 protected:
 	inline void UpdateMonitorData()
 	{
 		long acceptCnt = InterlockedExchange(&_acceptCnt, 0);
-		long releaseCnt = InterlockedExchange(&_releaseCnt, 0);
 		long disconnectCnt = InterlockedExchange(&_disconnectCnt, 0);
+		long recvMsgCnt = InterlockedExchange(&_recvMsgCnt, 0);
+		long sendMsgCnt = InterlockedExchange(&_sendMsgCnt, 0);
 
 		_acceptTotal += acceptCnt;
-		_releaseTotal += releaseCnt;
 		_disconnectTotal += disconnectCnt;
 
 		_acceptTPS = acceptCnt;
-		_releaseTPS = releaseCnt;
 		_disconnectTPS = disconnectCnt;
-		_recvMsgTPS = _recvMsgCnt;
-		_sendMsgTPS = _sendMsgCnt;
+		_recvMsgTPS = recvMsgCnt;
+		_sendMsgTPS = sendMsgCnt;
 	}
 
 	inline int GetAcceptTotal() { return _acceptTotal; }
-	inline int GetReleaseTotal() { return _releaseTotal; }
-	inline int GetDisconnectTotal() { return  _disconnectTotal; }
+	inline int GetDisconnectTotal() { return _disconnectTotal; }
 	inline long GetSessionCount() { return _sessionCnt; }
 
 	inline int GetRecvMsgTPS() { return _recvMsgTPS; }
 	inline int GetSendMsgTPS() { return _sendMsgTPS; }
 	inline int GetAcceptTPS() { return _acceptTPS; }
-	inline int GetReleaseTPS() { return _releaseTPS; }
 	inline int GetDisconnectTPS() { return _disconnectTPS; }
-
-protected:
-	// CTlsPool<CPacket>* _pPacketPool;
 
 	// Called in Network Library
 private:
@@ -75,15 +69,17 @@ private:
 	static unsigned int WINAPI NetworkThread(void* arg);
 
 private:
-	bool ReleaseSession(__int64 sessionID);
-	bool HandleRecvCP(__int64 sessionID, int recvBytes);
-	bool HandleSendCP(__int64 sessionID, int sendBytes);
+	void HandleRelease(unsigned __int64 sessionID);
+	bool HandleRecvCP(CSession* pSession, int recvBytes);
+	bool HandleSendCP(CSession* pSession, int sendBytes);
 	bool RecvPost(CSession* pSession);
 	bool SendPost(CSession* pSession);
 
 private:
-	bool DecrementIOCount(CSession* pSession, int line, int sessionID);
-	bool IncrementIOCount(CSession* pSession, int line, int sessionID);
+	CSession* AcquireSessionUsage(unsigned __int64 sessionID, int line);
+	void ReleaseSessionUsage(CSession* pSession, int line);
+	void IncrementUseCount(CSession* pSession, int line);
+	void DecrementUseCount(CSession* pSession, int line);
 
 private:
 	wchar_t _IP[10];
@@ -100,32 +96,31 @@ private:
 	HANDLE* _networkThreads;
 	HANDLE _hNetworkCP;
 
-private:
+public: // TO-DO private
+#define __ID_BIT__ 47
 	CSession* _sessions[dfSESSION_MAX] = { nullptr, };
-	CLockFreeStack<__int64> _emptyIdx;
+	CLockFreeStack<long> _emptyIdx;
 	volatile long _sessionCnt = 0;
-
-private:
 	volatile __int64 _sessionID = 0;
 	unsigned __int64 _indexMask = 0;
 	unsigned __int64 _idMask = 0;
 
+public:
+	ValidFlag _releaseFlag;
+
 private:
 	int _acceptTotal = 0;
-	int _releaseTotal = 0;
 	int _disconnectTotal = 0;
+	int _TryReleaseTotal = 0;
 
 	int _acceptTPS = 0;
-	int _releaseTPS = 0;
 	int _disconnectTPS = 0;
 	int _recvMsgTPS = 0;
 	int _sendMsgTPS = 0;
 
 	volatile long _acceptCnt = 0;
-	volatile long _releaseCnt = 0;
 	volatile long _disconnectCnt = 0;
-	int _recvMsgCnt = 0;
-	int _sendMsgCnt = 0;
-
+	volatile long _recvMsgCnt = 0;
+	volatile long _sendMsgCnt = 0;
 };
 #endif

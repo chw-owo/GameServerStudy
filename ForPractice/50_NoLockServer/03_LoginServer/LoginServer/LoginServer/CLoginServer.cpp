@@ -91,7 +91,7 @@ bool CLoginServer::OnConnectRequest()
 	return false;
 }
 
-void CLoginServer::OnAcceptClient(__int64 sessionID)
+void CLoginServer::OnAcceptClient(unsigned __int64 sessionID)
 {
 	AcquireSRWLockExclusive(&_lock);
 
@@ -106,11 +106,11 @@ void CLoginServer::OnAcceptClient(__int64 sessionID)
 	ReleaseSRWLockExclusive(&_lock);
 }
 
-void CLoginServer::OnReleaseClient(__int64 sessionID)
+void CLoginServer::OnReleaseClient(unsigned __int64 sessionID)
 {
 	AcquireSRWLockExclusive(&_lock);
 
-	unordered_map<__int64, CUser*>::iterator mapIter = _usersMap.find(sessionID);
+	unordered_map<unsigned __int64, CUser*>::iterator mapIter = _usersMap.find(sessionID);
 	if (mapIter == _usersMap.end())
 	{
 		LOG(L"FightGame", CSystemLog::ERROR_LEVEL, L"%s[%d]: No Session %lld\n", _T(__FUNCTION__), __LINE__, sessionID);
@@ -134,12 +134,12 @@ void CLoginServer::OnReleaseClient(__int64 sessionID)
 	ReleaseSRWLockExclusive(&_lock);
 }
 
-void CLoginServer::OnRecv(__int64 sessionID, CPacket* packet)
+void CLoginServer::OnRecv(unsigned __int64 sessionID, CPacket* packet)
 {
 	try
 	{
 		AcquireSRWLockShared(&_lock);
-		unordered_map<__int64, CUser*>::iterator mapIter = _usersMap.find(sessionID);
+		unordered_map<unsigned __int64, CUser*>::iterator mapIter = _usersMap.find(sessionID);
 		if (mapIter == _usersMap.end())
 		{
 			LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d]: No Session %lld\n", _T(__FUNCTION__), __LINE__, sessionID);
@@ -182,7 +182,7 @@ void CLoginServer::OnRecv(__int64 sessionID, CPacket* packet)
 	}
 }
 
-void CLoginServer::OnSend(__int64 sessionID, int sendSize)
+void CLoginServer::OnSend(unsigned __int64 sessionID, int sendSize)
 {
 	
 }
@@ -244,7 +244,7 @@ unsigned int __stdcall CLoginServer::TimeoutThread(void* arg)
 		AcquireSRWLockExclusive(&pServer->_lock);
 
 		DWORD time = timeGetTime();
-		unordered_map<__int64, CUser*>::iterator it = pServer->_usersMap.begin();
+		unordered_map<unsigned __int64, CUser*>::iterator it = pServer->_usersMap.begin();
 		for (; it != pServer->_usersMap.end(); it++)
 		{
 			if (it->second->_lastRecvTime - time > dfTIMEOUT)
@@ -262,10 +262,10 @@ unsigned int __stdcall CLoginServer::TimeoutThread(void* arg)
 	return 0;
 }
 
-void CLoginServer::ReqSendUnicast(CPacket* packet, __int64 sessionID)
+void CLoginServer::ReqSendUnicast(CPacket* packet, unsigned __int64 sessionID)
 {
 	packet->AddUsageCount(1);
-	if (!SendPacket(sessionID, packet, dfSERVER_DISCONNECT))
+	if (!SendPacket(sessionID, packet))
 	{
 		CPacket::Free(packet);
 	}

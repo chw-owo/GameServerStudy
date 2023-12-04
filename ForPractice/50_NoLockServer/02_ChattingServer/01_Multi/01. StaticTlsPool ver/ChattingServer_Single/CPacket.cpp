@@ -1,6 +1,6 @@
 #include "CPacket.h"
 
-CLockFreePool<CPacket> CPacket::_pool = CLockFreePool<CPacket>(dfPACKET_DEF, false);
+CTlsPool<CPacket> CPacket::_pool = CTlsPool<CPacket>(dfPACKET_DEF, false);
 
 void CPacket::Clear(void)
 {

@@ -147,7 +147,7 @@ bool CChattingServer::OnConnectRequest()
 	return false;
 }
 
-void CChattingServer::OnAcceptClient(__int64 sessionID)
+void CChattingServer::OnAcceptClient(unsigned __int64 sessionID)
 {
 	CJob* job = _pJobPool->Alloc();
 	job->Setting(JOB_TYPE::SYSTEM, SYS_TYPE::ACCEPT, sessionID, nullptr);
@@ -157,7 +157,7 @@ void CChattingServer::OnAcceptClient(__int64 sessionID)
 	WakeByAddressSingle(&_signal);
 }
 
-void CChattingServer::OnReleaseClient(__int64 sessionID)
+void CChattingServer::OnReleaseClient(unsigned __int64 sessionID)
 {
 	CJob* job = _pJobPool->Alloc();
 	job->Setting(JOB_TYPE::SYSTEM, SYS_TYPE::RELEASE, sessionID, nullptr);
@@ -167,7 +167,7 @@ void CChattingServer::OnReleaseClient(__int64 sessionID)
 	WakeByAddressSingle(&_signal);
 }
 
-void CChattingServer::OnRecv(__int64 sessionID, CPacket* packet)
+void CChattingServer::OnRecv(unsigned __int64 sessionID, CPacket* packet)
 {
 	packet->AddUsageCount(1);
 	CJob* job = _pJobPool->Alloc();
@@ -179,13 +179,13 @@ void CChattingServer::OnRecv(__int64 sessionID, CPacket* packet)
 	WakeByAddressSingle(&_signal);
 }
 
-void CChattingServer::OnSend(__int64 sessionID, int sendSize)
+void CChattingServer::OnSend(unsigned __int64 sessionID, int sendSize)
 {
 }
 
 void CChattingServer::HandleTimeout()
 {
-	unordered_map<__int64, CPlayer*>::iterator iter = _playersMap.begin();
+	unordered_map<unsigned __int64, CPlayer*>::iterator iter = _playersMap.begin();
 	for (; iter != _playersMap.end();)
 	{
 		CPlayer* player = (*iter).second;
@@ -202,7 +202,7 @@ void CChattingServer::HandleTimeout()
 	}
 }
 
-void CChattingServer::HandleAccept(__int64 sessionID)
+void CChattingServer::HandleAccept(unsigned __int64 sessionID)
 {
 	if (_playersMap.size() >= dfPLAYER_MAX)
 	{
@@ -225,10 +225,10 @@ void CChattingServer::HandleAccept(__int64 sessionID)
 	return;
 }
 
-void CChattingServer::HandleRelease(__int64 sessionID)
+void CChattingServer::HandleRelease(unsigned __int64 sessionID)
 {
 	// Delete From SessionID-Player Map
-	unordered_map<__int64, CPlayer*>::iterator mapIter = _playersMap.find(sessionID);
+	unordered_map<unsigned __int64, CPlayer*>::iterator mapIter = _playersMap.find(sessionID);
 	if (mapIter == _playersMap.end())
 	{
 		LOG(L"FightGame", CSystemLog::ERROR_LEVEL, L"%s[%d]: No Session %lld\n", _T(__FUNCTION__), __LINE__, sessionID);
@@ -260,11 +260,11 @@ void CChattingServer::HandleRelease(__int64 sessionID)
 }
 
 
-void CChattingServer::HandleRecv(__int64 sessionID, CPacket* packet)
+void CChattingServer::HandleRecv(unsigned __int64 sessionID, CPacket* packet)
 {
 	try
 	{
-		unordered_map<__int64, CPlayer*>::iterator iter = _playersMap.find(sessionID);
+		unordered_map<unsigned __int64, CPlayer*>::iterator iter = _playersMap.find(sessionID);
 		if (iter == _playersMap.end())
 		{
 			LOG(L"FightGame", CSystemLog::ERROR_LEVEL, L"%s[%d]: No Session\n", _T(__FUNCTION__), __LINE__);
@@ -443,7 +443,7 @@ unsigned int __stdcall CChattingServer::TimeoutThread(void* arg)
 	return 0;
 }
 
-void CChattingServer::ReqSendUnicast(CPacket* packet, __int64 sessionID)
+void CChattingServer::ReqSendUnicast(CPacket* packet, unsigned __int64 sessionID)
 {
 	packet->AddUsageCount(1);
 	if (!SendPacket(sessionID, packet))
