@@ -31,8 +31,12 @@ public:
 	}
 
 public:
+	__int64 GetID() { return _ID; }
+
 	void Initialize(__int64 ID, SOCKET sock, SOCKADDR_IN addr)
 	{
+		::printf("%d: Session Initialize (%016llx - %016llx)\n", GetCurrentThreadId(), _ID, ID);
+
 		InterlockedExchange16(&_disconnect, 0);
 		InterlockedExchange(&_validFlag._flag, 0);
 		InterlockedExchange(&_sendFlag, 0);
@@ -48,6 +52,8 @@ public:
 
 	void Terminate()
 	{
+		::printf("%d: Session Terminate (%016llx - %016llx)\n", GetCurrentThreadId(), _ID, (__int64)-1);
+
 		InterlockedExchange16(&_disconnect, 1);
 		InterlockedExchange(&_validFlag._flag, 1);
 
@@ -67,8 +73,10 @@ public:
 		}
 	}
 
-public:
+private:
 	__int64 _ID = -1;	
+
+public:
 	volatile short _disconnect = 1;
 	volatile long _sendFlag;
 	volatile long _sendCount;

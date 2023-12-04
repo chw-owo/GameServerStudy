@@ -8,7 +8,7 @@
 
 #define dfSECTOR_CNT_Y			50
 #define dfSECTOR_CNT_X			50
-#define dfPLAYER_MAX			30000
+#define dfPLAYER_MAX			8000
 #define dfTIMEOUT				40000
 #define dfMONITOR_TEXT_LEN		1024
 #define dfJOB_DEF				10000

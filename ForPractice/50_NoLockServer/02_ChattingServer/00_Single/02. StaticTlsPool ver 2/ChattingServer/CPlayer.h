@@ -5,7 +5,7 @@ class CPlayer
 {
 public:
 	CPlayer() { __debugbreak(); };
-	CPlayer(__int64 sessionID, __int64 playerID)
+	CPlayer(unsigned __int64 sessionID, __int64 playerID)
 	{
 		_sessionID = sessionID;
 		_playerID = playerID;
@@ -22,7 +22,7 @@ public:
 
 	~CPlayer()
 	{
-		_sessionID = -1;
+		_sessionID = MAXULONGLONG;
 		_playerID = -1;
 
 		_accountNo = -1;		
@@ -36,7 +36,7 @@ public:
 	}
 
 public:
-	__int64 _sessionID = -1;
+	unsigned __int64 _sessionID = MAXULONGLONG;
 	__int64 _playerID = -1;
 
 	__int64 _accountNo = -1;

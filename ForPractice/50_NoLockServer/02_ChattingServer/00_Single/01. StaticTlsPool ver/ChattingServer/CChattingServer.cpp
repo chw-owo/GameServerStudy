@@ -2,7 +2,7 @@
 #include "CSystemLog.h"
 #include <tchar.h>
 #include <wchar.h>
-#define _MONITOR
+// #define _MONITOR
 // #define _TIMEOUT
 
 bool CChattingServer::Initialize()

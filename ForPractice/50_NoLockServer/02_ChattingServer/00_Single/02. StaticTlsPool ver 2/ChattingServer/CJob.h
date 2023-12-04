@@ -20,9 +20,9 @@ enum class SYS_TYPE
 class CJob
 {
 public:
-	CJob() : _type(JOB_TYPE::NONE), _sysType(SYS_TYPE::NONE), _sessionID(-1), _packet(nullptr){}
+	CJob() : _type(JOB_TYPE::NONE), _sysType(SYS_TYPE::NONE), _sessionID(MAXULONGLONG), _packet(nullptr){}
 
-	void Setting(JOB_TYPE type, SYS_TYPE sysType, __int64 sessionID, CPacket* packet)
+	void Setting(JOB_TYPE type, SYS_TYPE sysType, unsigned __int64 sessionID, CPacket* packet)
 	{
 		_type = type; 
 		_sysType = sysType;
@@ -33,6 +33,6 @@ public:
 public:
 	JOB_TYPE _type;
 	SYS_TYPE _sysType;
-	__int64 _sessionID;
+	unsigned __int64 _sessionID;
 	CPacket* _packet;
 };
