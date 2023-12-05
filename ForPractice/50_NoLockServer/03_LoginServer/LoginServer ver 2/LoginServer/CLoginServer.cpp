@@ -260,13 +260,13 @@ void CLoginServer::GetIPforClient(CUser* user, WCHAR* gameIP, WCHAR* chatIP)
 	{
 		wcscpy_s(gameIP, dfIP_LEN, it->second);
 		wcscpy_s(chatIP, dfIP_LEN, it->second);
-		::wprintf(L"%s => %s\n", user->_IP, it->second);
+		// ::wprintf(L"%s => %s\n", user->_IP, it->second);
 	}
 	else
 	{
 		wcscpy_s(gameIP, dfIP_LEN, _WanIPs);
 		wcscpy_s(chatIP, dfIP_LEN, _WanIPs);
-		::wprintf(L"%s => %s\n", user->_IP, _WanIPs);
+		// ::wprintf(L"%s => %s\n", user->_IP, _WanIPs);
 	}	
 }
 

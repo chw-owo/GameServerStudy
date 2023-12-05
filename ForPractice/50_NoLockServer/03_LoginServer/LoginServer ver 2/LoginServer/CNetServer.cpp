@@ -355,8 +355,10 @@ unsigned int __stdcall CNetServer::NetworkThread(void* arg)
 			if (GQCSRet == 0)
 			{
 				int err = WSAGetLastError();
-				if (err != WSAECONNRESET && err != WSAECONNABORTED && err != WSAENOTSOCK && err != WSAEINTR &&
-					err != ERROR_CONNECTION_ABORTED && err != ERROR_NETNAME_DELETED && err != ERROR_OPERATION_ABORTED)
+				if (err != WSAECONNRESET && err != WSAECONNABORTED && 
+					err != WSAENOTSOCK && err != WSAEINTR &&
+					err != ERROR_CONNECTION_ABORTED && err != ERROR_NETNAME_DELETED 
+					&& err != ERROR_OPERATION_ABORTED && err != ERROR_SEM_TIMEOUT)
 				{
 					swprintf_s(stErrMsg, dfMSG_MAX, L"%s[%d]: GQCS return 0, %d\n", _T(__FUNCTION__), __LINE__, err);
 					pNetServer->OnError(ERR_GQCS_RET0, stErrMsg);

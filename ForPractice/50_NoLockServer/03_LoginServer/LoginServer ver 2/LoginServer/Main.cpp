@@ -12,12 +12,12 @@
 #include <windows.h>
 #pragma comment(lib, "winmm.lib") 
 
+#define _MONITOR
+
 CCrashDump g_Dump;
 CLoginServer g_LoginServer;
 CChattingServer g_ChattingServer;
 CMonitorServer g_MonitorServer;
-
-//#define _MONITOR
 
 int wmain(int argc, wchar_t* argv[])
 {
