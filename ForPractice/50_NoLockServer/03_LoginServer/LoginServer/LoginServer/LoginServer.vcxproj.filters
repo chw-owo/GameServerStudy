@@ -61,14 +61,14 @@
     <ClCompile Include="CSystemLog.cpp">
       <Filter>Common\DebugTool</Filter>
     </ClCompile>
-    <ClCompile Include="Main.cpp">
-      <Filter>Common</Filter>
-    </ClCompile>
     <ClCompile Include="CLoginServer.cpp">
       <Filter>LoginServer</Filter>
     </ClCompile>
     <ClCompile Include="CChattingServer.cpp">
       <Filter>ChattingServer</Filter>
+    </ClCompile>
+    <ClCompile Include="Main.cpp">
+      <Filter>Common</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -111,9 +111,6 @@
     <ClInclude Include="CUser.h">
       <Filter>LoginServer\Object</Filter>
     </ClInclude>
-    <ClInclude Include="CommonProtocol.h">
-      <Filter>Common</Filter>
-    </ClInclude>
     <ClInclude Include="CLoginServer.h">
       <Filter>LoginServer</Filter>
     </ClInclude>
@@ -131,6 +128,9 @@
     </ClInclude>
     <ClInclude Include="CObjectPool.h">
       <Filter>ChattingServer\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="CommonProtocol.h">
+      <Filter>Common</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

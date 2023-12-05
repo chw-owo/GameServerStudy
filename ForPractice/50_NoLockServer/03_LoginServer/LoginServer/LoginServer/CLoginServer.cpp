@@ -7,7 +7,8 @@
 
 bool CLoginServer::Initialize()
 {
-	InitializeSRWLock(&_lock);
+	InitializeSRWLock(&_mapLock);
+	InitializeSRWLock(&_setLock);
 	_pUserPool = new CTlsPool<CUser>(dfUSER_MAX, true);
 
 	// Set Network Library
@@ -93,7 +94,7 @@ bool CLoginServer::OnConnectRequest()
 
 void CLoginServer::OnAcceptClient(unsigned __int64 sessionID)
 {
-	AcquireSRWLockExclusive(&_lock);
+	AcquireSRWLockExclusive(&_mapLock);
 
 	CUser* user = _pUserPool->Alloc(sessionID);
 	auto ret = _usersMap.insert(make_pair(sessionID, user));
@@ -103,54 +104,59 @@ void CLoginServer::OnAcceptClient(unsigned __int64 sessionID)
 		::wprintf(L"%s[%d] Already Exist SessionID: %lld\n", _T(__FUNCTION__), __LINE__, sessionID);
 	}
 
-	ReleaseSRWLockExclusive(&_lock);
+	ReleaseSRWLockExclusive(&_mapLock);
 }
 
 void CLoginServer::OnReleaseClient(unsigned __int64 sessionID)
 {
-	AcquireSRWLockExclusive(&_lock);
-
+	AcquireSRWLockExclusive(&_mapLock);
 	unordered_map<unsigned __int64, CUser*>::iterator mapIter = _usersMap.find(sessionID);
 	if (mapIter == _usersMap.end())
 	{
 		LOG(L"FightGame", CSystemLog::ERROR_LEVEL, L"%s[%d]: No Session %lld\n", _T(__FUNCTION__), __LINE__, sessionID);
 		::wprintf(L"%s[%d]: No Session %lld\n", _T(__FUNCTION__), __LINE__, sessionID);
-		ReleaseSRWLockExclusive(&_lock);
+		ReleaseSRWLockExclusive(&_mapLock);
 		return;
 	}
 	CUser* user = mapIter->second;
 	_usersMap.erase(mapIter);
+
+	AcquireSRWLockShared(&user->_lock);
+	ReleaseSRWLockExclusive(&_mapLock);
 	__int64 accountNo = user->_accountNo;
+	ReleaseSRWLockShared(&user->_lock);
 	_pUserPool->Free(user);
 
+	AcquireSRWLockExclusive(&_setLock);
 	unordered_set<__int64>::iterator setIter = _accountNos.find(accountNo);
 	if (setIter == _accountNos.end())
 	{
-		ReleaseSRWLockExclusive(&_lock);
+		ReleaseSRWLockExclusive(&_setLock);
 		return;
 	}
 	_accountNos.erase(setIter);
-
-	ReleaseSRWLockExclusive(&_lock);
+	ReleaseSRWLockExclusive(&_setLock);
 }
 
 void CLoginServer::OnRecv(unsigned __int64 sessionID, CPacket* packet)
 {
+	CUser* user;
 	try
 	{
-		AcquireSRWLockShared(&_lock);
+		AcquireSRWLockShared(&_mapLock);
 		unordered_map<unsigned __int64, CUser*>::iterator mapIter = _usersMap.find(sessionID);
 		if (mapIter == _usersMap.end())
 		{
 			LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d]: No Session %lld\n", _T(__FUNCTION__), __LINE__, sessionID);
 			::wprintf(L"%s[%d]: No Session %lld\n", _T(__FUNCTION__), __LINE__, sessionID);
 			CPacket::Free(packet);
-			ReleaseSRWLockShared(&_lock);
+			ReleaseSRWLockShared(&_mapLock);
 			return;
 		}
 
-		CUser* user = mapIter->second;
-		ReleaseSRWLockShared(&_lock);
+		user = mapIter->second;
+		AcquireSRWLockExclusive(&user->_lock);
+		ReleaseSRWLockShared(&_mapLock);
 
 		user->_lastRecvTime = timeGetTime();
 		short msgType = -1;
@@ -164,19 +170,21 @@ void CLoginServer::OnRecv(unsigned __int64 sessionID, CPacket* packet)
 
 		default:
 			Disconnect(sessionID);
-			LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d] Undefined Message, %d\n", _T(__FUNCTION__), __LINE__, msgType);
+			LOG(L"FightGame", CSystemLog::ERROR_LEVEL, L"%s[%d] Undefined Message, %d\n", _T(__FUNCTION__), __LINE__, msgType);
 			::wprintf(L"%s[%d] Undefined Message, %d\n", _T(__FUNCTION__), __LINE__, msgType);
 			break;
 		}
 
+		ReleaseSRWLockExclusive(&user->_lock);
 		InterlockedIncrement(&_handlePacketTPS);
 	}
 	catch (int packetError)
 	{
+		ReleaseSRWLockExclusive(&user->_lock);
 		if (packetError == ERR_PACKET)
 		{
 			Disconnect(sessionID);
-			LOG(L"FightGame", CSystemLog::DEBUG_LEVEL,L"%s[%d] Packet Error\n", _T(__FUNCTION__), __LINE__);
+			LOG(L"FightGame", CSystemLog::ERROR_LEVEL,L"%s[%d] Packet Error\n", _T(__FUNCTION__), __LINE__);
 			::wprintf(L"%s[%d] Packet Error\n", _T(__FUNCTION__), __LINE__);
 		}
 	}
@@ -241,7 +249,7 @@ unsigned int __stdcall CLoginServer::TimeoutThread(void* arg)
 
 	while (pServer->_serverAlive)
 	{
-		AcquireSRWLockExclusive(&pServer->_lock);
+		AcquireSRWLockExclusive(&pServer->_mapLock);
 
 		DWORD time = timeGetTime();
 		unordered_map<unsigned __int64, CUser*>::iterator it = pServer->_usersMap.begin();
@@ -251,7 +259,7 @@ unsigned int __stdcall CLoginServer::TimeoutThread(void* arg)
 				pServer->Disconnect(it->first);
 		}
 
-		ReleaseSRWLockExclusive(&pServer->_lock);
+		ReleaseSRWLockExclusive(&pServer->_mapLock);
 
 		Sleep(dfTIMEOUT);
 	}
@@ -330,9 +338,9 @@ BYTE CLoginServer::CheckAccountNoValid(__int64 accountNo)
 	if (accountNo < 0 || accountNo > 95000)
 		return dfLOGIN_STATUS_ACCOUNT_MISS;
 
-	AcquireSRWLockExclusive(&_lock);
+	AcquireSRWLockExclusive(&_setLock);
 	auto ret = _accountNos.insert(accountNo);
-	ReleaseSRWLockExclusive(&_lock);
+	ReleaseSRWLockExclusive(&_setLock);
 	if (ret.second == false)
 		return dfLOGIN_STATUS_GAME;
 
@@ -346,14 +354,6 @@ inline void CLoginServer::HandleCSPacket_REQ_LOGIN(CPacket* CSpacket, CUser* use
 	GetCSPacket_REQ_LOGIN(CSpacket, accountNo, sessionKey);
 
 	BYTE status = CheckAccountNoValid(accountNo);
-	if (status != 1)
-	{
-		Disconnect(user->_sessionID);
-		// LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d] Account No is Wrong: %lld\n", _T(__FUNCTION__), __LINE__,accountNo);
-		// ::wprintf(L"%s[%d] Account No is Wrong: %lld\n", _T(__FUNCTION__), __LINE__, accountNo);
-		return;
-	}
-
 	user->_accountNo = accountNo;
 
 	memcpy_s(user->_sessionKey, dfSESSIONKEY_LEN, sessionKey, dfSESSIONKEY_LEN);

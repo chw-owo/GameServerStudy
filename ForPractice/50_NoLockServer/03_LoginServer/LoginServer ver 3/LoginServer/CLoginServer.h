@@ -10,9 +10,6 @@
 #include <map>
 #include <unordered_map>
 #include <unordered_set>
-#include <synchapi.h>
-
-#pragma comment(lib, "Synchronization.lib")
 
 #ifndef _WINSOCKAPI_
 #define _WINSOCKAPI_
@@ -74,7 +71,8 @@ private:
 	HANDLE _timeoutThread;
 
 private:
-	SRWLOCK _lock;
+	SRWLOCK _setLock;
+	SRWLOCK _mapLock;
 	unordered_map<unsigned __int64, CUser*> _usersMap;
 	unordered_set<__int64> _accountNos;
 	CTlsPool<CUser>* _pUserPool;
@@ -96,6 +94,7 @@ private:
 	long _connCnt = 0;
 	MYSQL _conn[dfTHREAD_MAX] = { 0, };
 	MYSQL* _connection[dfTHREAD_MAX] = { 0, };
+	SRWLOCK _connLock;
 
 private:
 	volatile long _handlePacketTPS = 0;

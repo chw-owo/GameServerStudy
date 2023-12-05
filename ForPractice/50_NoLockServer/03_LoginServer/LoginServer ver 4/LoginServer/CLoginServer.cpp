@@ -10,7 +10,9 @@ bool CLoginServer::Initialize()
 {
 	// Set Data
 	_tlsKey = TlsAlloc();
-	InitializeSRWLock(&_userLock);
+	InitializeSRWLock(&_mapLock);
+	InitializeSRWLock(&_setLock);
+	InitializeSRWLock(&_connLock);
 	_pUserPool = new CTlsPool<CUser>(dfUSER_MAX, true);
 
 	// Set IP Address
@@ -112,7 +114,7 @@ bool CLoginServer::OnConnectRequest(WCHAR addr[dfADDRESS_LEN])
 
 void CLoginServer::OnAcceptClient(unsigned __int64 sessionID, WCHAR addr[dfADDRESS_LEN])
 {
-	AcquireSRWLockExclusive(&_userLock);
+	AcquireSRWLockExclusive(&_mapLock);
 
 	WCHAR* IP = nullptr;
 	WCHAR* next = nullptr;
@@ -126,59 +128,64 @@ void CLoginServer::OnAcceptClient(unsigned __int64 sessionID, WCHAR addr[dfADDRE
 		::wprintf(L"%s[%d] Already Exist SessionID: %lld\n", _T(__FUNCTION__), __LINE__, sessionID);
 	}
 
-	ReleaseSRWLockExclusive(&_userLock);
+	ReleaseSRWLockExclusive(&_mapLock);
 }
 
 void CLoginServer::OnReleaseClient(unsigned __int64 sessionID)
 {
-	AcquireSRWLockExclusive(&_userLock);
+	AcquireSRWLockExclusive(&_mapLock);
 
 	unordered_map<unsigned __int64, CUser*>::iterator mapIter = _usersMap.find(sessionID);
 	if (mapIter == _usersMap.end())
 	{
 		LOG(L"FightGame", CSystemLog::ERROR_LEVEL, L"%s[%d]: No Session %lld\n", _T(__FUNCTION__), __LINE__, sessionID);
 		::wprintf(L"%s[%d]: No Session %lld\n", _T(__FUNCTION__), __LINE__, sessionID);
-		ReleaseSRWLockExclusive(&_userLock);
+		ReleaseSRWLockExclusive(&_mapLock);
 		return;
 	}
 	CUser* user = mapIter->second;
 	_usersMap.erase(mapIter);
+
+	AcquireSRWLockShared(&user->_lock);
+	ReleaseSRWLockExclusive(&_mapLock);
 	__int64 accountNo = user->_accountNo;
+	ReleaseSRWLockShared(&user->_lock);
 	_pUserPool->Free(user);
 
+	AcquireSRWLockExclusive(&_setLock);
 	unordered_set<__int64>::iterator setIter = _accountNos.find(accountNo);
 	if (setIter == _accountNos.end())
 	{
-		ReleaseSRWLockExclusive(&_userLock);
+		ReleaseSRWLockExclusive(&_setLock);
 		return;
 	}
 	_accountNos.erase(setIter);
-
-	ReleaseSRWLockExclusive(&_userLock);
+	ReleaseSRWLockExclusive(&_setLock);
 }
 
 void CLoginServer::OnRecv(unsigned __int64 sessionID, CPacket* packet)
 {
+	AcquireSRWLockShared(&_mapLock);
+	unordered_map<unsigned __int64, CUser*>::iterator mapIter = _usersMap.find(sessionID);
+	if (mapIter == _usersMap.end())
+	{
+		LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d]: No Session %lld\n", _T(__FUNCTION__), __LINE__, sessionID);
+		::wprintf(L"%s[%d]: No Session %lld\n", _T(__FUNCTION__), __LINE__, sessionID);
+		CPacket::Free(packet);
+		ReleaseSRWLockShared(&_mapLock);
+		return;
+	}
+
+	CUser* user = mapIter->second;
+	AcquireSRWLockExclusive(&user->_lock);
+	ReleaseSRWLockShared(&_mapLock);
+
+	user->_lastRecvTime = timeGetTime();
+	short msgType = -1;
+	*packet >> msgType;
+
 	try
 	{
-		AcquireSRWLockShared(&_userLock);
-		unordered_map<unsigned __int64, CUser*>::iterator mapIter = _usersMap.find(sessionID);
-		if (mapIter == _usersMap.end())
-		{
-			LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d]: No Session %lld\n", _T(__FUNCTION__), __LINE__, sessionID);
-			::wprintf(L"%s[%d]: No Session %lld\n", _T(__FUNCTION__), __LINE__, sessionID);
-			CPacket::Free(packet);
-			ReleaseSRWLockShared(&_userLock);
-			return;
-		}
-
-		CUser* user = mapIter->second;
-		ReleaseSRWLockShared(&_userLock);
-
-		user->_lastRecvTime = timeGetTime();
-		short msgType = -1;
-		*packet >> msgType;
-
 		switch (msgType)
 		{
 		case en_PACKET_CS_LOGIN_REQ_LOGIN:
@@ -199,10 +206,11 @@ void CLoginServer::OnRecv(unsigned __int64 sessionID, CPacket* packet)
 		if (packetError == ERR_PACKET)
 		{
 			Disconnect(sessionID);
-			LOG(L"FightGame", CSystemLog::DEBUG_LEVEL,L"%s[%d] Packet Error\n", _T(__FUNCTION__), __LINE__);
+			LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d] Packet Error\n", _T(__FUNCTION__), __LINE__);
 			::wprintf(L"%s[%d] Packet Error\n", _T(__FUNCTION__), __LINE__);
 		}
 	}
+	ReleaseSRWLockExclusive(&user->_lock);
 }
 
 void CLoginServer::OnSend(unsigned __int64 sessionID, int sendSize)
@@ -216,8 +224,7 @@ unsigned int __stdcall CLoginServer::TimeoutThread(void* arg)
 
 	while (pServer->_serverAlive)
 	{
-		AcquireSRWLockExclusive(&pServer->_userLock);
-
+		AcquireSRWLockExclusive(&pServer->_mapLock);
 		DWORD time = timeGetTime();
 		unordered_map<unsigned __int64, CUser*>::iterator it = pServer->_usersMap.begin();
 		for (; it != pServer->_usersMap.end(); it++)
@@ -226,8 +233,7 @@ unsigned int __stdcall CLoginServer::TimeoutThread(void* arg)
 				pServer->Disconnect(it->first);
 		}
 
-		ReleaseSRWLockExclusive(&pServer->_userLock);
-
+		ReleaseSRWLockExclusive(&pServer->_mapLock); 
 		Sleep(dfTIMEOUT);
 	}
 
@@ -281,7 +287,8 @@ bool CLoginServer::GetDataFromMysql(CUser* user)
 	long idx = (long)TlsGetValue(_tlsKey);
 	if (idx == 0) 
 	{
-		if (!InitDBConnect(idx)) return false;
+		if (!InitDBConnect(idx)) 
+			return false;
 	}
 
 	MYSQL conn = _conn[idx];
@@ -298,7 +305,8 @@ bool CLoginServer::GetDataFromMysql(CUser* user)
 	query_stat = mysql_query(connection, query);
 	if (query_stat != 0)
 	{
-		printf("Mysql query error : %s (%d)\n", mysql_error(&conn), ret);
+		LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Mysql query error : %s (%d)\n", mysql_error(&conn), ret);
+		::printf("Mysql query error : %s (%d)\n", mysql_error(&conn), ret);
 		return false;
 	}
 
@@ -377,9 +385,9 @@ BYTE CLoginServer::CheckAccountNoValid(__int64 accountNo)
 	if (accountNo < 0 || accountNo > 95000)
 		return dfLOGIN_STATUS_ACCOUNT_MISS;
 
-	AcquireSRWLockExclusive(&_userLock);
+	AcquireSRWLockExclusive(&_setLock);
 	auto ret = _accountNos.insert(accountNo);
-	ReleaseSRWLockExclusive(&_userLock);
+	ReleaseSRWLockExclusive(&_setLock);
 	if (ret.second == false)
 		return dfLOGIN_STATUS_GAME;
 
@@ -396,8 +404,8 @@ inline void CLoginServer::HandleCSPacket_REQ_LOGIN(CPacket* CSpacket, CUser* use
 	if (status != 1)
 	{
 		Disconnect(user->_sessionID);
-		// LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d] Account No is Wrong: %lld\n", _T(__FUNCTION__), __LINE__,accountNo);
-		// ::wprintf(L"%s[%d] Account No is Wrong: %lld\n", _T(__FUNCTION__), __LINE__, accountNo);
+		LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d] Account No is Wrong: %lld\n", _T(__FUNCTION__), __LINE__,accountNo);
+		::wprintf(L"%s[%d] Account No is Wrong: %lld\n", _T(__FUNCTION__), __LINE__, accountNo);
 		return;
 	}
 	user->_accountNo = accountNo;

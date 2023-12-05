@@ -1,4 +1,7 @@
 #pragma once
+#include <synchapi.h>
+#pragma comment(lib, "Synchronization.lib")
+
 class CUser
 {
 public:
@@ -6,6 +9,7 @@ public:
 
 	CUser(__int64 sessionID, WCHAR* IP)
 	{
+		InitializeSRWLock(&_lock);
 		_sessionID = sessionID;
 		wcscpy_s(_IP, dfIP_LEN, IP);
 		_accountNo = -1;
@@ -29,6 +33,7 @@ public:
 public:
 	__int64 _sessionID = -1;
 	WCHAR _IP[dfIP_LEN] = { L"0" };
+	SRWLOCK _lock;
 
 public:
 	__int64 _accountNo = -1;

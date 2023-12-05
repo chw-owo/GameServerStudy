@@ -9,10 +9,8 @@
 #include "CUser.h"
 
 #include <map>
-#include <synchapi.h>
 #include <unordered_map>
 #include <unordered_set>
-#pragma comment(lib, "Synchronization.lib")
 using namespace std;
 
 #ifndef _WINSOCKAPI_
@@ -75,7 +73,8 @@ private:
 	HANDLE _timeoutThread;
 
 private:
-	SRWLOCK _userLock;
+	SRWLOCK _setLock;
+	SRWLOCK _mapLock;
 	unordered_map<unsigned __int64, CUser*> _usersMap;
 	unordered_set<__int64> _accountNos;
 	CTlsPool<CUser>* _pUserPool;

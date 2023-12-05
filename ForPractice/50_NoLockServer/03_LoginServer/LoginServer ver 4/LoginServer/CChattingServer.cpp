@@ -469,8 +469,8 @@ inline void CChattingServer::HandleCSPacket_REQ_LOGIN(CPacket* CSpacket, CPlayer
 
 	BYTE status = 0;
 	string key = to_string(accountNo);
-	_redis->get(key, [accountNo, &status, sessionKey](cpp_redis::reply& reply) {
-		
+	_redis->get(key, [&status, sessionKey](cpp_redis::reply& reply) {
+
 		if (memcmp(sessionKey, reply.as_string().c_str(), dfSESSIONKEY_LEN) == 0)
 			status = 1;
 	});

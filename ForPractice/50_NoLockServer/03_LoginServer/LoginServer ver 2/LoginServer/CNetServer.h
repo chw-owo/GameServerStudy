@@ -30,8 +30,6 @@ protected:
 protected:
 	virtual bool OnConnectRequest(WCHAR addr[dfADDRESS_LEN]) = 0;
 	virtual void OnAcceptClient(unsigned __int64 sessionID, WCHAR addr[dfADDRESS_LEN]) = 0;
-
-protected:
 	virtual void OnReleaseClient(unsigned __int64 sessionID) = 0;
 	virtual void OnRecv(unsigned __int64 sessionID, CPacket* packet) = 0;
 	virtual void OnSend(unsigned __int64 sessionID, int sendSize) = 0;
@@ -55,14 +53,14 @@ protected:
 		_sendMsgTPS = sendMsgCnt;
 	}
 
-	inline long GetAcceptTotal() { return _acceptTotal; }
-	inline long GetDisconnectTotal() { return _disconnectTotal; }
+	inline int GetAcceptTotal() { return _acceptTotal; }
+	inline int GetDisconnectTotal() { return _disconnectTotal; }
 	inline long GetSessionCount() { return _sessionCnt; }
 
-	inline long GetRecvMsgTPS() { return _recvMsgTPS; }
-	inline long GetSendMsgTPS() { return _sendMsgTPS; }
-	inline long GetAcceptTPS() { return _acceptTPS; }
-	inline long GetDisconnectTPS() { return _disconnectTPS; }
+	inline int GetRecvMsgTPS() { return _recvMsgTPS; }
+	inline int GetSendMsgTPS() { return _sendMsgTPS; }
+	inline int GetAcceptTPS() { return _acceptTPS; }
+	inline int GetDisconnectTPS() { return _disconnectTPS; }
 
 	// Called in Network Library
 private:
@@ -110,13 +108,14 @@ public:
 	ValidFlag _releaseFlag;
 
 private:
-	long _acceptTotal = 0;
-	long _disconnectTotal = 0;
+	int _acceptTotal = 0;
+	int _disconnectTotal = 0;
+	int _TryReleaseTotal = 0;
 
-	long _acceptTPS = 0;
-	long _disconnectTPS = 0;
-	long _recvMsgTPS = 0;
-	long _sendMsgTPS = 0;
+	int _acceptTPS = 0;
+	int _disconnectTPS = 0;
+	int _recvMsgTPS = 0;
+	int _sendMsgTPS = 0;
 
 	volatile long _acceptCnt = 0;
 	volatile long _disconnectCnt = 0;

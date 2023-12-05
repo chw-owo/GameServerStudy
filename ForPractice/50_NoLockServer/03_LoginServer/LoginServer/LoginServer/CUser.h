@@ -1,4 +1,7 @@
 #pragma once
+#include <synchapi.h>
+#pragma comment(lib, "Synchronization.lib")
+
 class CUser
 {
 public:
@@ -6,6 +9,7 @@ public:
 
 	CUser(__int64 sessionID)
 	{
+		InitializeSRWLock(&_lock);
 		_sessionID = sessionID;
 		_accountNo = -1;
 		_sessionKey = new char[dfSESSIONKEY_LEN];
@@ -25,5 +29,5 @@ public:
 	__int64 _accountNo = -1;
 	char* _sessionKey;
 	DWORD _lastRecvTime = 0;
-
+	SRWLOCK _lock;
 };

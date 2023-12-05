@@ -10,8 +10,6 @@
 #include <map>
 #include <unordered_map>
 #include <unordered_set>
-#include <synchapi.h>
-#pragma comment(lib, "Synchronization.lib")
 using namespace std;
 
 class CMonitorServer;
@@ -68,7 +66,8 @@ private:
 	HANDLE _timeoutThread;
 
 private:
-	SRWLOCK _lock;
+	SRWLOCK _setLock;
+	SRWLOCK _mapLock;
 	unordered_map<unsigned __int64, CUser*> _usersMap;
 	unordered_set<__int64> _accountNos;
 	CTlsPool<CUser>* _pUserPool;
