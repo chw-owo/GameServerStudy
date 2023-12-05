@@ -1,17 +1,17 @@
 #include "CLoginServer.h"
 #include <tchar.h>
 #include <wchar.h>
+#include <string>
+#include <iostream>
 
 // #define _TIMEOUT
 
 bool CLoginServer::Initialize()
 {
 	// Set Data
-	InitializeSRWLock(&_lock);
-	_pUserPool = new CTlsPool<CUser>(dfUSER_MAX, true);
-	
-	// Set Mysql Connect
 	_tlsKey = TlsAlloc();
+	InitializeSRWLock(&_userLock);
+	_pUserPool = new CTlsPool<CUser>(dfUSER_MAX, true);
 
 	// Set IP Address
 	_WanIPs = new WCHAR[dfIP_LEN];
@@ -60,6 +60,7 @@ bool CLoginServer::Initialize()
 	}
 #endif
 
+	_redis = CRedis::GetInstance()->_redis;
 	return true;
 }
 
@@ -111,7 +112,7 @@ bool CLoginServer::OnConnectRequest(WCHAR addr[dfADDRESS_LEN])
 
 void CLoginServer::OnAcceptClient(unsigned __int64 sessionID, WCHAR addr[dfADDRESS_LEN])
 {
-	AcquireSRWLockExclusive(&_lock);
+	AcquireSRWLockExclusive(&_userLock);
 
 	WCHAR* IP = nullptr;
 	WCHAR* next = nullptr;
@@ -125,19 +126,19 @@ void CLoginServer::OnAcceptClient(unsigned __int64 sessionID, WCHAR addr[dfADDRE
 		::wprintf(L"%s[%d] Already Exist SessionID: %lld\n", _T(__FUNCTION__), __LINE__, sessionID);
 	}
 
-	ReleaseSRWLockExclusive(&_lock);
+	ReleaseSRWLockExclusive(&_userLock);
 }
 
 void CLoginServer::OnReleaseClient(unsigned __int64 sessionID)
 {
-	AcquireSRWLockExclusive(&_lock);
+	AcquireSRWLockExclusive(&_userLock);
 
 	unordered_map<unsigned __int64, CUser*>::iterator mapIter = _usersMap.find(sessionID);
 	if (mapIter == _usersMap.end())
 	{
 		LOG(L"FightGame", CSystemLog::ERROR_LEVEL, L"%s[%d]: No Session %lld\n", _T(__FUNCTION__), __LINE__, sessionID);
 		::wprintf(L"%s[%d]: No Session %lld\n", _T(__FUNCTION__), __LINE__, sessionID);
-		ReleaseSRWLockExclusive(&_lock);
+		ReleaseSRWLockExclusive(&_userLock);
 		return;
 	}
 	CUser* user = mapIter->second;
@@ -148,31 +149,31 @@ void CLoginServer::OnReleaseClient(unsigned __int64 sessionID)
 	unordered_set<__int64>::iterator setIter = _accountNos.find(accountNo);
 	if (setIter == _accountNos.end())
 	{
-		ReleaseSRWLockExclusive(&_lock);
+		ReleaseSRWLockExclusive(&_userLock);
 		return;
 	}
 	_accountNos.erase(setIter);
 
-	ReleaseSRWLockExclusive(&_lock);
+	ReleaseSRWLockExclusive(&_userLock);
 }
 
 void CLoginServer::OnRecv(unsigned __int64 sessionID, CPacket* packet)
 {
 	try
 	{
-		AcquireSRWLockShared(&_lock);
+		AcquireSRWLockShared(&_userLock);
 		unordered_map<unsigned __int64, CUser*>::iterator mapIter = _usersMap.find(sessionID);
 		if (mapIter == _usersMap.end())
 		{
 			LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d]: No Session %lld\n", _T(__FUNCTION__), __LINE__, sessionID);
 			::wprintf(L"%s[%d]: No Session %lld\n", _T(__FUNCTION__), __LINE__, sessionID);
 			CPacket::Free(packet);
-			ReleaseSRWLockShared(&_lock);
+			ReleaseSRWLockShared(&_userLock);
 			return;
 		}
 
 		CUser* user = mapIter->second;
-		ReleaseSRWLockShared(&_lock);
+		ReleaseSRWLockShared(&_userLock);
 
 		user->_lastRecvTime = timeGetTime();
 		short msgType = -1;
@@ -215,7 +216,7 @@ unsigned int __stdcall CLoginServer::TimeoutThread(void* arg)
 
 	while (pServer->_serverAlive)
 	{
-		AcquireSRWLockExclusive(&pServer->_lock);
+		AcquireSRWLockExclusive(&pServer->_userLock);
 
 		DWORD time = timeGetTime();
 		unordered_map<unsigned __int64, CUser*>::iterator it = pServer->_usersMap.begin();
@@ -225,7 +226,7 @@ unsigned int __stdcall CLoginServer::TimeoutThread(void* arg)
 				pServer->Disconnect(it->first);
 		}
 
-		ReleaseSRWLockExclusive(&pServer->_lock);
+		ReleaseSRWLockExclusive(&pServer->_userLock);
 
 		Sleep(dfTIMEOUT);
 	}
@@ -247,13 +248,16 @@ void CLoginServer::ReqSendUnicast(CPacket* packet, unsigned __int64 sessionID)
 
 bool CLoginServer::InitDBConnect(long& idx)
 {
-	idx = InterlockedIncrement(&_connCnt);
+	AcquireSRWLockExclusive(&_connLock);
+
+	idx = _connCnt++;
 	bool ret = TlsSetValue(_tlsKey, (LPVOID)idx);
 	if (ret == 0)
 	{
 		int err = GetLastError();
 		LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Can not Set Tls: %d\n", err);
 		::wprintf(L"Can not Set Tls: %d\n", err);
+		ReleaseSRWLockExclusive(&_connLock);
 		return false;
 	}
 
@@ -263,19 +267,21 @@ bool CLoginServer::InitDBConnect(long& idx)
 	if (_connection == NULL)
 	{
 		LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Mysql connection error : %s", mysql_error(&_conn[idx]));
-		::printf("Mysql connection error : %s", mysql_error(&_conn[idx]));
+		::printf("Mysql connection error : %s", mysql_error(&_conn[idx]));	
+		ReleaseSRWLockExclusive(&_connLock);
 		return false;
 	}
 
+	ReleaseSRWLockExclusive(&_connLock);
 	return true;
 }
 
-void CLoginServer::GetDataFromMysql(CUser* user)
+bool CLoginServer::GetDataFromMysql(CUser* user)
 {
 	long idx = (long)TlsGetValue(_tlsKey);
 	if (idx == 0) 
 	{
-		if (!InitDBConnect(idx)) return;
+		if (!InitDBConnect(idx)) return false;
 	}
 
 	MYSQL conn = _conn[idx];
@@ -293,7 +299,7 @@ void CLoginServer::GetDataFromMysql(CUser* user)
 	if (query_stat != 0)
 	{
 		printf("Mysql query error : %s (%d)\n", mysql_error(&conn), ret);
-		return;
+		return false;
 	}
 
 	sql_result = mysql_store_result(connection);
@@ -304,12 +310,16 @@ void CLoginServer::GetDataFromMysql(CUser* user)
 
 	SetUserData(user); // Now, Not Use DB Data
 	mysql_free_result(sql_result);
+	return true;
 }
 
-void CLoginServer::SetDataToRedis()
+void CLoginServer::SetDataToRedis(CUser* user)
 {
-	// TO-DO
-	// Sleep(50);
+	__int64 accountNo = user->_accountNo;
+	string key = to_string(user->_accountNo);
+	//_redis->setex(key, dfREDIS_TIMEOUT, user->_sessionKey);
+	_redis->set(key, user->_sessionKey);
+	_redis->sync_commit();
 }
 
 void CLoginServer::GetIPforClient(CUser* user, WCHAR* gameIP, WCHAR* chatIP)
@@ -367,9 +377,9 @@ BYTE CLoginServer::CheckAccountNoValid(__int64 accountNo)
 	if (accountNo < 0 || accountNo > 95000)
 		return dfLOGIN_STATUS_ACCOUNT_MISS;
 
-	AcquireSRWLockExclusive(&_lock);
+	AcquireSRWLockExclusive(&_userLock);
 	auto ret = _accountNos.insert(accountNo);
-	ReleaseSRWLockExclusive(&_lock);
+	ReleaseSRWLockExclusive(&_userLock);
 	if (ret.second == false)
 		return dfLOGIN_STATUS_GAME;
 
@@ -394,8 +404,15 @@ inline void CLoginServer::HandleCSPacket_REQ_LOGIN(CPacket* CSpacket, CUser* use
 	memcpy_s(user->_sessionKey, dfSESSIONKEY_LEN, sessionKey, dfSESSIONKEY_LEN);
 	delete[] sessionKey;
 	
-	GetDataFromMysql(user);
-	SetDataToRedis();
+	if(!GetDataFromMysql(user)) 
+	{
+		Disconnect(user->_sessionID);
+		LOG(L"FightGame", CSystemLog::ERROR_LEVEL, L"%s[%d] Fail to Get Data from DB: %lld\n", _T(__FUNCTION__), __LINE__,accountNo);
+		::wprintf(L"%s[%d] Fail to Get Data from DB: %lld\n", _T(__FUNCTION__), __LINE__, accountNo);
+		return;
+	}
+
+	SetDataToRedis(user);
 	WCHAR* gameIP = new WCHAR[dfIP_LEN];
 	WCHAR* chatIP = new WCHAR[dfIP_LEN];
 	GetIPforClient(user, gameIP, chatIP);

@@ -4,6 +4,7 @@
 #include "CTlsPool.h"
 #include "CLockFreeQueue.h"
 
+#include "CRedis.h"
 #include "CSector.h"
 #include "CPlayer.h"
 #include "CJob.h"
@@ -11,11 +12,10 @@
 #include "CommonProtocol.h"
 #include "ErrorCode.h"
 
-#include <unordered_map>
-using namespace std;
-
 #include <synchapi.h>
+#include <unordered_map>
 #pragma comment(lib, "Synchronization.lib")
+using namespace std;
 
 class CMonitorServer;
 class CChattingServer : public CNetServer
@@ -98,5 +98,8 @@ private: // For Monitor
 	long _updateThreadWakeTPS = 0;
 	long _handlePacketTPS = 0;
 	long _jobQSize = 0;
+
+private:
+	cpp_redis::client* _redis;
 };
 

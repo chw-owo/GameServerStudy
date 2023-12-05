@@ -2,6 +2,8 @@
 #include "CSystemLog.h"
 #include <tchar.h>
 #include <wchar.h>
+#include <string>
+#include <iostream>
 
 // #define _TIMEOUT
 
@@ -74,6 +76,7 @@ bool CChattingServer::Initialize()
 	}
 #endif
 
+	_redis = CRedis::GetInstance()->_redis;
 	return true;
 }
 
@@ -464,6 +467,25 @@ inline void CChattingServer::HandleCSPacket_REQ_LOGIN(CPacket* CSpacket, CPlayer
 		return;
 	}
 
+	BYTE status = 0;
+	string key = to_string(accountNo);
+	_redis->get(key, [accountNo, &status, sessionKey](cpp_redis::reply& reply) {
+		
+		if (memcmp(sessionKey, reply.as_string().c_str(), dfSESSIONKEY_LEN) == 0)
+			status = 1;
+	});
+	_redis->sync_commit();
+
+	/*
+	if (status == 1)
+	{
+		vector<string> vec;
+		vec.push_back(key);
+		_redis->del(vec);
+		_redis->commit();
+	}
+	*/
+
 	player->_accountNo = accountNo;
 	memcpy_s(player->_ID, dfID_LEN * sizeof(wchar_t), ID, dfID_LEN * sizeof(wchar_t));
 	memcpy_s(player->_nickname, dfNICKNAME_LEN * sizeof(wchar_t), nickname, dfNICKNAME_LEN * sizeof(wchar_t));
@@ -471,7 +493,6 @@ inline void CChattingServer::HandleCSPacket_REQ_LOGIN(CPacket* CSpacket, CPlayer
 	delete[] ID;
 	delete[] nickname;
 	delete[] sessionKey;
-	BYTE status = 1;
 
 	CPacket* SCpacket = CPacket::Alloc();
 	SCpacket->Clear();

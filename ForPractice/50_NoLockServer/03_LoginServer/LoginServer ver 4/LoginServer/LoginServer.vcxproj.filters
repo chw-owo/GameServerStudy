@@ -50,6 +50,9 @@
     <Filter Include="Server\DebugTool">
       <UniqueIdentifier>{64c681ae-3600-4bf0-a899-e5eabeb395d2}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Server\Redis">
+      <UniqueIdentifier>{47df89b4-75cc-4353-bc66-d6429cf34d3c}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CPacket.cpp">
@@ -143,6 +146,9 @@
     </ClInclude>
     <ClInclude Include="CommonProtocol.h">
       <Filter>Server</Filter>
+    </ClInclude>
+    <ClInclude Include="CRedis.h">
+      <Filter>Server\Redis</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -12,11 +12,13 @@
 
 // Use in Login Server
 #define dfUSER_MAX				20000
+#define dfACCOUNTNO_LEN			20
 #define dfID_LEN				20
 #define dfNICKNAME_LEN			20
 #define dfSESSIONKEY_LEN		64
 #define dfIP_LEN				16
 #define dfQUERY_MAX				50
+#define dfREDIS_TIMEOUT			10
 
 // Use in Chat Server
 #define dfPLAYER_MAX			20000

@@ -12,7 +12,7 @@
 #include <windows.h>
 #pragma comment(lib, "winmm.lib") 
 
-#define _MONITOR
+// #define _MONITOR
 
 CCrashDump g_Dump;
 CLoginServer g_LoginServer;
@@ -25,7 +25,7 @@ int wmain(int argc, wchar_t* argv[])
 
     SYSLOG_DIRECTORY(L"SystemLog");
     SYSLOG_LEVEL(CSystemLog::ERROR_LEVEL);
-    LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Main Thread Start\n");
+    LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Main Thread Start\n"); 
 
     timeBeginPeriod(1);
     if (!g_LoginServer.Initialize()) return 0;

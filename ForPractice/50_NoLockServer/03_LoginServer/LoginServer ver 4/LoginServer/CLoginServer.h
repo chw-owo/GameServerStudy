@@ -3,16 +3,17 @@
 #include "CommonProtocol.h"
 #include "ErrorCode.h"
 
+#include "CRedis.h"
 #include "CNetServer.h"
 #include "CTlsPool.h"
 #include "CUser.h"
 
 #include <map>
+#include <synchapi.h>
 #include <unordered_map>
 #include <unordered_set>
-#include <synchapi.h>
-
 #pragma comment(lib, "Synchronization.lib")
+using namespace std;
 
 #ifndef _WINSOCKAPI_
 #define _WINSOCKAPI_
@@ -58,9 +59,9 @@ private:
 private:
 	BYTE CheckAccountNoValid(__int64 accountNo);
 	void GetIPforClient(CUser* user, WCHAR* gameIP, WCHAR* chatIP);
-	void GetDataFromMysql(CUser* user);
+	bool GetDataFromMysql(CUser* user);
+	void SetDataToRedis(CUser* user);
 	void SetUserData(CUser* user);
-	void SetDataToRedis();
 
 private:
 	inline void HandleCSPacket_REQ_LOGIN(CPacket* CSpacket, CUser* user);
@@ -74,7 +75,7 @@ private:
 	HANDLE _timeoutThread;
 
 private:
-	SRWLOCK _lock;
+	SRWLOCK _userLock;
 	unordered_map<unsigned __int64, CUser*> _usersMap;
 	unordered_set<__int64> _accountNos;
 	CTlsPool<CUser>* _pUserPool;
@@ -94,8 +95,10 @@ private:
 private:
 	long _tlsKey;
 	long _connCnt = 0;
+	SRWLOCK _connLock;
 	MYSQL _conn[dfTHREAD_MAX] = { 0, };
 	MYSQL* _connection[dfTHREAD_MAX] = { 0, };
+	cpp_redis::client* _redis;
 
 private:
 	volatile long _handlePacketTPS = 0;
