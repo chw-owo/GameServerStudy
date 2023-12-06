@@ -12,7 +12,7 @@
 #include <windows.h>
 #pragma comment(lib, "winmm.lib") 
 
-// #define _MONITOR
+#define _MONITOR
 
 CCrashDump g_Dump;
 CLoginServer g_LoginServer;

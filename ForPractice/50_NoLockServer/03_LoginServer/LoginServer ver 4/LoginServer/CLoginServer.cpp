@@ -259,7 +259,7 @@ bool CLoginServer::InitDBConnect(long& idx)
 	idx = _connCnt++;
 	bool ret = TlsSetValue(_tlsKey, (LPVOID)idx);
 	if (ret == 0)
-	{
+	{	
 		int err = GetLastError();
 		LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Can not Set Tls: %d\n", err);
 		::wprintf(L"Can not Set Tls: %d\n", err);
