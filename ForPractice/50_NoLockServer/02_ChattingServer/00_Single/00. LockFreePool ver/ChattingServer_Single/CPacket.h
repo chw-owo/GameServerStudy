@@ -30,10 +30,6 @@ public:
 	static CPacket* Alloc()
 	{
 		CPacket* packet = _pool.Alloc();
-
-		int* a = (int*)malloc(sizeof(int));
-		int* b = new int;
-
 		return packet;
 	}
 

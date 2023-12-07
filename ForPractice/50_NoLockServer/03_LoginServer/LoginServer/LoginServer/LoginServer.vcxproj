@@ -131,6 +131,7 @@
   <ItemGroup>
     <ClCompile Include="CChattingServer.cpp" />
     <ClCompile Include="CLoginServer.cpp" />
+    <ClCompile Include="CMonitorServer.cpp" />
     <ClCompile Include="CNetServer.cpp" />
     <ClCompile Include="CPacket.cpp" />
     <ClCompile Include="CProfiler.cpp" />
@@ -145,6 +146,7 @@
     <ClInclude Include="CLockFreeQueue.h" />
     <ClInclude Include="CLockFreeStack.h" />
     <ClInclude Include="CLoginServer.h" />
+    <ClInclude Include="CMonitorServer.h" />
     <ClInclude Include="CNetServer.h" />
     <ClInclude Include="CObjectPool.h" />
     <ClInclude Include="CommonProtocol.h" />

@@ -17,8 +17,11 @@ using namespace std;
 #include <synchapi.h>
 #pragma comment(lib, "Synchronization.lib")
 
+class CMonitorServer;
 class CChattingServer : public CNetServer
 {
+	friend CMonitorServer;
+
 public:
 	CChattingServer() {};
 	~CChattingServer() { Terminate(); };
@@ -49,7 +52,6 @@ private:
 
 private:
 	static unsigned int WINAPI UpdateThread(void* arg);
-	static unsigned int WINAPI MonitorThread(void* arg);
 	static unsigned int WINAPI TimeoutThread(void* arg);
 
 private:
@@ -75,7 +77,6 @@ private:
 private:
 	bool _serverAlive = true;
 	HANDLE _updateThread;
-	HANDLE _monitorThread;
 	HANDLE _timeoutThread;
 
 private:

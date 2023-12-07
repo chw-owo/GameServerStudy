@@ -13,8 +13,11 @@
 #pragma comment(lib, "Synchronization.lib")
 using namespace std;
 
+class CMonitorServer;
 class CLoginServer : public CNetServer
 {
+	friend CMonitorServer;
+
 public:
 	CLoginServer() {}
 	~CLoginServer() { Terminate(); }
@@ -38,7 +41,6 @@ private:
 	void OnSend(unsigned __int64 sessionID, int sendSize);
 
 private:
-	static unsigned int WINAPI MonitorThread(void* arg);
 	static unsigned int WINAPI TimeoutThread(void* arg);
 
 private:
@@ -62,7 +64,6 @@ private:
 
 private:
 	bool _serverAlive = true;
-	HANDLE _monitorThread;
 	HANDLE _timeoutThread;
 
 private:

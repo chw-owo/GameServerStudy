@@ -114,20 +114,19 @@ bool CLoginServer::OnConnectRequest(WCHAR addr[dfADDRESS_LEN])
 
 void CLoginServer::OnAcceptClient(unsigned __int64 sessionID, WCHAR addr[dfADDRESS_LEN])
 {
-	AcquireSRWLockExclusive(&_mapLock);
-
 	WCHAR* IP = nullptr;
 	WCHAR* next = nullptr;
 	IP = wcstok_s(addr, L":", &next);
-
 	CUser* user = _pUserPool->Alloc(sessionID, IP);
+
+	AcquireSRWLockExclusive(&_mapLock);
 	auto ret = _usersMap.insert(make_pair(sessionID, user));
 	if (ret.second == false)
 	{
+		_pUserPool->Free(user);
 		LOG(L"FightGame", CSystemLog::ERROR_LEVEL, L"%s[%d] Already Exist SessionID: %lld\n", _T(__FUNCTION__), __LINE__, sessionID);
 		::wprintf(L"%s[%d] Already Exist SessionID: %lld\n", _T(__FUNCTION__), __LINE__, sessionID);
 	}
-
 	ReleaseSRWLockExclusive(&_mapLock);
 }
 
@@ -146,20 +145,19 @@ void CLoginServer::OnReleaseClient(unsigned __int64 sessionID)
 	CUser* user = mapIter->second;
 	_usersMap.erase(mapIter);
 
-	AcquireSRWLockShared(&user->_lock);
+	AcquireSRWLockExclusive(&user->_lock);
 	ReleaseSRWLockExclusive(&_mapLock);
 	__int64 accountNo = user->_accountNo;
-	ReleaseSRWLockShared(&user->_lock);
+	ReleaseSRWLockExclusive(&user->_lock);
+
 	_pUserPool->Free(user);
 
 	AcquireSRWLockExclusive(&_setLock);
 	unordered_set<__int64>::iterator setIter = _accountNos.find(accountNo);
-	if (setIter == _accountNos.end())
+	if (setIter != _accountNos.end())
 	{
-		ReleaseSRWLockExclusive(&_setLock);
-		return;
+		_accountNos.erase(setIter);
 	}
-	_accountNos.erase(setIter);
 	ReleaseSRWLockExclusive(&_setLock);
 }
 
@@ -401,13 +399,6 @@ inline void CLoginServer::HandleCSPacket_REQ_LOGIN(CPacket* CSpacket, CUser* use
 	GetCSPacket_REQ_LOGIN(CSpacket, accountNo, sessionKey);
 
 	BYTE status = CheckAccountNoValid(accountNo);
-	if (status != 1)
-	{
-		Disconnect(user->_sessionID);
-		LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d] Account No is Wrong: %lld\n", _T(__FUNCTION__), __LINE__,accountNo);
-		::wprintf(L"%s[%d] Account No is Wrong: %lld\n", _T(__FUNCTION__), __LINE__, accountNo);
-		return;
-	}
 	user->_accountNo = accountNo;
 	memcpy_s(user->_sessionKey, dfSESSIONKEY_LEN, sessionKey, dfSESSIONKEY_LEN);
 	delete[] sessionKey;

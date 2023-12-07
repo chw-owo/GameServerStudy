@@ -44,6 +44,9 @@
     <Filter Include="ChattingServer\Utils">
       <UniqueIdentifier>{77fa0e7e-109b-4cb0-99d8-b752b5216c20}</UniqueIdentifier>
     </Filter>
+    <Filter Include="MonitorServer">
+      <UniqueIdentifier>{57e8387a-88c9-4558-a4fb-33e2ba4585da}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CPacket.cpp">
@@ -69,6 +72,9 @@
     </ClCompile>
     <ClCompile Include="Main.cpp">
       <Filter>Common</Filter>
+    </ClCompile>
+    <ClCompile Include="CMonitorServer.cpp">
+      <Filter>MonitorServer</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -131,6 +137,9 @@
     </ClInclude>
     <ClInclude Include="CommonProtocol.h">
       <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="CMonitorServer.h">
+      <Filter>MonitorServer</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

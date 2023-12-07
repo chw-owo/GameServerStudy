@@ -438,14 +438,14 @@ unsigned int __stdcall CLanServer::NetworkThread(void* arg)
 	PRO_SET(pSTLSProfiler, GetCurrentThreadId());
 
 	CLanServer* pLanServer = (CLanServer*)arg;
-
 	int threadID = GetCurrentThreadId();
+	NetworkOverlapped* pNetOvl = new NetworkOverlapped;
 
 	for (;;)
 	{
 		__int64 sessionID;
 		DWORD cbTransferred;
-		NetworkOverlapped* pNetOvl = new NetworkOverlapped;
+
 		int GQCSRet = GetQueuedCompletionStatus(pLanServer->_hNetworkCP,
 			&cbTransferred, (PULONG_PTR)&sessionID, (LPOVERLAPPED*)&pNetOvl, INFINITE);
 
@@ -529,6 +529,7 @@ unsigned int __stdcall CLanServer::NetworkThread(void* arg)
 		PRO_END(L"LS: NetworkThread");
 	}
 
+	delete pNetOvl;
 	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL,
 		L"Worker Thread Terminate (thread: %d)\n", GetCurrentThreadId());
 	::wprintf(L"Worker Thread Terminate (thread: %d)\n", GetCurrentThreadId());
