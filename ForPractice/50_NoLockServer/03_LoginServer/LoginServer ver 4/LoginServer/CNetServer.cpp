@@ -638,7 +638,6 @@ void CNetServer::IncrementUseCount(CSession* pSession, int line)
 
 void CNetServer::DecrementUseCount(CSession* pSession, int line)
 {
-	// TO-DO
 	short ret = InterlockedDecrement16(&pSession->_validFlag._useCount);
 	if (ret == 0)
 	{

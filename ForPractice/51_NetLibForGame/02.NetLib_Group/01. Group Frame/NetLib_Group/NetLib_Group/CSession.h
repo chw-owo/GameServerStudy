@@ -1,4 +1,3 @@
-
 #pragma once
 #include "Config.h"
 #include "CPacket.h"
@@ -8,11 +7,13 @@
 #include <ws2tcpip.h>
 #pragma comment(lib, "ws2_32.lib")
 
+class CGroup;
 enum class NET_TYPE
 {
 	SEND = 0,
 	RECV,
-	RELEASE
+	RELEASE,
+	ENTER
 };
 
 struct NetworkOverlapped
@@ -40,6 +41,7 @@ public:
 		_recvOvl._type = NET_TYPE::RECV;
 		_sendOvl._type = NET_TYPE::SEND;
 		_releaseOvl._type = NET_TYPE::RELEASE;
+		_enterOvl._type = NET_TYPE::ENTER;
 	}
 
 public:
@@ -50,10 +52,7 @@ public:
 		InterlockedExchange(&_sendFlag, 0);
 		InterlockedExchange16(&_validFlag._releaseFlag, 0);
 
-		// ::printf("%d: Session Initialize (%016llx - %016llx)\n", GetCurrentThreadId(), _ID, ID);
 		_ID = ID;
-		// LeaveLog(100, ID, _validFlag._useCount, _validFlag._releaseFlag);
-
 		_disconnect = false;
 		_sock = sock;
 		_addr = addr;
@@ -65,7 +64,6 @@ public:
 
 	void Terminate()
 	{
-		// ::printf("%d: Session Terminate (%016llx - %016llx)\n", GetCurrentThreadId(), _ID, (__int64)-1);
 		_ID = MAXULONGLONG;
 		_disconnect = true;
 		_sock = INVALID_SOCKET;
@@ -102,32 +100,11 @@ public:
 	NetworkOverlapped _recvOvl;
 	NetworkOverlapped _sendOvl;
 	NetworkOverlapped _releaseOvl;
+	NetworkOverlapped _enterOvl;
 
 	volatile ValidFlag _validFlag;
 
-	/*
-public:
-#define DEBUG_MAX 1000
-
-	struct DebugData
-	{
-		int _line = 0;
-		__int64 _reqID = 0;
-		short _useCount = 0;
-		short _releaseFlag = 0;
-		int _call = 0;
-	};
-
-	volatile long g_idx = -1;
-	DebugData debugs[DEBUG_MAX];
-	void LeaveLog(int line, __int64 reqID, short useCount, short releaseFlag, int call = 0)
-	{
-		long idx = InterlockedIncrement(&g_idx);
-		debugs[idx % DEBUG_MAX]._line = line;
-		debugs[idx % DEBUG_MAX]._reqID = reqID;
-		debugs[idx % DEBUG_MAX]._useCount = useCount;
-		debugs[idx % DEBUG_MAX]._releaseFlag = releaseFlag;
-		debugs[idx % DEBUG_MAX]._call = call;
-	}
-	*/
+public: // For Group
+	CGroup* _group = nullptr;
+	CLockFreeQueue<CPacket*> _deferedPacket;
 };

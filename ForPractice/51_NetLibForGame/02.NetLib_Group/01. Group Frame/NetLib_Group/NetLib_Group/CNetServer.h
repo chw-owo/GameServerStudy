@@ -8,8 +8,12 @@
 #include <process.h>
 #pragma comment(lib, "ws2_32.lib")
 
+class CGroup;
 class CNetServer
 {
+	friend CGroup;
+
+	// Called in CNetServer's Child
 protected:
 	CNetServer();
 	~CNetServer() {};
@@ -21,6 +25,8 @@ protected:
 protected:
 	bool Disconnect(unsigned __int64 sessionID);
 	bool SendPacket(unsigned __int64 sessionID, CPacket* packet, bool disconnect = false);
+	bool MoveGroup(unsigned __int64 sessionID, CGroup* pGroup);
+	bool DeferPacket(unsigned __int64 sessionID, CPacket* packet);
 
 protected:
 	virtual void OnInitialize() = 0;
@@ -28,10 +34,12 @@ protected:
 	virtual void OnThreadTerminate(wchar_t* threadName) = 0;
 
 protected:
-	virtual bool OnConnectRequest(WCHAR addr[dfADDRESS_LEN]) = 0;
-	virtual void OnAcceptClient(unsigned __int64 sessionID, WCHAR addr[dfADDRESS_LEN]) = 0;
+	virtual void OnEnterGroup(unsigned __int64 sessionID) = 0;
+	virtual void OnLeaveGroup(unsigned __int64 sessionID) = 0;
 
 protected:
+	virtual bool OnConnectRequest(WCHAR addr[dfADDRESS_LEN]) = 0;
+	virtual void OnAcceptClient(unsigned __int64 sessionID, WCHAR addr[dfADDRESS_LEN]) = 0;
 	virtual void OnReleaseClient(unsigned __int64 sessionID) = 0;
 	virtual void OnRecv(unsigned __int64 sessionID, CPacket* packet) = 0;
 	virtual void OnSend(unsigned __int64 sessionID, int sendSize) = 0;
@@ -64,13 +72,17 @@ protected:
 	inline long GetAcceptTPS() { return _acceptTPS; }
 	inline long GetDisconnectTPS() { return _disconnectTPS; }
 
-	// Called in Network Library
+	// Called in CNetServer
 private:
 	static unsigned int WINAPI AcceptThread(void* arg);
 	static unsigned int WINAPI NetworkThread(void* arg);
 
 private:
-	void HandleRelease(unsigned __int64 sessionID);
+	inline void HandleRelease(unsigned __int64 sessionID);
+	inline void HandleEnter(unsigned __int64 sessionID);
+	inline void HandleIOCP(unsigned __int64 sessionID, int GQCSRet, DWORD cbTransferred, NetworkOverlapped* pNetOvl);
+
+private:
 	bool HandleRecvCP(CSession* pSession, int recvBytes);
 	bool HandleSendCP(CSession* pSession, int sendBytes);
 	bool RecvPost(CSession* pSession);
