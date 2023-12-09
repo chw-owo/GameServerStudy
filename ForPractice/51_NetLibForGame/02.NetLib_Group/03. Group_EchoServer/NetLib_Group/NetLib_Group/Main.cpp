@@ -26,7 +26,7 @@ int wmain(int argc, wchar_t* argv[])
 
     for (;;)
     {
-        if (GetAsyncKeyState(VK_SPACE)) g_Server.Terminate();
+        // if (GetAsyncKeyState(VK_SPACE)) g_Server.Terminate();
     }
     timeEndPeriod(1);
 

@@ -6,6 +6,12 @@
 #include <stdio.h>
 #include <tchar.h>
 
+#ifndef _WINSOCKAPI_
+#define _WINSOCKAPI_
+#endif
+
+#include <windows.h>
+
 // 17 bit for Idx (MAX 131072)
 // 47 bit for Id (MAX 140737488355328)
 
@@ -486,8 +492,6 @@ void CNetServer::HandleRecvCP(CSession* pSession, int recvBytes)
 
 		if (header._code != dfPACKET_CODE)
 		{
-			__debugbreak();
-
 			wchar_t stErrMsg[dfMSG_MAX];
 			Disconnect(pSession->GetID());
 			swprintf_s(stErrMsg, dfMSG_MAX, L"%s[%d]: Wrong Packet Code", _T(__FUNCTION__), __LINE__);
