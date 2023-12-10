@@ -47,7 +47,6 @@ protected:
 	virtual void OnLeaveGroup(unsigned __int64 sessionID) = 0;
 
 protected:
-	virtual void OnReleaseClient(unsigned __int64 sessionID) = 0;
 	virtual void OnRecv(unsigned __int64 sessionID, CPacket* packet) = 0;
 	virtual void OnSend(unsigned __int64 sessionID, int sendSize) = 0;
 	virtual void OnError(int errorCode, wchar_t* errorMsg) = 0;
@@ -73,5 +72,39 @@ private:
 private:
 	vector<unsigned __int64> _sessions;
 	CLockFreeQueue<unsigned __int64> _enterSessions;
+
+	// Monitor
+private:
+	int _sendTPS = 0;
+	int _recvTPS = 0;
+	int _enterTPS = 0;
+	int _leaveTPS = 0;
+
+	long _sendCnt = 0;
+	long _recvCnt = 0;
+	long _enterCnt = 0;
+	long _leaveCnt = 0;
+
+public:
+	void UpdateMonitorData()
+	{
+		_sendTPS = _sendCnt;
+		_recvTPS = _recvCnt;
+		_enterTPS = _enterCnt;
+		_leaveTPS = _leaveCnt;
+
+		_sendCnt = 0;
+		_recvCnt = 0;
+		_enterCnt = 0;
+		_leaveCnt = 0;
+	}
+
+	int GetSendTPS() { return _sendTPS; }
+	int GetRecvTPS() { return _recvTPS; }
+	int GetEnterTPS() { return _enterTPS; }
+	int GetLeaveTPS() { return _leaveTPS; }
+
+public:
+	__int64 GetSessionCount() { return _sessions.size(); }
 };
 

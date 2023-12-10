@@ -1,5 +1,6 @@
 #include "CGroup.h"
 #include "CNetServer.h"
+#include <tchar.h>
 
 bool CGroup::Disconnect(unsigned __int64 sessionID)
 {
@@ -54,53 +55,44 @@ void CGroup::NetworkUpdate()
 	vector<unsigned __int64>::iterator it = _sessions.begin();
 	for (; it != _sessions.end();)
 	{
-		// TO-DO: 아 Release Flag에서 걸려서 Release가 안되겠구나!!!!!!
-
-		CSession* pSession = _pNet->AcquireSessionUsage((*it), __LINE__);
-		if (pSession == nullptr) 
+		unsigned __int64 sessionID = *it;
+		CSession* pSession = _pNet->AcquireSessionUsage(sessionID);
+		if (pSession == nullptr)
 		{
-			it++;
+			OnLeaveGroup(sessionID);
+			it = _sessions.erase(it);
+			_leaveCnt++;
 			continue;
 		}
-
+		
 		EnterCriticalSection(&pSession->_groupLock);
-
 		if (pSession->_pGroup != this)
 		{
-			OnLeaveGroup(pSession->GetID());
+			OnLeaveGroup(sessionID);
 			it = _sessions.erase(it);
-		}
-		else if (pSession->_validFlag._releaseFlag == 1)
-		{
-			OnReleaseClient(pSession->GetID());
-			PostQueuedCompletionStatus(_pNet->_hNetworkCP, 1, (ULONG_PTR)pSession->GetID(), (LPOVERLAPPED)&pSession->_releaseOvl);
-			it = _sessions.erase(it);
+			_leaveCnt++;
 		}
 		else
 		{
 			while (pSession->_OnRecvQ.GetUseSize() > 0)
 			{
-				if (pSession->_pGroup != this)
-					break;
-
+				if (pSession->_pGroup != this) break;
 				CPacket* packet = pSession->_OnRecvQ.Dequeue();
-				OnRecv(pSession->GetID(), packet);
+				OnRecv(sessionID, packet);
 				CPacket::Free(packet);
 			}
 
 			while (pSession->_OnSendQ.GetUseSize() > 0)
 			{
-				if (pSession->_pGroup != this)
-					break;
-
-				OnSend(pSession->GetID(), pSession->_OnSendQ.Dequeue());
+				if (pSession->_pGroup != this) break;
+				OnSend(sessionID, pSession->_OnSendQ.Dequeue());
 			}
 
 			it++;
 		}
 
 		LeaveCriticalSection(&pSession->_groupLock);
-		_pNet->ReleaseSessionUsage(pSession, __LINE__);
+		_pNet->ReleaseSessionUsage(pSession);
 	}
 }
 
@@ -111,6 +103,7 @@ void CGroup::AcceptEnterSessions()
 		unsigned __int64 sessionID = _enterSessions.Dequeue();
 		_sessions.push_back(sessionID);
 		OnEnterGroup(sessionID);
+		_enterCnt++;
 	}
 }
 
@@ -120,5 +113,6 @@ void CGroup::RemoveAllSessions()
 	for (; it != _sessions.end(); it++)
 	{
 		MoveGroup((*it), nullptr);
+		_leaveCnt++;
 	}
 }

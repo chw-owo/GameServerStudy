@@ -30,5 +30,7 @@ private:
 public:
 	CEchoGroup* _pEchoGroup;
 	CLoginGroup* _pLoginGroup;
+	HANDLE _MonitorThread;
+	static unsigned int WINAPI MonitorThread(void* arg);
 };
 

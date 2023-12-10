@@ -2,6 +2,7 @@
 class CEchoUser
 {
 public:
+	CEchoUser() {};
 	CEchoUser(unsigned __int64 sessionID) : _sessionID(sessionID) {};
 
 public:

@@ -6,6 +6,7 @@ CLoginGroup::CLoginGroup(CServer* pNet)
 {
 	_pEchoGroup = pNet->_pEchoGroup;
 	Setting((CNetServer*)pNet, 1);
+	_userPool = new CTlsPool<CLoginUser>(dfUSER_MAX, true);
 }
 
 void CLoginGroup::Initialize()
@@ -14,20 +15,6 @@ void CLoginGroup::Initialize()
 
 void CLoginGroup::Update()
 {
-	/*
-	::printf(
-		"Login SendTPS: %d\n"
-		"Login RecvTPS: %d\n"
-		"Login EnterTPS: %d\n"
-		"Login LeaveTPS: %d\n"
-		"Login ReleaseTPS: %d\n\n",
-		_sendTPS,
-		_recvTPS,
-		_enterTPS,
-		_leaveTPS,
-		_releaseTPS
-	);
-	*/
 }
 
 void CLoginGroup::Terminate()
@@ -52,14 +39,14 @@ void CLoginGroup::OnTerminate()
 
 void CLoginGroup::OnEnterGroup(unsigned __int64 sessionID)
 {
-	// ::printf("%016llx (%d)::: Login::%s\n", sessionID, GetCurrentThreadId(), __func__);
-	_usersMap.insert(make_pair(sessionID, new CLoginUser(sessionID)));
-	_enterTPS++;
+	// ::printf("%016llx (%d): Login::%s\n", sessionID, GetCurrentThreadId(), __func__);
+	CLoginUser* user = _userPool->Alloc(sessionID);
+	_usersMap.insert(make_pair(sessionID, user));
 }
 
 void CLoginGroup::OnLeaveGroup(unsigned __int64 sessionID)
 {
-	// ::printf("%016llx (%d)::: Login::%s\n", sessionID, GetCurrentThreadId(), __func__);
+	// ::printf("%016llx (%d): Login::%s\n", sessionID, GetCurrentThreadId(), __func__);
 	unordered_map<unsigned __int64, CLoginUser*>::iterator mapIter = _usersMap.find(sessionID);
 	if (mapIter == _usersMap.end())
 	{
@@ -67,24 +54,8 @@ void CLoginGroup::OnLeaveGroup(unsigned __int64 sessionID)
 		::wprintf(L"%s[%d]: No Session %llx\n", _T(__FUNCTION__), __LINE__, sessionID);
 		return;
 	}
-	delete mapIter->second;
+	_userPool->Free(mapIter->second);
 	_usersMap.erase(mapIter);
-	_leaveTPS++;
-}
-
-void CLoginGroup::OnReleaseClient(unsigned __int64 sessionID)
-{
-	// ::printf("%016llx (%d)::: Login::%s\n", sessionID, GetCurrentThreadId(), __func__);
-	unordered_map<unsigned __int64, CLoginUser*>::iterator mapIter = _usersMap.find(sessionID);
-	if (mapIter == _usersMap.end())
-	{
-		LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d]: No Session %llx\n", _T(__FUNCTION__), __LINE__, sessionID);
-		::wprintf(L"%s[%d]: No Session %llx\n", _T(__FUNCTION__), __LINE__, sessionID);
-		return;
-	}
-	delete mapIter->second;
-	_usersMap.erase(mapIter);
-	_releaseTPS++;
 }
 
 void CLoginGroup::OnRecv(unsigned __int64 sessionID, CPacket* packet)
@@ -102,6 +73,8 @@ void CLoginGroup::OnRecv(unsigned __int64 sessionID, CPacket* packet)
 	WORD msgType;
 	*packet >> msgType;
 
+	// ::printf("%016llx: Login::OnRecv %d\n", sessionID, msgType);
+
 	try
 	{
 		switch (msgType)
@@ -113,8 +86,7 @@ void CLoginGroup::OnRecv(unsigned __int64 sessionID, CPacket* packet)
 		default:
 			Disconnect(sessionID);
 			LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d] Undefined Message, %d\n", _T(__FUNCTION__), __LINE__, msgType);
-			::wprintf(L"%s[%d] Undefined Message, %d\n", _T(__FUNCTION__), __LINE__, msgType);
-			
+			::wprintf(L"%s[%d] Undefined Message, %d\n", _T(__FUNCTION__), __LINE__, msgType);	
 			break;
 		}
 	}
@@ -127,14 +99,11 @@ void CLoginGroup::OnRecv(unsigned __int64 sessionID, CPacket* packet)
 			::wprintf(L"%s[%d] Packet Error\n", _T(__FUNCTION__), __LINE__);
 		}
 	}
-
-	_recvTPS++;
 }
 
 void CLoginGroup::OnSend(unsigned __int64 sessionID, int sendSize)
 {
-	// // ::printf("%016llx (%d)::: Login::%s\n", sessionID, GetCurrentThreadId(), __func__);
-	_sendTPS++;
+	// ::printf("%016llx (%d): Login::%s\n", sessionID, GetCurrentThreadId(), __func__);
 }
 
 void CLoginGroup::OnError(int errorCode, wchar_t* errorMsg)

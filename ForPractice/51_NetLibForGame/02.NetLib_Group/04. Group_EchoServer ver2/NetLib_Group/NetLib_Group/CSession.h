@@ -51,13 +51,13 @@ public:
 		InterlockedExchange(&_sendFlag, 0);
 		InterlockedExchange16(&_validFlag._releaseFlag, 0);
 
-		// ::printf("%d: Session Initialize (%016llx - %016llx)\n", GetCurrentThreadId(), _ID, ID);
 		_ID = ID;
-		// LeaveLog(100, ID, _validFlag._useCount, _validFlag._releaseFlag);
-
 		_disconnect = false;
 		_sock = sock;
 		_addr = addr;
+		EnterCriticalSection(&_groupLock);
+		_pGroup = nullptr;
+		LeaveCriticalSection(&_groupLock);
 
 		ZeroMemory(&_recvOvl._ovl, sizeof(_recvOvl._ovl));
 		ZeroMemory(&_sendOvl._ovl, sizeof(_sendOvl._ovl));
@@ -71,6 +71,11 @@ public:
 		_disconnect = true;
 		_sock = INVALID_SOCKET;
 		_recvBuf.ClearBuffer();
+
+		EnterCriticalSection(&_groupLock);
+		_pGroup = nullptr;
+		LeaveCriticalSection(&_groupLock);
+
 		while (_sendBuf.GetUseSize() > 0)
 		{
 			CPacket* packet = _sendBuf.Dequeue();
@@ -80,6 +85,17 @@ public:
 		{
 			CPacket* packet = _tempBuf.Dequeue();
 			CPacket::Free(packet);
+		}
+
+		while (_OnRecvQ.GetUseSize() > 0)
+		{
+			CPacket* packet = _OnRecvQ.Dequeue();
+			CPacket::Free(packet);
+		}
+
+		while (_OnSendQ.GetUseSize() > 0)
+		{
+			_OnSendQ.Dequeue();
 		}
 	}
 

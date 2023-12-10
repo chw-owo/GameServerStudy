@@ -53,24 +53,24 @@ protected:
 	{
 		long acceptCnt = InterlockedExchange(&_acceptCnt, 0);
 		long disconnectCnt = InterlockedExchange(&_disconnectCnt, 0);
-		long recvMsgCnt = InterlockedExchange(&_recvMsgCnt, 0);
-		long sendMsgCnt = InterlockedExchange(&_sendMsgCnt, 0);
+		long recvMsgCnt = InterlockedExchange(&_recvCnt, 0);
+		long sendMsgCnt = InterlockedExchange(&_sendCnt, 0);
 
 		_acceptTotal += acceptCnt;
 		_disconnectTotal += disconnectCnt;
 
 		_acceptTPS = acceptCnt;
 		_disconnectTPS = disconnectCnt;
-		_recvMsgTPS = recvMsgCnt;
-		_sendMsgTPS = sendMsgCnt;
+		_recvTPS = recvMsgCnt;
+		_sendTPS = sendMsgCnt;
 	}
 
 	inline long GetAcceptTotal() { return _acceptTotal; }
 	inline long GetDisconnectTotal() { return _disconnectTotal; }
 	inline long GetSessionCount() { return _sessionCnt; }
 
-	inline long GetRecvMsgTPS() { return _recvMsgTPS; }
-	inline long GetSendMsgTPS() { return _sendMsgTPS; }
+	inline long GetRecvTPS() { return _recvTPS; }
+	inline long GetSendTPS() { return _sendTPS; }
 	inline long GetAcceptTPS() { return _acceptTPS; }
 	inline long GetDisconnectTPS() { return _disconnectTPS; }
 
@@ -87,10 +87,10 @@ private:
 	bool SendPost(CSession* pSession);
 
 private:
-	CSession* AcquireSessionUsage(unsigned __int64 sessionID, int line);
-	void ReleaseSessionUsage(CSession* pSession, int line);
-	void IncrementUseCount(CSession* pSession, int line);
-	void DecrementUseCount(CSession* pSession, int line);
+	CSession* AcquireSessionUsage(unsigned __int64 sessionID);
+	void ReleaseSessionUsage(CSession* pSession);
+	void IncrementUseCount(CSession* pSession);
+	void DecrementUseCount(CSession* pSession);
 
 private:
 	wchar_t _IP[10];
@@ -125,13 +125,13 @@ private:
 
 	long _acceptTPS = 0;
 	long _disconnectTPS = 0;
-	long _recvMsgTPS = 0;
-	long _sendMsgTPS = 0;
+	long _recvTPS = 0;
+	long _sendTPS = 0;
 
 	volatile long _acceptCnt = 0;
 	volatile long _disconnectCnt = 0;
-	volatile long _recvMsgCnt = 0;
-	volatile long _sendMsgCnt = 0;
+	volatile long _recvCnt = 0;
+	volatile long _sendCnt = 0;
 
 private:
 	unordered_map<CGroup*, HANDLE> _groupThreads;

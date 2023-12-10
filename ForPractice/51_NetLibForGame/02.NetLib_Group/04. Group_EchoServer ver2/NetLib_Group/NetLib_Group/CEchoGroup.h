@@ -29,7 +29,6 @@ private:
 	void OnEnterGroup(unsigned __int64 sessionID);
 	void OnLeaveGroup(unsigned __int64 sessionID);
 
-	void OnReleaseClient(unsigned __int64 sessionID);
 	void OnRecv(unsigned __int64 sessionID, CPacket* packet);
 	void OnSend(unsigned __int64 sessionID, int sendSize);
 	void OnError(int errorCode, wchar_t* errorMsg);
@@ -44,13 +43,9 @@ private:
 
 private:
 	unordered_map<unsigned __int64, CEchoUser*> _usersMap;
+	CTlsPool<CEchoUser>* _userPool;
 
-	// Monitor
-private:
-	int _sendTPS = 0;
-	int _recvTPS = 0;
-	int _enterTPS = 0;
-	int _leaveTPS = 0;
-	int _releaseTPS = 0;
+public:
+	__int64 GetUserCount() { return _usersMap.size(); }
 };
 

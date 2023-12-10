@@ -4,6 +4,7 @@
 CEchoGroup::CEchoGroup(CServer* pNet)
 {
 	Setting((CNetServer*)pNet, 1);
+	_userPool = new CTlsPool<CEchoUser>(dfUSER_MAX, true);
 }
 
 void CEchoGroup::Initialize()
@@ -12,20 +13,6 @@ void CEchoGroup::Initialize()
 
 void CEchoGroup::Update()
 {
-	/*
-	::printf(
-		"Echo SendTPS: %d\n"
-		"Echo RecvTPS: %d\n"
-		"Echo EnterTPS: %d\n"
-		"Echo LeaveTPS: %d\n"
-		"Echo ReleaseTPS: %d\n\n",
-		_sendTPS,
-		_recvTPS,
-		_enterTPS,
-		_leaveTPS,
-		_releaseTPS
-	);
-	*/
 }
 
 void CEchoGroup::Terminate()
@@ -50,14 +37,14 @@ void CEchoGroup::OnTerminate()
 
 void CEchoGroup::OnEnterGroup(unsigned __int64 sessionID)
 {
-	// ::printf("%016llx (%d)::: Echo::%s\n", sessionID, GetCurrentThreadId(), __func__);
-	_usersMap.insert(make_pair(sessionID, new CEchoUser(sessionID)));
-	_enterTPS++;
+	// ::printf("%016llx (%d): Echo::%s\n", sessionID, GetCurrentThreadId(), __func__);
+	CEchoUser* user = _userPool->Alloc(sessionID);
+	_usersMap.insert(make_pair(sessionID, user));
 }
 
 void CEchoGroup::OnLeaveGroup(unsigned __int64 sessionID)
 {
-	// ::printf("%016llx (%d)::: Echo::%s\n", sessionID, GetCurrentThreadId(), __func__);
+	// ::printf("%016llx (%d): Echo::%s\n", sessionID, GetCurrentThreadId(), __func__);
 	unordered_map<unsigned __int64, CEchoUser*>::iterator mapIter = _usersMap.find(sessionID);
 	if (mapIter == _usersMap.end())
 	{
@@ -65,24 +52,8 @@ void CEchoGroup::OnLeaveGroup(unsigned __int64 sessionID)
 		::wprintf(L"%s[%d]: No Session %llx\n", _T(__FUNCTION__), __LINE__, sessionID);
 		return;
 	}
-	delete mapIter->second;
+	_userPool->Free(mapIter->second);
 	_usersMap.erase(mapIter);
-	_leaveTPS++;
-}
-
-void CEchoGroup::OnReleaseClient(unsigned __int64 sessionID)
-{
-	// ::printf("%016llx (%d)::: Echo::%s\n", sessionID, GetCurrentThreadId(), __func__);
-	unordered_map<unsigned __int64, CEchoUser*>::iterator mapIter = _usersMap.find(sessionID);
-	if (mapIter == _usersMap.end())
-	{
-		LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d]: No Session %llx\n", _T(__FUNCTION__), __LINE__, sessionID);
-		::wprintf(L"%s[%d]: No Session %llx\n", _T(__FUNCTION__), __LINE__, sessionID);
-		return;
-	}
-	delete mapIter->second;
-	_usersMap.erase(mapIter);
-	_releaseTPS++;
 }
 
 void CEchoGroup::OnRecv(unsigned __int64 sessionID, CPacket* packet)
@@ -124,14 +95,11 @@ void CEchoGroup::OnRecv(unsigned __int64 sessionID, CPacket* packet)
 			::wprintf(L"%s[%d] Packet Error\n", _T(__FUNCTION__), __LINE__);
 		}
 	}
-
-	_recvTPS++;
 }
 
 void CEchoGroup::OnSend(unsigned __int64 sessionID, int sendSize)
 {
-	// // ::printf("%016llx (%d)::: Echo::%s (%d)\n", sessionID, GetCurrentThreadId(), __func__, sendSize);
-	_sendTPS++;
+	// ::printf("%016llx (%d): Echo::%s (%d)\n", sessionID, GetCurrentThreadId(), __func__, sendSize);
 }
 
 void CEchoGroup::OnError(int errorCode, wchar_t* errorMsg)

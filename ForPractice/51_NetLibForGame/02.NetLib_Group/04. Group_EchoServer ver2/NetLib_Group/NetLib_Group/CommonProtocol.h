@@ -12,6 +12,9 @@
 // Use in Login Server
 #define dfSESSIONKEY_LEN		64
 
+// Use in Monitor
+#define dfMONITOR_TEXT_LEN		1024
+
 enum en_PACKET_TYPE
 {
 	//------------------------------------------------------
