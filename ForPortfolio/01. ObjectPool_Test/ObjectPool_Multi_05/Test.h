@@ -1,42 +1,132 @@
 #pragma once
 #include <iostream>
+#include <algorithm>
 #include <vector>
 #include <chrono>
-#include <tuple>
+#include <cmath>
 #include "CTlsPool.h"  
 #include "Data.h"
 
+#include "matplotlibcpp.h"
+namespace plt = matplotlibcpp;
+
+#define dfTEST_CNT 2000
+#define dfTHREAD_CNT 5
+#define dfNODE_MAX 12000
+double TlsPoolTotals[dfTHREAD_CNT];
+double NewDeleteTotals[dfTHREAD_CNT];
+
+std::vector<int> blockSizes;
+std::vector<double> TlsPoolDurations;
+std::vector<double> NewDeleteDurations;
+
+struct argForThread
+{
+    argForThread(size_t pool, int idx)
+        : _pool(pool), _idx(idx) {};
+    size_t _pool;
+    int _idx;
+};
+
 template <typename T>
-void comparePerformance(size_t numAllocations) {
-    std::vector<double> CTlsPoolDurations;
-    std::vector<double> newDeleteDurations;
+unsigned __stdcall TlsPoolThread(void* arg)
+{
+    argForThread* input = (argForThread*)arg;
+    CTlsPool<T>* pool = (CTlsPool<T>*)input->_pool;
+    int idx = input->_idx;
+    pool->Initialize();
+    TlsPoolTotals[idx] = 0;
 
-    CTlsPool<T> CTlsPool(numAllocations);
+    for (size_t i = 0; i < dfTEST_CNT; ++i)
+    {
+        auto TlsPoolStart = std::chrono::high_resolution_clock::now();
+        T* obj = pool->Alloc();
+        pool->Free(obj);
+        auto TlsPoolEnd = std::chrono::high_resolution_clock::now();
 
-    auto CTlsPoolStart = std::chrono::high_resolution_clock::now();
-    for (size_t i = 0; i < numAllocations; ++i) {
-        T* obj = CTlsPool.allocate();
-        CTlsPool.deallocate(obj);
+        auto TlsPoolDuration = std::chrono::duration_cast<std::chrono::microseconds>(TlsPoolEnd - TlsPoolStart).count();
+        TlsPoolTotals[idx] += TlsPoolDuration;
     }
-    auto CTlsPoolEnd = std::chrono::high_resolution_clock::now();
-    auto CTlsPoolDuration = std::chrono::duration_cast<std::chrono::microseconds>(CTlsPoolEnd - CTlsPoolStart).count();
-    CTlsPoolDurations.push_back(CTlsPoolDuration);
+}
 
-    auto newDeleteStart = std::chrono::high_resolution_clock::now();
-    for (size_t i = 0; i < numAllocations; ++i) {
+template <typename T>
+unsigned __stdcall NewDeleteThread(void* arg)
+{
+    int idx = (int)arg;
+    NewDeleteTotals[idx] = 0;
+
+    for (size_t i = 0; i < dfTEST_CNT; ++i)
+    {
+        auto NewDeleteStart = std::chrono::high_resolution_clock::now();
         T* obj = new T;
         delete obj;
+        auto NewDeleteEnd = std::chrono::high_resolution_clock::now();
+
+        auto NewDeleteDuration = std::chrono::duration_cast<std::chrono::microseconds>(NewDeleteEnd - NewDeleteStart).count();
+        NewDeleteTotals[idx] += NewDeleteDuration;
     }
-    auto newDeleteEnd = std::chrono::high_resolution_clock::now();
-    auto newDeleteDuration = std::chrono::duration_cast<std::chrono::microseconds>(newDeleteEnd - newDeleteStart).count();
-    newDeleteDurations.push_back(newDeleteDuration);
+}
 
+template <typename T>
+void comparePerformance() 
+{
+    // Test TlsPool
+
+    CTlsPool<T> pool(dfNODE_MAX, false);
+    HANDLE TlsPoolThreads[dfTHREAD_CNT];
+    for (int i = 0; i < dfTHREAD_CNT; i++)
+    {
+        argForThread* arg = new argForThread((size_t)&pool, i);
+        TlsPoolThreads[i] = (HANDLE)_beginthreadex(NULL, 0, TlsPoolThread<T>, arg, 0, nullptr);
+        if (TlsPoolThreads[i] == NULL)
+        {
+            ::printf(" Error! %s(%d)\n", __func__, __LINE__);
+            __debugbreak();
+        }
+    }
+    WaitForMultipleObjects(dfTHREAD_CNT, TlsPoolThreads, true, INFINITE);
+    
+    double TlsPoolTotal = 0;
+    for (int i = 0; i < dfTHREAD_CNT; i++)
+    {
+        TlsPoolTotal += TlsPoolTotals[i];
+    }
+    TlsPoolTotal /= 10000;
+    TlsPoolDurations.push_back(TlsPoolTotal);
+
+    // Test New Delete
+
+    HANDLE NewDeleteThreads[dfTHREAD_CNT];
+    for (int i = 0; i < dfTHREAD_CNT; i++)
+    {
+        NewDeleteThreads[i] = (HANDLE)_beginthreadex(NULL, 0, NewDeleteThread<T>, (void*)i, 0, nullptr);
+        if (NewDeleteThreads[i] == NULL)
+        {
+            ::printf(" Error! %s(%d)\n", __func__, __LINE__);
+            __debugbreak();
+        }
+    }
+    WaitForMultipleObjects(dfTHREAD_CNT, NewDeleteThreads, true, INFINITE);
+
+    double NewDeleteTotal = 0;
+    for (int i = 0; i < dfTHREAD_CNT; i++)
+    {
+        NewDeleteTotal += NewDeleteTotals[i];
+    }
+    NewDeleteTotal /= 10000;
+    NewDeleteDurations.push_back(NewDeleteTotal);
+
+    blockSizes.push_back(sizeof(T));
+}
+
+void DrawGraph()
+{
     // 그래프 그리기
-    plt::plot(CTlsPoolDurations, "r-", label = "CTlsPool");
-    plt::plot(newDeleteDurations, "k-", label = "new/delete");
+    plt::plot(blockSizes, TlsPoolDurations, "r-");
+    plt::plot(blockSizes, NewDeleteDurations, "k-");
 
-    plt::xlabel("Struct Index");
-    plt::ylabel("Time (microseconds)");
+    plt::xlabel("Block Size (byte)");
+    plt::ylabel("Avg Time (ms)");
     plt::title("CTlsPool vs new/delete Performance");
     plt::legend();
     plt::grid(true);
@@ -49,260 +139,260 @@ void Test()
 {
     const size_t numAllocations = 10000;
 
-    comparePerformance<MyStruct0>(numAllocations);
-    comparePerformance<MyStruct1>(numAllocations);
-    comparePerformance<MyStruct2>(numAllocations);
-    comparePerformance<MyStruct3>(numAllocations);
-    comparePerformance<MyStruct4>(numAllocations);
-    comparePerformance<MyStruct5>(numAllocations);
-    comparePerformance<MyStruct6>(numAllocations);
-    comparePerformance<MyStruct7>(numAllocations);
-    comparePerformance<MyStruct8>(numAllocations);
-    comparePerformance<MyStruct9>(numAllocations);
-    comparePerformance<MyStruct10>(numAllocations);
-    comparePerformance<MyStruct11>(numAllocations);
-    comparePerformance<MyStruct12>(numAllocations);
-    comparePerformance<MyStruct13>(numAllocations);
-    comparePerformance<MyStruct14>(numAllocations);
-    comparePerformance<MyStruct15>(numAllocations);
-    comparePerformance<MyStruct16>(numAllocations);
-    comparePerformance<MyStruct17>(numAllocations);
-    comparePerformance<MyStruct18>(numAllocations);
-    comparePerformance<MyStruct19>(numAllocations);
-    comparePerformance<MyStruct20>(numAllocations);
-    comparePerformance<MyStruct21>(numAllocations);
-    comparePerformance<MyStruct22>(numAllocations);
-    comparePerformance<MyStruct23>(numAllocations);
-    comparePerformance<MyStruct24>(numAllocations);
-    comparePerformance<MyStruct25>(numAllocations);
-    comparePerformance<MyStruct26>(numAllocations);
-    comparePerformance<MyStruct27>(numAllocations);
-    comparePerformance<MyStruct28>(numAllocations);
-    comparePerformance<MyStruct29>(numAllocations);
-    comparePerformance<MyStruct30>(numAllocations);
-    comparePerformance<MyStruct31>(numAllocations);
-    comparePerformance<MyStruct32>(numAllocations);
-    comparePerformance<MyStruct33>(numAllocations);
-    comparePerformance<MyStruct34>(numAllocations);
-    comparePerformance<MyStruct35>(numAllocations);
-    comparePerformance<MyStruct36>(numAllocations);
-    comparePerformance<MyStruct37>(numAllocations);
-    comparePerformance<MyStruct38>(numAllocations);
-    comparePerformance<MyStruct39>(numAllocations);
-    comparePerformance<MyStruct40>(numAllocations);
-    comparePerformance<MyStruct41>(numAllocations);
-    comparePerformance<MyStruct42>(numAllocations);
-    comparePerformance<MyStruct43>(numAllocations);
-    comparePerformance<MyStruct44>(numAllocations);
-    comparePerformance<MyStruct45>(numAllocations);
-    comparePerformance<MyStruct46>(numAllocations);
-    comparePerformance<MyStruct47>(numAllocations);
-    comparePerformance<MyStruct48>(numAllocations);
-    comparePerformance<MyStruct49>(numAllocations);
-    comparePerformance<MyStruct50>(numAllocations);
-    comparePerformance<MyStruct51>(numAllocations);
-    comparePerformance<MyStruct52>(numAllocations);
-    comparePerformance<MyStruct53>(numAllocations);
-    comparePerformance<MyStruct54>(numAllocations);
-    comparePerformance<MyStruct55>(numAllocations);
-    comparePerformance<MyStruct56>(numAllocations);
-    comparePerformance<MyStruct57>(numAllocations);
-    comparePerformance<MyStruct58>(numAllocations);
-    comparePerformance<MyStruct59>(numAllocations);
-    comparePerformance<MyStruct60>(numAllocations);
-    comparePerformance<MyStruct61>(numAllocations);
-    comparePerformance<MyStruct62>(numAllocations);
-    comparePerformance<MyStruct63>(numAllocations);
-    comparePerformance<MyStruct64>(numAllocations);
-    comparePerformance<MyStruct65>(numAllocations);
-    comparePerformance<MyStruct66>(numAllocations);
-    comparePerformance<MyStruct67>(numAllocations);
-    comparePerformance<MyStruct68>(numAllocations);
-    comparePerformance<MyStruct69>(numAllocations);
-    comparePerformance<MyStruct70>(numAllocations);
-    comparePerformance<MyStruct71>(numAllocations);
-    comparePerformance<MyStruct72>(numAllocations);
-    comparePerformance<MyStruct73>(numAllocations);
-    comparePerformance<MyStruct74>(numAllocations);
-    comparePerformance<MyStruct75>(numAllocations);
-    comparePerformance<MyStruct76>(numAllocations);
-    comparePerformance<MyStruct77>(numAllocations);
-    comparePerformance<MyStruct78>(numAllocations);
-    comparePerformance<MyStruct79>(numAllocations);
-    comparePerformance<MyStruct80>(numAllocations);
-    comparePerformance<MyStruct81>(numAllocations);
-    comparePerformance<MyStruct82>(numAllocations);
-    comparePerformance<MyStruct83>(numAllocations);
-    comparePerformance<MyStruct84>(numAllocations);
-    comparePerformance<MyStruct85>(numAllocations);
-    comparePerformance<MyStruct86>(numAllocations);
-    comparePerformance<MyStruct87>(numAllocations);
-    comparePerformance<MyStruct88>(numAllocations);
-    comparePerformance<MyStruct89>(numAllocations);
-    comparePerformance<MyStruct90>(numAllocations);
-    comparePerformance<MyStruct91>(numAllocations);
-    comparePerformance<MyStruct92>(numAllocations);
-    comparePerformance<MyStruct93>(numAllocations);
-    comparePerformance<MyStruct94>(numAllocations);
-    comparePerformance<MyStruct95>(numAllocations);
-    comparePerformance<MyStruct96>(numAllocations);
-    comparePerformance<MyStruct97>(numAllocations);
-    comparePerformance<MyStruct98>(numAllocations);
-    comparePerformance<MyStruct99>(numAllocations);
-    comparePerformance<MyStruct100>(numAllocations);
-    comparePerformance<MyStruct101>(numAllocations);
-    comparePerformance<MyStruct102>(numAllocations);
-    comparePerformance<MyStruct103>(numAllocations);
-    comparePerformance<MyStruct104>(numAllocations);
-    comparePerformance<MyStruct105>(numAllocations);
-    comparePerformance<MyStruct106>(numAllocations);
-    comparePerformance<MyStruct107>(numAllocations);
-    comparePerformance<MyStruct108>(numAllocations);
-    comparePerformance<MyStruct109>(numAllocations);
-    comparePerformance<MyStruct110>(numAllocations);
-    comparePerformance<MyStruct111>(numAllocations);
-    comparePerformance<MyStruct112>(numAllocations);
-    comparePerformance<MyStruct113>(numAllocations);
-    comparePerformance<MyStruct114>(numAllocations);
-    comparePerformance<MyStruct115>(numAllocations);
-    comparePerformance<MyStruct116>(numAllocations);
-    comparePerformance<MyStruct117>(numAllocations);
-    comparePerformance<MyStruct118>(numAllocations);
-    comparePerformance<MyStruct119>(numAllocations);
-    comparePerformance<MyStruct120>(numAllocations);
-    comparePerformance<MyStruct121>(numAllocations);
-    comparePerformance<MyStruct122>(numAllocations);
-    comparePerformance<MyStruct123>(numAllocations);
-    comparePerformance<MyStruct124>(numAllocations);
-    comparePerformance<MyStruct125>(numAllocations);
-    comparePerformance<MyStruct126>(numAllocations);
-    comparePerformance<MyStruct127>(numAllocations);
-    comparePerformance<MyStruct128>(numAllocations);
-    comparePerformance<MyStruct129>(numAllocations);
-    comparePerformance<MyStruct130>(numAllocations);
-    comparePerformance<MyStruct131>(numAllocations);
-    comparePerformance<MyStruct132>(numAllocations);
-    comparePerformance<MyStruct133>(numAllocations);
-    comparePerformance<MyStruct134>(numAllocations);
-    comparePerformance<MyStruct135>(numAllocations);
-    comparePerformance<MyStruct136>(numAllocations);
-    comparePerformance<MyStruct137>(numAllocations);
-    comparePerformance<MyStruct138>(numAllocations);
-    comparePerformance<MyStruct139>(numAllocations);
-    comparePerformance<MyStruct140>(numAllocations);
-    comparePerformance<MyStruct141>(numAllocations);
-    comparePerformance<MyStruct142>(numAllocations);
-    comparePerformance<MyStruct143>(numAllocations);
-    comparePerformance<MyStruct144>(numAllocations);
-    comparePerformance<MyStruct145>(numAllocations);
-    comparePerformance<MyStruct146>(numAllocations);
-    comparePerformance<MyStruct147>(numAllocations);
-    comparePerformance<MyStruct148>(numAllocations);
-    comparePerformance<MyStruct149>(numAllocations);
-    comparePerformance<MyStruct150>(numAllocations);
-    comparePerformance<MyStruct151>(numAllocations);
-    comparePerformance<MyStruct152>(numAllocations);
-    comparePerformance<MyStruct153>(numAllocations);
-    comparePerformance<MyStruct154>(numAllocations);
-    comparePerformance<MyStruct155>(numAllocations);
-    comparePerformance<MyStruct156>(numAllocations);
-    comparePerformance<MyStruct157>(numAllocations);
-    comparePerformance<MyStruct158>(numAllocations);
-    comparePerformance<MyStruct159>(numAllocations);
-    comparePerformance<MyStruct160>(numAllocations);
-    comparePerformance<MyStruct161>(numAllocations);
-    comparePerformance<MyStruct162>(numAllocations);
-    comparePerformance<MyStruct163>(numAllocations);
-    comparePerformance<MyStruct164>(numAllocations);
-    comparePerformance<MyStruct165>(numAllocations);
-    comparePerformance<MyStruct166>(numAllocations);
-    comparePerformance<MyStruct167>(numAllocations);
-    comparePerformance<MyStruct168>(numAllocations);
-    comparePerformance<MyStruct169>(numAllocations);
-    comparePerformance<MyStruct170>(numAllocations);
-    comparePerformance<MyStruct171>(numAllocations);
-    comparePerformance<MyStruct172>(numAllocations);
-    comparePerformance<MyStruct173>(numAllocations);
-    comparePerformance<MyStruct174>(numAllocations);
-    comparePerformance<MyStruct175>(numAllocations);
-    comparePerformance<MyStruct176>(numAllocations);
-    comparePerformance<MyStruct177>(numAllocations);
-    comparePerformance<MyStruct178>(numAllocations);
-    comparePerformance<MyStruct179>(numAllocations);
-    comparePerformance<MyStruct180>(numAllocations);
-    comparePerformance<MyStruct181>(numAllocations);
-    comparePerformance<MyStruct182>(numAllocations);
-    comparePerformance<MyStruct183>(numAllocations);
-    comparePerformance<MyStruct184>(numAllocations);
-    comparePerformance<MyStruct185>(numAllocations);
-    comparePerformance<MyStruct186>(numAllocations);
-    comparePerformance<MyStruct187>(numAllocations);
-    comparePerformance<MyStruct188>(numAllocations);
-    comparePerformance<MyStruct189>(numAllocations);
-    comparePerformance<MyStruct190>(numAllocations);
-    comparePerformance<MyStruct191>(numAllocations);
-    comparePerformance<MyStruct192>(numAllocations);
-    comparePerformance<MyStruct193>(numAllocations);
-    comparePerformance<MyStruct194>(numAllocations);
-    comparePerformance<MyStruct195>(numAllocations);
-    comparePerformance<MyStruct196>(numAllocations);
-    comparePerformance<MyStruct197>(numAllocations);
-    comparePerformance<MyStruct198>(numAllocations);
-    comparePerformance<MyStruct199>(numAllocations);
-    comparePerformance<MyStruct200>(numAllocations);
-    comparePerformance<MyStruct201>(numAllocations);
-    comparePerformance<MyStruct202>(numAllocations);
-    comparePerformance<MyStruct203>(numAllocations);
-    comparePerformance<MyStruct204>(numAllocations);
-    comparePerformance<MyStruct205>(numAllocations);
-    comparePerformance<MyStruct206>(numAllocations);
-    comparePerformance<MyStruct207>(numAllocations);
-    comparePerformance<MyStruct208>(numAllocations);
-    comparePerformance<MyStruct209>(numAllocations);
-    comparePerformance<MyStruct210>(numAllocations);
-    comparePerformance<MyStruct211>(numAllocations);
-    comparePerformance<MyStruct212>(numAllocations);
-    comparePerformance<MyStruct213>(numAllocations);
-    comparePerformance<MyStruct214>(numAllocations);
-    comparePerformance<MyStruct215>(numAllocations);
-    comparePerformance<MyStruct216>(numAllocations);
-    comparePerformance<MyStruct217>(numAllocations);
-    comparePerformance<MyStruct218>(numAllocations);
-    comparePerformance<MyStruct219>(numAllocations);
-    comparePerformance<MyStruct220>(numAllocations);
-    comparePerformance<MyStruct221>(numAllocations);
-    comparePerformance<MyStruct222>(numAllocations);
-    comparePerformance<MyStruct223>(numAllocations);
-    comparePerformance<MyStruct224>(numAllocations);
-    comparePerformance<MyStruct225>(numAllocations);
-    comparePerformance<MyStruct226>(numAllocations);
-    comparePerformance<MyStruct227>(numAllocations);
-    comparePerformance<MyStruct228>(numAllocations);
-    comparePerformance<MyStruct229>(numAllocations);
-    comparePerformance<MyStruct230>(numAllocations);
-    comparePerformance<MyStruct231>(numAllocations);
-    comparePerformance<MyStruct232>(numAllocations);
-    comparePerformance<MyStruct233>(numAllocations);
-    comparePerformance<MyStruct234>(numAllocations);
-    comparePerformance<MyStruct235>(numAllocations);
-    comparePerformance<MyStruct236>(numAllocations);
-    comparePerformance<MyStruct237>(numAllocations);
-    comparePerformance<MyStruct238>(numAllocations);
-    comparePerformance<MyStruct239>(numAllocations);
-    comparePerformance<MyStruct240>(numAllocations);
-    comparePerformance<MyStruct241>(numAllocations);
-    comparePerformance<MyStruct242>(numAllocations);
-    comparePerformance<MyStruct243>(numAllocations);
-    comparePerformance<MyStruct244>(numAllocations);
-    comparePerformance<MyStruct245>(numAllocations);
-    comparePerformance<MyStruct246>(numAllocations);
-    comparePerformance<MyStruct247>(numAllocations);
-    comparePerformance<MyStruct248>(numAllocations);
-    comparePerformance<MyStruct249>(numAllocations);
-    comparePerformance<MyStruct250>(numAllocations);
-    comparePerformance<MyStruct251>(numAllocations);
-    comparePerformance<MyStruct252>(numAllocations);
-    comparePerformance<MyStruct253>(numAllocations);
-    comparePerformance<MyStruct254>(numAllocations);
-    comparePerformance<MyStruct255>(numAllocations);
+    comparePerformance<MyStruct0>();
+    comparePerformance<MyStruct1>();
+    comparePerformance<MyStruct2>();
+    comparePerformance<MyStruct3>();
+    comparePerformance<MyStruct4>();
+    comparePerformance<MyStruct5>();
+    comparePerformance<MyStruct6>();
+    comparePerformance<MyStruct7>();
+    comparePerformance<MyStruct8>();
+    comparePerformance<MyStruct9>();
+    comparePerformance<MyStruct10>();
+    comparePerformance<MyStruct11>();
+    comparePerformance<MyStruct12>();
+    comparePerformance<MyStruct13>();
+    comparePerformance<MyStruct14>();
+    comparePerformance<MyStruct15>();
+    comparePerformance<MyStruct16>();
+    comparePerformance<MyStruct17>();
+    comparePerformance<MyStruct18>();
+    comparePerformance<MyStruct19>();
+    comparePerformance<MyStruct20>();
+    comparePerformance<MyStruct21>();
+    comparePerformance<MyStruct22>();
+    comparePerformance<MyStruct23>();
+    comparePerformance<MyStruct24>();
+    comparePerformance<MyStruct25>();
+    comparePerformance<MyStruct26>();
+    comparePerformance<MyStruct27>();
+    comparePerformance<MyStruct28>();
+    comparePerformance<MyStruct29>();
+    comparePerformance<MyStruct30>();
+    comparePerformance<MyStruct31>();
+    comparePerformance<MyStruct32>();
+    comparePerformance<MyStruct33>();
+    comparePerformance<MyStruct34>();
+    comparePerformance<MyStruct35>();
+    comparePerformance<MyStruct36>();
+    comparePerformance<MyStruct37>();
+    comparePerformance<MyStruct38>();
+    comparePerformance<MyStruct39>();
+    comparePerformance<MyStruct40>();
+    comparePerformance<MyStruct41>();
+    comparePerformance<MyStruct42>();
+    comparePerformance<MyStruct43>();
+    comparePerformance<MyStruct44>();
+    comparePerformance<MyStruct45>();
+    comparePerformance<MyStruct46>();
+    comparePerformance<MyStruct47>();
+    comparePerformance<MyStruct48>();
+    comparePerformance<MyStruct49>();
+    comparePerformance<MyStruct50>();
+    comparePerformance<MyStruct51>();
+    comparePerformance<MyStruct52>();
+    comparePerformance<MyStruct53>();
+    comparePerformance<MyStruct54>();
+    comparePerformance<MyStruct55>();
+    comparePerformance<MyStruct56>();
+    comparePerformance<MyStruct57>();
+    comparePerformance<MyStruct58>();
+    comparePerformance<MyStruct59>();
+    comparePerformance<MyStruct60>();
+    comparePerformance<MyStruct61>();
+    comparePerformance<MyStruct62>();
+    comparePerformance<MyStruct63>();
+    comparePerformance<MyStruct64>();
+    comparePerformance<MyStruct65>();
+    comparePerformance<MyStruct66>();
+    comparePerformance<MyStruct67>();
+    comparePerformance<MyStruct68>();
+    comparePerformance<MyStruct69>();
+    comparePerformance<MyStruct70>();
+    comparePerformance<MyStruct71>();
+    comparePerformance<MyStruct72>();
+    comparePerformance<MyStruct73>();
+    comparePerformance<MyStruct74>();
+    comparePerformance<MyStruct75>();
+    comparePerformance<MyStruct76>();
+    comparePerformance<MyStruct77>();
+    comparePerformance<MyStruct78>();
+    comparePerformance<MyStruct79>();
+    comparePerformance<MyStruct80>();
+    comparePerformance<MyStruct81>();
+    comparePerformance<MyStruct82>();
+    comparePerformance<MyStruct83>();
+    comparePerformance<MyStruct84>();
+    comparePerformance<MyStruct85>();
+    comparePerformance<MyStruct86>();
+    comparePerformance<MyStruct87>();
+    comparePerformance<MyStruct88>();
+    comparePerformance<MyStruct89>();
+    comparePerformance<MyStruct90>();
+    comparePerformance<MyStruct91>();
+    comparePerformance<MyStruct92>();
+    comparePerformance<MyStruct93>();
+    comparePerformance<MyStruct94>();
+    comparePerformance<MyStruct95>();
+    comparePerformance<MyStruct96>();
+    comparePerformance<MyStruct97>();
+    comparePerformance<MyStruct98>();
+    comparePerformance<MyStruct99>();
+    comparePerformance<MyStruct100>();
+    comparePerformance<MyStruct101>();
+    comparePerformance<MyStruct102>();
+    comparePerformance<MyStruct103>();
+    comparePerformance<MyStruct104>();
+    comparePerformance<MyStruct105>();
+    comparePerformance<MyStruct106>();
+    comparePerformance<MyStruct107>();
+    comparePerformance<MyStruct108>();
+    comparePerformance<MyStruct109>();
+    comparePerformance<MyStruct110>();
+    comparePerformance<MyStruct111>();
+    comparePerformance<MyStruct112>();
+    comparePerformance<MyStruct113>();
+    comparePerformance<MyStruct114>();
+    comparePerformance<MyStruct115>();
+    comparePerformance<MyStruct116>();
+    comparePerformance<MyStruct117>();
+    comparePerformance<MyStruct118>();
+    comparePerformance<MyStruct119>();
+    comparePerformance<MyStruct120>();
+    comparePerformance<MyStruct121>();
+    comparePerformance<MyStruct122>();
+    comparePerformance<MyStruct123>();
+    comparePerformance<MyStruct124>();
+    comparePerformance<MyStruct125>();
+    comparePerformance<MyStruct126>();
+    comparePerformance<MyStruct127>();
+    comparePerformance<MyStruct128>();
+    comparePerformance<MyStruct129>();
+    comparePerformance<MyStruct130>();
+    comparePerformance<MyStruct131>();
+    comparePerformance<MyStruct132>();
+    comparePerformance<MyStruct133>();
+    comparePerformance<MyStruct134>();
+    comparePerformance<MyStruct135>();
+    comparePerformance<MyStruct136>();
+    comparePerformance<MyStruct137>();
+    comparePerformance<MyStruct138>();
+    comparePerformance<MyStruct139>();
+    comparePerformance<MyStruct140>();
+    comparePerformance<MyStruct141>();
+    comparePerformance<MyStruct142>();
+    comparePerformance<MyStruct143>();
+    comparePerformance<MyStruct144>();
+    comparePerformance<MyStruct145>();
+    comparePerformance<MyStruct146>();
+    comparePerformance<MyStruct147>();
+    comparePerformance<MyStruct148>();
+    comparePerformance<MyStruct149>();
+    comparePerformance<MyStruct150>();
+    comparePerformance<MyStruct151>();
+    comparePerformance<MyStruct152>();
+    comparePerformance<MyStruct153>();
+    comparePerformance<MyStruct154>();
+    comparePerformance<MyStruct155>();
+    comparePerformance<MyStruct156>();
+    comparePerformance<MyStruct157>();
+    comparePerformance<MyStruct158>();
+    comparePerformance<MyStruct159>();
+    comparePerformance<MyStruct160>();
+    comparePerformance<MyStruct161>();
+    comparePerformance<MyStruct162>();
+    comparePerformance<MyStruct163>();
+    comparePerformance<MyStruct164>();
+    comparePerformance<MyStruct165>();
+    comparePerformance<MyStruct166>();
+    comparePerformance<MyStruct167>();
+    comparePerformance<MyStruct168>();
+    comparePerformance<MyStruct169>();
+    comparePerformance<MyStruct170>();
+    comparePerformance<MyStruct171>();
+    comparePerformance<MyStruct172>();
+    comparePerformance<MyStruct173>();
+    comparePerformance<MyStruct174>();
+    comparePerformance<MyStruct175>();
+    comparePerformance<MyStruct176>();
+    comparePerformance<MyStruct177>();
+    comparePerformance<MyStruct178>();
+    comparePerformance<MyStruct179>();
+    comparePerformance<MyStruct180>();
+    comparePerformance<MyStruct181>();
+    comparePerformance<MyStruct182>();
+    comparePerformance<MyStruct183>();
+    comparePerformance<MyStruct184>();
+    comparePerformance<MyStruct185>();
+    comparePerformance<MyStruct186>();
+    comparePerformance<MyStruct187>();
+    comparePerformance<MyStruct188>();
+    comparePerformance<MyStruct189>();
+    comparePerformance<MyStruct190>();
+    comparePerformance<MyStruct191>();
+    comparePerformance<MyStruct192>();
+    comparePerformance<MyStruct193>();
+    comparePerformance<MyStruct194>();
+    comparePerformance<MyStruct195>();
+    comparePerformance<MyStruct196>();
+    comparePerformance<MyStruct197>();
+    comparePerformance<MyStruct198>();
+    comparePerformance<MyStruct199>();
+    comparePerformance<MyStruct200>();
+    comparePerformance<MyStruct201>();
+    comparePerformance<MyStruct202>();
+    comparePerformance<MyStruct203>();
+    comparePerformance<MyStruct204>();
+    comparePerformance<MyStruct205>();
+    comparePerformance<MyStruct206>();
+    comparePerformance<MyStruct207>();
+    comparePerformance<MyStruct208>();
+    comparePerformance<MyStruct209>();
+    comparePerformance<MyStruct210>();
+    comparePerformance<MyStruct211>();
+    comparePerformance<MyStruct212>();
+    comparePerformance<MyStruct213>();
+    comparePerformance<MyStruct214>();
+    comparePerformance<MyStruct215>();
+    comparePerformance<MyStruct216>();
+    comparePerformance<MyStruct217>();
+    comparePerformance<MyStruct218>();
+    comparePerformance<MyStruct219>();
+    comparePerformance<MyStruct220>();
+    comparePerformance<MyStruct221>();
+    comparePerformance<MyStruct222>();
+    comparePerformance<MyStruct223>();
+    comparePerformance<MyStruct224>();
+    comparePerformance<MyStruct225>();
+    comparePerformance<MyStruct226>();
+    comparePerformance<MyStruct227>();
+    comparePerformance<MyStruct228>();
+    comparePerformance<MyStruct229>();
+    comparePerformance<MyStruct230>();
+    comparePerformance<MyStruct231>();
+    comparePerformance<MyStruct232>();
+    comparePerformance<MyStruct233>();
+    comparePerformance<MyStruct234>();
+    comparePerformance<MyStruct235>();
+    comparePerformance<MyStruct236>();
+    comparePerformance<MyStruct237>();
+    comparePerformance<MyStruct238>();
+    comparePerformance<MyStruct239>();
+    comparePerformance<MyStruct240>();
+    comparePerformance<MyStruct241>();
+    comparePerformance<MyStruct242>();
+    comparePerformance<MyStruct243>();
+    comparePerformance<MyStruct244>();
+    comparePerformance<MyStruct245>();
+    comparePerformance<MyStruct246>();
+    comparePerformance<MyStruct247>();
+    comparePerformance<MyStruct248>();
+    comparePerformance<MyStruct249>();
+    comparePerformance<MyStruct250>();
+    comparePerformance<MyStruct251>();
+    comparePerformance<MyStruct252>();
+    comparePerformance<MyStruct253>();
+    comparePerformance<MyStruct254>();
+    comparePerformance<MyStruct255>();
 }
