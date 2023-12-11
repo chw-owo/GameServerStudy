@@ -5,12 +5,41 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Main">
+      <UniqueIdentifier>{4270a532-f9a1-4a4c-8647-e174473725bf}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Matplotlib">
+      <UniqueIdentifier>{d6b9a46a-9c66-43ac-b356-98bbb3827f77}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="QueueTest">
+      <UniqueIdentifier>{0550c4af-fbc1-472d-9ad2-6e171a83f701}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="Main.cpp" />
+    <ClInclude Include="matplotlibcpp.h">
+      <Filter>Matplotlib</Filter>
+    </ClInclude>
+    <ClInclude Include="TestMatplotlib.h">
+      <Filter>Matplotlib</Filter>
+    </ClInclude>
+    <ClInclude Include="CLockFreeQueue.h">
+      <Filter>QueueTest</Filter>
+    </ClInclude>
+    <ClInclude Include="CTlsPool.h">
+      <Filter>QueueTest</Filter>
+    </ClInclude>
+    <ClInclude Include="Test.h">
+      <Filter>QueueTest</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="CLockFreeQueue.h" />
-    <ClInclude Include="CTlsPool.h" />
+    <ClCompile Include="main.cpp">
+      <Filter>Main</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="tmp.h">
+      <Filter>QueueTest</Filter>
+    </None>
   </ItemGroup>
 </Project>
