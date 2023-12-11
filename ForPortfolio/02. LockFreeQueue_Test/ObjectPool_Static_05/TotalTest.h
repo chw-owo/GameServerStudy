@@ -38,7 +38,7 @@ double LockDeQTotal = 0;
 double StlEnQTotal = 0;
 double StlDeQTotal = 0;
 
-unsigned __stdcall LockFreeEnqThread(void* arg)
+unsigned __stdcall LockFreeEnqThread_Total(void* arg)
 {
     int idx = (int)arg;
     starttimes[idx].QuadPart = 0;
@@ -61,7 +61,7 @@ unsigned __stdcall LockFreeEnqThread(void* arg)
     return 0;
 }
 
-unsigned __stdcall LockFreeDeqThread(void* arg)
+unsigned __stdcall LockFreeDeqThread_Total(void* arg)
 {
     int idx = (int)arg;
     starttimes[idx].QuadPart = 0;
@@ -84,7 +84,7 @@ unsigned __stdcall LockFreeDeqThread(void* arg)
     return 0;
 }
 
-unsigned __stdcall LockEnqThread(void* arg)
+unsigned __stdcall LockEnqThread_Total(void* arg)
 {
     int idx = (int)arg;
     starttimes[idx].QuadPart = 0;
@@ -108,7 +108,7 @@ unsigned __stdcall LockEnqThread(void* arg)
     return 0;
 }
 
-unsigned __stdcall LockDeqThread(void* arg)
+unsigned __stdcall LockDeqThread_Total(void* arg)
 {
     int idx = (int)arg;
     starttimes[idx].QuadPart = 0;
@@ -132,7 +132,7 @@ unsigned __stdcall LockDeqThread(void* arg)
     return 0;
 }
 
-unsigned __stdcall StlEnqThread(void* arg)
+unsigned __stdcall StlEnqThread_Total(void* arg)
 {
     int idx = (int)arg;
     starttimes[idx].QuadPart = 0;
@@ -154,7 +154,7 @@ unsigned __stdcall StlEnqThread(void* arg)
     return 0;
 }
 
-unsigned __stdcall StlDeqThread(void* arg)
+unsigned __stdcall StlDeqThread_Total(void* arg)
 {
     int idx = (int)arg;
     starttimes[idx].QuadPart = 0;
@@ -177,7 +177,7 @@ unsigned __stdcall StlDeqThread(void* arg)
     return 0;
 }
 
-void comparePerformance()
+void comparePerformance_Total()
 {
     LARGE_INTEGER start;
     LARGE_INTEGER end;
@@ -188,7 +188,7 @@ void comparePerformance()
     ResetEvent(beginComplete);
     for (int i = 0; i < dfTHREAD_CNT; i++)
     {
-        MyEnQThreads[i] = (HANDLE)_beginthreadex(NULL, 0, LockFreeEnqThread, (void*)i, 0, nullptr);
+        MyEnQThreads[i] = (HANDLE)_beginthreadex(NULL, 0, LockFreeEnqThread_Total, (void*)i, 0, nullptr);
         if (MyEnQThreads[i] == NULL)
         {
             ::printf(" Error! %s(%d)\n", __func__, __LINE__);
@@ -218,7 +218,7 @@ void comparePerformance()
     ResetEvent(beginComplete);
     for (int i = 0; i < dfTHREAD_CNT; i++)
     {
-        MyDeQThreads[i] = (HANDLE)_beginthreadex(NULL, 0, LockFreeDeqThread, (void*)i, 0, nullptr);
+        MyDeQThreads[i] = (HANDLE)_beginthreadex(NULL, 0, LockFreeDeqThread_Total, (void*)i, 0, nullptr);
         if (MyDeQThreads[i] == NULL)
         {
             ::printf(" Error! %s(%d)\n", __func__, __LINE__);
@@ -248,7 +248,7 @@ void comparePerformance()
     ResetEvent(beginComplete);
     for (int i = 0; i < dfTHREAD_CNT; i++)
     {
-        LockEnQThreads[i] = (HANDLE)_beginthreadex(NULL, 0, LockEnqThread, (void*)i, 0, nullptr);
+        LockEnQThreads[i] = (HANDLE)_beginthreadex(NULL, 0, LockEnqThread_Total, (void*)i, 0, nullptr);
         if (LockEnQThreads[i] == NULL)
         {
             ::printf(" Error! %s(%d)\n", __func__, __LINE__);
@@ -278,7 +278,7 @@ void comparePerformance()
     ResetEvent(beginComplete);
     for (int i = 0; i < dfTHREAD_CNT; i++)
     {
-        LockDeQThreads[i] = (HANDLE)_beginthreadex(NULL, 0, LockDeqThread, (void*)i, 0, nullptr);
+        LockDeQThreads[i] = (HANDLE)_beginthreadex(NULL, 0, LockDeqThread_Total, (void*)i, 0, nullptr);
         if (LockDeQThreads[i] == NULL)
         {
             ::printf(" Error! %s(%d)\n", __func__, __LINE__);
@@ -308,7 +308,7 @@ void comparePerformance()
     ResetEvent(beginComplete);
     for (int i = 0; i < dfTHREAD_CNT; i++)
     {
-        StlEnQThreads[i] = (HANDLE)_beginthreadex(NULL, 0, StlEnqThread, (void*)i, 0, nullptr);
+        StlEnQThreads[i] = (HANDLE)_beginthreadex(NULL, 0, StlEnqThread_Total, (void*)i, 0, nullptr);
         if (StlEnQThreads[i] == NULL)
         {
             ::printf(" Error! %s(%d)\n", __func__, __LINE__);
@@ -338,7 +338,7 @@ void comparePerformance()
     ResetEvent(beginComplete);
     for (int i = 0; i < dfTHREAD_CNT; i++)
     {
-        StlDeQThreads[i] = (HANDLE)_beginthreadex(NULL, 0, StlDeqThread, (void*)i, 0, nullptr);
+        StlDeQThreads[i] = (HANDLE)_beginthreadex(NULL, 0, StlDeqThread_Total, (void*)i, 0, nullptr);
         if (StlDeQThreads[i] == NULL)
         {
             ::printf(" Error! %s(%d)\n", __func__, __LINE__);
@@ -374,7 +374,7 @@ void TotalTest()
     InitializeSRWLock(&lock);
     QueryPerformanceFrequency(&freq);
 
-    comparePerformance();
+    comparePerformance_Total();
     // delete LockFreeQ;
 }
 */

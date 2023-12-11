@@ -1,4 +1,4 @@
-﻿#include "TotalTest.h"
+﻿// #include "TotalTest.h"
 #include "Test.h"
 
 int main()

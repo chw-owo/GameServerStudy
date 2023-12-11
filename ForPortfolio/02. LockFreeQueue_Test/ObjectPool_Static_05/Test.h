@@ -1,5 +1,5 @@
-
 #pragma once
+
 #include <Windows.h>
 #include <process.h>  
 #include <iostream>
@@ -17,36 +17,38 @@ using namespace Concurrency;
 #define MS_PER_SEC 1000000000
 #define McS_PER_SEC 1000000
 
-HANDLE beginThreadComplete = nullptr;
-HANDLE enqComplete = nullptr;
+long cnt = 0;
+int* input = nullptr;
+LARGE_INTEGER freq;
+HANDLE beginComplete = nullptr;
+HANDLE endComplete = nullptr;
 
-double MyEnqTimes[dfTHREAD_CNT];
-double MyDeqTimes[dfTHREAD_CNT];
-double LockEnqTimes[dfTHREAD_CNT];
-double LockDeqTimes[dfTHREAD_CNT];
-double StlEnqTimes[dfTHREAD_CNT];
-double StlDeqTimes[dfTHREAD_CNT];
 
-int MyEnqCalls[dfTHREAD_CNT];
-int MyDeqCalls[dfTHREAD_CNT];
-int LockEnqCalls[dfTHREAD_CNT];
-int LockDeqCalls[dfTHREAD_CNT];
-int StlEnqCalls[dfTHREAD_CNT];
-int StlDeqCalls[dfTHREAD_CNT];
+SRWLOCK lock;
+queue<int*> LockQ;
+concurrent_queue<int*> StlQ;
+CLockFreeQueue<int*>* LockFreeQ;
 
-double MyEnqAvgs[dfTHREAD_CNT];
-double MyDeqAvgs[dfTHREAD_CNT];
-double LockEnqAvgs[dfTHREAD_CNT];
-double LockDeqAvgs[dfTHREAD_CNT];
-double StlEnqAvgs[dfTHREAD_CNT];
-double StlDeqAvgs[dfTHREAD_CNT];
+double MyEnqTimes[dfTHREAD_CNT] = { 0, };
+double MyDeqTimes[dfTHREAD_CNT] = { 0, };
+double LockEnqTimes[dfTHREAD_CNT] = { 0, };
+double LockDeqTimes[dfTHREAD_CNT] = { 0, };
+double StlEnqTimes[dfTHREAD_CNT] = { 0, };
+double StlDeqTimes[dfTHREAD_CNT] = { 0, };
 
-double MyEnqTotal;
-double MyDeqTotal;
-double LockEnqTotal;
-double LockDeqTotal;
-double StlEnqTotal;
-double StlDeqTotal;
+int MyEnqCalls[dfTHREAD_CNT] = { 0, };
+int MyDeqCalls[dfTHREAD_CNT] = { 0, };
+int LockEnqCalls[dfTHREAD_CNT] = { 0, };
+int LockDeqCalls[dfTHREAD_CNT] = { 0, };
+int StlEnqCalls[dfTHREAD_CNT] = { 0, };
+int StlDeqCalls[dfTHREAD_CNT] = { 0, };
+
+double MyEnqAvgs[dfTHREAD_CNT] = { 0, };
+double MyDeqAvgs[dfTHREAD_CNT] = { 0, };
+double LockEnqAvgs[dfTHREAD_CNT] = { 0, };
+double LockDeqAvgs[dfTHREAD_CNT] = { 0, };
+double StlEnqAvgs[dfTHREAD_CNT] = { 0, };
+double StlDeqAvgs[dfTHREAD_CNT] = { 0, };
 
 double MyEnqAvg = 0;
 double MyDeqAvg = 0;
@@ -55,483 +57,286 @@ double LockDeqAvg = 0;
 double StlEnqAvg = 0;
 double StlDeqAvg = 0;
 
-volatile long MyCnt = -1;
-volatile long LockCnt = -1;
-volatile long StlCnt = -1;
-volatile long MyEnqComplete = 0;
-volatile long LockEnqComplete = 0;
-volatile long StlEnqComplete = 0;
-
-struct argForThread
+unsigned __stdcall LockFreeEnqThread(void* arg)
 {
-    argForThread(size_t Q, int idx, SRWLOCK* lock = nullptr)
-        : _Q(Q), _idx(idx), _lock(lock) {};
-    size_t _Q;
-    int _idx;
-    SRWLOCK* _lock;
-};
-
-unsigned __stdcall LockFreeQueueThread1(void* arg)
-{
-    argForThread* input = (argForThread*)arg;
-    CLockFreeQueue<int*>* Q = (CLockFreeQueue<int*>*)input->_Q;
-    int idx = input->_idx;
-
-    LARGE_INTEGER freq;
-    LARGE_INTEGER start;
-    LARGE_INTEGER end;
-    double interval = 0;
-
-    MyEnqTimes[idx] = 0;
-    MyDeqTimes[idx] = 0;
-    MyEnqCalls[idx] = 0;
-    MyDeqCalls[idx] = 0;
-
-    QueryPerformanceFrequency(&freq);
-    WaitForSingleObject(beginThreadComplete, INFINITE);
-
-    int data;
-
-    for (int i = 0; i < dfTEST_CNT; ++i)
-    {
-        QueryPerformanceCounter(&start);
-        Q->Enqueue(&data);
-        QueryPerformanceCounter(&end);
-
-        interval = (end.QuadPart - start.QuadPart) / (double)freq.QuadPart;
-        MyEnqTimes[idx] += interval;
-        MyEnqCalls[idx]++;
-    }
-
-    for (size_t i = 0; i < dfTEST_CNT; ++i)
-    {
-        QueryPerformanceCounter(&start);
-        Q->Dequeue();
-        QueryPerformanceCounter(&end);
-        
-        interval = (end.QuadPart - start.QuadPart) / (double)freq.QuadPart;
-        MyDeqTimes[idx] += interval;
-        MyDeqCalls[idx]++;
-    }
-
-    return 0;
-}
-
-unsigned __stdcall LockQueueThread1(void* arg)
-{
-    argForThread* input = (argForThread*)arg;
-    queue<int*>* Q = (queue<int*>*)input->_Q;
-    int idx = input->_idx;
-    SRWLOCK* lock = input->_lock;
-
-    LARGE_INTEGER freq;
-    LARGE_INTEGER start;
-    LARGE_INTEGER end;
-    double interval = 0;
-
-    LockEnqTimes[idx] = 0;
-    LockDeqTimes[idx] = 0;
-    LockEnqCalls[idx] = 0;
-    LockDeqCalls[idx] = 0;
-
-    QueryPerformanceFrequency(&freq);
-    WaitForSingleObject(beginThreadComplete, INFINITE);
-
-    int data;
-
-    for (int i = 0; i < dfTEST_CNT; ++i)
-    {
-        QueryPerformanceCounter(&start);
-
-        AcquireSRWLockExclusive(lock);
-        Q->push(&data);
-        ReleaseSRWLockExclusive(lock);
-
-        QueryPerformanceCounter(&end);
-
-        interval = (end.QuadPart - start.QuadPart) / (double)freq.QuadPart;
-        LockEnqTimes[idx] += interval;
-        LockEnqCalls[idx]++;
-    }
-
-    for (size_t i = 0; i < dfTEST_CNT; ++i)
-    {
-        QueryPerformanceCounter(&start);
-
-        AcquireSRWLockExclusive(lock);
-        Q->pop();
-        ReleaseSRWLockExclusive(lock);
-
-        QueryPerformanceCounter(&end);
-
-        interval = (end.QuadPart - start.QuadPart) / (double)freq.QuadPart;
-        LockDeqTimes[idx] += interval;
-        LockDeqCalls[idx]++;
-    }
-
-    return 0;
-}
-
-unsigned __stdcall StlQueueThread1(void* arg)
-{
-    argForThread* input = (argForThread*)arg;
-    concurrent_queue<int*>* Q = (concurrent_queue<int*>*)input->_Q;
-    int idx = input->_idx;
-
-    LARGE_INTEGER freq;
-    LARGE_INTEGER start;
-    LARGE_INTEGER end;
-    double interval = 0;
-
-    StlEnqTimes[idx] = 0;
-    StlDeqTimes[idx] = 0;
-    StlEnqCalls[idx] = 0;
-    StlDeqCalls[idx] = 0;
-
-    int data;
-
-    QueryPerformanceFrequency(&freq);
-    WaitForSingleObject(beginThreadComplete, INFINITE);
-
-    for (size_t i = 0; i < dfTEST_CNT; ++i)
-    {
-        QueryPerformanceCounter(&start);
-        Q->push(&data);
-        QueryPerformanceCounter(&end);
-
-        interval = (end.QuadPart - start.QuadPart) / (double)freq.QuadPart;
-        StlEnqTimes[idx] += interval;
-        StlEnqCalls[idx]++;
-    }
-
-    for (size_t i = 0; i < dfTEST_CNT; ++i)
-    {
-        int* tmp;
-        QueryPerformanceCounter(&start);
-        Q->try_pop(tmp);
-        QueryPerformanceCounter(&end);
-
-        interval = (end.QuadPart - start.QuadPart) / (double)freq.QuadPart;
-        StlDeqTimes[idx] += interval;
-        StlDeqCalls[idx]++;
-    }
-
-    return 0;
-}
-
-void comparePerformance1()
-{
-    // Test My Lock-Free Queue
-    CLockFreeQueue<int*> LockFreeQueue;
-    HANDLE MyThreads[dfTHREAD_CNT];
-    ResetEvent(beginThreadComplete);
-    for (int i = 0; i < dfTHREAD_CNT; i++)
-    {
-        argForThread* arg = new argForThread((size_t)&LockFreeQueue, i);
-        MyThreads[i] = (HANDLE)_beginthreadex(NULL, 0, LockFreeQueueThread1, arg, 0, nullptr);
-        if (MyThreads[i] == NULL)
-        {
-            ::printf(" Error! %s(%d)\n", __func__, __LINE__);
-            __debugbreak();
-        }
-    }
-    SetEvent(beginThreadComplete);
-    WaitForMultipleObjects(dfTHREAD_CNT, MyThreads, true, INFINITE);
-
-    for (int i = 0; i < dfTHREAD_CNT; i++)
-    {
-        MyEnqTimes[i] *= MS_PER_SEC;
-        MyDeqTimes[i] *= MS_PER_SEC;
-        MyEnqAvgs[i] = MyEnqTimes[i] / MyEnqCalls[i];
-        MyDeqAvgs[i] = MyDeqTimes[i] / MyDeqCalls[i];
-        MyEnqAvg += MyEnqAvgs[i];
-        MyDeqAvg += MyDeqAvgs[i];
-    }
-
-    MyEnqAvg = MyEnqAvg / dfTHREAD_CNT;
-    MyDeqAvg = MyDeqAvg / dfTHREAD_CNT;
-
-    // Test Queue with Lock
-    SRWLOCK lock;
-    InitializeSRWLock(&lock);
-    queue<int*> LockQueue;
-    HANDLE LockThreads[dfTHREAD_CNT];
-    ResetEvent(beginThreadComplete);
-    for (int i = 0; i < dfTHREAD_CNT; i++)
-    {
-        argForThread* arg = new argForThread((size_t)&LockQueue, i, &lock);
-        LockThreads[i] = (HANDLE)_beginthreadex(NULL, 0, LockQueueThread1, arg, 0, nullptr);
-        if (LockThreads[i] == NULL)
-        {
-            ::printf(" Error! %s(%d)\n", __func__, __LINE__);
-            __debugbreak();
-        }
-    }
-    SetEvent(beginThreadComplete);
-    WaitForMultipleObjects(dfTHREAD_CNT, LockThreads, true, INFINITE);
-
-    for (int i = 0; i < dfTHREAD_CNT; i++)
-    {
-        LockEnqTimes[i] *= MS_PER_SEC;
-        LockDeqTimes[i] *= MS_PER_SEC;
-        LockEnqAvgs[i] = LockEnqTimes[i] / LockEnqCalls[i];
-        LockDeqAvgs[i] = LockDeqTimes[i] / LockDeqCalls[i];
-        LockEnqAvg += LockEnqAvgs[i];
-        LockDeqAvg += LockDeqAvgs[i];
-    }
-
-    LockEnqAvg = LockEnqAvg / dfTHREAD_CNT;
-    LockDeqAvg = LockDeqAvg / dfTHREAD_CNT;
-
-    // Test Stl Queue
-    concurrent_queue<int*> StlQueue;
-    HANDLE StlThreads[dfTHREAD_CNT];
-    ResetEvent(beginThreadComplete);
-    for (int i = 0; i < dfTHREAD_CNT; i++)
-    {
-        argForThread* arg = new argForThread((size_t)&StlQueue, i);
-        StlThreads[i] = (HANDLE)_beginthreadex(NULL, 0, StlQueueThread1, (void*)arg, 0, nullptr);
-        if (StlThreads[i] == NULL)
-        {
-            ::printf(" Error! %s(%d)\n", __func__, __LINE__);
-            __debugbreak();
-        }
-    }
-    SetEvent(beginThreadComplete);
-    WaitForMultipleObjects(dfTHREAD_CNT, StlThreads, true, INFINITE);
-
-    for (int i = 0; i < dfTHREAD_CNT; i++)
-    {
-        StlEnqTimes[i] *= MS_PER_SEC;
-        StlDeqTimes[i] *= MS_PER_SEC;
-        StlEnqAvgs[i] = StlEnqTimes[i] / StlEnqCalls[i];
-        StlDeqAvgs[i] = StlDeqTimes[i] / StlDeqCalls[i];
-        StlEnqAvg += StlEnqAvgs[i];
-        StlDeqAvg += StlDeqAvgs[i];
-    }
-
-    StlEnqAvg = StlEnqAvg / dfTHREAD_CNT;
-    StlDeqAvg = StlDeqAvg / dfTHREAD_CNT;
-}
-
-unsigned __stdcall LockFreeQueueThread2(void* arg)
-{
-    argForThread* input = (argForThread*)arg;
-    CLockFreeQueue<int*>* Q = (CLockFreeQueue<int*>*)input->_Q;
-    int idx = input->_idx;
-
-    LARGE_INTEGER freq;
-    LARGE_INTEGER start;
-    LARGE_INTEGER end;
-    double interval = 0;
-
-    MyEnqTimes[idx] = 0;
-    MyDeqTimes[idx] = 0;
-    MyEnqCalls[idx] = 0;
-    MyDeqCalls[idx] = 0;
-
+    int idx = (int)arg;
     CLockFreeQueue<int*>::_pQueuePool->Initialize();
-    QueryPerformanceFrequency(&freq);
-    WaitForSingleObject(beginThreadComplete, INFINITE);
 
-    int data;
-    long ret = InterlockedIncrement(&MyCnt);
-    while(ret < dfTEST_TOTAL_CNT)
+    LARGE_INTEGER start;
+    LARGE_INTEGER end;
+    double interval = 0;
+
+    InterlockedExchange(&cnt, 0);
+    WaitForSingleObject(beginComplete, INFINITE);
+
+    long ret = InterlockedIncrement(&cnt);
+    while (ret < dfTEST_TOTAL_CNT)
     {
         QueryPerformanceCounter(&start);
-        Q->Enqueue(&data);
+        LockFreeQ->Enqueue(input);
         Sleep(0);
         QueryPerformanceCounter(&end);
 
         interval = (end.QuadPart - start.QuadPart) / (double)freq.QuadPart;
         MyEnqTimes[idx] += interval;
         MyEnqCalls[idx]++;
-        ret = InterlockedIncrement(&MyCnt);
+        ret = InterlockedIncrement(&cnt);
     }
 
-    long complete = InterlockedIncrement(&MyEnqComplete);
-    if (complete < dfTHREAD_CNT)
-    {
-        WaitForSingleObject(enqComplete, INFINITE);
-    }
-    else
-    {
-        InterlockedExchange(&MyCnt, dfTEST_TOTAL_CNT);
-        SetEvent(enqComplete);
-    }
+    return 0;
+}
 
-    ret = InterlockedDecrement(&MyCnt);
-    while (ret > 0)
+unsigned __stdcall LockFreeDeqThread(void* arg)
+{
+    int idx = (int)arg;
+    CLockFreeQueue<int*>::_pQueuePool->Initialize();
+
+    LARGE_INTEGER start;
+    LARGE_INTEGER end;
+    double interval = 0;
+
+    InterlockedExchange(&cnt, 0);
+    WaitForSingleObject(beginComplete, INFINITE);
+
+    long ret = InterlockedIncrement(&cnt);
+    while (ret < dfTEST_TOTAL_CNT)
     {
         QueryPerformanceCounter(&start);
-        Q->Dequeue();
+        LockFreeQ->Dequeue();
         Sleep(0);
         QueryPerformanceCounter(&end);
 
         interval = (end.QuadPart - start.QuadPart) / (double)freq.QuadPart;
         MyDeqTimes[idx] += interval;
         MyDeqCalls[idx]++;
-        ret = InterlockedDecrement(&MyCnt);
+        ret = InterlockedIncrement(&cnt);
     }
 
     return 0;
 }
 
-unsigned __stdcall LockQueueThread2(void* arg)
+unsigned __stdcall LockEnqThread(void* arg)
 {
-    argForThread* input = (argForThread*)arg;
-    queue<int*>* Q = (queue<int*>*)input->_Q;
-    int idx = input->_idx;
-    SRWLOCK* lock = input->_lock;
+    int idx = (int)arg;
 
-    LARGE_INTEGER freq;
     LARGE_INTEGER start;
     LARGE_INTEGER end;
     double interval = 0;
 
-    LockEnqTimes[idx] = 0;
-    LockDeqTimes[idx] = 0;
-    LockEnqCalls[idx] = 0;
-    LockDeqCalls[idx] = 0;
+    InterlockedExchange(&cnt, 0);
+    WaitForSingleObject(beginComplete, INFINITE);
 
-    QueryPerformanceFrequency(&freq);
-    WaitForSingleObject(beginThreadComplete, INFINITE);
-
-    int data;
-    long ret = InterlockedIncrement(&LockCnt);
-
+    long ret = InterlockedIncrement(&cnt);
     while (ret < dfTEST_TOTAL_CNT)
     {
         QueryPerformanceCounter(&start);
-
-        AcquireSRWLockExclusive(lock);
-        Q->push(&data);
+        AcquireSRWLockExclusive(&lock);
+        LockQ.push(input);
         Sleep(0);
-        ReleaseSRWLockExclusive(lock);
-
+        ReleaseSRWLockExclusive(&lock);
         QueryPerformanceCounter(&end);
 
         interval = (end.QuadPart - start.QuadPart) / (double)freq.QuadPart;
         LockEnqTimes[idx] += interval;
         LockEnqCalls[idx]++;
-        ret = InterlockedIncrement(&LockCnt);
+        ret = InterlockedIncrement(&cnt);
     }
 
-    long complete = InterlockedIncrement(&LockEnqComplete);
-    if (complete < dfTHREAD_CNT)
-    {
-        WaitForSingleObject(enqComplete, INFINITE);
-    }
-    else
-    {
-        InterlockedExchange(&LockCnt, dfTEST_TOTAL_CNT);
-        SetEvent(enqComplete);
-    }
+    return 0;
+}
 
-    ret = InterlockedDecrement(&LockCnt);
-    while (ret > 0)
+unsigned __stdcall LockDeqThread(void* arg)
+{
+    int idx = (int)arg;
+
+    LARGE_INTEGER start;
+    LARGE_INTEGER end;
+    double interval = 0;
+
+    InterlockedExchange(&cnt, 0);
+    WaitForSingleObject(beginComplete, INFINITE);
+
+    long ret = InterlockedIncrement(&cnt);
+    while (ret < dfTEST_TOTAL_CNT)
     {
         QueryPerformanceCounter(&start);
-
-        AcquireSRWLockExclusive(lock);
-        Q->pop();
+        AcquireSRWLockExclusive(&lock);
+        LockQ.pop();
         Sleep(0);
-        ReleaseSRWLockExclusive(lock);
-
+        ReleaseSRWLockExclusive(&lock);
         QueryPerformanceCounter(&end);
 
         interval = (end.QuadPart - start.QuadPart) / (double)freq.QuadPart;
         LockDeqTimes[idx] += interval;
         LockDeqCalls[idx]++;
-        ret = InterlockedDecrement(&LockCnt);
+        ret = InterlockedIncrement(&cnt);
     }
+
     return 0;
 }
 
-unsigned __stdcall StlQueueThread2(void* arg)
+unsigned __stdcall StlEnqThread(void* arg)
 {
-    argForThread* input = (argForThread*)arg;
-    concurrent_queue<int*>* Q = (concurrent_queue<int*>*)input->_Q;
-    int idx = input->_idx;
+    int idx = (int)arg;
 
-    LARGE_INTEGER freq;
     LARGE_INTEGER start;
     LARGE_INTEGER end;
     double interval = 0;
 
-    StlEnqTimes[idx] = 0;
-    StlDeqTimes[idx] = 0;
-    StlEnqCalls[idx] = 0;
-    StlDeqCalls[idx] = 0;
+    InterlockedExchange(&cnt, 0);
+    WaitForSingleObject(beginComplete, INFINITE);
 
-    QueryPerformanceFrequency(&freq);
-    WaitForSingleObject(beginThreadComplete, INFINITE);
-
-    int data;
-    long ret = InterlockedIncrement(&StlCnt);
-
+    long ret = InterlockedIncrement(&cnt);
     while (ret < dfTEST_TOTAL_CNT)
     {
         QueryPerformanceCounter(&start);
-        Q->push(&data);
+        StlQ.push(input);
         Sleep(0);
         QueryPerformanceCounter(&end);
 
         interval = (end.QuadPart - start.QuadPart) / (double)freq.QuadPart;
         StlEnqTimes[idx] += interval;
         StlEnqCalls[idx]++;
-        ret = InterlockedIncrement(&StlCnt);
+        ret = InterlockedIncrement(&cnt);
     }
 
-    long complete = InterlockedIncrement(&StlEnqComplete);
-    if (complete < dfTHREAD_CNT)
-    {
-        WaitForSingleObject(enqComplete, INFINITE);
-    }
-    else
-    {
-        InterlockedExchange(&StlCnt, dfTEST_TOTAL_CNT);
-        SetEvent(enqComplete);
-    }
+    return 0;
+}
 
-    ret = InterlockedDecrement(&StlCnt);
-    while (ret > 0)
+unsigned __stdcall StlDeqThread(void* arg)
+{
+    int idx = (int)arg;
+
+    LARGE_INTEGER start;
+    LARGE_INTEGER end;
+    double interval = 0;
+
+    InterlockedExchange(&cnt, 0);
+    WaitForSingleObject(beginComplete, INFINITE);
+
+    long ret = InterlockedIncrement(&cnt);
+    while (ret < dfTEST_TOTAL_CNT)
     {
         int* tmp;
         QueryPerformanceCounter(&start);
-        Q->try_pop(tmp);
+        StlQ.try_pop(tmp);
         Sleep(0);
         QueryPerformanceCounter(&end);
 
         interval = (end.QuadPart - start.QuadPart) / (double)freq.QuadPart;
         StlDeqTimes[idx] += interval;
         StlDeqCalls[idx]++;
-        ret = InterlockedDecrement(&StlCnt);
+        ret = InterlockedIncrement(&cnt);
     }
 
     return 0;
 }
 
-void comparePerformance2()
+void comparePerformance()
 {
-    // Test My Lock-Free Queue
-    CLockFreeQueue<int*> LockFreeQueue;
-    HANDLE MyThreads[dfTHREAD_CNT];
-    ResetEvent(enqComplete);
-    ResetEvent(beginThreadComplete);
+    LARGE_INTEGER start;
+    LARGE_INTEGER end;
+
+    // Test My Lock-Free Queue: EnQ =======================================================================
+
+    HANDLE MyEnQThreads[dfTHREAD_CNT];
+    ResetEvent(beginComplete);
     for (int i = 0; i < dfTHREAD_CNT; i++)
     {
-        argForThread* arg = new argForThread((size_t)&LockFreeQueue, i);
-        MyThreads[i] = (HANDLE)_beginthreadex(NULL, 0, LockFreeQueueThread2, arg, 0, nullptr);
-        if (MyThreads[i] == NULL)
+        MyEnQThreads[i] = (HANDLE)_beginthreadex(NULL, 0, LockFreeEnqThread, (void*)i, 0, nullptr);
+        if (MyEnQThreads[i] == NULL)
         {
             ::printf(" Error! %s(%d)\n", __func__, __LINE__);
             __debugbreak();
         }
     }
-    SetEvent(beginThreadComplete);
-    WaitForMultipleObjects(dfTHREAD_CNT, MyThreads, true, INFINITE);
+    SetEvent(beginComplete);
+    WaitForMultipleObjects(dfTHREAD_CNT, MyEnQThreads, true, INFINITE);
 
+    // Test My Lock-Free Queue: DeQ =======================================================================
+
+    HANDLE MyDeQThreads[dfTHREAD_CNT];
+    ResetEvent(beginComplete);
+    for (int i = 0; i < dfTHREAD_CNT; i++)
+    {
+        MyDeQThreads[i] = (HANDLE)_beginthreadex(NULL, 0, LockFreeDeqThread, (void*)i, 0, nullptr);
+        if (MyDeQThreads[i] == NULL)
+        {
+            ::printf(" Error! %s(%d)\n", __func__, __LINE__);
+            __debugbreak();
+        }
+    }
+    SetEvent(beginComplete);
+    WaitForMultipleObjects(dfTHREAD_CNT, MyDeQThreads, true, INFINITE);
+
+    // Test Queue with Lock: EnQ =======================================================================
+
+    HANDLE LockEnQThreads[dfTHREAD_CNT];
+    ResetEvent(beginComplete);
+    for (int i = 0; i < dfTHREAD_CNT; i++)
+    {
+        LockEnQThreads[i] = (HANDLE)_beginthreadex(NULL, 0, LockEnqThread, (void*)i, 0, nullptr);
+        if (LockEnQThreads[i] == NULL)
+        {
+            ::printf(" Error! %s(%d)\n", __func__, __LINE__);
+            __debugbreak();
+        }
+    }
+    SetEvent(beginComplete);
+    WaitForMultipleObjects(dfTHREAD_CNT, LockEnQThreads, true, INFINITE);
+
+    // Test Queue with Lock: DeQ =======================================================================
+
+    HANDLE LockDeQThreads[dfTHREAD_CNT];
+    ResetEvent(beginComplete);
+    for (int i = 0; i < dfTHREAD_CNT; i++)
+    {
+        LockDeQThreads[i] = (HANDLE)_beginthreadex(NULL, 0, LockDeqThread, (void*)i, 0, nullptr);
+        if (LockDeQThreads[i] == NULL)
+        {
+            ::printf(" Error! %s(%d)\n", __func__, __LINE__);
+            __debugbreak();
+        }
+    }
+    SetEvent(beginComplete);
+    WaitForMultipleObjects(dfTHREAD_CNT, LockDeQThreads, true, INFINITE);
+
+    // Test Stl Queue: EnQ =======================================================================
+
+    HANDLE StlEnQThreads[dfTHREAD_CNT];
+    ResetEvent(beginComplete);
+    for (int i = 0; i < dfTHREAD_CNT; i++)
+    {
+        StlEnQThreads[i] = (HANDLE)_beginthreadex(NULL, 0, StlEnqThread, (void*)i, 0, nullptr);
+        if (StlEnQThreads[i] == NULL)
+        {
+            ::printf(" Error! %s(%d)\n", __func__, __LINE__);
+            __debugbreak();
+        }
+    }
+    SetEvent(beginComplete);
+    WaitForMultipleObjects(dfTHREAD_CNT, StlEnQThreads, true, INFINITE);
+
+    // Test Stl Queue: DeQ =======================================================================
+
+    HANDLE StlDeQThreads[dfTHREAD_CNT];
+    ResetEvent(beginComplete);
+    for (int i = 0; i < dfTHREAD_CNT; i++)
+    {
+        StlDeQThreads[i] = (HANDLE)_beginthreadex(NULL, 0, StlDeqThread, (void*)i, 0, nullptr);
+        if (StlDeQThreads[i] == NULL)
+        {
+            ::printf(" Error! %s(%d)\n", __func__, __LINE__);
+            __debugbreak();
+        }
+    }
+    SetEvent(beginComplete);
+    WaitForMultipleObjects(dfTHREAD_CNT, StlDeQThreads, true, INFINITE);
+
+}
+
+void printoutResult()
+{
     for (int i = 0; i < dfTHREAD_CNT; i++)
     {
         MyEnqTimes[i] *= MS_PER_SEC;
@@ -562,26 +367,6 @@ void comparePerformance2()
     ::printf("\n");
     ::printf("Enq Avg: %f, Deq Avg: %f\n", MyEnqAvg, MyDeqAvg);
     ::printf("\n\n");
-
-    // Test Queue with Lock
-    SRWLOCK lock;
-    InitializeSRWLock(&lock);
-    queue<int*> LockQueue;
-    HANDLE LockThreads[dfTHREAD_CNT];
-    ResetEvent(enqComplete);
-    ResetEvent(beginThreadComplete);
-    for (int i = 0; i < dfTHREAD_CNT; i++)
-    {
-        argForThread* arg = new argForThread((size_t)&LockQueue, i, &lock);
-        LockThreads[i] = (HANDLE)_beginthreadex(NULL, 0, LockQueueThread2, arg, 0, nullptr);
-        if (LockThreads[i] == NULL)
-        {
-            ::printf(" Error! %s(%d)\n", __func__, __LINE__);
-            __debugbreak();
-        }
-    }
-    SetEvent(beginThreadComplete);
-    WaitForMultipleObjects(dfTHREAD_CNT, LockThreads, true, INFINITE);
 
     for (int i = 0; i < dfTHREAD_CNT; i++)
     {
@@ -614,23 +399,6 @@ void comparePerformance2()
     ::printf("Enq Avg: %f, Deq Avg: %f\n", LockEnqAvg, LockDeqAvg);
     ::printf("\n\n");
 
-    // Test Stl Queue
-    concurrent_queue<int*> StlQueue;
-    HANDLE StlThreads[dfTHREAD_CNT];
-    ResetEvent(enqComplete);
-    ResetEvent(beginThreadComplete);
-    for (int i = 0; i < dfTHREAD_CNT; i++)
-    {
-        argForThread* arg = new argForThread((size_t)&StlQueue, i);
-        StlThreads[i] = (HANDLE)_beginthreadex(NULL, 0, StlQueueThread2, (void*)arg, 0, nullptr);
-        if (StlThreads[i] == NULL)
-        {
-            ::printf(" Error! %s(%d)\n", __func__, __LINE__);
-            __debugbreak();
-        }
-    }
-    SetEvent(beginThreadComplete);
-    WaitForMultipleObjects(dfTHREAD_CNT, StlThreads, true, INFINITE);
 
     for (int i = 0; i < dfTHREAD_CNT; i++)
     {
@@ -666,13 +434,17 @@ void comparePerformance2()
 
 void Test()
 {
-    beginThreadComplete = CreateEvent(NULL, true, false, nullptr);
-    if (beginThreadComplete == NULL) printf("Error\n");
-    enqComplete = CreateEvent(NULL, true, false, nullptr);
-    if (enqComplete == NULL) printf("Error\n");
+    beginComplete = CreateEvent(NULL, true, false, nullptr);
+    if (beginComplete == NULL) printf("Error\n");
+    endComplete = CreateEvent(NULL, true, false, nullptr);
+    if (endComplete == NULL) printf("Error\n");
 
-    timeBeginPeriod(1);
-    // comparePerformance1();  
-    comparePerformance2();  
-    timeEndPeriod(1);
+    LockFreeQ = new CLockFreeQueue<int*>;
+    InitializeSRWLock(&lock);
+    QueryPerformanceFrequency(&freq);
+
+    comparePerformance();
+    printoutResult();
+
+    // delete LockFreeQ;
 }
