@@ -8,20 +8,11 @@
     <Filter Include="Main">
       <UniqueIdentifier>{4270a532-f9a1-4a4c-8647-e174473725bf}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Matplotlib">
-      <UniqueIdentifier>{d6b9a46a-9c66-43ac-b356-98bbb3827f77}</UniqueIdentifier>
-    </Filter>
     <Filter Include="QueueTest">
       <UniqueIdentifier>{0550c4af-fbc1-472d-9ad2-6e171a83f701}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="matplotlibcpp.h">
-      <Filter>Matplotlib</Filter>
-    </ClInclude>
-    <ClInclude Include="TestMatplotlib.h">
-      <Filter>Matplotlib</Filter>
-    </ClInclude>
     <ClInclude Include="CLockFreeQueue.h">
       <Filter>QueueTest</Filter>
     </ClInclude>
@@ -31,15 +22,13 @@
     <ClInclude Include="Test.h">
       <Filter>QueueTest</Filter>
     </ClInclude>
+    <ClInclude Include="TotalTest.h">
+      <Filter>QueueTest</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
       <Filter>Main</Filter>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="tmp.h">
-      <Filter>QueueTest</Filter>
-    </None>
   </ItemGroup>
 </Project>

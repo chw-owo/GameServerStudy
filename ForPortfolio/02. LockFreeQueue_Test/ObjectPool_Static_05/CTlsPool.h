@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <windows.h>
 #define BUCKET_SIZE 200
-#define THREAD_MAX 20
+#define THREAD_MAX 30
 
 template <class T>
 class CTlsPool

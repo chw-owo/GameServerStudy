@@ -1,8 +1,9 @@
-﻿#include "Test.h"
-// #include "TestMatplotlib.h"
+﻿#include "TotalTest.h"
+#include "Test.h"
 
 int main()
 {
+    // TotalTest();
     Test();
 }
 
