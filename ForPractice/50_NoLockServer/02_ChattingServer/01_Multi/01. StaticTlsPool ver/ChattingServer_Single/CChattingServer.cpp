@@ -296,7 +296,7 @@ void CChattingServer::OnRecv(unsigned __int64 sessionID, CPacket* packet)
 		LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d]: No Session %lld\n", _T(__FUNCTION__), __LINE__, sessionID);
 		::wprintf(L"%s[%d]: No Session %lld\n", _T(__FUNCTION__), __LINE__, sessionID);
 		CPacket::Free(packet);
-		ReleaseSRWLockExclusive(&_playersLock);
+		ReleaseSRWLockShared(&_playersLock);
 		return;
 	}
 
