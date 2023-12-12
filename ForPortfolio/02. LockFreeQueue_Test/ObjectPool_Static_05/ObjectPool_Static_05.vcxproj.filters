@@ -11,19 +11,28 @@
     <Filter Include="QueueTest">
       <UniqueIdentifier>{0550c4af-fbc1-472d-9ad2-6e171a83f701}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Queue">
+      <UniqueIdentifier>{578aa585-92bc-4211-a39a-11e8015f23e2}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="CLockFreeQueue.h">
-      <Filter>QueueTest</Filter>
-    </ClInclude>
-    <ClInclude Include="CTlsPool.h">
-      <Filter>QueueTest</Filter>
-    </ClInclude>
     <ClInclude Include="Test.h">
       <Filter>QueueTest</Filter>
     </ClInclude>
     <ClInclude Include="TotalTest.h">
       <Filter>QueueTest</Filter>
+    </ClInclude>
+    <ClInclude Include="Test2.h">
+      <Filter>QueueTest</Filter>
+    </ClInclude>
+    <ClInclude Include="TotalTest2.h">
+      <Filter>QueueTest</Filter>
+    </ClInclude>
+    <ClInclude Include="CLockFreeQueue.h">
+      <Filter>Queue</Filter>
+    </ClInclude>
+    <ClInclude Include="CTlsPool.h">
+      <Filter>Queue</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

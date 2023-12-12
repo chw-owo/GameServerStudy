@@ -18,15 +18,15 @@ public:
         friend CLockFreeQueue;
 
     public:
-        QueueNode() { __debugbreak(); }
-        QueueNode(long QID)
+        inline QueueNode() { __debugbreak(); }
+        inline QueueNode(long QID)
         {
             _next = (__int64)QID;
             _next <<= __ADDRESS_BIT__;
             _next &= CLockFreeQueue::_keyMask;
         }
 
-        ~QueueNode()
+        inline ~QueueNode()
         {
             _data = 0;
             _next = 0;
@@ -69,10 +69,10 @@ private:
     }
 
 public:
-    long GetUseSize() { return _useSize; }
+    inline long GetUseSize() { return _useSize; }
 
 public:
-    CLockFreeQueue()
+    inline CLockFreeQueue()
     {
         _QID = InterlockedIncrement(&_QIDSupplier);
         if (_QID > __QUEUE_MAX__) __debugbreak();
@@ -85,7 +85,7 @@ public:
     }
 
 public:
-    void Enqueue(T data)
+    inline void Enqueue(T data)
     {
         QueueNode* node = _pQueuePool->Alloc(_QID);
         node->_data = data;
@@ -116,7 +116,7 @@ public:
         }
     }
 
-    T Dequeue()
+    inline T Dequeue()
     {
         T data = 0;
 

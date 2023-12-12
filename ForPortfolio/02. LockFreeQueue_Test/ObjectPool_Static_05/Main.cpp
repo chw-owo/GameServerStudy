@@ -1,9 +1,9 @@
-﻿// #include "TotalTest.h"
-#include "Test.h"
+﻿#include "TotalTest2.h"
+// #include "Test2.h"
 
 int main()
 {
-    // TotalTest();
-    Test();
+    TotalTest();
+    // Test();
 }
 
