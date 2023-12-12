@@ -76,6 +76,7 @@ private:
 		_iHeaderWritePos = 0;
 		_usageCount = 0;
 		_encode = 0;
+		_pGroup = nullptr;
 	}
 
 	inline CPacket()

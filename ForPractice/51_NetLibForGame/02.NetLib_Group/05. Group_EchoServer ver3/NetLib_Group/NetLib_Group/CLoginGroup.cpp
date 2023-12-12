@@ -120,6 +120,7 @@ void CLoginGroup::OnDebug(int debugCode, wchar_t* debugMsg)
 
 void CLoginGroup::ReqSendUnicast(CPacket* packet, unsigned __int64 sessionID)
 {
+	packet->SetGroup(this);
 	packet->AddUsageCount(1); 
 	if (!SendPacket(sessionID, packet))
 	{

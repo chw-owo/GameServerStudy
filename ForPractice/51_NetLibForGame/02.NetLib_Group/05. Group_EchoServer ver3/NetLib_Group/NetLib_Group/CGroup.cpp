@@ -80,7 +80,6 @@ void CGroup::NetworkUpdate()
 				CPacket* packet = pSession->_OnRecvQ.Dequeue();
 				OnRecv(sessionID, packet);
 				CPacket::Free(packet);
-				InterlockedIncrement(&_recvCnt);
 			}
 			it++;
 		}
@@ -92,7 +91,6 @@ void CGroup::NetworkUpdate()
 	while (_OnSendQ.GetUseSize() > 0)
 	{
 		OnSend(_OnSendQ.Dequeue());
-		InterlockedIncrement(&_sendCnt);
 	}
 }
 

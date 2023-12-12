@@ -540,6 +540,7 @@ void CNetServer::HandleRecvCP(CSession* pSession, int recvBytes)
 		else
 		{
 			pSession->_OnRecvQ.Enqueue(packet);
+			InterlockedIncrement(&pSession->_pGroup->_recvCnt);
 		}
 		LeaveCriticalSection(&pSession->_groupLock);
 
@@ -630,8 +631,6 @@ bool CNetServer::SendPost(CSession* pSession)
 	int idx = 0;
 	int useSize = pSession->_sendBuf.GetUseSize();
 
-
-	EnterCriticalSection(&pSession->_groupLock);
 	for (; idx < useSize; idx++)
 	{
 		if (idx == dfWSASENDBUF_CNT) break;
@@ -643,10 +642,9 @@ bool CNetServer::SendPost(CSession* pSession)
 		pSession->_tempBuf.Enqueue(packet);
 
 		InterlockedIncrement(&_sendCnt);
-		if (pSession->_pGroup != nullptr)
-			InterlockedIncrement(&pSession->_pGroup->_sendCnt);
+		if (packet->_pGroup != nullptr)
+			InterlockedIncrement(&packet->_pGroup->_sendCnt);
 	}
-	LeaveCriticalSection(&pSession->_groupLock);
 	pSession->_sendCount = idx;
 
 	DWORD sendBytes;

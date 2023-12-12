@@ -116,6 +116,7 @@ void CEchoGroup::OnDebug(int debugCode, wchar_t* debugMsg)
 
 void CEchoGroup::ReqSendUnicast(CPacket* packet, unsigned __int64 sessionID)
 {
+	packet->SetGroup(this);
 	packet->AddUsageCount(1);
 	if (!SendPacket(sessionID, packet))
 	{
