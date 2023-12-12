@@ -5,9 +5,11 @@
 #include "CLockFreeStack.h"
 #include "CSession.h"
 #include <ws2tcpip.h>
+#include <synchapi.h>
 #include <process.h>
 #include <unordered_map>
 #pragma comment(lib, "ws2_32.lib")
+#pragma comment(lib, "Synchronization.lib")
 using namespace std;
 
 class CGroup;
@@ -44,7 +46,7 @@ protected:
 protected:
 	virtual void OnReleaseClient(unsigned __int64 sessionID) = 0;
 	virtual void OnRecv(unsigned __int64 sessionID, CPacket* packet) = 0;
-	virtual void OnSend(unsigned __int64 sessionID, int sendSize) = 0;
+	virtual void OnSend(unsigned __int64 sessionID) = 0;
 	virtual void OnError(int errorCode, wchar_t* errorMsg) = 0;
 	virtual void OnDebug(int debugCode, wchar_t* debugMsg) = 0;
 
@@ -64,10 +66,10 @@ protected:
 
 	inline long GetSessionCount() { return _sessionCnt; }
 
-	inline long GetAcceptTotal() { return _acceptTotal; }
-	inline long GetDisconnectTotal() { return _disconnectTotal; }
-	inline long GetRecvTotal() { return _recvTotal; }
-	inline long GetSendTotal() { return _sendTotal; }
+	inline unsigned long long GetAcceptTotal() { return _acceptTotal; }
+	inline unsigned long long GetDisconnectTotal() { return _disconnectTotal; }
+	inline unsigned long long GetRecvTotal() { return _recvTotal; }
+	inline unsigned long long GetSendTotal() { return _sendTotal; }
 
 	inline long GetAcceptTPS() { return _acceptTPS; }
 	inline long GetDisconnectTPS() { return _disconnectTPS; }
@@ -120,10 +122,10 @@ public:
 	ValidFlag _releaseFlag;
 
 private:
-	long _acceptTotal = 0;
-	long _disconnectTotal = 0;
-	long _recvTotal = 0;
-	long _sendTotal = 0;
+	unsigned long long _acceptTotal = 0;
+	unsigned long long _disconnectTotal = 0;
+	unsigned long long _recvTotal = 0;
+	unsigned long long _sendTotal = 0;
 
 	long _acceptTPS = 0;
 	long _disconnectTPS = 0;

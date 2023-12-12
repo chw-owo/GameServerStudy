@@ -3,7 +3,7 @@
 
 CEchoGroup::CEchoGroup(CServer* pNet)
 {
-	Setting((CNetServer*)pNet, 1);
+	Setting((CNetServer*)pNet, 0);
 	_userPool = new CTlsPool<CEchoUser>(dfUSER_MAX, true);
 }
 

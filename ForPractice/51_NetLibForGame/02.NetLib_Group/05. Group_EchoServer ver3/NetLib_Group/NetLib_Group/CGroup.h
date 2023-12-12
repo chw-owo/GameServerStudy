@@ -20,12 +20,16 @@ public:
 	void Setting(CNetServer* pNet, DWORD fps)
 	{
 		_pNet = pNet;
-		_fps = fps;
+		_fps = fps;	
 	}
 
 public:
-	void SetDead() { _alive = false; }
 	bool GetAlive() { return _alive; }
+	void SetDead() 
+	{ 
+		_alive = false; 
+		InterlockedIncrement(&_signal);
+	}
 
 	// Called in CGroup's Child Class
 protected:
@@ -60,15 +64,14 @@ private:
 private:
 	bool SkipForFixedFrame();
 	void NetworkUpdate();
-
-private:
-	void AcceptEnterSessions();
 	void RemoveAllSessions();
 
 private:
 	bool _alive = true;
-	DWORD _fps;
+	DWORD _fps = 0;
 	CNetServer* _pNet;
+	long _signal = 0;
+	long _undesired = 0;
 
 private:
 	vector<unsigned __int64> _sessions;
@@ -92,10 +95,10 @@ public:
 
 	__int64 GetSessionCount() { return _sessions.size(); }
 
-	inline long GetEnterTotal() { return _enterTotal; }
-	inline long GetLeaveTotal() { return _leaveTotal; }
-	inline long GetRecvTotal() { return _recvTotal; }
-	inline long GetSendTotal() { return _sendTotal; }
+	inline unsigned long long GetEnterTotal() { return _enterTotal; }
+	inline unsigned long long GetLeaveTotal() { return _leaveTotal; }
+	inline unsigned long long GetRecvTotal() { return _recvTotal; }
+	inline unsigned long long GetSendTotal() { return _sendTotal; }
 
 	inline long GetEnterTPS() { return _enterTPS; }
 	inline long GetLeaveTPS() { return _leaveTPS; }
@@ -103,10 +106,10 @@ public:
 	inline long GetSendTPS() { return _sendTPS; }
 
 private:
-	long _enterTotal = 0;
-	long _leaveTotal = 0;
-	long _recvTotal = 0;
-	long _sendTotal = 0;
+	unsigned long long _enterTotal = 0;
+	unsigned long long _leaveTotal = 0;
+	unsigned long long _recvTotal = 0;
+	unsigned long long _sendTotal = 0;
 
 	long _enterTPS = 0;
 	long _leaveTPS = 0;

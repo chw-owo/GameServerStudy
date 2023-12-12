@@ -5,7 +5,7 @@
 CLoginGroup::CLoginGroup(CServer* pNet)
 {
 	_pEchoGroup = pNet->_pEchoGroup;
-	Setting((CNetServer*)pNet, 1);
+	Setting((CNetServer*)pNet, 0);
 	_userPool = new CTlsPool<CLoginUser>(dfUSER_MAX, true);
 }
 

@@ -76,7 +76,7 @@ void CServer::OnRecv(unsigned __int64 sessionID, CPacket* packet)
 	// ::printf("%016llx (%d): Main::%s\n", sessionID, GetCurrentThreadId(), __func__);
 }
 
-void CServer::OnSend(unsigned __int64 sessionID, int sendSize)
+void CServer::OnSend(unsigned __int64 sessionID)
 {
 	// ::printf("%016llx (%d): Main::%s\n", sessionID, GetCurrentThreadId(), __func__);
 }
@@ -150,10 +150,10 @@ unsigned int __stdcall CServer::MonitorThread(void* arg)
 
 			L"Session Count : %lld\n\n"
 
-			L"Total Accept : %d\n"
-			L"Total Disconnect : %d\n"
-			L"Total Recv : %d\n"
-			L"Total Send : %d\n\n"
+			L"Total Accept : %llu\n"
+			L"Total Disconnect : %llu\n"
+			L"Total Recv : %llu\n"
+			L"Total Send : %llu\n\n"
 
 			L"Accept / 1sec: % d\n"
 			L"Disconnect / 1sec: % d\n"
@@ -165,10 +165,10 @@ unsigned int __stdcall CServer::MonitorThread(void* arg)
 			L"Session Count : %lld\n"
 			L"User Count : %lld\n\n"
 
-			L"Total Enter : %d\n"
-			L"Total Leave : %d\n"
-			L"Total Recv : %d\n"
-			L"Total Send : %d\n\n"
+			L"Total Enter : %llu\n"
+			L"Total Leave : %llu\n"
+			L"Total Recv : %llu\n"
+			L"Total Send : %llu\n"
 
 			L"Enter / 1sec: % d\n"
 			L"Leave / 1sec: % d\n"
@@ -180,10 +180,10 @@ unsigned int __stdcall CServer::MonitorThread(void* arg)
 			L"Session Count : %lld\n"
 			L"User Count : %lld\n\n"
 
-			L"Total Enter : %d\n"
-			L"Total Leave : %d\n"
-			L"Total Recv : %d\n"
-			L"Total Send : %d\n\n"
+			L"Total Enter : %llu\n"
+			L"Total Leave : %llu\n"
+			L"Total Recv : %llu\n"
+			L"Total Send : %llu\n\n"
 
 			L"Enter / 1sec: % d\n"
 			L"Leave / 1sec: % d\n"

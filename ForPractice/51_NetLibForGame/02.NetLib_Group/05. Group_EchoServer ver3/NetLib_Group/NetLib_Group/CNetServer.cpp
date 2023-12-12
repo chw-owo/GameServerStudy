@@ -422,7 +422,11 @@ bool CNetServer::MoveGroup(unsigned __int64 sessionID, CGroup* pGroup)
 	EnterCriticalSection(&pSession->_groupLock);
 	pSession->_pGroup = pGroup;
 	if (pGroup != nullptr)
+	{
 		pGroup->_enterSessions.Enqueue(pSession->GetID());
+		long ret = InterlockedIncrement(&pGroup->_signal);
+		if (ret == 1) WakeByAddressSingle(&pGroup->_signal);
+	}
 	LeaveCriticalSection(&pSession->_groupLock);
 
 	ReleaseSessionUsage(pSession);
@@ -466,8 +470,10 @@ void CNetServer::HandleRecvCP(CSession* pSession, int recvBytes)
 		return;
 	}
 
+	int cnt = 0;
 	int useSize = pSession->_recvBuf.GetUseSize();
 
+	EnterCriticalSection(&pSession->_groupLock);
 	while (useSize > dfHEADER_LEN)
 	{
 		stHeader header;
@@ -478,6 +484,7 @@ void CNetServer::HandleRecvCP(CSession* pSession, int recvBytes)
 			Disconnect(pSession->GetID());
 			swprintf_s(stErrMsg, dfMSG_MAX, L"%s[%d]: Recv Buffer Peek Error", _T(__FUNCTION__), __LINE__);
 			OnError(ERR_RECVBUF_PEEK, stErrMsg);
+			LeaveCriticalSection(&pSession->_groupLock);
 			return;
 		}
 
@@ -487,6 +494,7 @@ void CNetServer::HandleRecvCP(CSession* pSession, int recvBytes)
 			Disconnect(pSession->GetID());
 			swprintf_s(stErrMsg, dfMSG_MAX, L"%s[%d]: Wrong Packet Code", _T(__FUNCTION__), __LINE__);
 			OnDebug(DEB_WRONG_PACKETCODE, stErrMsg);
+			LeaveCriticalSection(&pSession->_groupLock);
 			return;
 		}
 
@@ -501,6 +509,7 @@ void CNetServer::HandleRecvCP(CSession* pSession, int recvBytes)
 			Disconnect(pSession->GetID());
 			swprintf_s(stErrMsg, dfMSG_MAX, L"%s[%d]: Recv Buffer MoveReadPos Error", _T(__FUNCTION__), __LINE__);
 			OnError(ERR_RECVBUF_MOVEREADPOS, stErrMsg);
+			LeaveCriticalSection(&pSession->_groupLock);
 			return;
 		}
 
@@ -516,6 +525,7 @@ void CNetServer::HandleRecvCP(CSession* pSession, int recvBytes)
 			wchar_t stErrMsg[dfMSG_MAX];
 			swprintf_s(stErrMsg, dfMSG_MAX, L"%s[%d]: Recv Buffer Dequeue Error", _T(__FUNCTION__), __LINE__);
 			OnDebug(DEB_WRONG_PACKETLEN, stErrMsg);
+			LeaveCriticalSection(&pSession->_groupLock);
 			return;
 		}
 		packet->MovePayloadWritePos(dequeueRet);
@@ -528,10 +538,10 @@ void CNetServer::HandleRecvCP(CSession* pSession, int recvBytes)
 			wchar_t stErrMsg[dfMSG_MAX];
 			swprintf_s(stErrMsg, dfMSG_MAX, L"%s[%d]: Wrong Checksum", _T(__FUNCTION__), __LINE__);
 			OnDebug(DEB_WRONG_DECODE, stErrMsg);
+			LeaveCriticalSection(&pSession->_groupLock);
 			return;
 		}
 
-		EnterCriticalSection(&pSession->_groupLock);
 		if (pSession->_pGroup == nullptr)
 		{
 			OnRecv(pSession->GetID(), packet);
@@ -540,13 +550,20 @@ void CNetServer::HandleRecvCP(CSession* pSession, int recvBytes)
 		else
 		{
 			pSession->_OnRecvQ.Enqueue(packet);
-			InterlockedIncrement(&pSession->_pGroup->_recvCnt);
+			long ret = InterlockedIncrement(&pSession->_pGroup->_signal);
+			if (ret == 1) WakeByAddressSingle(&pSession->_pGroup->_signal);
 		}
-		LeaveCriticalSection(&pSession->_groupLock);
 
+		cnt++;
 		useSize = pSession->_recvBuf.GetUseSize();
-		InterlockedIncrement(&_recvCnt);
 	}
+
+	InterlockedAdd(&_recvCnt, cnt);
+	if (pSession->_pGroup != nullptr)
+		InterlockedAdd(&pSession->_pGroup->_recvCnt, cnt);
+
+	LeaveCriticalSection(&pSession->_groupLock);
+	
 
 	RecvPost(pSession);
 }
@@ -560,9 +577,15 @@ void CNetServer::HandleSendCP(CSession* pSession, int sendBytes)
 		if (packet == nullptr) break;
 		
 		if (packet->_pGroup == nullptr)
-			OnSend(pSession->GetID(), packet->GetPayloadSize());
+		{
+			OnSend(pSession->GetID());
+		}
 		else
+		{
 			packet->_pGroup->_OnSendQ.Enqueue(pSession->GetID());
+			long ret = InterlockedIncrement(&pSession->_pGroup->_signal);
+			if (ret == 1) WakeByAddressSingle(&pSession->_pGroup->_signal);
+		}
 
 		CPacket::Free(packet);
 	}
@@ -746,11 +769,19 @@ void CNetServer::HandleRelease(unsigned __int64 sessionID)
 	CSession* pSession = _sessions[(long)idx];
 
 	SOCKET sock = pSession->_sock;
+	EnterCriticalSection(&pSession->_groupLock);
+	CGroup* pGroup = pSession->_pGroup;
 	pSession->Terminate();
+	LeaveCriticalSection(&pSession->_groupLock);
+	if (pGroup != nullptr)
+	{
+		long ret = InterlockedIncrement(&pGroup->_signal);
+		if (ret == 1) WakeByAddressSingle(&pGroup->_signal);
+	}
+
 	closesocket(sock);
 	_emptyIdx.Push(idx);
 	OnReleaseClient(sessionID);
-
 	InterlockedIncrement(&_disconnectCnt);
 	InterlockedDecrement(&_sessionCnt);
 }
