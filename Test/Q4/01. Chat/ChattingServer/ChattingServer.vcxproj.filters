@@ -1,0 +1,130 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="리소스 파일">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="ChattingServer">
+      <UniqueIdentifier>{882e17d8-7064-4855-b22d-c2d9cd52d160}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib">
+      <UniqueIdentifier>{1e646f21-cfff-4bcc-8e14-8ca1ff3bae1a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ChattingServer\DebugTool">
+      <UniqueIdentifier>{a57f94ac-3a50-4d97-81b7-83b60f69934a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Packet">
+      <UniqueIdentifier>{27a080dd-522d-4d48-864b-862f87f5518e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Network">
+      <UniqueIdentifier>{d6bafcba-f404-4eeb-9511-33559cf875f6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ChattingServer\ChattingServer">
+      <UniqueIdentifier>{fe376647-d573-4347-b1ec-8c8b6e67e11d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ChattingServer\ChattingServer\Object">
+      <UniqueIdentifier>{b7fb4350-76d3-40eb-b5e3-d9cc023931c2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ChattingServer\ChattingServer\Utils">
+      <UniqueIdentifier>{521a4d14-a205-494e-b609-e402ee86e924}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Network\Session">
+      <UniqueIdentifier>{653cd73e-c1b0-469f-bdf3-a8824a83d367}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Network\Utils">
+      <UniqueIdentifier>{5964aedb-e406-4e62-8cfa-85957b978264}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Common">
+      <UniqueIdentifier>{1f4c465d-af9e-4d2f-ba1d-c24e1244abd8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Common\Utils">
+      <UniqueIdentifier>{3bd0db85-d83d-4d09-b8df-ece2149169d9}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="CChattingServer.cpp">
+      <Filter>ChattingServer\ChattingServer</Filter>
+    </ClCompile>
+    <ClCompile Include="CSystemLog.cpp">
+      <Filter>ChattingServer\DebugTool</Filter>
+    </ClCompile>
+    <ClCompile Include="CLanServer.cpp">
+      <Filter>NetLib\Network</Filter>
+    </ClCompile>
+    <ClCompile Include="CRingBuffer.cpp">
+      <Filter>NetLib\Network\Utils</Filter>
+    </ClCompile>
+    <ClCompile Include="CPacket.cpp">
+      <Filter>NetLib\Packet</Filter>
+    </ClCompile>
+    <ClCompile Include="Main.cpp">
+      <Filter>ChattingServer</Filter>
+    </ClCompile>
+    <ClCompile Include="CNetServer.cpp">
+      <Filter>NetLib\Network</Filter>
+    </ClCompile>
+    <ClCompile Include="CProfiler.cpp">
+      <Filter>ChattingServer\DebugTool</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Config.h">
+      <Filter>NetLib</Filter>
+    </ClInclude>
+    <ClInclude Include="ErrorCode.h">
+      <Filter>NetLib</Filter>
+    </ClInclude>
+    <ClInclude Include="CPlayer.h">
+      <Filter>ChattingServer\ChattingServer\Object</Filter>
+    </ClInclude>
+    <ClInclude Include="CSector.h">
+      <Filter>ChattingServer\ChattingServer\Object</Filter>
+    </ClInclude>
+    <ClInclude Include="CChattingServer.h">
+      <Filter>ChattingServer\ChattingServer</Filter>
+    </ClInclude>
+    <ClInclude Include="CCrashDump.h">
+      <Filter>ChattingServer\DebugTool</Filter>
+    </ClInclude>
+    <ClInclude Include="CSystemLog.h">
+      <Filter>ChattingServer\DebugTool</Filter>
+    </ClInclude>
+    <ClInclude Include="CLanServer.h">
+      <Filter>NetLib\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="CSession.h">
+      <Filter>NetLib\Network\Session</Filter>
+    </ClInclude>
+    <ClInclude Include="CRingBuffer.h">
+      <Filter>NetLib\Network\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="Protocol.h">
+      <Filter>ChattingServer</Filter>
+    </ClInclude>
+    <ClInclude Include="CPacket.h">
+      <Filter>NetLib\Packet</Filter>
+    </ClInclude>
+    <ClInclude Include="CJob.h">
+      <Filter>ChattingServer\ChattingServer\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="CObjectPool.h">
+      <Filter>ChattingServer\ChattingServer\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="CNetServer.h">
+      <Filter>NetLib\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="CTlsPool.h">
+      <Filter>Common\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="CLockFreeQueue.h">
+      <Filter>Common\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="CLockFreeStack.h">
+      <Filter>Common\Utils</Filter>
+    </ClInclude>
+    <ClInclude Include="CProfiler.h">
+      <Filter>ChattingServer\DebugTool</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
