@@ -10,8 +10,10 @@
 
 enum class NET_TYPE
 {
-	SEND = 0,
-	RECV,
+	SEND_COMPLETE = 0,
+	RECV_COMPLETE,
+	SEND_POST,
+	RECV_POST,
 	RELEASE
 };
 
@@ -37,8 +39,10 @@ public:
 	CSession()
 	{
 		_validFlag._flag = 0;
-		_recvOvl._type = NET_TYPE::RECV;
-		_sendOvl._type = NET_TYPE::SEND;
+		_recvComplOvl._type = NET_TYPE::RECV_COMPLETE;
+		_sendComplOvl._type = NET_TYPE::SEND_COMPLETE;
+		_recvPostOvl._type = NET_TYPE::RECV_POST;
+		_sendPostOvl._type = NET_TYPE::SEND_POST;
 		_releaseOvl._type = NET_TYPE::RELEASE;
 	}
 
@@ -50,26 +54,25 @@ public:
 		InterlockedExchange(&_sendFlag, 0);
 		InterlockedExchange16(&_validFlag._releaseFlag, 0);
 
-		// ::printf("%d: Session Initialize (%016llx - %016llx)\n", GetCurrentThreadId(), _ID, ID);
 		_ID = ID;
-		// LeaveLog(100, ID, _validFlag._useCount, _validFlag._releaseFlag);
-
 		_disconnect = false;
 		_sock = sock;
 		_addr = addr;
 
-		ZeroMemory(&_recvOvl._ovl, sizeof(_recvOvl._ovl));
-		ZeroMemory(&_sendOvl._ovl, sizeof(_sendOvl._ovl));
+		ZeroMemory(&_recvComplOvl._ovl, sizeof(_recvComplOvl._ovl));
+		ZeroMemory(&_sendComplOvl._ovl, sizeof(_sendComplOvl._ovl));
+		ZeroMemory(&_recvPostOvl._ovl, sizeof(_recvPostOvl._ovl));
+		ZeroMemory(&_sendPostOvl._ovl, sizeof(_sendPostOvl._ovl));
 		ZeroMemory(&_releaseOvl._ovl, sizeof(_releaseOvl._ovl));
 	}
 
 	void Terminate()
 	{
-		// ::printf("%d: Session Terminate (%016llx - %016llx)\n", GetCurrentThreadId(), _ID, (__int64)-1);
 		_ID = MAXULONGLONG;
 		_disconnect = true;
 		_sock = INVALID_SOCKET;
 		_recvBuf.ClearBuffer();
+
 		while (_sendBuf.GetUseSize() > 0)
 		{
 			CPacket* packet = _sendBuf.Dequeue();
@@ -99,35 +102,11 @@ public:
 	WSABUF _wsaRecvbuf[dfWSARECVBUF_CNT];
 	WSABUF _wsaSendbuf[dfWSASENDBUF_CNT];
 
-	NetworkOverlapped _recvOvl;
-	NetworkOverlapped _sendOvl;
+	NetworkOverlapped _recvComplOvl;
+	NetworkOverlapped _sendComplOvl;
+	NetworkOverlapped _recvPostOvl;
+	NetworkOverlapped _sendPostOvl;
 	NetworkOverlapped _releaseOvl;
 
 	volatile ValidFlag _validFlag;
-
-	/*
-public:
-#define DEBUG_MAX 1000
-
-	struct DebugData
-	{
-		int _line = 0;
-		__int64 _reqID = 0;
-		short _useCount = 0;
-		short _releaseFlag = 0;
-		int _call = 0;
-	};
-
-	volatile long g_idx = -1;
-	DebugData debugs[DEBUG_MAX];
-	void LeaveLog(int line, __int64 reqID, short useCount, short releaseFlag, int call = 0)
-	{
-		long idx = InterlockedIncrement(&g_idx);
-		debugs[idx % DEBUG_MAX]._line = line;
-		debugs[idx % DEBUG_MAX]._reqID = reqID;
-		debugs[idx % DEBUG_MAX]._useCount = useCount;
-		debugs[idx % DEBUG_MAX]._releaseFlag = releaseFlag;
-		debugs[idx % DEBUG_MAX]._call = call;
-	}
-	*/
 };

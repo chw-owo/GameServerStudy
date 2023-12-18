@@ -5,7 +5,7 @@
 CLoginGroup::CLoginGroup(CServer* pNet)
 {
 	_pEchoGroup = pNet->_pEchoGroup;
-	Setting((CNetServer*)pNet, 1);
+	Setting((CNetServer*)pNet, 0);
 	_userPool = new CTlsPool<CLoginUser>(dfUSER_MAX, true);
 }
 
@@ -101,7 +101,7 @@ void CLoginGroup::OnRecv(unsigned __int64 sessionID, CPacket* packet)
 	}
 }
 
-void CLoginGroup::OnSend(unsigned __int64 sessionID, int sendSize)
+void CLoginGroup::OnSend(unsigned __int64 sessionID)
 {
 	// ::printf("%016llx (%d): Login::%s\n", sessionID, GetCurrentThreadId(), __func__);
 }
@@ -120,6 +120,7 @@ void CLoginGroup::OnDebug(int debugCode, wchar_t* debugMsg)
 
 void CLoginGroup::ReqSendUnicast(CPacket* packet, unsigned __int64 sessionID)
 {
+	packet->SetGroup(this);
 	packet->AddUsageCount(1); 
 	if (!SendPacket(sessionID, packet))
 	{

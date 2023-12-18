@@ -92,11 +92,6 @@ public:
 			CPacket* packet = _OnRecvQ.Dequeue();
 			CPacket::Free(packet);
 		}
-
-		while (_OnSendQ.GetUseSize() > 0)
-		{
-			_OnSendQ.Dequeue();
-		}
 	}
 
 private:
@@ -125,5 +120,4 @@ public: // For Group;
 	CGroup* _pGroup = nullptr;
 	CRITICAL_SECTION _groupLock;
 	CLockFreeQueue<CPacket*> _OnRecvQ;
-	CLockFreeQueue<__int64> _OnSendQ;
 };

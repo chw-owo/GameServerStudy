@@ -134,6 +134,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="CChattingServer.cpp" />
+    <ClCompile Include="CLanClient.cpp" />
+    <ClCompile Include="CMonitorClient.cpp" />
     <ClCompile Include="CPacket.cpp" />
     <ClCompile Include="CProfiler.cpp" />
     <ClCompile Include="CRingBuffer.cpp" />
@@ -141,11 +143,14 @@
     <ClCompile Include="CLanServer.cpp" />
     <ClCompile Include="Main.cpp" />
     <ClCompile Include="CNetServer.cpp" />
+    <ClCompile Include="CMonitorManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CChattingServer.h" />
     <ClInclude Include="CCrashDump.h" />
     <ClInclude Include="CJob.h" />
+    <ClInclude Include="CLanClient.h" />
+    <ClInclude Include="CMonitorClient.h" />
     <ClInclude Include="CTlsPool.h" />
     <ClInclude Include="CLockFreeQueue.h" />
     <ClInclude Include="CLockFreeStack.h" />
@@ -161,7 +166,8 @@
     <ClInclude Include="ErrorCode.h" />
     <ClInclude Include="CLanServer.h" />
     <ClInclude Include="CNetServer.h" />
-    <ClInclude Include="Protocol.h" />
+    <ClInclude Include="CommonProtocol.h" />
+    <ClInclude Include="CMonitorManager.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

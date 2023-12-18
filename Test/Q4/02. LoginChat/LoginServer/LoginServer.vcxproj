@@ -137,6 +137,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="CChattingServer.cpp" />
+    <ClCompile Include="CLanClient.cpp" />
+    <ClCompile Include="CLanServer.cpp" />
     <ClCompile Include="CLoginServer.cpp" />
     <ClCompile Include="CMonitorServer.cpp" />
     <ClCompile Include="CNetServer.cpp" />
@@ -150,6 +152,8 @@
     <ClInclude Include="CChattingServer.h" />
     <ClInclude Include="CCrashDump.h" />
     <ClInclude Include="CJob.h" />
+    <ClInclude Include="CLanClient.h" />
+    <ClInclude Include="CLanServer.h" />
     <ClInclude Include="CLockFreeQueue.h" />
     <ClInclude Include="CLockFreeStack.h" />
     <ClInclude Include="CLoginServer.h" />

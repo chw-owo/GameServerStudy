@@ -85,6 +85,12 @@
     <ClCompile Include="CLoginGroup.cpp">
       <Filter>Server\Server\Group\Login</Filter>
     </ClCompile>
+    <ClCompile Include="CLanServer.cpp">
+      <Filter>NetLib\Network</Filter>
+    </ClCompile>
+    <ClCompile Include="CLanClient.cpp">
+      <Filter>NetLib\Network</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CommonProtocol.h">
@@ -146,6 +152,12 @@
     </ClInclude>
     <ClInclude Include="CLoginGroup.h">
       <Filter>Server\Server\Group\Login</Filter>
+    </ClInclude>
+    <ClInclude Include="CLanServer.h">
+      <Filter>NetLib\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="CLanClient.h">
+      <Filter>NetLib\Network</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

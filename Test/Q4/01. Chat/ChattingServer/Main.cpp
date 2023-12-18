@@ -1,4 +1,5 @@
 ﻿#include "CChattingServer.h"
+#include "CMonitorClient.h"
 #include "CCrashDump.h"
 #include "CSystemLog.h"
 #include <locale.h>
@@ -12,6 +13,7 @@
 
 CCrashDump g_Dump;
 CChattingServer g_Server;
+CMonitorClient g_Monitor;
 
 int wmain(int argc, wchar_t* argv[])
 {
@@ -23,9 +25,15 @@ int wmain(int argc, wchar_t* argv[])
 
     timeBeginPeriod(1);
     if (!g_Server.Initialize()) return 0;
+    if (!g_Monitor.Initialize(&g_Server)) return 0;
+
     for (;;)
     {
-       // if (GetAsyncKeyState(VK_SPACE)) g_Server.Terminate();
+       // if (GetAsyncKeyState(VK_SPACE)) 
+       // {
+       //     g_Server.Terminate();
+       //     g_Monitor.Terminate();
+       // }
     }
     timeEndPeriod(1);
 

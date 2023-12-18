@@ -1,6 +1,6 @@
 #pragma once
 #include <vector>
-#include "Protocol.h"
+#include "CommonProtocol.h"
 using namespace std;
 
 class CPlayer;

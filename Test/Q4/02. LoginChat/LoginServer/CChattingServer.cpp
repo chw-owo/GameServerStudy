@@ -49,13 +49,16 @@ bool CChattingServer::Initialize()
 	GetSystemInfo(&si);
 
 	int cpuCount = (int)si.dwNumberOfProcessors;
-	int networkThreadCnt = 0;
+	int threadCnt = 0;
+	int runningThreadCnt = 0;
 
 	::wprintf(L"CPU total: %d\n", cpuCount);
-	::wprintf(L"Network Thread Count (Except Accept Thread) (recommend under %d): ", cpuCount - 1);
-	::scanf_s("%d", &networkThreadCnt);
+	::wprintf(L"Thread Count: ");
+	::scanf_s("%d", &threadCnt);
+	::wprintf(L"Running Thread Count: ");
+	::scanf_s("%d", &runningThreadCnt);
 
-	if (!NetworkInitialize(dfSERVER_IP, dfCHAT_PORT, networkThreadCnt, false))
+	if (!NetworkInitialize(dfSERVER_IP, dfCHAT_PORT, threadCnt, runningThreadCnt, false))
 	{
 		Terminate();
 		return false;

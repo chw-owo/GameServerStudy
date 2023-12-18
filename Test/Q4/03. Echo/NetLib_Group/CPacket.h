@@ -20,9 +20,15 @@
 #include <windows.h>
 #include <stdio.h>
 
+class CGroup;
+class CNetServer;
+class CLanServer;
+
 class CPacket
 {
 	friend CTlsPool<CPacket>;
+	friend CNetServer;
+	friend CLanServer;
 
 public:
 	static CTlsPool<CPacket> _pool;
@@ -59,6 +65,11 @@ public:
 		InterlockedAdd(&_usageCount, usageCount);
 	}
 
+	void SetGroup(CGroup* pGroup)
+	{
+		_pGroup = pGroup;
+	}
+
 private:
 	void Clear(void)
 	{
@@ -68,6 +79,7 @@ private:
 		_iHeaderWritePos = 0;
 		_usageCount = 0;
 		_encode = 0;
+		_pGroup = nullptr;
 	}
 
 	inline CPacket()
@@ -557,4 +569,7 @@ private:
 
 private:
 	int _errCode;
+
+private:
+	CGroup* _pGroup;
 };

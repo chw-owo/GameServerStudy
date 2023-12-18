@@ -1,5 +1,5 @@
 #pragma once
-#include "Protocol.h"
+#include "CommonProtocol.h"
 
 class CPlayer
 {

@@ -17,12 +17,6 @@
     <Filter Include="NetLib\Network">
       <UniqueIdentifier>{6e488204-6105-43da-888a-eaf8898f8607}</UniqueIdentifier>
     </Filter>
-    <Filter Include="NetLib\Network\Session">
-      <UniqueIdentifier>{4a5ecd20-3900-47fc-ae70-2376645c3dd1}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="NetLib\Network\Utils">
-      <UniqueIdentifier>{4643e4b4-7531-415d-abb0-1c00dce12f07}</UniqueIdentifier>
-    </Filter>
     <Filter Include="NetLib\Packet">
       <UniqueIdentifier>{8aa383e3-f9dc-40fe-b35d-022d45a1d371}</UniqueIdentifier>
     </Filter>
@@ -53,13 +47,19 @@
     <Filter Include="Server\Redis">
       <UniqueIdentifier>{47df89b4-75cc-4353-bc66-d6429cf34d3c}</UniqueIdentifier>
     </Filter>
+    <Filter Include="NetLib\Session">
+      <UniqueIdentifier>{4a5ecd20-3900-47fc-ae70-2376645c3dd1}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Session\Utils">
+      <UniqueIdentifier>{4643e4b4-7531-415d-abb0-1c00dce12f07}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CPacket.cpp">
       <Filter>NetLib\Packet</Filter>
     </ClCompile>
     <ClCompile Include="CRingBuffer.cpp">
-      <Filter>NetLib\Network\Utils</Filter>
+      <Filter>NetLib\Session\Utils</Filter>
     </ClCompile>
     <ClCompile Include="CNetServer.cpp">
       <Filter>NetLib\Network</Filter>
@@ -82,6 +82,12 @@
     <ClCompile Include="Main.cpp">
       <Filter>Server</Filter>
     </ClCompile>
+    <ClCompile Include="CLanClient.cpp">
+      <Filter>NetLib\Network</Filter>
+    </ClCompile>
+    <ClCompile Include="CLanServer.cpp">
+      <Filter>NetLib\Network</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CLockFreeQueue.h">
@@ -94,13 +100,13 @@
       <Filter>Common\Utils</Filter>
     </ClInclude>
     <ClInclude Include="CSession.h">
-      <Filter>NetLib\Network\Session</Filter>
+      <Filter>NetLib\Session</Filter>
     </ClInclude>
     <ClInclude Include="CPacket.h">
       <Filter>NetLib\Packet</Filter>
     </ClInclude>
     <ClInclude Include="CRingBuffer.h">
-      <Filter>NetLib\Network\Utils</Filter>
+      <Filter>NetLib\Session\Utils</Filter>
     </ClInclude>
     <ClInclude Include="CNetServer.h">
       <Filter>NetLib\Network</Filter>
@@ -149,6 +155,12 @@
     </ClInclude>
     <ClInclude Include="CRedis.h">
       <Filter>Server\Redis</Filter>
+    </ClInclude>
+    <ClInclude Include="CLanClient.h">
+      <Filter>NetLib\Network</Filter>
+    </ClInclude>
+    <ClInclude Include="CLanServer.h">
+      <Filter>NetLib\Network</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

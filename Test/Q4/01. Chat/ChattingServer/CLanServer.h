@@ -15,7 +15,7 @@ protected:
 	~CLanServer() {};
 
 protected:
-	bool NetworkInitialize(const wchar_t* IP, short port, int numOfThreads, bool nagle);
+	bool NetworkInitialize(const wchar_t* IP, short port, int numOfThreads, int numOfRunnings, bool nagle);
 	bool NetworkTerminate();
 
 protected:
@@ -41,24 +41,24 @@ protected:
 	{
 		long acceptCnt = InterlockedExchange(&_acceptCnt, 0);
 		long disconnectCnt = InterlockedExchange(&_disconnectCnt, 0);
-		long recvMsgCnt = InterlockedExchange(&_recvMsgCnt, 0);
-		long sendMsgCnt = InterlockedExchange(&_sendMsgCnt, 0);
+		long recvCnt = InterlockedExchange(&_recvCnt, 0);
+		long sendCnt = InterlockedExchange(&_sendCnt, 0);
 
 		_acceptTotal += acceptCnt;
 		_disconnectTotal += disconnectCnt;
 
 		_acceptTPS = acceptCnt;
 		_disconnectTPS = disconnectCnt;
-		_recvMsgTPS = recvMsgCnt;
-		_sendMsgTPS = sendMsgCnt;
+		_recvTPS = recvCnt;
+		_sendTPS = sendCnt;
 	}
 
 	inline int GetAcceptTotal() { return _acceptTotal; }
 	inline int GetDisconnectTotal() { return _disconnectTotal; }
 	inline long GetSessionCount() { return _sessionCnt; }
 
-	inline int GetRecvMsgTPS() { return _recvMsgTPS; }
-	inline int GetSendMsgTPS() { return _sendMsgTPS; }
+	inline int GetRecvTPS() { return _recvTPS; }
+	inline int GetSendTPS() { return _sendTPS; }
 	inline int GetAcceptTPS() { return _acceptTPS; }
 	inline int GetDisconnectTPS() { return _disconnectTPS; }
 
@@ -85,6 +85,7 @@ private:
 	short _port;
 	bool _nagle;
 	int _numOfThreads;
+	int _numOfRunnings;
 
 private:
 	SOCKET _listenSock;
@@ -114,12 +115,12 @@ private:
 
 	int _acceptTPS = 0;
 	int _disconnectTPS = 0;
-	int _recvMsgTPS = 0;
-	int _sendMsgTPS = 0;
+	int _recvTPS = 0;
+	int _sendTPS = 0;
 
 	volatile long _acceptCnt = 0;
 	volatile long _disconnectCnt = 0;
-	volatile long _recvMsgCnt = 0;
-	volatile long _sendMsgCnt = 0;
+	volatile long _recvCnt = 0;
+	volatile long _sendCnt = 0;
 };
 #endif

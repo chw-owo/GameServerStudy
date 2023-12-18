@@ -23,15 +23,23 @@ unsigned int __stdcall CGroup::UpdateThread(void* arg)
 	pGroup->Initialize();
 	pGroup->OnInitialize();
 
-	while (pGroup->GetAlive())
+	if (pGroup->_fps > 0)
 	{
-		pGroup->AcceptEnterSessions();
-		pGroup->NetworkUpdate();
-
-		if (!pGroup->SkipForFixedFrame())
+		while (pGroup->GetAlive())
 		{
-			pGroup->Update();
-			pGroup->OnUpdate();
+			pGroup->NetworkUpdate();
+			if (!pGroup->SkipForFixedFrame())
+			{
+				pGroup->Update();
+				pGroup->OnUpdate();
+			}
+		}
+	}
+	else
+	{
+		while (pGroup->GetAlive())
+		{
+			pGroup->NetworkUpdate();
 		}
 	}
 
@@ -52,6 +60,20 @@ bool CGroup::SkipForFixedFrame()
 
 void CGroup::NetworkUpdate()
 {
+	if (_fps == 0)
+		WaitOnAddress(&_signal, &_undesired, sizeof(long), INFINITE);
+	else
+		WaitOnAddress(&_signal, &_undesired, sizeof(long), (1000 / _fps));
+
+	while (_enterSessions.GetUseSize() > 0)
+	{
+		unsigned __int64 sessionID = _enterSessions.Dequeue();
+		_sessions.push_back(sessionID);
+		OnEnterGroup(sessionID);
+		InterlockedIncrement(&_enterCnt);
+		InterlockedDecrement(&_signal);
+	}
+
 	vector<unsigned __int64>::iterator it = _sessions.begin();
 	for (; it != _sessions.end();)
 	{
@@ -61,7 +83,8 @@ void CGroup::NetworkUpdate()
 		{
 			OnLeaveGroup(sessionID);
 			it = _sessions.erase(it);
-			_leaveCnt++;
+			InterlockedIncrement(&_leaveCnt);
+			InterlockedDecrement(&_signal);
 			continue;
 		}
 		
@@ -70,7 +93,8 @@ void CGroup::NetworkUpdate()
 		{
 			OnLeaveGroup(sessionID);
 			it = _sessions.erase(it);
-			_leaveCnt++;
+			InterlockedIncrement(&_leaveCnt);
+			InterlockedDecrement(&_signal);
 		}
 		else
 		{
@@ -80,30 +104,19 @@ void CGroup::NetworkUpdate()
 				CPacket* packet = pSession->_OnRecvQ.Dequeue();
 				OnRecv(sessionID, packet);
 				CPacket::Free(packet);
+				InterlockedDecrement(&_signal);
 			}
-
-			while (pSession->_OnSendQ.GetUseSize() > 0)
-			{
-				if (pSession->_pGroup != this) break;
-				OnSend(sessionID, pSession->_OnSendQ.Dequeue());
-			}
-
 			it++;
 		}
 
 		LeaveCriticalSection(&pSession->_groupLock);
 		_pNet->ReleaseSessionUsage(pSession);
 	}
-}
 
-void CGroup::AcceptEnterSessions()
-{
-	while (_enterSessions.GetUseSize() > 0)
+	while (_OnSendQ.GetUseSize() > 0)
 	{
-		unsigned __int64 sessionID = _enterSessions.Dequeue();
-		_sessions.push_back(sessionID);
-		OnEnterGroup(sessionID);
-		_enterCnt++;
+		OnSend(_OnSendQ.Dequeue());
+		InterlockedDecrement(&_signal);
 	}
 }
 
@@ -113,6 +126,6 @@ void CGroup::RemoveAllSessions()
 	for (; it != _sessions.end(); it++)
 	{
 		MoveGroup((*it), nullptr);
-		_leaveCnt++;
+		InterlockedIncrement(&_leaveCnt);
 	}
 }

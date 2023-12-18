@@ -31,7 +31,7 @@ private:
 	void OnLeaveGroup(unsigned __int64 sessionID);
 
 	void OnRecv(unsigned __int64 sessionID, CPacket* packet);
-	void OnSend(unsigned __int64 sessionID, int sendSize);
+	void OnSend(unsigned __int64 sessionID);
 	void OnError(int errorCode, wchar_t* errorMsg);
 	void OnDebug(int debugCode, wchar_t* debugMsg);
 

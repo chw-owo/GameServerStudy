@@ -123,7 +123,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
-      <Optimization>Disabled</Optimization>
+      <Optimization>Custom</Optimization>
       <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
     </ClCompile>
     <Link>
@@ -137,6 +137,8 @@
   <ItemGroup>
     <ClCompile Include="CEchoGroup.cpp" />
     <ClCompile Include="CGroup.cpp" />
+    <ClCompile Include="CLanClient.cpp" />
+    <ClCompile Include="CLanServer.cpp" />
     <ClCompile Include="CLoginGroup.cpp" />
     <ClCompile Include="CNetServer.cpp" />
     <ClCompile Include="CPacket.cpp" />
@@ -151,6 +153,8 @@
     <ClInclude Include="CEchoGroup.h" />
     <ClInclude Include="CEchoUser.h" />
     <ClInclude Include="CGroup.h" />
+    <ClInclude Include="CLanClient.h" />
+    <ClInclude Include="CLanServer.h" />
     <ClInclude Include="CLockFreeQueue.h" />
     <ClInclude Include="CLockFreeStack.h" />
     <ClInclude Include="CLoginGroup.h" />

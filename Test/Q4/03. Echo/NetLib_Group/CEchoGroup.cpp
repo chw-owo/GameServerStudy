@@ -3,7 +3,7 @@
 
 CEchoGroup::CEchoGroup(CServer* pNet)
 {
-	Setting((CNetServer*)pNet, 1);
+	Setting((CNetServer*)pNet, 0);
 	_userPool = new CTlsPool<CEchoUser>(dfUSER_MAX, true);
 }
 
@@ -97,7 +97,7 @@ void CEchoGroup::OnRecv(unsigned __int64 sessionID, CPacket* packet)
 	}
 }
 
-void CEchoGroup::OnSend(unsigned __int64 sessionID, int sendSize)
+void CEchoGroup::OnSend(unsigned __int64 sessionID)
 {
 	// ::printf("%016llx (%d): Echo::%s (%d)\n", sessionID, GetCurrentThreadId(), __func__, sendSize);
 }
@@ -116,6 +116,7 @@ void CEchoGroup::OnDebug(int debugCode, wchar_t* debugMsg)
 
 void CEchoGroup::ReqSendUnicast(CPacket* packet, unsigned __int64 sessionID)
 {
+	packet->SetGroup(this);
 	packet->AddUsageCount(1);
 	if (!SendPacket(sessionID, packet))
 	{

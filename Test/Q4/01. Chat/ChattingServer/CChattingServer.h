@@ -8,7 +8,7 @@
 #include "CPlayer.h"
 #include "CJob.h"
 
-#include "Protocol.h"
+#include "CommonProtocol.h"
 #include "ErrorCode.h"
 
 #include <unordered_map>
@@ -17,8 +17,11 @@ using namespace std;
 #include <synchapi.h>
 #pragma comment(lib, "Synchronization.lib")
 
+class CMonitorClient;
 class CChattingServer : public CNetServer
 {
+	friend CMonitorClient;
+
 public:
 	CChattingServer() {};
 	~CChattingServer() { Terminate(); };
@@ -49,7 +52,6 @@ private:
 
 private:
 	static unsigned int WINAPI UpdateThread(void* arg);
-	static unsigned int WINAPI MonitorThread(void* arg);
 	static unsigned int WINAPI TimeoutThread(void* arg);
 
 private:
@@ -63,9 +65,9 @@ private:
 	inline void HandleCSPacket_REQ_HEARTBEAT(CPlayer* player);
 
 private:
-	inline void GetCSPacket_REQ_LOGIN(CPacket* packet, __int64& accountNo, wchar_t*& ID, wchar_t*& nickname, char*& sessionKey);
+	inline void GetCSPacket_REQ_LOGIN(CPacket* packet, __int64& accountNo, wchar_t ID[dfID_LEN], wchar_t nickname[dfNICKNAME_LEN], char sessionKey[dfSESSIONKEY_LEN]);
 	inline void GetCSPacket_REQ_SECTOR_MOVE(CPacket* packet, __int64& accountNo, WORD& sectorX, WORD& sectorY);
-	inline void GetCSPacket_REQ_MESSAGE(CPacket* packet, __int64& accountNo, WORD& messageLen, wchar_t*& message);
+	inline void GetCSPacket_REQ_MESSAGE(CPacket* packet, __int64& accountNo, WORD& messageLen, wchar_t message[dfMSG_MAX]);
 	
 private:
 	inline void SetSCPacket_RES_LOGIN(CPacket* packet, BYTE status, __int64 accountNo);
@@ -75,7 +77,6 @@ private:
 private:
 	bool _serverAlive = true;
 	HANDLE _updateThread;
-	HANDLE _monitorThread; 
 	HANDLE _timeoutThread;
 
 private:
@@ -92,10 +93,33 @@ private:
 	CTlsPool<CJob>* _pJobPool;
 
 private: // For Monitor
-	long _totalAccept = 0;
-	long _totalDisconnect = 0;
-	long _updateThreadWakeTPS = 0;
-	long _handlePacketTPS = 0;
-	long _jobQSize = 0;
+
+	inline long GetPlayerCount()
+	{
+		return _playersMap.size();
+	}
+
+	inline long GetJobPoolSize()
+	{
+		return _pJobPool->GetNodeCount();
+	}
+
+	inline long GetPacketPoolSize()
+	{
+		return CPacket::_pool.GetNodeCount();
+	}
+
+	inline long GetJobQSize() 
+	{ 
+		return _pJobQueue->GetUseSize(); 
+	}
+
+	inline long GetUpdateTPS() 
+	{ 
+		long updateTPS = InterlockedExchange(&_updateCnt, 0);
+		return updateTPS; 
+	}
+
+	volatile long _updateCnt = 0;
 };
 

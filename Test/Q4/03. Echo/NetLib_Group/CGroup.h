@@ -10,21 +10,27 @@
 using namespace std;
 
 class CNetServer;
+class CLanServer;
 class CGroup
 {
 	friend CNetServer;
+	friend CLanServer;
 
 	// Call Everywhere
 public:
 	void Setting(CNetServer* pNet, DWORD fps)
 	{
 		_pNet = pNet;
-		_fps = fps;
+		_fps = fps;	
 	}
 
 public:
-	void SetDead() { _alive = false; }
 	bool GetAlive() { return _alive; }
+	void SetDead() 
+	{ 
+		_alive = false; 
+		InterlockedIncrement(&_signal);
+	}
 
 	// Called in CGroup's Child Class
 protected:
@@ -48,7 +54,7 @@ protected:
 
 protected:
 	virtual void OnRecv(unsigned __int64 sessionID, CPacket* packet) = 0;
-	virtual void OnSend(unsigned __int64 sessionID, int sendSize) = 0;
+	virtual void OnSend(unsigned __int64 sessionID) = 0;
 	virtual void OnError(int errorCode, wchar_t* errorMsg) = 0;
 	virtual void OnDebug(int debugCode, wchar_t* debugMsg) = 0;
 
@@ -59,47 +65,61 @@ private:
 private:
 	bool SkipForFixedFrame();
 	void NetworkUpdate();
-
-private:
-	void AcceptEnterSessions();
 	void RemoveAllSessions();
 
 private:
 	bool _alive = true;
-	DWORD _fps;
+	DWORD _fps = 0;
 	CNetServer* _pNet;
+	long _signal = 0;
+	long _undesired = 0;
 
 private:
 	vector<unsigned __int64> _sessions;
 	CLockFreeQueue<unsigned __int64> _enterSessions;
+	CLockFreeQueue<unsigned __int64> _OnSendQ;
 
 	// Monitor
-private:
-	int _sendTPS = 0;
-	int _recvTPS = 0;
-	int _enterTPS = 0;
-	int _leaveTPS = 0;
-
-	long _sendCnt = 0;
-	long _recvCnt = 0;
-	long _enterCnt = 0;
-	long _leaveCnt = 0;
-
 public:
-	void UpdateMonitorData()
+	inline void UpdateMonitorData()
 	{
-		_sendTPS = InterlockedExchange(&_sendCnt, 0);
-		_recvTPS = InterlockedExchange(&_recvCnt, 0);
 		_enterTPS = InterlockedExchange(&_enterCnt, 0);
 		_leaveTPS = InterlockedExchange(&_leaveCnt, 0);
+		_recvTPS = InterlockedExchange(&_recvCnt, 0);
+		_sendTPS = InterlockedExchange(&_sendCnt, 0);
+
+		_enterTotal += _enterTPS;
+		_leaveTotal += _leaveTPS;
+		_recvTotal += _recvTPS;
+		_sendTotal += _sendTPS;
 	}
 
-	int GetSendTPS() { return _sendTPS; }
-	int GetRecvTPS() { return _recvTPS; }
-	int GetEnterTPS() { return _enterTPS; }
-	int GetLeaveTPS() { return _leaveTPS; }
-
-public:
 	__int64 GetSessionCount() { return _sessions.size(); }
+
+	inline unsigned long long GetEnterTotal() { return _enterTotal; }
+	inline unsigned long long GetLeaveTotal() { return _leaveTotal; }
+	inline unsigned long long GetRecvTotal() { return _recvTotal; }
+	inline unsigned long long GetSendTotal() { return _sendTotal; }
+
+	inline long GetEnterTPS() { return _enterTPS; }
+	inline long GetLeaveTPS() { return _leaveTPS; }
+	inline long GetRecvTPS() { return _recvTPS; }
+	inline long GetSendTPS() { return _sendTPS; }
+
+private:
+	unsigned long long _enterTotal = 0;
+	unsigned long long _leaveTotal = 0;
+	unsigned long long _recvTotal = 0;
+	unsigned long long _sendTotal = 0;
+
+	long _enterTPS = 0;
+	long _leaveTPS = 0;
+	long _recvTPS = 0;
+	long _sendTPS = 0;
+
+	volatile long _enterCnt = 0;
+	volatile long _leaveCnt = 0;
+	volatile long _recvCnt = 0;
+	volatile long _sendCnt = 0;
 };
 

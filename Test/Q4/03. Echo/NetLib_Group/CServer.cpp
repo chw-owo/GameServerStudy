@@ -18,13 +18,16 @@ bool CServer::Initialize()
 	GetSystemInfo(&si);
 
 	int cpuCount = (int)si.dwNumberOfProcessors;
-	int networkThreadCnt = 0;
+	int threadCnt = 0;
+	int runningThreadCnt = 0;
 
 	::wprintf(L"CPU total: %d\n", cpuCount);
-	::wprintf(L"Network Thread Count (Except Accept Thread) (recommend under %d): ", cpuCount - 1);
-	::scanf_s("%d", &networkThreadCnt);
+	::wprintf(L"Thread Count: ");
+	::scanf_s("%d", &threadCnt);
+	::wprintf(L"Running Thread Count: ");
+	::scanf_s("%d", &runningThreadCnt);
 
-	if (!NetworkInitialize(dfSERVER_IP, dfECHO_PORT, networkThreadCnt, false))
+	if (!NetworkInitialize(dfSERVER_IP, dfECHO_PORT, threadCnt, runningThreadCnt, false))
 	{
 		Terminate();
 		return false;
@@ -76,7 +79,7 @@ void CServer::OnRecv(unsigned __int64 sessionID, CPacket* packet)
 	// ::printf("%016llx (%d): Main::%s\n", sessionID, GetCurrentThreadId(), __func__);
 }
 
-void CServer::OnSend(unsigned __int64 sessionID, int sendSize)
+void CServer::OnSend(unsigned __int64 sessionID)
 {
 	// ::printf("%016llx (%d): Main::%s\n", sessionID, GetCurrentThreadId(), __func__);
 }
@@ -130,8 +133,10 @@ unsigned int __stdcall CServer::MonitorThread(void* arg)
 
 	CreateDirectory(L"MonitorLog", NULL);
 
-	while (1)
+	for (;;)
 	{
+		Sleep(1000);
+
 		SYSTEMTIME stTime;
 		GetLocalTime(&stTime);
 		WCHAR text[dfMONITOR_TEXT_LEN];
@@ -142,16 +147,16 @@ unsigned int __stdcall CServer::MonitorThread(void* arg)
 
 		swprintf_s(text, dfMONITOR_TEXT_LEN,
 
-			L"[%s %02d:%02d:%02d]\n\n"
+			L"\n\n[%s %02d:%02d:%02d]\n\n"
 
 			"<Network Library> ---------------------------\n\n"
 
 			L"Session Count : %lld\n\n"
 
-			L"Total Accept : %d\n"
-			L"Total Disconnect : %d\n"
-			L"Total Recv : %d\n"
-			L"Total Send : %d\n\n"
+			L"Total Accept : %llu\n"
+			L"Total Disconnect : %llu\n"
+			L"Total Recv : %llu\n"
+			L"Total Send : %llu\n\n"
 
 			L"Accept / 1sec: % d\n"
 			L"Disconnect / 1sec: % d\n"
@@ -161,7 +166,13 @@ unsigned int __stdcall CServer::MonitorThread(void* arg)
 			"<Login Server> ---------------------------\n\n"
 
 			L"Session Count : %lld\n"
-			L"User Count : %lld\n"
+			L"User Count : %lld\n\n"
+
+			L"Total Enter : %llu\n"
+			L"Total Leave : %llu\n"
+			L"Total Recv : %llu\n"
+			L"Total Send : %llu\n"
+
 			L"Enter / 1sec: % d\n"
 			L"Leave / 1sec: % d\n"
 			L"Recv / 1sec: % d\n"
@@ -170,28 +181,37 @@ unsigned int __stdcall CServer::MonitorThread(void* arg)
 			L"<Echo Server> ------------------------\n\n"
 
 			L"Session Count : %lld\n"
-			L"User Count : %lld\n"
+			L"User Count : %lld\n\n"
+
+			L"Total Enter : %llu\n"
+			L"Total Leave : %llu\n"
+			L"Total Recv : %llu\n"
+			L"Total Send : %llu\n\n"
+
 			L"Enter / 1sec: % d\n"
 			L"Leave / 1sec: % d\n"
 			L"Recv / 1sec: % d\n"
 			L"Send / 1sec: % d\n\n"
 
-			L"============================================\n\n",
+			L"============================================",
 
 			_T(__DATE__), stTime.wHour, stTime.wMinute, stTime.wSecond,
 
 			pServer->GetSessionCount(),
 			pServer->GetAcceptTotal(), pServer->GetDisconnectTotal(),
 			pServer->GetRecvTotal(), pServer->GetSendTotal(),
-
 			pServer->GetAcceptTPS(), pServer->GetDisconnectTPS(),
 			pServer->GetRecvTPS(), pServer->GetSendTPS(),
 
 			pLogin->GetSessionCount(), pLogin->GetUserCount(),
+			pLogin->GetEnterTotal(), pLogin->GetLeaveTotal(),
+			pLogin->GetRecvTotal(), pLogin->GetSendTotal(),
 			pLogin->GetEnterTPS(), pLogin->GetLeaveTPS(),
 			pLogin->GetRecvTPS(), pLogin->GetSendTPS(),
 
 			pEcho->GetSessionCount(), pEcho->GetUserCount(),
+			pEcho->GetEnterTotal(), pEcho->GetLeaveTotal(),
+			pEcho->GetRecvTotal(), pEcho->GetSendTotal(),
 			pEcho->GetEnterTPS(), pEcho->GetLeaveTPS(),
 			pEcho->GetRecvTPS(), pEcho->GetSendTPS());
 
@@ -214,42 +234,9 @@ unsigned int __stdcall CServer::MonitorThread(void* arg)
 			LOG(L"FightGame", CSystemLog::ERROR_LEVEL, L"%s[%d]: Fileptr is nullptr %s\n", _T(__FUNCTION__), __LINE__, L"MonitorLog/MonitorLog.txt");
 			::wprintf(L"%s[%d]: Fileptr is nullptr %s\n", _T(__FUNCTION__), __LINE__, L"MonitorLog/MonitorLog.txt");
 		}
-
-		Sleep(1000);
 	}
 
 	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Monitor Thread (%d) Terminate\n", GetCurrentThreadId());
 	::wprintf(L"Monitor Thread (%d) Terminate\n", GetCurrentThreadId());
-	return 0;
-
-	/*
-::printf(
-	"Echo SendTPS: %d\n"
-	"Echo RecvTPS: %d\n"
-	"Echo EnterTPS: %d\n"
-	"Echo LeaveTPS: %d\n"
-	"Echo ReleaseTPS: %d\n\n",
-	_sendTPS,
-	_recvTPS,
-	_enterTPS,
-	_leaveTPS,
-	_releaseTPS
-);
-*/
-
-/*
-::printf(
-	"Login SendTPS: %d\n"
-	"Login RecvTPS: %d\n"
-	"Login EnterTPS: %d\n"
-	"Login LeaveTPS: %d\n"
-	"Login ReleaseTPS: %d\n\n",
-	_sendTPS,
-	_recvTPS,
-	_enterTPS,
-	_leaveTPS,
-	_releaseTPS
-);
-*/
 	return 0;
 }
