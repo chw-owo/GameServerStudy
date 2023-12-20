@@ -55,11 +55,11 @@
     <ClCompile Include="CLanServer.cpp">
       <Filter>NetLib\LanServer</Filter>
     </ClCompile>
-    <ClCompile Include="CProfiler.cpp">
-      <Filter>MonitorServer\DebugTool</Filter>
-    </ClCompile>
     <ClCompile Include="CSystemLog.cpp">
       <Filter>MonitorServer\DebugTool</Filter>
+    </ClCompile>
+    <ClCompile Include="CRecvPacket.cpp">
+      <Filter>NetLib\Packet</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -99,11 +99,11 @@
     <ClInclude Include="CCrashDump.h">
       <Filter>MonitorServer\DebugTool</Filter>
     </ClInclude>
-    <ClInclude Include="CProfiler.h">
-      <Filter>MonitorServer\DebugTool</Filter>
-    </ClInclude>
     <ClInclude Include="CSystemLog.h">
       <Filter>MonitorServer\DebugTool</Filter>
+    </ClInclude>
+    <ClInclude Include="CRecvPacket.h">
+      <Filter>NetLib\Packet</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -8,6 +8,9 @@ CommonProtocol.h 의 채팅,로그인 등 패킷변동사항이 많아서
 기존 프로토콜 헤더에 추가하여 사용 바랍니다.
 */
 
+#define dfSERVER_IP				L"0.0.0.0"
+#define dfSERVER_PORT			12050
+
 enum en_PACKET_TYPE
 {
 

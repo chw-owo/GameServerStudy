@@ -24,5 +24,9 @@ private:
 	void OnReleaseClient(unsigned __int64 sessionID);
 	void OnRecv(unsigned __int64 sessionID, CPacket* packet);
 	void OnSend(unsigned __int64 sessionID, int sendSize);
+
+private:
+	static unsigned int WINAPI MonitorThread(void* arg);
+	HANDLE _monitorThread;
 };
 

@@ -130,7 +130,7 @@
     <ClCompile Include="CLanServer.cpp" />
     <ClCompile Include="CMonitorServer.cpp" />
     <ClCompile Include="CPacket.cpp" />
-    <ClCompile Include="CProfiler.cpp" />
+    <ClCompile Include="CRecvPacket.cpp" />
     <ClCompile Include="CRingBuffer.cpp" />
     <ClCompile Include="CSystemLog.cpp" />
     <ClCompile Include="Main.cpp" />
@@ -143,7 +143,7 @@
     <ClInclude Include="CMonitorServer.h" />
     <ClInclude Include="Config.h" />
     <ClInclude Include="CPacket.h" />
-    <ClInclude Include="CProfiler.h" />
+    <ClInclude Include="CRecvPacket.h" />
     <ClInclude Include="CRingBuffer.h" />
     <ClInclude Include="CSystemLog.h" />
     <ClInclude Include="CTlsPool.h" />
