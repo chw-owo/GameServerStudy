@@ -1,35 +1,42 @@
 #pragma once
 #include "CommonProtocol.h"
+#include "CLockFreeQueue.h"
+#include "CJob.h"
 
 class CPlayer
 {
 public:
-	CPlayer() { __debugbreak(); };
-	CPlayer(unsigned __int64 sessionID, __int64 playerID)
+	CPlayer()
+	{  
+		_ID = new wchar_t[dfID_LEN];
+		_nickname = new wchar_t[dfNICKNAME_LEN];
+		_sessionKey = new char[dfSESSIONKEY_LEN];
+	}
+
+	~CPlayer()
+	{
+		delete[] _ID;
+		delete[] _nickname;
+		delete[] _sessionKey;
+	}
+
+	void Initailize(unsigned __int64 sessionID, __int64 playerID)
 	{
 		_sessionID = sessionID;
 		_playerID = playerID;
 
 		_accountNo = -1;
-		_ID = new wchar_t[dfID_LEN];
-		_nickname = new wchar_t[dfNICKNAME_LEN];
-		_sessionKey = new char[dfSESSIONKEY_LEN];
-
 		_sectorX = -1;
 		_sectorY = -1;
 		_lastRecvTime = timeGetTime();
 	}
 
-	~CPlayer()
+	void Terminate()
 	{
 		_sessionID = MAXULONGLONG;
 		_playerID = -1;
 
 		_accountNo = -1;		
-		delete[] _ID;
-		delete[] _nickname;
-		delete[] _sessionKey;
-
 		_sectorX = -1;
 		_sectorY = -1;
 		_lastRecvTime = 0;

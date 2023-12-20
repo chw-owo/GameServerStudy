@@ -10,7 +10,7 @@ bool CChattingServer::Initialize()
 	// Set Queue & Pool
 	_pJobQueue = new CLockFreeQueue<CJob*>;
 	_pJobPool = new CTlsPool<CJob>(dfJOB_DEF, true);
-	_pPlayerPool = new CObjectPool<CPlayer>(dfPLAYER_MAX, true);
+	_pPlayerPool = new CObjectPool<CPlayer>(dfPLAYER_MAX, false);
 
 	// Set Sector
 	for (int i = 0; i < dfSECTOR_CNT_Y; i++)
@@ -31,8 +31,8 @@ bool CChattingServer::Initialize()
 			if (j > 0)												_sectors[i][j]._around.push_back(&_sectors[i][j - 1]);
 			if (j < dfSECTOR_CNT_Y - 1)								_sectors[i][j]._around.push_back(&_sectors[i][j + 1]);
 		}
-	} 
-	
+	}
+
 	// Set Logic Thread
 	_updateThread = (HANDLE)_beginthreadex(NULL, 0, UpdateThread, this, 0, nullptr);
 	if (_updateThread == NULL)
@@ -47,19 +47,16 @@ bool CChattingServer::Initialize()
 	GetSystemInfo(&si);
 
 	int cpuCount = (int)si.dwNumberOfProcessors;
-	int threadCnt = 0;
+	int totalThreadCnt = 0;
 	int runningThreadCnt = 0;
-	// bool monitorServer = false;
 
 	::wprintf(L"CPU total: %d\n", cpuCount);
-	::wprintf(L"Thread Count: ");
-	::scanf_s("%d", &threadCnt);
-	::wprintf(L"Running Thread Count: ");
+	::wprintf(L"Total Network Thread Count: ");
+	::scanf_s("%d", &totalThreadCnt);
+	::wprintf(L"Running Network Thread Count: ");
 	::scanf_s("%d", &runningThreadCnt);
-	// ::wprintf(L"Monitor Server (no - 0, yes - 1): ");
-	// ::scanf_s("%d", &monitorServer);
 
-	if (!NetworkInitialize(dfSERVER_IP, dfSERVER_PORT, threadCnt, runningThreadCnt, false, true))
+	if (!NetworkInitialize(dfSERVER_IP, dfSERVER_PORT, totalThreadCnt, runningThreadCnt, false, true))
 	{
 		Terminate();
 		return false;
@@ -68,6 +65,7 @@ bool CChattingServer::Initialize()
 	// Initialize Compelete
 	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Server Initialize\n");
 	::wprintf(L"Server Initialize\n\n");
+
 
 #ifdef _TIMEOUT
 	// Set Timeout Thread
@@ -94,10 +92,6 @@ void CChattingServer::Terminate()
 	InterlockedIncrement(&_signal);
 	WakeByAddressSingle(&_signal);
 	WaitForSingleObject(_updateThread, INFINITE);
-
-#ifdef _MONITOR
-	WaitForSingleObject(_monitorThread, INFINITE);
-#endif
 
 #ifdef _TIMEOUT
 	WaitForSingleObject(_timeoutThread, INFINITE);
@@ -133,8 +127,8 @@ void CChattingServer::OnError(int errorCode, wchar_t* errorMsg)
 
 void CChattingServer::OnDebug(int debugCode, wchar_t* debugMsg)
 {
-	// LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s (%d)\n", debugMsg, debugCode);
-	// ::wprintf(L"%s (%d)\n", debugMsg, debugCode);
+	LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s (%d)\n", debugMsg, debugCode);
+	::wprintf(L"%s (%d)\n", debugMsg, debugCode);
 }
 
 bool CChattingServer::OnConnectRequest()
@@ -162,9 +156,8 @@ void CChattingServer::OnReleaseClient(unsigned __int64 sessionID)
 	WakeByAddressSingle(&_signal);
 }
 
-void CChattingServer::OnRecv(unsigned __int64 sessionID, CPacket* packet)
+void CChattingServer::OnRecv(unsigned __int64 sessionID, CRecvPacket* packet)
 {
-	packet->AddUsageCount(1);
 	CJob* job = _pJobPool->Alloc();
 	job->Setting(JOB_TYPE::CONTENT, SYS_TYPE::NONE, sessionID, packet);
 	_pJobQueue->Enqueue(job);
@@ -206,15 +199,16 @@ void CChattingServer::HandleAccept(unsigned __int64 sessionID)
 		return;
 	}
 
-	CPlayer* pPlayer = _pPlayerPool->Alloc(sessionID, _playerIDGenerator++);
+	CPlayer* pPlayer = _pPlayerPool->Alloc();
+	pPlayer->Initailize(sessionID, _playerIDGenerator++);
 	auto ret = _playersMap.insert(make_pair(sessionID, pPlayer));
 	if (ret.second == false)
 	{
-		LOG(L"FightGame", CSystemLog:: ERROR_LEVEL, L"%s[%d] Already Exist SessionID: %lld\n", _T(__FUNCTION__), __LINE__, sessionID);
+		LOG(L"FightGame", CSystemLog::ERROR_LEVEL, L"%s[%d] Already Exist SessionID: %lld\n", _T(__FUNCTION__), __LINE__, sessionID);
 		::wprintf(L"%s[%d] Already Exist SessionID: %lld\n", _T(__FUNCTION__), __LINE__, sessionID);
 	}
 
-	// ::printf("%lld (%d): Handle Accept\n", (_sessionID & _idMask), GetCurrentThreadId());
+	// // ::printf("%lld (%d): Handle Accept\n", (_sessionID & _idMask), GetCurrentThreadId());
 
 	return;
 }
@@ -246,69 +240,76 @@ void CChattingServer::HandleRelease(unsigned __int64 sessionID)
 				sector->_players.erase(vectorIter);
 				break;
 			}
-		}            
+		}
 	}
 
 	// Delete Player
+	pPlayer->Terminate();
 	_pPlayerPool->Free(pPlayer);
-	// ::printf("%lld (%d): Handle Release\n", (_sessionID & _idMask), GetCurrentThreadId());
+
+	// // ::printf("%lld (%d): Handle Release\n", (_sessionID & _idMask), GetCurrentThreadId());
 }
 
 
-void CChattingServer::HandleRecv(unsigned __int64 sessionID, CPacket* packet)
+void CChattingServer::HandleRecv(unsigned __int64 sessionID, CRecvPacket* packet)
 {
 	unordered_map<unsigned __int64, CPlayer*>::iterator iter = _playersMap.find(sessionID);
+	
 	if (iter == _playersMap.end())
 	{
 		Disconnect(sessionID);
 		LOG(L"FightGame", CSystemLog::ERROR_LEVEL, L"%s[%d]: No Session\n", _T(__FUNCTION__), __LINE__);
 		::wprintf(L"%s[%d]: No Session\n", _T(__FUNCTION__), __LINE__);
-		return;
 	}
-
-	// ::printf("%lld (%d): Handle Recv\n", (_sessionID & _idMask), GetCurrentThreadId());
-	CPlayer* pPlayer = iter->second;
-
-	try
-	{		
-		pPlayer->_lastRecvTime = timeGetTime();
-		short msgType = -1;
-		*packet >> msgType;
-
-		switch (msgType)
-		{
-		case en_PACKET_CS_CHAT_REQ_LOGIN:
-			HandleCSPacket_REQ_LOGIN(packet, pPlayer);
-			break;
-
-		case en_PACKET_CS_CHAT_REQ_SECTOR_MOVE:
-			HandleCSPacket_REQ_SECTOR_MOVE(packet, pPlayer);
-			break;
-
-		case en_PACKET_CS_CHAT_REQ_MESSAGE:
-			HandleCSPacket_REQ_MESSAGE(packet, pPlayer);
-			break;
-
-		case en_PACKET_CS_CHAT_REQ_HEARTBEAT:
-			HandleCSPacket_REQ_HEARTBEAT(pPlayer);
-			break;
-
-		default:
-			Disconnect(pPlayer->_sessionID);
-			// LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d] Undefined Message, %d\n", _T(__FUNCTION__), __LINE__, msgType);
-			// ::wprintf(L"%s[%d] Undefined Message, %d\n", _T(__FUNCTION__), __LINE__, msgType);
-			break;
-		}
-	}
-	catch (int packetError)
+	else
 	{
-		if (packetError == ERR_PACKET)
+		CPlayer* pPlayer = iter->second;
+		try
 		{
-			Disconnect(pPlayer->_sessionID);
-			// LOG(L"FightGame", CSystemLog::DEBUG_LEVEL,L"%s[%d] Packet Error\n", _T(__FUNCTION__), __LINE__);
-			// ::wprintf(L"%s[%d] Packet Error\n", _T(__FUNCTION__), __LINE__);
+			pPlayer->_lastRecvTime = timeGetTime();
+			short msgType = -1;
+			*packet >> msgType;
+
+			// ::printf("read %d, write %d, use %d\n", packet->_readPos, packet->_writePos, packet->_packet->_usageCount);
+
+			switch (msgType)
+			{
+			case en_PACKET_CS_CHAT_REQ_LOGIN:
+				HandleCSPacket_REQ_LOGIN(packet, pPlayer);
+				break;
+
+			case en_PACKET_CS_CHAT_REQ_SECTOR_MOVE:
+				HandleCSPacket_REQ_SECTOR_MOVE(packet, pPlayer);
+				break;
+
+			case en_PACKET_CS_CHAT_REQ_MESSAGE:
+				HandleCSPacket_REQ_MESSAGE(packet, pPlayer);
+				break;
+
+			case en_PACKET_CS_CHAT_REQ_HEARTBEAT:
+				HandleCSPacket_REQ_HEARTBEAT(pPlayer);
+				break;
+
+			default:
+				Disconnect(pPlayer->_sessionID);
+				LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d] Undefined Message, %d\n", _T(__FUNCTION__), __LINE__, msgType);
+				::wprintf(L"%s[%d] Undefined Message, %d\n", _T(__FUNCTION__), __LINE__, msgType);
+				// __debugbreak();
+				break;
+			}
+		}
+		catch (int packetError)
+		{
+			if (packetError == ERR_PACKET)
+			{
+				Disconnect(pPlayer->_sessionID);
+				LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d] Packet Error\n", _T(__FUNCTION__), __LINE__);
+				::wprintf(L"%s[%d] Packet Error\n", _T(__FUNCTION__), __LINE__);
+			}
 		}
 	}
+
+	CRecvPacket::Free(packet);
 }
 
 unsigned int __stdcall CChattingServer::UpdateThread(void* arg)
@@ -316,42 +317,44 @@ unsigned int __stdcall CChattingServer::UpdateThread(void* arg)
 	CChattingServer* pServer = (CChattingServer*)arg;
 	CLockFreeQueue<CJob*>* pJobQueue = pServer->_pJobQueue;
 	long undesired = 0;
-	
+
 	while (pServer->_serverAlive)
 	{
 		WaitOnAddress(&pServer->_signal, &undesired, sizeof(long), INFINITE);
-		InterlockedIncrement(&pServer->_updateCnt);
 
-		CJob* job = pJobQueue->Dequeue();
-		if (job == nullptr) continue;
-
-		if (job->_type == JOB_TYPE::SYSTEM)
+		while (pJobQueue->GetUseSize() > 0)
 		{
-			if (job->_sysType == SYS_TYPE::ACCEPT)
-			{
-				pServer->HandleAccept(job->_sessionID);
-			}
-			else if (job->_sysType == SYS_TYPE::RELEASE)
-			{
-				pServer->HandleRelease(job->_sessionID);
-			}
-			else if (job->_sysType == SYS_TYPE::TIMEOUT)
-			{
-				pServer->HandleTimeout();
-			}
-			else if (job->_sysType == SYS_TYPE::TERMINATE)
-			{
-				break;
-			}
-		}
-		else if (job->_type == JOB_TYPE::CONTENT)
-		{
-			pServer->HandleRecv(job->_sessionID, job->_packet);
-			CPacket::Free(job->_packet);
-		}
+			CJob* job = pJobQueue->Dequeue();
+			if (job == nullptr) break;
+			pServer->_updateCnt++;
 
-		pServer->_pJobPool->Free(job);
-		InterlockedDecrement(&pServer->_signal);	
+			if (job->_type == JOB_TYPE::SYSTEM)
+			{
+				if (job->_sysType == SYS_TYPE::ACCEPT)
+				{
+					pServer->HandleAccept(job->_sessionID);
+				}
+				else if (job->_sysType == SYS_TYPE::RELEASE)
+				{
+					pServer->HandleRelease(job->_sessionID);
+				}
+				else if (job->_sysType == SYS_TYPE::TIMEOUT)
+				{
+					pServer->HandleTimeout();
+				}
+				else if (job->_sysType == SYS_TYPE::TERMINATE)
+				{
+					break;
+				}
+			}
+			else if (job->_type == JOB_TYPE::CONTENT)
+			{
+				pServer->HandleRecv(job->_sessionID, job->_packet);
+			}
+
+			pServer->_pJobPool->Free(job);
+			InterlockedDecrement(&pServer->_signal);
+		}
 	}
 
 	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Update Thread (%d) Terminate\n", GetCurrentThreadId());
@@ -446,7 +449,7 @@ void CChattingServer::ReqSendAroundSector(CPacket* packet, CSector* centerSector
 	}
 }
 
-inline void CChattingServer::HandleCSPacket_REQ_LOGIN(CPacket* CSpacket, CPlayer* player)
+inline void CChattingServer::HandleCSPacket_REQ_LOGIN(CRecvPacket* CSpacket, CPlayer* player)
 {
 	__int64 accountNo;
 	wchar_t ID[dfID_LEN];
@@ -454,15 +457,15 @@ inline void CChattingServer::HandleCSPacket_REQ_LOGIN(CPacket* CSpacket, CPlayer
 	char sessionKey[dfSESSIONKEY_LEN];
 	GetCSPacket_REQ_LOGIN(CSpacket, accountNo, ID, nickname, sessionKey);
 
-	// ::printf("%lld (%d): Login (%lld)\n", (player->_sessionID & _idMask), GetCurrentThreadId(), accountNo);
-
 	if (accountNo < 0)
 	{
 		Disconnect(player->_sessionID);
-		// LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d] Account No is Wrong: %lld\n", _T(__FUNCTION__), __LINE__, accountNo);
-		// ::wprintf(L"%s[%d] Account No is Wrong: %lld\n", _T(__FUNCTION__), __LINE__, accountNo);
+		LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d] Account No is Wrong: %lld\n", _T(__FUNCTION__), __LINE__, accountNo);
+		::wprintf(L"%s[%d] Account No is Wrong: %lld\n", _T(__FUNCTION__), __LINE__, accountNo);
 		return;
 	}
+
+	// // ::printf("%d: Login (%016llx)\n", GetCurrentThreadId(), player->_sessionID);
 
 	player->_accountNo = accountNo;
 	memcpy_s(player->_ID, dfID_LEN * sizeof(wchar_t), ID, dfID_LEN * sizeof(wchar_t));
@@ -476,7 +479,7 @@ inline void CChattingServer::HandleCSPacket_REQ_LOGIN(CPacket* CSpacket, CPlayer
 	ReqSendUnicast(SCpacket, player->_sessionID);
 }
 
-inline void CChattingServer::HandleCSPacket_REQ_SECTOR_MOVE(CPacket* CSpacket, CPlayer* player)
+inline void CChattingServer::HandleCSPacket_REQ_SECTOR_MOVE(CRecvPacket* CSpacket, CPlayer* player)
 {
 	__int64 accountNo;
 	WORD sectorX;
@@ -486,20 +489,20 @@ inline void CChattingServer::HandleCSPacket_REQ_SECTOR_MOVE(CPacket* CSpacket, C
 	if (player->_accountNo != accountNo)
 	{
 		Disconnect(player->_sessionID);
-		// LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d] Account No is Different: %lld != %lld\n", _T(__FUNCTION__), __LINE__, player->_accountNo, accountNo);
-		// ::wprintf(L"%s[%d] Account No is Different: %lld != %lld\n", _T(__FUNCTION__), __LINE__, player->_accountNo, accountNo);
+		LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d] Account No is Different: %lld != %lld\n", _T(__FUNCTION__), __LINE__, player->_accountNo, accountNo);
+		::wprintf(L"%s[%d] Account No is Different: %lld != %lld\n", _T(__FUNCTION__), __LINE__, player->_accountNo, accountNo);
 		return;
 	}
 
 	if (sectorX >= dfSECTOR_CNT_X || sectorY >= dfSECTOR_CNT_Y)
 	{
 		Disconnect(player->_sessionID);
-		// LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d] Sector Val is Wrong\n", _T(__FUNCTION__), __LINE__);
-		// ::wprintf(L"%s[%d] Sector Val is Wrong\n", _T(__FUNCTION__), __LINE__);
+		LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d] Sector Val is Wrong\n", _T(__FUNCTION__), __LINE__);
+		::wprintf(L"%s[%d] Sector Val is Wrong\n", _T(__FUNCTION__), __LINE__);
 		return;
 	}
 
-	// ::printf("%lld (%d): Sector Move (%lld, [%d][%d]->[%d][%d])\n", (player->_sessionID & _idMask), GetCurrentThreadId(), accountNo, player->_sectorY, player->_sectorX, sectorY, sectorX);
+	// // ::printf("%d: Sector Move [%d][%d]->[%d][%d] (%016llx)\n", GetCurrentThreadId(), player->_sectorY, player->_sectorX, sectorY, sectorX, player->_sessionID);
 
 	if (player->_sectorX < dfSECTOR_CNT_X && player->_sectorY < dfSECTOR_CNT_Y)
 	{
@@ -525,7 +528,7 @@ inline void CChattingServer::HandleCSPacket_REQ_SECTOR_MOVE(CPacket* CSpacket, C
 	ReqSendUnicast(SCpacket, player->_sessionID);
 }
 
-inline void CChattingServer::HandleCSPacket_REQ_MESSAGE(CPacket* CSpacket, CPlayer* player)
+inline void CChattingServer::HandleCSPacket_REQ_MESSAGE(CRecvPacket* CSpacket, CPlayer* player)
 {
 	__int64 accountNo;
 	WORD messageLen;
@@ -535,10 +538,12 @@ inline void CChattingServer::HandleCSPacket_REQ_MESSAGE(CPacket* CSpacket, CPlay
 	if (player->_accountNo != accountNo)
 	{
 		Disconnect(player->_sessionID);
-		// LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d] Account No is Different: %lld != %lld\n", _T(__FUNCTION__), __LINE__, player->_accountNo, accountNo);
-		// ::wprintf(L"%s[%d] Account No is Different: %lld != %lld\n", _T(__FUNCTION__), __LINE__, player->_accountNo, accountNo);
+		LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d] Account No is Different: %lld != %lld\n", _T(__FUNCTION__), __LINE__, player->_accountNo, accountNo);
+		::wprintf(L"%s[%d] Account No is Different: %lld != %lld\n", _T(__FUNCTION__), __LINE__, player->_accountNo, accountNo);
 		return;
 	}
+
+	// // ::printf("%d: Message (%016llx)\n", GetCurrentThreadId(), player->_sessionID);
 
 	CPacket* SCpacket = CPacket::Alloc();
 	SCpacket->Clear();
@@ -555,7 +560,7 @@ inline void CChattingServer::HandleCSPacket_REQ_HEARTBEAT(CPlayer* player)
 	player->_lastRecvTime = timeGetTime();
 }
 
-inline void CChattingServer::GetCSPacket_REQ_LOGIN(CPacket* packet, __int64& accountNo, wchar_t ID[dfID_LEN], wchar_t nickname[dfNICKNAME_LEN], char sessionKey[dfSESSIONKEY_LEN])
+inline void CChattingServer::GetCSPacket_REQ_LOGIN(CRecvPacket* packet, __int64& accountNo, wchar_t ID[dfID_LEN], wchar_t nickname[dfNICKNAME_LEN], char sessionKey[dfSESSIONKEY_LEN])
 {
 	*packet >> accountNo;
 	packet->GetPayloadData((char*)ID, dfID_LEN * sizeof(wchar_t));
@@ -563,14 +568,14 @@ inline void CChattingServer::GetCSPacket_REQ_LOGIN(CPacket* packet, __int64& acc
 	packet->GetPayloadData((char*)sessionKey, dfSESSIONKEY_LEN);
 }
 
-inline void CChattingServer::GetCSPacket_REQ_SECTOR_MOVE(CPacket* packet, __int64& accountNo, WORD& sectorX, WORD& sectorY)
+inline void CChattingServer::GetCSPacket_REQ_SECTOR_MOVE(CRecvPacket* packet, __int64& accountNo, WORD& sectorX, WORD& sectorY)
 {
 	*packet >> accountNo;
 	*packet >> sectorX;
 	*packet >> sectorY;
 }
 
-inline void CChattingServer::GetCSPacket_REQ_MESSAGE(CPacket* packet, __int64& accountNo, WORD& messageLen, wchar_t message[dfMSG_MAX])
+inline void CChattingServer::GetCSPacket_REQ_MESSAGE(CRecvPacket* packet, __int64& accountNo, WORD& messageLen, wchar_t message[dfMSG_MAX])
 {
 	*packet >> accountNo;
 	*packet >> messageLen;

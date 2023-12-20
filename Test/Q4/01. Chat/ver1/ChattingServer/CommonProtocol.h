@@ -17,6 +17,7 @@
 #define dfNICKNAME_LEN			20
 #define dfSESSIONKEY_LEN		64
 #define dfMSG_MAX				1024
+#define dfTHREAD_MAX			20
 
 enum en_PACKET_TYPE
 {

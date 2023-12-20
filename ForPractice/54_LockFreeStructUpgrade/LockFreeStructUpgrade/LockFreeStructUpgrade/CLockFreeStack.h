@@ -1,6 +1,7 @@
 #pragma once
 #include "CTlsPool.h"
 
+#define dfSTACKNODE_DEF 40000
 template<typename T>
 class CLockFreeStack
 {
@@ -9,12 +10,6 @@ private:
 	class StackNode
 	{
 		friend CLockFreeStack;
-	public:
-		bool operator != (const StackNode& other)
-		{
-			return _data != other._data;
-		}
-
 	public:
 		StackNode() {}
 		~StackNode() {}
@@ -34,19 +29,18 @@ private: // For protect ABA
 
 private:
 	// 17 bit key + 47 bit address
-	__int64 CreateAddress(StackNode* node)
+	inline __int64 CreateAddress(StackNode* node)
 	{
 		unsigned __int64 key = (unsigned __int64)InterlockedIncrement64(&_key);
 		key <<= __ADDRESS_BIT__;
 		__int64 address = (__int64)node;
 		address &= _addressMask;
 		address |= key;
-
 		return address;
 	}
 
 public:
-	CLockFreeStack()
+	inline CLockFreeStack()
 	{
 		_pStackPool = new CTlsPool<StackNode>(0, false);
 		_keyMask = 0b11111111111111111;
@@ -60,10 +54,10 @@ private:
 	volatile long _useSize = 0;
 
 public:
-	long GetUseSize() { return _useSize; }
+	inline long GetUseSize() { return _useSize; }
 
 public:
-	void Push(T data)
+	inline void Push(T data)
 	{
 		StackNode* pNewNode = _pStackPool->Alloc();
 		pNewNode->_data = data;
@@ -82,7 +76,7 @@ public:
 		}
 	}
 
-	T Pop()
+	inline T Pop()
 	{
 		for (;;)
 		{
@@ -91,16 +85,16 @@ public:
 
 			if (InterlockedCompareExchange64(&_pTop, pNextTop, pPrevTop) == pPrevTop)
 			{
+				InterlockedDecrement(&_useSize);
 				StackNode* pPrevNode = (StackNode*)(pPrevTop & _addressMask);
 				T data = pPrevNode->_data;
-				_pStackPool->Free(pPrevNode);
-				InterlockedDecrement(&_useSize);
+				_pStackPool->Free(pPrevNode);	
 				return data;
 			}
 		}
 	}
 
-};
+}; 
 
 template<typename T>
-CTlsPool<typename CLockFreeStack<T>::StackNode>* CLockFreeStack<T>::_pStackPool = new CTlsPool<CLockFreeStack<T>::StackNode>(0, false);
+CTlsPool<typename CLockFreeStack<T>::StackNode>* CLockFreeStack<T>::_pStackPool = new CTlsPool<CLockFreeStack<T>::StackNode>(dfSTACKNODE_DEF, false);

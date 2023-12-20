@@ -2,6 +2,7 @@
 #include "CTlsPool.h"
 using namespace std;
 
+#define dfQUEUENODE_MAX 40000
 template <typename T>
 class CLockFreeQueue
 {
@@ -18,17 +19,17 @@ public:
         friend CLockFreeQueue;
 
     public:
-        QueueNode() { __debugbreak(); }
-        QueueNode(long QID)
+        QueueNode() {}
+        
+        inline QueueNode(long QID)
         {
             _next = (__int64)QID;
             _next <<= __ADDRESS_BIT__;
             _next &= CLockFreeQueue::_keyMask;
         }
 
-        ~QueueNode()
+        inline ~QueueNode()
         {
-            _data = 0;
             _next = 0;
         }
 
@@ -45,14 +46,13 @@ public:
 private:
     __int64 _head;
     __int64 _tail;
-    long _useSize;
+    volatile long _useSize;
 
 private:
     inline __int64 CreateAddress(QueueNode* node)
     {
         __int64 address = (__int64)node;
         address &= _addressMask;
-
         unsigned __int64 nodeID = (unsigned __int64)InterlockedIncrement(&_nodeID);
         nodeID <<= __ADDRESS_BIT__;
         nodeID &= CLockFreeQueue::_keyMask;
@@ -69,10 +69,10 @@ private:
     }
 
 public:
-    long GetUseSize() { return _useSize; }
+    inline long GetUseSize() { return _useSize; }
 
 public:
-    CLockFreeQueue()
+    inline CLockFreeQueue()
     {
         _QID = InterlockedIncrement(&_QIDSupplier);
         if (_QID > __QUEUE_MAX__) __debugbreak();
@@ -85,7 +85,7 @@ public:
     }
 
 public:
-    void Enqueue(T data)
+    inline void Enqueue(T data)
     {
         QueueNode* node = _pQueuePool->Alloc(_QID);
         node->_data = data;
@@ -116,7 +116,7 @@ public:
         }
     }
 
-    T Dequeue()
+    inline T Dequeue()
     {
         T data = 0;
 
@@ -155,6 +155,7 @@ public:
                 return data;
             }
         }
+
         return 0;
     }
 };
@@ -165,4 +166,4 @@ long CLockFreeQueue<T>::_QIDSupplier = 0;
 template<typename T>
 unsigned __int64 CLockFreeQueue<T>::_keyMask = 0b1111111111111111100000000000000000000000000000000000000000000000;
 template<typename T>
-CTlsPool<typename CLockFreeQueue<T>::QueueNode>* CLockFreeQueue<T>::_pQueuePool = new CTlsPool<CLockFreeQueue<T>::QueueNode>(0, true);
+CTlsPool<typename CLockFreeQueue<T>::QueueNode>* CLockFreeQueue<T>::_pQueuePool = new CTlsPool<CLockFreeQueue<T>::QueueNode>(dfQUEUENODE_MAX, true);

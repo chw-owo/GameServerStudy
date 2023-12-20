@@ -1,0 +1,126 @@
+#pragma once
+#include "Config.h"
+#ifdef LANSERVER
+
+#include "CLockFreeStack.h"
+#include "CSession.h"
+#include <ws2tcpip.h>
+#include <process.h>
+#pragma comment(lib, "ws2_32.lib")
+
+class CLanServer
+{
+protected:
+	CLanServer();
+	~CLanServer() {};
+
+protected:
+	bool NetworkInitialize(const wchar_t* IP, short port, int numOfThreads, int numOfRunnings, bool nagle);
+	bool NetworkTerminate();
+
+protected:
+	bool Disconnect(unsigned __int64 sessionID);
+	bool SendPacket(unsigned __int64 sessionID, CPacket* packet);
+
+protected:
+	virtual void OnInitialize() = 0;
+	virtual void OnTerminate() = 0;
+	virtual void OnThreadTerminate(wchar_t* threadName) = 0;
+
+protected:
+	virtual bool OnConnectRequest() = 0;
+	virtual void OnAcceptClient(unsigned __int64 sessionID) = 0;
+	virtual void OnReleaseClient(unsigned __int64 sessionID) = 0;
+	virtual void OnRecv(unsigned __int64 sessionID, CPacket* packet) = 0;
+	virtual void OnSend(unsigned __int64 sessionID, int sendSize) = 0;
+	virtual void OnError(int errorCode, wchar_t* errorMsg) = 0;
+	virtual void OnDebug(int debugCode, wchar_t* debugMsg) = 0;
+
+protected:
+	inline void UpdateMonitorData()
+	{
+		long acceptCnt = InterlockedExchange(&_acceptCnt, 0);
+		long disconnectCnt = InterlockedExchange(&_disconnectCnt, 0);
+		long recvCnt = InterlockedExchange(&_recvCnt, 0);
+		long sendCnt = InterlockedExchange(&_sendCnt, 0);
+
+		_acceptTotal += acceptCnt;
+		_disconnectTotal += disconnectCnt;
+
+		_acceptTPS = acceptCnt;
+		_disconnectTPS = disconnectCnt;
+		_recvTPS = recvCnt;
+		_sendTPS = sendCnt;
+	}
+
+	inline int GetAcceptTotal() { return _acceptTotal; }
+	inline int GetDisconnectTotal() { return _disconnectTotal; }
+	inline long GetSessionCount() { return _sessionCnt; }
+
+	inline int GetRecvTPS() { return _recvTPS; }
+	inline int GetSendTPS() { return _sendTPS; }
+	inline int GetAcceptTPS() { return _acceptTPS; }
+	inline int GetDisconnectTPS() { return _disconnectTPS; }
+
+	// Called in Network Library
+private:
+	static unsigned int WINAPI AcceptThread(void* arg);
+	static unsigned int WINAPI NetworkThread(void* arg);
+
+private:
+	void HandleRelease(unsigned __int64 sessionID);
+	bool HandleRecvCP(CSession* pSession, int recvBytes);
+	bool HandleSendCP(CSession* pSession, int sendBytes);
+	bool RecvPost(CSession* pSession);
+	bool SendPost(CSession* pSession);
+
+private:
+	CSession* AcquireSessionUsage(unsigned __int64 sessionID, int line);
+	void ReleaseSessionUsage(CSession* pSession, int line);
+	void IncrementUseCount(CSession* pSession, int line);
+	void DecrementUseCount(CSession* pSession, int line);
+
+private:
+	wchar_t _IP[10];
+	short _port;
+	bool _nagle;
+	int _numOfThreads;
+	int _numOfRunnings;
+
+private:
+	SOCKET _listenSock;
+	volatile long _networkAlive = 0;
+
+private:
+	HANDLE _acceptThread;
+	HANDLE* _networkThreads;
+	HANDLE _hNetworkCP;
+
+public: // TO-DO private
+#define __ID_BIT__ 47
+	CSession* _sessions[dfSESSION_MAX] = { nullptr, };
+	CLockFreeStack<long> _emptyIdx;
+	volatile long _sessionCnt = 0;
+	volatile __int64 _sessionID = 0;
+	unsigned __int64 _indexMask = 0;
+	unsigned __int64 _idMask = 0;
+
+public:
+	ValidFlag _releaseFlag;
+
+private:
+	int _acceptTotal = 0;
+	int _disconnectTotal = 0;
+	int _TryReleaseTotal = 0;
+
+	int _acceptTPS = 0;
+	int _disconnectTPS = 0;
+	int _recvTPS = 0;
+	int _sendTPS = 0;
+
+	volatile long _acceptCnt = 0;
+	volatile long _disconnectCnt = 0;
+	volatile long _recvCnt = 0;
+	volatile long _sendCnt = 0;
+};
+#endif
