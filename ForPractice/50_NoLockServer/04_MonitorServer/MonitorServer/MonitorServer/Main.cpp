@@ -1,4 +1,4 @@
-﻿#include "CMonitorServer.h"
+﻿#include "CLanMonitorServer.h"
 #include "CCrashDump.h"
 #include "CSystemLog.h"
 #include <locale.h>
@@ -9,7 +9,7 @@
 
 #include <windows.h>
 #pragma comment(lib, "winmm.lib") 
-CMonitorServer g_MonitorServer;
+CLanMonitorServer g_MonitorServer;
 
 int wmain(int argc, wchar_t* argv[])
 {

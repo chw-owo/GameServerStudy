@@ -1,23 +1,8 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
-    <Filter Include="NetLib">
-      <UniqueIdentifier>{1e646f21-cfff-4bcc-8e14-8ca1ff3bae1a}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="NetLib\Packet">
-      <UniqueIdentifier>{27a080dd-522d-4d48-864b-862f87f5518e}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="NetLib\Network">
-      <UniqueIdentifier>{d6bafcba-f404-4eeb-9511-33559cf875f6}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Common">
       <UniqueIdentifier>{1f4c465d-af9e-4d2f-ba1d-c24e1244abd8}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="NetLib\Session">
-      <UniqueIdentifier>{653cd73e-c1b0-469f-bdf3-a8824a83d367}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="NetLib\Session\Utils">
-      <UniqueIdentifier>{5964aedb-e406-4e62-8cfa-85957b978264}</UniqueIdentifier>
     </Filter>
     <Filter Include="Server">
       <UniqueIdentifier>{37afb12e-2c69-46f4-9c5b-4026189fee7b}</UniqueIdentifier>
@@ -40,6 +25,21 @@
     <Filter Include="리소스 파일">
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="NetLib">
+      <UniqueIdentifier>{1e646f21-cfff-4bcc-8e14-8ca1ff3bae1a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Packet">
+      <UniqueIdentifier>{27a080dd-522d-4d48-864b-862f87f5518e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Network">
+      <UniqueIdentifier>{d6bafcba-f404-4eeb-9511-33559cf875f6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Session">
+      <UniqueIdentifier>{653cd73e-c1b0-469f-bdf3-a8824a83d367}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Session\Utils">
+      <UniqueIdentifier>{5964aedb-e406-4e62-8cfa-85957b978264}</UniqueIdentifier>
     </Filter>
     <Filter Include="NetLib\Monitor">
       <UniqueIdentifier>{6851edaf-1ca6-443b-bdba-e195ce6b2acc}</UniqueIdentifier>

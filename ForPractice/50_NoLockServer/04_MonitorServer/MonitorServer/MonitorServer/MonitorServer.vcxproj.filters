@@ -11,63 +11,84 @@
     <Filter Include="Common">
       <UniqueIdentifier>{5342bd2f-a246-4b29-ad68-06ceb185525e}</UniqueIdentifier>
     </Filter>
-    <Filter Include="MonitorServer">
-      <UniqueIdentifier>{e72ba591-f6c8-4859-a9f3-de7caa7a6aef}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="NetLib\Session">
-      <UniqueIdentifier>{5364f88a-57e7-48c8-9a43-e9130ed1e55b}</UniqueIdentifier>
-    </Filter>
     <Filter Include="NetLib\Packet">
       <UniqueIdentifier>{471d1911-e189-4acc-ae26-9a450f73ba05}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="NetLib\Session\Utils">
-      <UniqueIdentifier>{87f1e77a-e244-4024-83de-5b0b029194c5}</UniqueIdentifier>
     </Filter>
     <Filter Include="Common\Utils">
       <UniqueIdentifier>{ca2e40dd-cd08-49fa-bbd6-f2f9be442dee}</UniqueIdentifier>
     </Filter>
-    <Filter Include="MonitorServer\MonitorServer">
-      <UniqueIdentifier>{faaa1842-b36c-43c2-97c4-05939fa23e1f}</UniqueIdentifier>
+    <Filter Include="Monitor">
+      <UniqueIdentifier>{e72ba591-f6c8-4859-a9f3-de7caa7a6aef}</UniqueIdentifier>
     </Filter>
-    <Filter Include="MonitorServer\MonitorServer\Utils">
-      <UniqueIdentifier>{6e36c639-78ef-407b-8a2e-239f73b328e6}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="MonitorServer\DebugTool">
+    <Filter Include="Monitor\DebugTool">
       <UniqueIdentifier>{8d31fb41-81e3-420a-83ad-bdcad249a49c}</UniqueIdentifier>
     </Filter>
-    <Filter Include="NetLib\LanServer">
+    <Filter Include="Monitor\LanMonitorServer">
+      <UniqueIdentifier>{faaa1842-b36c-43c2-97c4-05939fa23e1f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Monitor\NetMonitorServer">
+      <UniqueIdentifier>{46901b5d-7104-40ef-af4d-f161429d23d2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Monitor">
+      <UniqueIdentifier>{0783d038-5b41-47e6-b740-7f64b7a40106}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Network">
+      <UniqueIdentifier>{d274adc8-1ec6-483b-b652-eb18b8a85191}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Network\NetServer">
+      <UniqueIdentifier>{674c9d7b-7e00-4d7e-98e3-7fdcf5863922}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Network\LanServer">
       <UniqueIdentifier>{b860f129-43eb-4c55-8de6-c4c8aa1e7d6a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Network\Object">
+      <UniqueIdentifier>{840390d0-b6f1-449c-8ab4-6554539ca82e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Monitor\MonitorData">
+      <UniqueIdentifier>{b9457ba9-e2cd-44c9-8dae-4e052e47f68f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Monitor\MonitorData\Data">
+      <UniqueIdentifier>{9c358692-7309-4105-ba98-67856d29a03b}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
-      <Filter>MonitorServer</Filter>
+      <Filter>Monitor</Filter>
     </ClCompile>
-    <ClCompile Include="CMonitorServer.cpp">
-      <Filter>MonitorServer\MonitorServer</Filter>
+    <ClCompile Include="CLanMonitorServer.cpp">
+      <Filter>Monitor\LanMonitorServer</Filter>
     </ClCompile>
     <ClCompile Include="CPacket.cpp">
       <Filter>NetLib\Packet</Filter>
     </ClCompile>
-    <ClCompile Include="CRingBuffer.cpp">
-      <Filter>NetLib\Session\Utils</Filter>
-    </ClCompile>
     <ClCompile Include="CLanServer.cpp">
-      <Filter>NetLib\LanServer</Filter>
+      <Filter>NetLib\Network\LanServer</Filter>
     </ClCompile>
     <ClCompile Include="CSystemLog.cpp">
-      <Filter>MonitorServer\DebugTool</Filter>
+      <Filter>Monitor\DebugTool</Filter>
     </ClCompile>
     <ClCompile Include="CRecvPacket.cpp">
       <Filter>NetLib\Packet</Filter>
     </ClCompile>
+    <ClCompile Include="CNetMonitorServer.cpp">
+      <Filter>Monitor\NetMonitorServer</Filter>
+    </ClCompile>
+    <ClCompile Include="CNetServer.cpp">
+      <Filter>NetLib\Network\NetServer</Filter>
+    </ClCompile>
+    <ClCompile Include="CMonitorManager.cpp">
+      <Filter>NetLib\Monitor</Filter>
+    </ClCompile>
+    <ClCompile Include="CMonitorData.cpp">
+      <Filter>Monitor\MonitorData</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="MonitorProtocol.h">
-      <Filter>MonitorServer</Filter>
+      <Filter>Monitor</Filter>
     </ClInclude>
-    <ClInclude Include="CMonitorServer.h">
-      <Filter>MonitorServer\MonitorServer</Filter>
+    <ClInclude Include="CLanMonitorServer.h">
+      <Filter>Monitor\LanMonitorServer</Filter>
     </ClInclude>
     <ClInclude Include="CLockFreeQueue.h">
       <Filter>Common\Utils</Filter>
@@ -81,12 +102,6 @@
     <ClInclude Include="CPacket.h">
       <Filter>NetLib\Packet</Filter>
     </ClInclude>
-    <ClInclude Include="CRingBuffer.h">
-      <Filter>NetLib\Session\Utils</Filter>
-    </ClInclude>
-    <ClInclude Include="CSession.h">
-      <Filter>NetLib\Session</Filter>
-    </ClInclude>
     <ClInclude Include="Config.h">
       <Filter>NetLib</Filter>
     </ClInclude>
@@ -94,16 +109,49 @@
       <Filter>NetLib</Filter>
     </ClInclude>
     <ClInclude Include="CLanServer.h">
-      <Filter>NetLib\LanServer</Filter>
+      <Filter>NetLib\Network\LanServer</Filter>
     </ClInclude>
     <ClInclude Include="CCrashDump.h">
-      <Filter>MonitorServer\DebugTool</Filter>
+      <Filter>Monitor\DebugTool</Filter>
     </ClInclude>
     <ClInclude Include="CSystemLog.h">
-      <Filter>MonitorServer\DebugTool</Filter>
+      <Filter>Monitor\DebugTool</Filter>
     </ClInclude>
     <ClInclude Include="CRecvPacket.h">
       <Filter>NetLib\Packet</Filter>
+    </ClInclude>
+    <ClInclude Include="CNetMonitorServer.h">
+      <Filter>Monitor\NetMonitorServer</Filter>
+    </ClInclude>
+    <ClInclude Include="CNetServer.h">
+      <Filter>NetLib\Network\NetServer</Filter>
+    </ClInclude>
+    <ClInclude Include="CMonitorManager.h">
+      <Filter>NetLib\Monitor</Filter>
+    </ClInclude>
+    <ClInclude Include="CJob.h">
+      <Filter>NetLib\Network\Object</Filter>
+    </ClInclude>
+    <ClInclude Include="CSession.h">
+      <Filter>NetLib\Network\Object</Filter>
+    </ClInclude>
+    <ClInclude Include="CGameData.h">
+      <Filter>Monitor\MonitorData\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="CLoginData.h">
+      <Filter>Monitor\MonitorData\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="CChatData.h">
+      <Filter>Monitor\MonitorData\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="CServerData.h">
+      <Filter>Monitor\MonitorData\Data</Filter>
+    </ClInclude>
+    <ClInclude Include="CMonitorData.h">
+      <Filter>Monitor\MonitorData</Filter>
+    </ClInclude>
+    <ClInclude Include="CData.h">
+      <Filter>Monitor\MonitorData</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

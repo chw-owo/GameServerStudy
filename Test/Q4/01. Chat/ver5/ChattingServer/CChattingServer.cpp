@@ -206,7 +206,7 @@ void CChattingServer::HandleAccept(unsigned __int64 sessionID)
 		::wprintf(L"%s[%d] Already Exist SessionID: %lld\n", _T(__FUNCTION__), __LINE__, sessionID);
 	}
 
-	// // ::printf("%lld (%d): Handle Accept\n", (_sessionID & _idMask), GetCurrentThreadId());
+	// ::printf("%lld (%d): Handle Accept\n", (_sessionID & _idMask), GetCurrentThreadId());
 
 	return;
 }
@@ -245,7 +245,7 @@ void CChattingServer::HandleRelease(unsigned __int64 sessionID)
 	pPlayer->Terminate();
 	_pPlayerPool->Free(pPlayer);
 
-	// // ::printf("%lld (%d): Handle Release\n", (_sessionID & _idMask), GetCurrentThreadId());
+	// ::printf("%lld (%d): Handle Release\n", (_sessionID & _idMask), GetCurrentThreadId());
 }
 
 

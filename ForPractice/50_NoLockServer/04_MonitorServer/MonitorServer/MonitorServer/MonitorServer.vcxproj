@@ -118,6 +118,8 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
+      <Optimization>Disabled</Optimization>
+      <InlineFunctionExpansion>OnlyExplicitInline</InlineFunctionExpansion>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -128,25 +130,37 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="CLanServer.cpp" />
-    <ClCompile Include="CMonitorServer.cpp" />
+    <ClCompile Include="CLanMonitorServer.cpp" />
+    <ClCompile Include="CMonitorData.cpp" />
+    <ClCompile Include="CMonitorManager.cpp" />
+    <ClCompile Include="CNetMonitorServer.cpp" />
+    <ClCompile Include="CNetServer.cpp" />
     <ClCompile Include="CPacket.cpp" />
     <ClCompile Include="CRecvPacket.cpp" />
-    <ClCompile Include="CRingBuffer.cpp" />
     <ClCompile Include="CSystemLog.cpp" />
     <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CChatData.h" />
     <ClInclude Include="CCrashDump.h" />
+    <ClInclude Include="CData.h" />
+    <ClInclude Include="CGameData.h" />
+    <ClInclude Include="CJob.h" />
     <ClInclude Include="CLanServer.h" />
     <ClInclude Include="CLockFreeQueue.h" />
     <ClInclude Include="CLockFreeStack.h" />
-    <ClInclude Include="CMonitorServer.h" />
+    <ClInclude Include="CLanMonitorServer.h" />
+    <ClInclude Include="CLoginData.h" />
+    <ClInclude Include="CMonitorData.h" />
+    <ClInclude Include="CMonitorManager.h" />
+    <ClInclude Include="CNetMonitorServer.h" />
+    <ClInclude Include="CNetServer.h" />
     <ClInclude Include="Config.h" />
     <ClInclude Include="CPacket.h" />
     <ClInclude Include="CRecvPacket.h" />
-    <ClInclude Include="CRingBuffer.h" />
     <ClInclude Include="CSystemLog.h" />
     <ClInclude Include="CTlsPool.h" />
+    <ClInclude Include="CServerData.h" />
     <ClInclude Include="ErrorCode.h" />
     <ClInclude Include="MonitorProtocol.h" />
     <ClInclude Include="CSession.h" />

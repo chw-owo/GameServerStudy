@@ -9,7 +9,9 @@ CommonProtocol.h 의 채팅,로그인 등 패킷변동사항이 많아서
 */
 
 #define dfSERVER_IP				L"0.0.0.0"
-#define dfSERVER_PORT			12050
+#define dfNETSERVER_PORT			12001
+#define dfLANSERVER_PORT			12002
+#define dfSESSION_KEY				"ajfw@!cv980dSZ[fje#@fdj123948djf"
 
 enum en_PACKET_TYPE
 {
@@ -76,7 +78,7 @@ enum en_PACKET_TYPE
 	//	{
 	//		WORD	Type
 	//
-	//		char	LoginSessionKey[32]		// 로그인 인증 키. (이는 모니터링 서버에 고정값으로 보유)
+	//		char	LoginSessionKey[32]		// 로그인 인증 키. (이는 모니터링 서버에 고정값으로 보유) 
 	//										// 각 모니터링 툴은 같은 키를 가지고 들어와야 함
 	//	}
 	//
@@ -148,6 +150,7 @@ enum en_PACKET_SS_MONITOR_DATA_UPDATE
 	dfMONITOR_DATA_TYPE_GAME_AUTH_THREAD_FPS = 21,		// 게임서버 AUTH 스레드 초당 프레임 수 (루프 수)
 	dfMONITOR_DATA_TYPE_GAME_GAME_THREAD_FPS = 22,		// 게임서버 GAME 스레드 초당 프레임 수 (루프 수)
 	dfMONITOR_DATA_TYPE_GAME_PACKET_POOL = 23,		// 게임서버 패킷풀 사용량
+
 
 	dfMONITOR_DATA_TYPE_CHAT_SERVER_RUN = 30,		// 채팅서버 ChatServer 실행 여부 ON / OFF
 	dfMONITOR_DATA_TYPE_CHAT_SERVER_CPU = 31,		// 채팅서버 ChatServer CPU 사용률
