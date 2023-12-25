@@ -1,116 +1,66 @@
 #include "CMonitorClient.h"
 #include "CChattingServer.h"
 #include <tchar.h>
+#include <time.h>
 
-#define __MONITOR
-/*
-	<모니터링 항목>
-
-	en_MONITOR_DATA_TYPE_CHAT_SERVER_RUN = 30,			// 채팅서버 ChatServer 실행 여부 ON / OFF
-	en_MONITOR_DATA_TYPE_CHAT_SERVER_CPU = 31,			// 채팅서버 ChatServer CPU 사용률
-	en_MONITOR_DATA_TYPE_CHAT_SERVER_MEM = 32,			// 채팅서버 ChatServer 메모리 사용 MByte
-	en_MONITOR_DATA_TYPE_CHAT_SESSION = 33,				// 채팅서버 세션 수 (커넥션 수)
-	en_MONITOR_DATA_TYPE_CHAT_PLAYER = 34,				// 채팅서버 인증성공 사용자 수 (실제 접속자)
-	en_MONITOR_DATA_TYPE_CHAT_UPDATE_TPS = 35,			// 채팅서버 UPDATE 스레드 초당 처리 횟수
-	en_MONITOR_DATA_TYPE_CHAT_PACKET_POOL = 36,			// 채팅서버 패킷풀 사용량
-	en_MONITOR_DATA_TYPE_CHAT_UPDATEMSG_POOL = 37,		// 채팅서버 UPDATE MSG 풀 사용량
-
-	en_MONITOR_DATA_TYPE_MONITOR_CPU_TOTAL = 40,		// 서버컴퓨터 CPU 전체 사용률
-	en_MONITOR_DATA_TYPE_MONITOR_NONPAGED_MEMORY = 41,	// 서버컴퓨터 논페이지 메모리 MByte
-	en_MONITOR_DATA_TYPE_MONITOR_NETWORK_RECV = 42,		// 서버컴퓨터 네트워크 수신량 KByte
-	en_MONITOR_DATA_TYPE_MONITOR_NETWORK_SEND = 43,		// 서버컴퓨터 네트워크 송신량 KByte
-	en_MONITOR_DATA_TYPE_MONITOR_AVAILABLE_MEMORY = 44,	// 서버컴퓨터 사용가능 메모리
-
-	<그 외 모니터링 로그>
-
-	- Update TPS, msgQ size
-	- Accept Total, Disconnect Total
-	- Accept TPS, Disconnect TPS, Recv TPS, Send TPS
-
-	<Code> 
-
-	L"\n\n[%s %02d:%02d:%02d]\n\n"
-
-	L"<Total Server> -----------------------------------\n\n"
-
-	L"CPU Total : %d\n"
-	L"Recv (KB) : %d\n"
-	L"Send (KB) : %d\n"
-	L"Usable Memory (MB) : %d\n"
-	L"Nonpaged Memory (MB) : %d\n\n"
-
-	L"<Chatting Server> --------------------------------\n\n"
-
-	L"CPU : %d\n"
-	L"ON/OFF : %d\n"
-	L"Private Memory (MB) : %d\n\n"
-
-	L"<Chatting Server - Network> ----------------------\n\n"
-
-	L"Session Count : %d\n"
-	L"Total Accept : %d\n"
-	L"Total Disconnect : %d\n"
-	L"Accept / 1sec: %d\n"
-	L"Disconnect / 1sec: %d\n"
-	L"Recv / 1sec: % d\n"
-	L"Send / 1sec: % d\n\n"
-
-	L"<Chatting Server - Content> ----------------------\n\n"
-
-	L"Player Count : %d\n"
-	L"Update / 1sec : %d\n"
-	L"Job Q Size : %d\n"
-	L"Job Pool Size : %d\n"
-	L"Packet Pool Size : %d\n\n"
-
-	L"==================================================",
-
-	_T(__DATE__), stTime.wHour, stTime.wMinute, stTime.wSecond,
-
-	pServer->GetTotalCPUTime(),
-	pServer->GetTotalRecv(), pServer->GetTotalSend(),
-	pServer->GetTotalUsableMemory(), pServer->GetTotalNonpaged(),
-
-	pServer->GetProcessTotalCPUTime(), pServer->GetProcessOnOff(),
-	pServer->GetProcessMemory(),
-
-	pServer->GetSessionCount(),
-	pServer->GetAcceptTotal(), pServer->GetDisconnectTotal(),
-	pServer->GetAcceptTPS(), pServer->GetDisconnectTPS(),
-	pServer->GetRecvTPS(), pServer->GetSendTPS(),
-
-	pServer->GetPlayerCount(), pServer->GetUpdateTPS(),
-	pServer->GetJobQSize(), pServer->GetJobPoolSize(),
-	pServer->GetPacketPoolSize()
-
-*/
+#define __CONSOLE_MONITOR
 
 bool CMonitorClient::Initialize(CChattingServer* pChattingServer)
 {
-	_pChattingServer = pChattingServer;
-	_monitorThread = (HANDLE)_beginthreadex(NULL, 0, MonitorThread, this, 0, nullptr);
-	if (_monitorThread == NULL)
+	// Set Network Library
+	
+	int totalThreadCnt = 0;
+	int runningThreadCnt = 0;
+	::wprintf(L"<Monitor Client>\n");
+	::wprintf(L"Total Network Thread Count: ");
+	::scanf_s("%d", &totalThreadCnt);
+	::wprintf(L"Running Network Thread Count: ");
+	::scanf_s("%d", &runningThreadCnt);
+
+	if (!NetworkInitialize(dfMONIOTOR_IP, dfMONIOTOR_PORT, totalThreadCnt, runningThreadCnt, false, true))
 	{
-		LOG(L"FightGame", CSystemLog::ERROR_LEVEL, L"%s[%d]: Begin Monitor Thread Error\n", _T(__FUNCTION__), __LINE__);
-		::wprintf(L"%s[%d]: Begin Monitor Thread Error\n", _T(__FUNCTION__), __LINE__);
+		Terminate();
 		return false;
 	}
+
+	_pChattingServer = pChattingServer;
+
+#ifdef __CONSOLE_MONITOR
+	_printThread = (HANDLE)_beginthreadex(NULL, 0, PrintThread, this, 0, nullptr);
+	if (_printThread == NULL)
+	{
+		LOG(L"FightGame", CSystemLog::ERROR_LEVEL, L"%s[%d]: Begin Print Thread Error\n", _T(__FUNCTION__), __LINE__);
+		::wprintf(L"%s[%d]: Begin Print Thread Error\n", _T(__FUNCTION__), __LINE__);
+		return false;
+	}
+#endif
+
+	_sendThread = (HANDLE)_beginthreadex(NULL, 0, SendThread, this, 0, nullptr);
+	if (_sendThread == NULL)
+	{
+		LOG(L"FightGame", CSystemLog::ERROR_LEVEL, L"%s[%d]: Begin Send Thread Error\n", _T(__FUNCTION__), __LINE__);
+		::wprintf(L"%s[%d]: Begin Send Thread Error\n", _T(__FUNCTION__), __LINE__);
+		return false;
+	}
+
+	// Initialize Compelete
+	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Monitor: Server Initialize\n");
+	::wprintf(L"Monitor: Server Initialize\n\n");
 }
 
-unsigned int __stdcall CMonitorClient::MonitorThread(void* arg)
+unsigned int __stdcall CMonitorClient::PrintThread(void* arg)
 {
 	CMonitorClient* pMonitor = (CMonitorClient*)arg;
 	CChattingServer* pServer = pMonitor->_pChattingServer;
 	CreateDirectory(L"MonitorLog", NULL);
 
-	for (;;)
+	while (pServer->_serverAlive)
 	{
 		Sleep(1000);
 
 		pServer->_mm->UpdateProcessCPUTime();
 		pServer->_mm->UpdateTotalCPUTime();
 
-#ifdef __MONITOR
 		SYSTEMTIME stTime;
 		GetLocalTime(&stTime);
 		WCHAR text[dfMONITOR_TEXT_LEN];
@@ -157,7 +107,6 @@ unsigned int __stdcall CMonitorClient::MonitorThread(void* arg)
 			);
 
 		::wprintf(L"%s", text);
-		PRO_PRINT();
 
 		FILE* file;
 		errno_t openRet = _wfopen_s(&file, L"MonitorLog/MonitorLog.txt", L"a+");
@@ -176,7 +125,6 @@ unsigned int __stdcall CMonitorClient::MonitorThread(void* arg)
 			LOG(L"FightGame", CSystemLog::ERROR_LEVEL, L"%s[%d]: Fileptr is nullptr %s\n", _T(__FUNCTION__), __LINE__, L"MonitorLog/MonitorLog.txt");
 			::wprintf(L"%s[%d]: Fileptr is nullptr %s\n", _T(__FUNCTION__), __LINE__, L"MonitorLog/MonitorLog.txt");
 		}
-#endif
 	}
 
 	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Monitor Thread (%d) Terminate\n", GetCurrentThreadId());
@@ -184,20 +132,84 @@ unsigned int __stdcall CMonitorClient::MonitorThread(void* arg)
 	return 0;
 }
 
+unsigned int __stdcall CMonitorClient::SendThread(void* arg)
+{
+	CMonitorClient* pMonitor = (CMonitorClient*)arg;
+	CChattingServer* pServer = pMonitor->_pChattingServer;
+
+	CLanPacket* packet = CLanPacket::Alloc();
+	packet->Clear();
+	*packet << (WORD)en_PACKET_SS_MONITOR_LOGIN;
+	*packet << (int)0; 
+	pMonitor->ReqSendUnicast(packet);
+
+	while (pMonitor->_serverAlive)
+	{
+		Sleep(1000);
+
+		int now = (int) time(NULL);
+
+		// Chat
+		pMonitor->SetDataToPacket(en_MONITOR_DATA_TYPE_CHAT_SERVER_RUN, pServer->_mm->GetProcessOnOff(), now);
+		pMonitor->SetDataToPacket(en_MONITOR_DATA_TYPE_CHAT_SERVER_CPU, pServer->_mm->GetProcessCPUTime(), now);
+		pMonitor->SetDataToPacket(en_MONITOR_DATA_TYPE_CHAT_SERVER_MEM, pServer->_mm->GetProcessMemory(), now);
+		pMonitor->SetDataToPacket(en_MONITOR_DATA_TYPE_CHAT_SESSION, pServer->GetSessionCount(), now);
+		pMonitor->SetDataToPacket(en_MONITOR_DATA_TYPE_CHAT_PLAYER, pServer->GetPlayerCount(), now);
+		pMonitor->SetDataToPacket(en_MONITOR_DATA_TYPE_CHAT_UPDATE_TPS, pServer->GetUpdateTPS(), now);
+		pMonitor->SetDataToPacket(en_MONITOR_DATA_TYPE_CHAT_PACKET_POOL, pServer->GetPacketPoolSize(), now);
+		pMonitor->SetDataToPacket(en_MONITOR_DATA_TYPE_CHAT_UPDATEMSG_POOL, pServer->GetJobQSize(), now);
+
+		// Server
+		pMonitor->SetDataToPacket(en_MONITOR_DATA_TYPE_MONITOR_CPU_TOTAL, pServer->_mm->GetTotalCPUTime(), now);
+		pMonitor->SetDataToPacket(en_MONITOR_DATA_TYPE_MONITOR_NONPAGED_MEMORY, pServer->_mm->GetTotalNonpaged(), now);
+		pMonitor->SetDataToPacket(en_MONITOR_DATA_TYPE_MONITOR_NETWORK_RECV, pServer->_mm->GetTotalRecv(), now);
+		pMonitor->SetDataToPacket(en_MONITOR_DATA_TYPE_MONITOR_NETWORK_SEND, pServer->_mm->GetTotalSend(), now);
+		pMonitor->SetDataToPacket(en_MONITOR_DATA_TYPE_MONITOR_AVAILABLE_MEMORY, pServer->_mm->GetTotalUsableMemory(), now);
+	}
+	return 0;
+}
+
+void CMonitorClient::SetDataToPacket(BYTE type, int val, int time)
+{
+	CLanPacket* packet = CLanPacket::Alloc();
+	packet->Clear();
+	*packet << (WORD) en_PACKET_SS_MONITOR_DATA_UPDATE;
+	*packet << type;
+	*packet << val;
+	*packet << time;
+	ReqSendUnicast(packet);
+}
+
+void CMonitorClient::ReqSendUnicast(CLanPacket* packet)
+{
+	packet->AddUsageCount(1);
+	if (!SendPacket(packet))
+	{
+		CLanPacket::Free(packet);
+	}
+}
+
 void CMonitorClient::Terminate()
 {
+	// TO-DO
 }
 
 void CMonitorClient::OnInitialize()
 {
+	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Monitor: Network Library Initialize\n");
+	::wprintf(L"Monitor: Network Library Initialize\n");
 }
 
 void CMonitorClient::OnTerminate()
 {
+	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Monitor: Network Library Terminate\n");
+	::wprintf(L"Monitor: Network Library Terminate\n");
 }
 
 void CMonitorClient::OnThreadTerminate(wchar_t* threadName)
 {
+	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Monitor: %s Terminate\n", threadName);
+	::wprintf(L"Monitor: %s Terminate\n", threadName);
 }
 
 void CMonitorClient::OnEnterServer()
@@ -208,8 +220,9 @@ void CMonitorClient::OnLeaveServer()
 {
 }
 
-void CMonitorClient::OnRecv(CPacket* packet)
+void CMonitorClient::OnRecv(CRecvLanPacket* packet)
 {
+
 }
 
 void CMonitorClient::OnSend(int sendSize)
@@ -218,8 +231,12 @@ void CMonitorClient::OnSend(int sendSize)
 
 void CMonitorClient::OnError(int errorCode, wchar_t* errorMsg)
 {
+	LOG(L"FightGame", CSystemLog::ERROR_LEVEL, L"Monitor: %s (%d)\n", errorMsg, errorCode);
+	::wprintf(L"Monitor: %s (%d)\n", errorMsg, errorCode);
 }
 
 void CMonitorClient::OnDebug(int debugCode, wchar_t* debugMsg)
 {
+	LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"Monitor: %s (%d)\n", debugMsg, debugCode);
+	::wprintf(L"Monitor: %s (%d)\n", debugMsg, debugCode);
 }

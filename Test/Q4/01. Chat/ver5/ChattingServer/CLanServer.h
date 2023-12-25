@@ -3,10 +3,10 @@
 #ifdef LANSERVER
 
 #include "CLockFreeStack.h"
-#include "CSession.h"
-#include "CRecvPacket.h"
+#include "CLanSession.h"
+#include "CRecvLanPacket.h"
 #include "CMonitorManager.h"
-#include "CJob.h"
+#include "CLanJob.h"
 #include <ws2tcpip.h>
 #include <process.h>
 #pragma comment(lib, "ws2_32.lib")
@@ -18,15 +18,15 @@ protected:
 	~CLanServer() {};
 
 protected:
-	bool NetworkInitialize(
+	bool LanworkInitialize(
 		const wchar_t* IP, short port, int numOfThreads, int numOfRunnings, bool nagle, bool monitorServer = false);
-	bool NetworkTerminate();
+	bool LanworkTerminate();
 
 protected:
 	bool Disconnect(unsigned __int64 sessionID);
-	bool SendPacket(unsigned __int64 sessionID, CPacket* packet);
-	void EnqueueJob(unsigned __int64 sessionID, CJob* job);
-	CJob* DequeueJob(unsigned __int64 sessionID);
+	bool SendPacket(unsigned __int64 sessionID, CLanPacket* packet);
+	void EnqueueJob(unsigned __int64 sessionID, CLanJob* job);
+	CLanJob* DequeueJob(unsigned __int64 sessionID);
 
 protected:
 	virtual void OnInitialize() = 0;
@@ -37,29 +37,29 @@ protected:
 	virtual bool OnConnectRequest() = 0;
 	virtual void OnAcceptClient(unsigned __int64 sessionID) = 0;
 	virtual void OnReleaseClient(unsigned __int64 sessionID) = 0;
-	virtual void OnRecv(unsigned __int64 sessionID, CRecvPacket* packet) = 0;
+	virtual void OnRecv(unsigned __int64 sessionID, CRecvLanPacket* packet) = 0;
 	virtual void OnSend(unsigned __int64 sessionID, int sendSize) = 0;
 	virtual void OnError(int errorCode, wchar_t* errorMsg) = 0;
 	virtual void OnDebug(int debugCode, wchar_t* debugMsg) = 0;
 
-	// Called in Network Library
+	// Called in Lanwork Library
 private:
 	static unsigned int WINAPI AcceptThread(void* arg);
-	static unsigned int WINAPI NetworkThread(void* arg);
+	static unsigned int WINAPI LanworkThread(void* arg);
 
 private:
 	void HandleRelease(unsigned __int64 sessionID);
-	bool HandleRecvCP(CSession* pSession, int recvBytes);
-	bool HandleSendCP(CSession* pSession, int sendBytes);
-	bool RecvPost(CSession* pSession);
-	bool SendPost(CSession* pSession);
-	bool SendCheck(CSession* pSession);
+	bool HandleRecvCP(CLanSession* pSession, int recvBytes);
+	bool HandleSendCP(CLanSession* pSession, int sendBytes);
+	bool RecvPost(CLanSession* pSession);
+	bool SendPost(CLanSession* pSession);
+	bool SendCheck(CLanSession* pSession);
 
 private:
-	CSession* AcquireSessionUsage(unsigned __int64 sessionID);
-	void ReleaseSessionUsage(CSession* pSession);
-	void IncrementUseCount(CSession* pSession);
-	void DecrementUseCount(CSession* pSession);
+	CLanSession* AcquireSessionUsage(unsigned __int64 sessionID);
+	void ReleaseSessionUsage(CLanSession* pSession);
+	void IncrementUseCount(CLanSession* pSession);
+	void DecrementUseCount(CLanSession* pSession);
 
 private:
 	wchar_t _IP[10];
@@ -75,11 +75,11 @@ private:
 private:
 	HANDLE _acceptThread;
 	HANDLE* _networkThreads;
-	HANDLE _hNetworkCP;
+	HANDLE _hLanworkCP;
 
 public: // TO-DO: private
 #define __ID_BIT__ 47
-	CSession* _sessions[dfSESSION_MAX] = { nullptr, };
+	CLanSession* _sessions[dfSESSION_MAX] = { nullptr, };
 	CLockFreeStack<long> _emptyIdx;
 	volatile long _sessionCnt = 0;
 	volatile __int64 _sessionID = 0;
@@ -87,8 +87,8 @@ public: // TO-DO: private
 	unsigned __int64 _idMask = 0;
 
 public:
-	CLockFreeQueue<CJob*>* _pJobQueues[dfJOB_QUEUE_CNT] = { nullptr, };
-	CTlsPool<CJob>* _pJobPool;
+	CLockFreeQueue<CLanJob*>* _pJobQueues[dfJOB_QUEUE_CNT] = { nullptr, };
+	CTlsPool<CLanJob>* _pJobPool;
 
 public:
 	ValidFlag _releaseFlag;

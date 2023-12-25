@@ -1,16 +1,16 @@
 #pragma once
 
-// #define LANSERVER
+#define LANSERVER
 #define NETSERVER
 
 #ifdef LANSERVER
 #pragma pack (push, 1)
-struct stHeader
+struct stLanHeader
 {
-	unsigned short	_len;			
+	unsigned short	_len;
 };
 #pragma pack (pop)
-#define dfHEADER_LEN				sizeof(stHeader)
+#define dfLANHEADER_LEN				sizeof(stLanHeader)
 #endif
 
 #ifdef NETSERVER
@@ -19,15 +19,15 @@ struct stHeader
 #define dfPACKET_KEY		0x32
 
 #pragma pack (push, 1)
-struct stHeader
+struct stNetHeader
 {
 	unsigned char _code = dfPACKET_CODE;
-	unsigned short _len;			
+	unsigned short _len;
 	unsigned char _randKey;
 	unsigned char _checkSum;
 };
 #pragma pack (pop)
-#define dfHEADER_LEN				sizeof(stHeader)
+#define dfNETHEADER_LEN				sizeof(stNetHeader)
 #endif
 
 #define dfSESSION_MAX				20000

@@ -8,10 +8,17 @@ CommonProtocol.h 의 채팅,로그인 등 패킷변동사항이 많아서
 기존 프로토콜 헤더에 추가하여 사용 바랍니다.
 */
 
-#define dfSERVER_IP				L"0.0.0.0"
-#define dfNETSERVER_PORT			12001
-#define dfLANSERVER_PORT			12002
+#define dfSERVER_IP					L"0.0.0.0"
+#define dfLANSERVER_PORT			12001
+#define dfNETSERVER_PORT			12002
 #define dfSESSION_KEY				"ajfw@!cv980dSZ[fje#@fdj123948djf"
+
+// Server No
+// : TO-DO (session ID 별 server No)
+#define dfSERVER_NO		1
+#define dfGAME_NO		1
+#define dfCHAT_NO		1
+#define dfLOGIN_NO		1
 
 enum en_PACKET_TYPE
 {

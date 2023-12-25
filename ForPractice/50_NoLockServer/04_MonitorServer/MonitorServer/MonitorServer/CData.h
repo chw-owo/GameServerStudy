@@ -2,6 +2,6 @@
 class CData
 {
 public:
-	int _val;
-	int _timestamp;
+	int _val = 1;
+	int _timestamp = 1;
 };

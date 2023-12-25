@@ -136,9 +136,10 @@
     <ClCompile Include="CChattingServer.cpp" />
     <ClCompile Include="CLanClient.cpp" />
     <ClCompile Include="CMonitorClient.cpp" />
-    <ClCompile Include="CPacket.cpp" />
-    <ClCompile Include="CRecvPacket.cpp" />
-    <ClCompile Include="CRingBuffer.cpp" />
+    <ClCompile Include="CNetPacket.cpp" />
+    <ClCompile Include="CLanPacket.cpp" />
+    <ClCompile Include="CRecvNetPacket.cpp" />
+    <ClCompile Include="CRecvLanPacket.cpp" />
     <ClCompile Include="CSystemLog.cpp" />
     <ClCompile Include="CLanServer.cpp" />
     <ClCompile Include="Main.cpp" />
@@ -147,27 +148,32 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CChattingServer.h" />
+    <ClInclude Include="CClientSession.h" />
     <ClInclude Include="CCrashDump.h" />
-    <ClInclude Include="CJob.h" />
+    <ClInclude Include="CLanJob.h" />
     <ClInclude Include="CLanClient.h" />
     <ClInclude Include="CMonitorClient.h" />
-    <ClInclude Include="CRecvPacket.h" />
+    <ClInclude Include="CNetJob.h" />
+    <ClInclude Include="CNetPacket.h" />
+    <ClInclude Include="CNetSession.h" />
+    <ClInclude Include="CRecvNetPacket.h" />
+    <ClInclude Include="CRecvLanPacket.h" />
     <ClInclude Include="CTlsPool.h" />
     <ClInclude Include="CLockFreeQueue.h" />
     <ClInclude Include="CLockFreeStack.h" />
     <ClInclude Include="CObjectPool.h" />
     <ClInclude Include="Config.h" />
-    <ClInclude Include="CPacket.h" />
+    <ClInclude Include="CLanPacket.h" />
     <ClInclude Include="CPlayer.h" />
-    <ClInclude Include="CRingBuffer.h" />
     <ClInclude Include="CSector.h" />
-    <ClInclude Include="CSession.h" />
+    <ClInclude Include="CLanSession.h" />
     <ClInclude Include="CSystemLog.h" />
     <ClInclude Include="ErrorCode.h" />
     <ClInclude Include="CLanServer.h" />
     <ClInclude Include="CNetServer.h" />
     <ClInclude Include="CommonProtocol.h" />
     <ClInclude Include="CMonitorManager.h" />
+    <ClInclude Include="Utils.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

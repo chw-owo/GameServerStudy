@@ -2,13 +2,13 @@
 //#ifndef __GODDAMNBUG_ONLINE_PROTOCOL__
 //#define __GODDAMNBUG_ONLINE_PROTOCOL__
 
-// ºΩ≈Õ 50 x 50
+// Chatting Server
 #define dfSERVER_IP				L"0.0.0.0"
 #define dfSERVER_PORT			12050
 
 #define dfSECTOR_CNT_Y			50
 #define dfSECTOR_CNT_X			50
-#define dfPLAYER_MAX			30000
+#define dfPLAYER_MAX			20000
 #define dfTIMEOUT				40000
 #define dfMONITOR_TEXT_LEN		1024
 
@@ -17,6 +17,10 @@
 #define dfSESSIONKEY_LEN		64
 #define dfMSG_MAX				1024
 #define dfTHREAD_MAX			20
+
+// Monitor Client
+#define dfMONIOTOR_IP			L"127.0.0.1"
+#define dfMONIOTOR_PORT			12001
 
 enum en_PACKET_TYPE
 {

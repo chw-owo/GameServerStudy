@@ -28,7 +28,7 @@ public:
 	float GetProcessUserCPUTime() { return _fProcessUserCPU; }
 	float GetProcessKernelCPUTime() { return _fProcessKernelCPU; }
 
-private:
+public:
 	long GetProcessOnOff();
 	long GetProcessMemory();
 
@@ -38,11 +38,11 @@ public:
 	float GetTotalUserCPUTime() { return _fTotalUserCPU; }
 	float GetTotalKernelCPUTime() { return _fTotalKernelCPU; }
 
-private:
+public:
 	long GetTotalNonpaged();
 	long GetTotalUsableMemory();
 
-private:
+public:
 	long GetTotalRecv();
 	long GetTotalSend();
 	

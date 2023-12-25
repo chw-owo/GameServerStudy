@@ -3,10 +3,10 @@
 #ifdef NETSERVER
 
 #include "CLockFreeStack.h"
-#include "CSession.h"
-#include "CRecvPacket.h"
+#include "CNetSession.h"
+#include "CRecvNetPacket.h"
 #include "CMonitorManager.h"
-#include "CJob.h"
+#include "CNetJob.h"
 #include <ws2tcpip.h>
 #include <process.h>
 #pragma comment(lib, "ws2_32.lib")
@@ -24,9 +24,9 @@ protected:
 
 protected:
 	bool Disconnect(unsigned __int64 sessionID);
-	bool SendPacket(unsigned __int64 sessionID, CPacket* packet);
-	void EnqueueJob(unsigned __int64 sessionID, CJob* job);
-	CJob* DequeueJob(unsigned __int64 sessionID);
+	bool SendPacket(unsigned __int64 sessionID, CNetPacket* packet);
+	void EnqueueJob(unsigned __int64 sessionID, CNetJob* job);
+	CNetJob* DequeueJob(unsigned __int64 sessionID);
 
 protected:
 	virtual void OnInitialize() = 0;
@@ -37,7 +37,7 @@ protected:
 	virtual bool OnConnectRequest() = 0;
 	virtual void OnAcceptClient(unsigned __int64 sessionID) = 0;
 	virtual void OnReleaseClient(unsigned __int64 sessionID) = 0;
-	virtual void OnRecv(unsigned __int64 sessionID, CRecvPacket* packet) = 0;
+	virtual void OnRecv(unsigned __int64 sessionID, CRecvNetPacket* packet) = 0;
 	virtual void OnSend(unsigned __int64 sessionID, int sendSize) = 0;
 	virtual void OnError(int errorCode, wchar_t* errorMsg) = 0;
 	virtual void OnDebug(int debugCode, wchar_t* debugMsg) = 0;
@@ -49,17 +49,17 @@ private:
 
 private:
 	void HandleRelease(unsigned __int64 sessionID);
-	bool HandleRecvCP(CSession* pSession, int recvBytes);
-	bool HandleSendCP(CSession* pSession, int sendBytes);
-	bool RecvPost(CSession* pSession);
-	bool SendPost(CSession* pSession);
-	bool SendCheck(CSession* pSession);
+	bool HandleRecvCP(CNetSession* pSession, int recvBytes);
+	bool HandleSendCP(CNetSession* pSession, int sendBytes);
+	bool RecvPost(CNetSession* pSession);
+	bool SendPost(CNetSession* pSession);
+	bool SendCheck(CNetSession* pSession);
 
 private:
-	CSession* AcquireSessionUsage(unsigned __int64 sessionID);
-	void ReleaseSessionUsage(CSession* pSession);
-	void IncrementUseCount(CSession* pSession);
-	void DecrementUseCount(CSession* pSession);
+	CNetSession* AcquireSessionUsage(unsigned __int64 sessionID);
+	void ReleaseSessionUsage(CNetSession* pSession);
+	void IncrementUseCount(CNetSession* pSession);
+	void DecrementUseCount(CNetSession* pSession);
 
 private:
 	wchar_t _IP[10];
@@ -79,7 +79,7 @@ private:
 
 public: // TO-DO: private
 #define __ID_BIT__ 47
-	CSession* _sessions[dfSESSION_MAX] = { nullptr, };
+	CNetSession* _sessions[dfSESSION_MAX] = { nullptr, };
 	CLockFreeStack<long> _emptyIdx;
 	volatile long _sessionCnt = 0;
 	volatile __int64 _sessionID = 0;
@@ -87,8 +87,8 @@ public: // TO-DO: private
 	unsigned __int64 _idMask = 0;
 
 public:
-	CLockFreeQueue<CJob*>* _pJobQueues[dfJOB_QUEUE_CNT] = { nullptr, };
-	CTlsPool<CJob>* _pJobPool;
+	CLockFreeQueue<CNetJob*>* _pJobQueues[dfJOB_QUEUE_CNT] = { nullptr, };
+	CTlsPool<CNetJob>* _pJobPool;
 
 public:
 	ValidFlag _releaseFlag;

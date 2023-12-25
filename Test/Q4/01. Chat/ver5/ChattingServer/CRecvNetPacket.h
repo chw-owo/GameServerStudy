@@ -1,33 +1,36 @@
 #pragma once
-#include "CPacket.h"
+#include "Config.h"
+
+#ifdef NETSERVER
+#include "CNetPacket.h"
 #include "CTlsPool.h"
 
-class CRecvPacket
+class CRecvNetPacket
 {
-	friend CTlsPool<CRecvPacket>;
+	friend CTlsPool<CRecvNetPacket>;
 
 private:
-	CRecvPacket() { }
-	CRecvPacket(CPacket* packet) : _packet(packet),
+	CRecvNetPacket() { }
+	CRecvNetPacket(CNetPacket* packet) : _packet(packet),
 		_readPos(packet->GetPayloadReadPos()), _writePos(packet->GetPayloadWritePos()) { }
 
 public: // TO-DO: private
 	int _readPos = 0;
 	int _writePos = 0;
-	CPacket* _packet = nullptr;
+	CNetPacket* _packet = nullptr;
 
 public:
-	static CTlsPool<CRecvPacket> _pool;
+	static CTlsPool<CRecvNetPacket> _pool;
 
-	static CRecvPacket* Alloc(CPacket* packet)
+	static CRecvNetPacket* Alloc(CNetPacket* packet)
 	{
-		CRecvPacket* recvPacket = _pool.Alloc(packet);
-		return recvPacket;
+		CRecvNetPacket* recvNetPacket = _pool.Alloc(packet);
+		return recvNetPacket;
 	}
 
-	static bool Free(CRecvPacket* packet)
+	static bool Free(CRecvNetPacket* packet)
 	{
-		if (CPacket::Free(packet->_packet))
+		if (CNetPacket::Free(packet->_packet))
 		{
 			_pool.Free(packet);
 			return true;
@@ -36,13 +39,13 @@ public:
 	}
 
 public:
-	inline CRecvPacket& operator = (CRecvPacket& clSrCPacket)
+	inline CRecvNetPacket& operator = (CRecvNetPacket& clSrCNetPacket)
 	{
-		*this = clSrCPacket;
+		*this = clSrCNetPacket;
 		return *this;
 	}
 
-	inline CRecvPacket& operator >> (float& fValue)
+	inline CRecvNetPacket& operator >> (float& fValue)
 	{
 		if (_writePos - _readPos < sizeof(float))
 		{
@@ -57,7 +60,7 @@ public:
 		_readPos += sizeof(float);
 		return *this;
 	}
-	inline CRecvPacket& operator >> (double& dValue)
+	inline CRecvNetPacket& operator >> (double& dValue)
 	{
 		if (_writePos - _readPos < sizeof(double))
 		{
@@ -72,7 +75,7 @@ public:
 		_readPos += sizeof(double);
 		return *this;
 	}
-	inline CRecvPacket& operator >> (char& chValue)
+	inline CRecvNetPacket& operator >> (char& chValue)
 	{
 		if (_writePos - _readPos < sizeof(char))
 		{
@@ -87,7 +90,7 @@ public:
 		_readPos += sizeof(char);
 		return *this;
 	}
-	inline CRecvPacket& operator >> (BYTE& byValue)
+	inline CRecvNetPacket& operator >> (BYTE& byValue)
 	{
 		if (_writePos - _readPos < sizeof(BYTE))
 		{
@@ -103,7 +106,7 @@ public:
 		_readPos += sizeof(BYTE);
 		return *this;
 	}
-	inline CRecvPacket& operator >> (wchar_t& szValue)
+	inline CRecvNetPacket& operator >> (wchar_t& szValue)
 	{
 		if (_writePos - _readPos < sizeof(wchar_t))
 		{
@@ -118,7 +121,7 @@ public:
 		_readPos += sizeof(wchar_t);
 		return *this;
 	}
-	inline CRecvPacket& operator >> (short& shValue)
+	inline CRecvNetPacket& operator >> (short& shValue)
 	{
 		if (_writePos - _readPos < sizeof(short))
 		{
@@ -135,7 +138,7 @@ public:
 		_readPos += sizeof(short);
 		return *this;
 	}
-	inline CRecvPacket& operator >> (WORD& wValue)
+	inline CRecvNetPacket& operator >> (WORD& wValue)
 	{
 		if (_writePos - _readPos < sizeof(WORD))
 		{
@@ -150,7 +153,7 @@ public:
 		_readPos += sizeof(WORD);
 		return *this;
 	}
-	inline CRecvPacket& operator >> (int& iValue)
+	inline CRecvNetPacket& operator >> (int& iValue)
 	{
 		if (_writePos - _readPos < sizeof(int))
 		{
@@ -165,7 +168,7 @@ public:
 		_readPos += sizeof(int);
 		return *this;
 	}
-	inline CRecvPacket& operator >> (DWORD& dwValue)
+	inline CRecvNetPacket& operator >> (DWORD& dwValue)
 	{
 		if (_writePos - _readPos < sizeof(DWORD))
 		{
@@ -180,7 +183,7 @@ public:
 		_readPos += sizeof(DWORD);
 		return *this;
 	}
-	inline CRecvPacket& operator >> (__int64& iValue)
+	inline CRecvNetPacket& operator >> (__int64& iValue)
 	{
 		if (_writePos - _readPos < sizeof(__int64))
 		{
@@ -211,3 +214,5 @@ public:
 	}
 
 };
+
+#endif

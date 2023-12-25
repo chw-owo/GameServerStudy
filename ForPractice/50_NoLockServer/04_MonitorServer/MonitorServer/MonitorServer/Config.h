@@ -15,8 +15,8 @@ struct stLanHeader
 
 #ifdef NETSERVER
 
-#define dfPACKET_CODE		0x77
-#define dfPACKET_KEY		0x32
+#define dfPACKET_CODE		109
+#define dfPACKET_KEY		30
 
 #pragma pack (push, 1)
 struct stNetHeader

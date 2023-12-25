@@ -1,42 +1,12 @@
-
 #pragma once
-#include "Config.h"
-#include "CPacket.h"
-#include "CPacket.h"
+#include "CNetPacket.h"
 #include "CLockFreeQueue.h"
+#include "Utils.h"
 
-#include <ws2tcpip.h>
-#pragma comment(lib, "ws2_32.lib")
-
-enum class NET_TYPE
-{
-	SEND_COMPLETE = 0,
-	RECV_COMPLETE,
-	SEND_POST,
-	RECV_POST,
-	RELEASE
-};
-
-struct NetworkOverlapped
-{
-	OVERLAPPED _ovl;
-	NET_TYPE _type;
-};
-
-union ValidFlag
-{
-	struct
-	{
-		volatile short _releaseFlag;
-		volatile short _useCount;
-	};
-	volatile long _flag;
-};
-
-class CSession
+class CNetSession
 {
 public:
-	CSession()
+	CNetSession()
 	{
 		_validFlag._flag = 0;
 		_recvComplOvl._type = NET_TYPE::RECV_COMPLETE;
@@ -45,14 +15,14 @@ public:
 		_sendPostOvl._type = NET_TYPE::SEND_POST;
 		_releaseOvl._type = NET_TYPE::RELEASE;
 
-		_recvBuf = CPacket::Alloc();
+		_recvBuf = CNetPacket::Alloc();
 		_recvBuf->Clear();
 		_recvBuf->AddUsageCount(1);
 	}
 
-	~CSession()
+	~CNetSession()
 	{
-		CPacket::Free(_recvBuf);
+		CNetPacket::Free(_recvBuf);
 	}
 
 public:
@@ -74,7 +44,7 @@ public:
 		ZeroMemory(&_sendPostOvl._ovl, sizeof(_sendPostOvl._ovl));
 		ZeroMemory(&_releaseOvl._ovl, sizeof(_releaseOvl._ovl));
 
-		
+
 	}
 
 	void Terminate()
@@ -85,13 +55,13 @@ public:
 
 		while (_sendBuf.GetUseSize() > 0)
 		{
-			CPacket* packet = _sendBuf.Dequeue();
-			CPacket::Free(packet);
+			CNetPacket* packet = _sendBuf.Dequeue();
+			CNetPacket::Free(packet);
 		}
 		while (_tempBuf.GetUseSize() > 0)
 		{
-			CPacket* packet = _tempBuf.Dequeue();
-			CPacket::Free(packet);
+			CNetPacket* packet = _tempBuf.Dequeue();
+			CNetPacket::Free(packet);
 		}
 	}
 
@@ -106,9 +76,9 @@ public:
 	SOCKET _sock;
 	SOCKADDR_IN _addr;
 
-	CPacket* _recvBuf;
-	CLockFreeQueue<CPacket*> _sendBuf;
-	CLockFreeQueue<CPacket*> _tempBuf;
+	CNetPacket* _recvBuf;
+	CLockFreeQueue<CNetPacket*> _sendBuf;
+	CLockFreeQueue<CNetPacket*> _tempBuf;
 	WSABUF _wsaRecvbuf[dfWSARECVBUF_CNT];
 	WSABUF _wsaSendbuf[dfWSASENDBUF_CNT];
 

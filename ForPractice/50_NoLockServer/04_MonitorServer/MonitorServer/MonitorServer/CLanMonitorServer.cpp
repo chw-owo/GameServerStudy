@@ -3,17 +3,18 @@
 #include "CSystemLog.h"
 #include <tchar.h>
 
+/*
+1. Recv 테스트
+2. DB 저장 스레드 생성
+*/
+
 bool CLanMonitorServer::Initialize()
 {
 	// Set Network Library
-	SYSTEM_INFO si;
-	GetSystemInfo(&si);
 
-	int cpuCount = (int)si.dwNumberOfProcessors;
 	int totalThreadCnt = 0;
 	int runningThreadCnt = 0;
-
-	::wprintf(L"CPU total: %d\n", cpuCount);
+	::wprintf(L"<Lan Server>\n");
 	::wprintf(L"Total Network Thread Count: ");
 	::scanf_s("%d", &totalThreadCnt);
 	::wprintf(L"Running Network Thread Count: ");
@@ -33,9 +34,17 @@ bool CLanMonitorServer::Initialize()
 		return false;
 	}
 
+	_saveThread = (HANDLE)_beginthreadex(NULL, 0, SaveThread, this, 0, nullptr);
+	if (_saveThread == NULL)
+	{
+		LOG(L"FightGame", CSystemLog::ERROR_LEVEL, L"%s[%d]: Begin Save Thread Error\n", _T(__FUNCTION__), __LINE__);
+		::wprintf(L"%s[%d]: Begin Save Thread Error\n", _T(__FUNCTION__), __LINE__);
+		return false;
+	}
+
 	// Initialize Compelete
-	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Server Initialize\n");
-	::wprintf(L"Server Initialize\n\n");
+	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Lan: Server Initialize\n");
+	::wprintf(L"Lan: Server Initialize\n\n");
 }
 
 void CLanMonitorServer::Terminate()
@@ -46,7 +55,7 @@ void CLanMonitorServer::Terminate()
 unsigned int __stdcall CLanMonitorServer::MonitorThread(void* arg)
 {
 	CLanMonitorServer* pServer = (CLanMonitorServer*)arg;
-	CLockFreeQueue<CJob*>** pJobQueues = pServer->_pJobQueues;
+	CLockFreeQueue<CLanJob*>** pJobQueues = pServer->_pJobQueues;
 	long undesired = 0;
 
 	while (pServer->_serverAlive)
@@ -57,7 +66,7 @@ unsigned int __stdcall CLanMonitorServer::MonitorThread(void* arg)
 		{
 			while (pJobQueues[i]->GetUseSize() > 0)
 			{
-				CJob* job = pJobQueues[i]->Dequeue();
+				CLanJob* job = pJobQueues[i]->Dequeue();
 				if (job == nullptr) break;
 
 				if (job->_type == JOB_TYPE::SYSTEM)
@@ -88,34 +97,46 @@ unsigned int __stdcall CLanMonitorServer::MonitorThread(void* arg)
 	return 0;
 }
 
+unsigned int __stdcall CLanMonitorServer::SaveThread(void* arg)
+{
+	CLanMonitorServer* pServer = (CLanMonitorServer*)arg;
+
+	while (pServer->_serverAlive)
+	{
+		Sleep(300000);
+		// TO-DO: DB 연동
+	}
+	return 0;
+}
+
 void CLanMonitorServer::OnInitialize()
 {
-	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Network Library Initialize\n");
-	::wprintf(L"Network Library Initialize\n");
+	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Lan: Network Library Initialize\n");
+	::wprintf(L"Lan: Network Library Initialize\n");
 }
 
 void CLanMonitorServer::OnTerminate()
 {
-	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Network Library Terminate\n");
-	::wprintf(L"Network Library Terminate\n");
+	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Lan: Network Library Terminate\n");
+	::wprintf(L"Lan: Network Library Terminate\n");
 }
 
 void CLanMonitorServer::OnThreadTerminate(wchar_t* threadName)
 {
-	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"%s Terminate\n", threadName);
-	::wprintf(L"%s Terminate\n", threadName);
+	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Lan: %s Terminate\n", threadName);
+	::wprintf(L"Lan: %s Terminate\n", threadName);
 }
 
 void CLanMonitorServer::OnError(int errorCode, wchar_t* errorMsg)
 {
-	LOG(L"FightGame", CSystemLog::ERROR_LEVEL, L"%s (%d)\n", errorMsg, errorCode);
-	::wprintf(L"%s (%d)\n", errorMsg, errorCode);
+	LOG(L"FightGame", CSystemLog::ERROR_LEVEL, L"Lan: %s (%d)\n", errorMsg, errorCode);
+	::wprintf(L"Lan: %s (%d)\n", errorMsg, errorCode);
 }
 
 void CLanMonitorServer::OnDebug(int debugCode, wchar_t* debugMsg)
 {
-	LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s (%d)\n", debugMsg, debugCode);
-	::wprintf(L"%s (%d)\n", debugMsg, debugCode);
+	LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"Lan: %s (%d)\n", debugMsg, debugCode);
+	::wprintf(L"Lan: %s (%d)\n", debugMsg, debugCode);
 }
 
 bool CLanMonitorServer::OnConnectRequest()
@@ -125,7 +146,7 @@ bool CLanMonitorServer::OnConnectRequest()
 
 void CLanMonitorServer::OnAcceptClient(unsigned __int64 sessionID)
 {
-	CJob* job = _pJobPool->Alloc();
+	CLanJob* job = _pJobPool->Alloc();
 	job->Setting(JOB_TYPE::SYSTEM, SYS_TYPE::ACCEPT, sessionID, nullptr);
 	EnqueueJob(sessionID, job);
 
@@ -135,7 +156,7 @@ void CLanMonitorServer::OnAcceptClient(unsigned __int64 sessionID)
 
 void CLanMonitorServer::OnReleaseClient(unsigned __int64 sessionID)
 {
-	CJob* job = _pJobPool->Alloc();
+	CLanJob* job = _pJobPool->Alloc();
 	job->Setting(JOB_TYPE::SYSTEM, SYS_TYPE::RELEASE, sessionID, nullptr);
 	EnqueueJob(sessionID, job);
 
@@ -143,9 +164,9 @@ void CLanMonitorServer::OnReleaseClient(unsigned __int64 sessionID)
 	WakeByAddressSingle(&_signal);
 }
 
-void CLanMonitorServer::OnRecv(unsigned __int64 sessionID, CRecvPacket* packet)
+void CLanMonitorServer::OnRecv(unsigned __int64 sessionID, CRecvLanPacket* packet)
 {
-	CJob* job = _pJobPool->Alloc();
+	CLanJob* job = _pJobPool->Alloc();
 	job->Setting(JOB_TYPE::CONTENT, SYS_TYPE::NONE, sessionID, packet);
 	EnqueueJob(sessionID, job);
 
@@ -159,8 +180,8 @@ void CLanMonitorServer::OnSend(unsigned __int64 sessionID, int sendSize)
 
 void CLanMonitorServer::HandleAccept(unsigned __int64 sessionID)
 {
-	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Accept: %016llx\n", sessionID);
-	::wprintf(L"Accept: %016llx\n", sessionID);
+	// LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Accept: %016llx\n", sessionID);
+	// ::wprintf(L"Accept: %016llx\n", sessionID);
 }
 
 void CLanMonitorServer::HandleRelease(unsigned __int64 sessionID)
@@ -169,7 +190,7 @@ void CLanMonitorServer::HandleRelease(unsigned __int64 sessionID)
 	::wprintf(L"Release: %016llx\n", sessionID);
 }
 
-void CLanMonitorServer::HandleRecv(unsigned __int64 sessionID, CRecvPacket* packet)
+void CLanMonitorServer::HandleRecv(unsigned __int64 sessionID, CRecvLanPacket* packet)
 {
 	try
 	{
@@ -198,14 +219,14 @@ void CLanMonitorServer::HandleRecv(unsigned __int64 sessionID, CRecvPacket* pack
 		if (packetError == ERR_PACKET)
 		{
 			Disconnect(sessionID);
-			LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d] Packet Error\n", _T(__FUNCTION__), __LINE__);
-			::wprintf(L"%s[%d] Packet Error\n", _T(__FUNCTION__), __LINE__);
+			LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d] LanPacket Error\n", _T(__FUNCTION__), __LINE__);
+			::wprintf(L"%s[%d] LanPacket Error\n", _T(__FUNCTION__), __LINE__);
 		}
 	}
-	CRecvPacket::Free(packet);
+	CRecvLanPacket::Free(packet);
 }
 
-void CLanMonitorServer::Handle_LOGIN(unsigned __int64 sessionID, CRecvPacket* packet)
+void CLanMonitorServer::Handle_LOGIN(unsigned __int64 sessionID, CRecvLanPacket* packet)
 {
 	int serverID;
 	*packet >> serverID;
@@ -217,7 +238,7 @@ void CLanMonitorServer::Handle_LOGIN(unsigned __int64 sessionID, CRecvPacket* pa
 	}
 }
 
-void CLanMonitorServer::Handle_DATA_UPDATE(unsigned __int64 sessionID, CRecvPacket* packet)
+void CLanMonitorServer::Handle_DATA_UPDATE(unsigned __int64 sessionID, CRecvLanPacket* packet)
 {
 	BYTE dataType;
 	*packet >> dataType;
@@ -228,141 +249,141 @@ void CLanMonitorServer::Handle_DATA_UPDATE(unsigned __int64 sessionID, CRecvPack
 	// LOGIN ==========================================================
 
 	case dfMONITOR_DATA_TYPE_LOGIN_SERVER_RUN:
-		HandleData(packet, &g_monitor._login.SERVER_RUN);
+		GetDataFromPacket(packet, &g_monitor._login.SERVER_RUN);
 		break;
 
 	case dfMONITOR_DATA_TYPE_LOGIN_SERVER_CPU:
-		HandleData(packet, &g_monitor._login.SERVER_CPU);
+		GetDataFromPacket(packet, &g_monitor._login.SERVER_CPU);
 		break;
 
 	case dfMONITOR_DATA_TYPE_LOGIN_SERVER_MEM:
-		HandleData(packet, &g_monitor._login.SERVER_MEM);
+		GetDataFromPacket(packet, &g_monitor._login.SERVER_MEM);
 		break;
 
 	case dfMONITOR_DATA_TYPE_LOGIN_SESSION:
-		HandleData(packet, &g_monitor._login.SESSION);
+		GetDataFromPacket(packet, &g_monitor._login.SESSION);
 		break;
 
 	case dfMONITOR_DATA_TYPE_LOGIN_AUTH_TPS:
-		HandleData(packet, &g_monitor._login.AUTH_TPS);
+		GetDataFromPacket(packet, &g_monitor._login.AUTH_TPS);
 		break;
 
 	case dfMONITOR_DATA_TYPE_LOGIN_PACKET_POOL:
-		HandleData(packet, &g_monitor._login.PACKET_POOL);
+		GetDataFromPacket(packet, &g_monitor._login.PACKET_POOL);
 		break;
 
 	// GAME ===========================================================
 
 	case dfMONITOR_DATA_TYPE_GAME_SERVER_RUN:
-		HandleData(packet, &g_monitor._game.SERVER_RUN);
+		GetDataFromPacket(packet, &g_monitor._game.SERVER_RUN);
 		break;
 
 	case dfMONITOR_DATA_TYPE_GAME_SERVER_CPU:
-		HandleData(packet, &g_monitor._game.SERVER_CPU);
+		GetDataFromPacket(packet, &g_monitor._game.SERVER_CPU);
 		break;
 
 	case dfMONITOR_DATA_TYPE_GAME_SERVER_MEM:
-		HandleData(packet, &g_monitor._game.SERVER_MEM);
+		GetDataFromPacket(packet, &g_monitor._game.SERVER_MEM);
 		break;
 
 	case dfMONITOR_DATA_TYPE_GAME_SESSION:
-		HandleData(packet, &g_monitor._game.SESSION);
+		GetDataFromPacket(packet, &g_monitor._game.SESSION);
 		break;
 
 	case dfMONITOR_DATA_TYPE_GAME_AUTH_PLAYER:
-		HandleData(packet, &g_monitor._game.AUTH_PLAYER);
+		GetDataFromPacket(packet, &g_monitor._game.AUTH_PLAYER);
 		break;
 
 	case dfMONITOR_DATA_TYPE_GAME_GAME_PLAYER:
-		HandleData(packet, &g_monitor._game.GAME_PLAYER);
+		GetDataFromPacket(packet, &g_monitor._game.GAME_PLAYER);
 		break;
 
 	case dfMONITOR_DATA_TYPE_GAME_ACCEPT_TPS:
-		HandleData(packet, &g_monitor._game.ACCEPT_TPS);
+		GetDataFromPacket(packet, &g_monitor._game.ACCEPT_TPS);
 		break;
 
 	case dfMONITOR_DATA_TYPE_GAME_PACKET_RECV_TPS:
-		HandleData(packet, &g_monitor._game.PACKET_RECV_TPS);
+		GetDataFromPacket(packet, &g_monitor._game.PACKET_RECV_TPS);
 		break;
 
 	case dfMONITOR_DATA_TYPE_GAME_PACKET_SEND_TPS:
-		HandleData(packet, &g_monitor._game.PACKET_SEND_TPS);
+		GetDataFromPacket(packet, &g_monitor._game.PACKET_SEND_TPS);
 		break;
 
 	case dfMONITOR_DATA_TYPE_GAME_DB_WRITE_TPS:
-		HandleData(packet, &g_monitor._game.DB_WRITE_TPS);
+		GetDataFromPacket(packet, &g_monitor._game.DB_WRITE_TPS);
 		break;
 
 	case dfMONITOR_DATA_TYPE_GAME_DB_WRITE_MSG:
-		HandleData(packet, &g_monitor._game.DB_WRITE_MSG);
+		GetDataFromPacket(packet, &g_monitor._game.DB_WRITE_MSG);
 		break;
 
 	case dfMONITOR_DATA_TYPE_GAME_AUTH_THREAD_FPS:
-		HandleData(packet, &g_monitor._game.AUTH_THREAD_FPS);
+		GetDataFromPacket(packet, &g_monitor._game.AUTH_THREAD_FPS);
 		break;
 
 	case dfMONITOR_DATA_TYPE_GAME_GAME_THREAD_FPS:
-		HandleData(packet, &g_monitor._game.GAME_THREAD_FPS);
+		GetDataFromPacket(packet, &g_monitor._game.GAME_THREAD_FPS);
 		break;
 
 	case dfMONITOR_DATA_TYPE_GAME_PACKET_POOL:
-		HandleData(packet, &g_monitor._game.PACKET_POOL);
+		GetDataFromPacket(packet, &g_monitor._game.PACKET_POOL);
 		break;
 
 	// CHAT ===========================================================
 
 	case dfMONITOR_DATA_TYPE_CHAT_SERVER_RUN:
-		HandleData(packet, &g_monitor._chat.SERVER_RUN);
+		GetDataFromPacket(packet, &g_monitor._chat.SERVER_RUN);
 		break;
 
 	case dfMONITOR_DATA_TYPE_CHAT_SERVER_CPU:
-		HandleData(packet, &g_monitor._chat.SERVER_CPU);
+		GetDataFromPacket(packet, &g_monitor._chat.SERVER_CPU);
 		break;
 
 	case dfMONITOR_DATA_TYPE_CHAT_SERVER_MEM:
-		HandleData(packet, &g_monitor._chat.SERVER_MEM);
+		GetDataFromPacket(packet, &g_monitor._chat.SERVER_MEM);
 		break;
 
 	case dfMONITOR_DATA_TYPE_CHAT_SESSION:
-		HandleData(packet, &g_monitor._chat.SESSION);
+		GetDataFromPacket(packet, &g_monitor._chat.SESSION);
 		break;
 
 	case dfMONITOR_DATA_TYPE_CHAT_PLAYER:
-		HandleData(packet, &g_monitor._chat.PLAYER);
+		GetDataFromPacket(packet, &g_monitor._chat.PLAYER);
 		break;
 
 	case dfMONITOR_DATA_TYPE_CHAT_UPDATE_TPS:
-		HandleData(packet, &g_monitor._chat.UPDATE_TPS);
+		GetDataFromPacket(packet, &g_monitor._chat.UPDATE_TPS);
 		break;
 
 	case dfMONITOR_DATA_TYPE_CHAT_PACKET_POOL:
-		HandleData(packet, &g_monitor._chat.PACKET_POOL);
+		GetDataFromPacket(packet, &g_monitor._chat.PACKET_POOL);
 		break;
 
 	case dfMONITOR_DATA_TYPE_CHAT_UPDATEMSG_POOL:
-		HandleData(packet, &g_monitor._chat.UPDATEMSG_POOL);
+		GetDataFromPacket(packet, &g_monitor._chat.UPDATEMSG_POOL);
 		break;
 
 	// SERVER ===========================================================
 
 	case dfMONITOR_DATA_TYPE_MONITOR_CPU_TOTAL:
-		HandleData(packet, &g_monitor._server.CPU_TOTAL);
+		GetDataFromPacket(packet, &g_monitor._server.CPU_TOTAL);
 		break;
 
 	case dfMONITOR_DATA_TYPE_MONITOR_NONPAGED_MEMORY:
-		HandleData(packet, &g_monitor._server.NONPAGED_MEMORY);
+		GetDataFromPacket(packet, &g_monitor._server.NONPAGED_MEMORY);
 		break;
 
 	case dfMONITOR_DATA_TYPE_MONITOR_NETWORK_RECV:
-		HandleData(packet, &g_monitor._server.NETWORK_RECV);
+		GetDataFromPacket(packet, &g_monitor._server.NETWORK_RECV);
 		break;
 
 	case dfMONITOR_DATA_TYPE_MONITOR_NETWORK_SEND:
-		HandleData(packet, &g_monitor._server.NETWORK_SEND);
+		GetDataFromPacket(packet, &g_monitor._server.NETWORK_SEND);
 		break;
 
 	case dfMONITOR_DATA_TYPE_MONITOR_AVAILABLE_MEMORY:
-		HandleData(packet, &g_monitor._server.AVAILABLE_MEMORY);
+		GetDataFromPacket(packet, &g_monitor._server.AVAILABLE_MEMORY);
 		break;
 
 	default:
@@ -373,8 +394,9 @@ void CLanMonitorServer::Handle_DATA_UPDATE(unsigned __int64 sessionID, CRecvPack
 	}
 }
 
-void CLanMonitorServer::HandleData(CRecvPacket* packet, CData* data)
+void CLanMonitorServer::GetDataFromPacket(CRecvLanPacket* packet, CData* data)
 {
 	*packet >> data->_val;
 	*packet >> data->_timestamp;
+	// printf("%d, %d\n", data->_val, data->_timestamp);
 }

@@ -1,14 +1,17 @@
 #pragma once
+#include "Config.h"
 
 /*
 <사용 방법>
 
-1. CPacket::Alloc()로 할당, 데이터 삽입 전 Clear()로 초기화.
+1. CNetPacket::Alloc()로 할당, 데이터 삽입 전 Clear()로 초기화.
 
-2. SendPacket으로 전송 요청 하기 전 AddUsageCount(n)으로 목적지 수 설정
+2. SendNetPacket으로 전송 요청 하기 전 AddUsageCount(n)으로 목적지 수 설정
    Unicast의 경우 1, Multicast의 경우 목적지 수를 n으로 입력한다.
 
 */
+
+#ifdef NETSERVER
 
 #ifndef _WINSOCKAPI_
 #define _WINSOCKAPI_
@@ -20,22 +23,22 @@
 #include <windows.h>
 #include <stdio.h>
 
-class CRecvPacket;
-class CPacket
+class CRecvNetPacket;
+class CNetPacket
 {
-	friend CTlsPool<CPacket>;
-	friend CRecvPacket;
+	friend CTlsPool<CNetPacket>;
+	friend CRecvNetPacket;
 
 public:
-	static CTlsPool<CPacket> _pool;
+	static CTlsPool<CNetPacket> _pool;
 
-	static CPacket* Alloc()
+	static CNetPacket* Alloc()
 	{
-		CPacket* packet = _pool.Alloc();
+		CNetPacket* packet = _pool.Alloc();
 		return packet;
 	}
 
-	static bool Free(CPacket* packet)
+	static bool Free(CNetPacket* packet)
 	{
 		if (InterlockedDecrement(&packet->_usageCount) == 0)
 		{
@@ -62,46 +65,38 @@ public:
 	}
 
 protected:
-	inline CPacket()
-		: _iBufferSize(dfRBUFFER_DEF_SIZE), _iPayloadSize(0), _iHeaderSize(dfHEADER_LEN),
-		_iPayloadReadPos(dfHEADER_LEN), _iPayloadWritePos(dfHEADER_LEN),
+	inline CNetPacket()
+		: _iBufferSize(dfRBUFFER_DEF_SIZE), _iPayloadSize(0), _iHeaderSize(dfNETHEADER_LEN),
+		_iPayloadReadPos(dfNETHEADER_LEN), _iPayloadWritePos(dfNETHEADER_LEN),
 		_iHeaderReadPos(0), _iHeaderWritePos(0)
 	{
 		_chpBuffer = new char[_iBufferSize];
 	}
 
-	inline CPacket(int headerLen)
-		: _iBufferSize(dfRBUFFER_DEF_SIZE), _iPayloadSize(0), _iHeaderSize(headerLen),
-		_iPayloadReadPos(headerLen), _iPayloadWritePos(headerLen),
+	inline CNetPacket(int iBufferSize)
+		: _iBufferSize(iBufferSize), _iPayloadSize(0), _iHeaderSize(dfNETHEADER_LEN),
+		_iPayloadReadPos(dfNETHEADER_LEN), _iPayloadWritePos(dfNETHEADER_LEN),
 		_iHeaderReadPos(0), _iHeaderWritePos(0)
 	{
 		_chpBuffer = new char[_iBufferSize];
 	}
 
-	inline CPacket(int headerLen, int iBufferSize)
-		: _iBufferSize(iBufferSize), _iPayloadSize(0), _iHeaderSize(headerLen),
-		_iPayloadReadPos(headerLen), _iPayloadWritePos(headerLen),
-		_iHeaderReadPos(0), _iHeaderWritePos(0)
-	{
-		_chpBuffer = new char[_iBufferSize];
-	}
-
-	inline ~CPacket()
+	inline ~CNetPacket()
 	{
 		delete[] _chpBuffer;
 	}
 
 public:
 	inline int GetBufferSize(void) { return _iBufferSize; }
-	inline int GetPacketSize(void) { return _iPayloadWritePos - _iHeaderReadPos; }
-	inline char* GetPacketReadPtr(void) { return &_chpBuffer[0]; }
+	inline int GetNetPacketSize(void) { return _iPayloadWritePos - _iHeaderReadPos; }
+	inline char* GetNetPacketReadPtr(void) { return &_chpBuffer[0]; }
 
 	inline bool IsPayloadEmpty(void) { return (_iPayloadWritePos == _iPayloadReadPos); }
 	inline bool IsHeaderEmpty(void) { return (_iHeaderWritePos == _iHeaderReadPos); }
 	inline bool IsEmpty(void) { return (IsPayloadEmpty() && IsHeaderEmpty()); }
 
 	inline short GetPayloadSize(void) { return (short)(_iPayloadWritePos - _iPayloadReadPos); }
-	inline char* GetPayloadPtr(void) { return &_chpBuffer[dfHEADER_LEN]; }
+	inline char* GetPayloadPtr(void) { return &_chpBuffer[dfNETHEADER_LEN]; }
 	inline char* GetPayloadReadPtr(void) { return &_chpBuffer[_iPayloadReadPos]; }
 	inline int GetPayloadReadPos(void) { return _iPayloadReadPos; }
 	inline char* GetPayloadWritePtr(void) { return &_chpBuffer[_iPayloadWritePos]; }
@@ -172,7 +167,6 @@ public:
 			return ERR_PACKET;
 		}
 
-		// ::printf("Write: %d => %d\n", _iPayloadWritePos, _iPayloadWritePos + iSize);
 		_iPayloadWritePos += iSize;
 		return iSize;
 	}
@@ -216,13 +210,13 @@ public:
 
 
 public:
-	inline CPacket& operator = (CPacket& clSrCPacket)
+	inline CNetPacket& operator = (CNetPacket& clSrCNetPacket)
 	{
-		*this = clSrCPacket;
+		*this = clSrCNetPacket;
 		return *this;
 	}
 
-	inline CPacket& operator << (float fValue)
+	inline CNetPacket& operator << (float fValue)
 	{
 		if (_iBufferSize - _iPayloadWritePos < sizeof(fValue))
 			Resize((int)(_iBufferSize * 1.5f));
@@ -234,7 +228,7 @@ public:
 		_iPayloadWritePos += sizeof(fValue);
 		return *this;
 	}
-	inline CPacket& operator << (double dValue)
+	inline CNetPacket& operator << (double dValue)
 	{
 		if (_iBufferSize - _iPayloadWritePos < sizeof(dValue))
 			Resize((int)(_iBufferSize * 1.5f));
@@ -246,7 +240,7 @@ public:
 		_iPayloadWritePos += sizeof(dValue);
 		return *this;
 	}
-	inline CPacket& operator << (char chValue)
+	inline CNetPacket& operator << (char chValue)
 	{
 		if (_iBufferSize - _iPayloadWritePos < sizeof(chValue))
 			Resize((int)(_iBufferSize * 1.5f));
@@ -258,7 +252,7 @@ public:
 		_iPayloadWritePos += sizeof(chValue);
 		return *this;
 	}
-	inline CPacket& operator << (unsigned char byValue)
+	inline CNetPacket& operator << (unsigned char byValue)
 	{
 		if (_iBufferSize - _iPayloadWritePos < sizeof(byValue))
 			Resize((int)(_iBufferSize * 1.5f));
@@ -270,7 +264,7 @@ public:
 		_iPayloadWritePos += sizeof(byValue);
 		return *this;
 	}
-	inline CPacket& operator << (short shValue)
+	inline CNetPacket& operator << (short shValue)
 	{
 		if (_iBufferSize - _iPayloadWritePos < sizeof(shValue))
 			Resize((int)(_iBufferSize * 1.5f));
@@ -282,7 +276,7 @@ public:
 		_iPayloadWritePos += sizeof(shValue);
 		return *this;
 	}
-	inline CPacket& operator << (unsigned short wValue)
+	inline CNetPacket& operator << (unsigned short wValue)
 	{
 		if (_iBufferSize - _iPayloadWritePos < sizeof(wValue))
 			Resize((int)(_iBufferSize * 1.5f));
@@ -294,7 +288,7 @@ public:
 		_iPayloadWritePos += sizeof(wValue);
 		return *this;
 	}
-	inline CPacket& operator << (int iValue)
+	inline CNetPacket& operator << (int iValue)
 	{
 		if (_iBufferSize - _iPayloadWritePos < sizeof(iValue))
 			Resize((int)(_iBufferSize * 1.5f));
@@ -306,7 +300,7 @@ public:
 		_iPayloadWritePos += sizeof(iValue);
 		return *this;
 	}
-	inline CPacket& operator << (long lValue)
+	inline CNetPacket& operator << (long lValue)
 	{
 		if (_iBufferSize - _iPayloadWritePos < sizeof(lValue))
 			Resize((int)(_iBufferSize * 1.5f));
@@ -318,7 +312,7 @@ public:
 		_iPayloadWritePos += sizeof(lValue);
 		return *this;
 	}
-	inline CPacket& operator << (__int64 iValue)
+	inline CNetPacket& operator << (__int64 iValue)
 	{
 		if (_iBufferSize - _iPayloadWritePos < sizeof(iValue))
 			Resize((int)(_iBufferSize * 1.5f));
@@ -331,7 +325,7 @@ public:
 		return *this;
 	}
 
-	inline CPacket& operator >> (float& fValue)
+	inline CNetPacket& operator >> (float& fValue)
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(float))
 		{
@@ -346,7 +340,7 @@ public:
 		_iPayloadReadPos += sizeof(float);
 		return *this;
 	}
-	inline CPacket& operator >> (double& dValue)
+	inline CNetPacket& operator >> (double& dValue)
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(double))
 		{
@@ -361,7 +355,7 @@ public:
 		_iPayloadReadPos += sizeof(double);
 		return *this;
 	}
-	inline CPacket& operator >> (char& chValue)
+	inline CNetPacket& operator >> (char& chValue)
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(char))
 		{
@@ -376,12 +370,12 @@ public:
 		_iPayloadReadPos += sizeof(char);
 		return *this;
 	}
-	inline CPacket& operator >> (BYTE& byValue)
+	inline CNetPacket& operator >> (BYTE& byValue)
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(BYTE))
 		{
 			_errCode = ERR_GET_BYTE_OVER;
-			
+
 			throw (int)ERR_PACKET;
 			return *this;
 		}
@@ -392,11 +386,11 @@ public:
 		_iPayloadReadPos += sizeof(BYTE);
 		return *this;
 	}
-	inline CPacket& operator >> (wchar_t& szValue)
+	inline CNetPacket& operator >> (wchar_t& szValue)
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(wchar_t))
 		{
-			_errCode = ERR_GET_WCHAR_OVER;			
+			_errCode = ERR_GET_WCHAR_OVER;
 			throw (int)ERR_PACKET;
 			return *this;
 		}
@@ -407,11 +401,11 @@ public:
 		_iPayloadReadPos += sizeof(wchar_t);
 		return *this;
 	}
-	inline CPacket& operator >> (short& shValue)
+	inline CNetPacket& operator >> (short& shValue)
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(short))
 		{
-			::printf("\n%d - %d = %d\n", 
+			::printf("\n%d - %d = %d\n",
 				_iPayloadWritePos, _iPayloadReadPos, _iPayloadWritePos - _iPayloadReadPos);
 			_errCode = ERR_GET_SHORT_OVER;
 			throw (int)ERR_PACKET;
@@ -424,11 +418,11 @@ public:
 		_iPayloadReadPos += sizeof(short);
 		return *this;
 	}
-	inline CPacket& operator >> (WORD& wValue)
+	inline CNetPacket& operator >> (WORD& wValue)
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(WORD))
 		{
-			_errCode = ERR_GET_WORD_OVER;			
+			_errCode = ERR_GET_WORD_OVER;
 			throw (int)ERR_PACKET;
 			return *this;
 		}
@@ -439,11 +433,11 @@ public:
 		_iPayloadReadPos += sizeof(WORD);
 		return *this;
 	}
-	inline CPacket& operator >> (int& iValue)
+	inline CNetPacket& operator >> (int& iValue)
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(int))
 		{
-			_errCode = ERR_GET_INT_OVER;			
+			_errCode = ERR_GET_INT_OVER;
 			throw (int)ERR_PACKET;
 			return *this;
 		}
@@ -454,11 +448,11 @@ public:
 		_iPayloadReadPos += sizeof(int);
 		return *this;
 	}
-	inline CPacket& operator >> (DWORD& dwValue)
+	inline CNetPacket& operator >> (DWORD& dwValue)
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(DWORD))
 		{
-			_errCode = ERR_GET_DWORD_OVER;			
+			_errCode = ERR_GET_DWORD_OVER;
 			throw (int)ERR_PACKET;
 			return *this;
 		}
@@ -469,11 +463,11 @@ public:
 		_iPayloadReadPos += sizeof(DWORD);
 		return *this;
 	}
-	inline CPacket& operator >> (__int64& iValue)
+	inline CNetPacket& operator >> (__int64& iValue)
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(__int64))
 		{
-			_errCode = ERR_GET_INT64_OVER;			
+			_errCode = ERR_GET_INT64_OVER;
 			throw (int)ERR_PACKET;
 			return *this;
 		}
@@ -489,7 +483,7 @@ public:
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < iSize)
 		{
-			_errCode = ERR_GET_PAYLOAD_OVER;			
+			_errCode = ERR_GET_PAYLOAD_OVER;
 			return ERR_PACKET;
 		}
 
@@ -502,7 +496,7 @@ public:
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < iSize)
 		{
-			_errCode = ERR_PEEK_PAYLOAD_OVER;			
+			_errCode = ERR_PEEK_PAYLOAD_OVER;
 			return ERR_PACKET;
 		}
 
@@ -579,9 +573,9 @@ public:
 		return _iBufferSize - _iPayloadWritePos;
 	}
 
-#ifdef NETSERVER
+
 public:
-	bool Decode(stHeader& header, char* payload)
+	bool Decode(stNetHeader& header, char* payload)
 	{
 		unsigned char checkSum = 0;
 
@@ -609,7 +603,7 @@ public:
 	}
 
 
-	bool Encode(stHeader& header, char* payload)
+	bool Encode(stNetHeader& header, char* payload)
 	{
 		if (InterlockedExchange(&_encode, 1) == 1) return false;
 		// 콘텐츠를 멀티로 제작할 경우 event를 통한 완료 확인 및 대기 필요
@@ -636,10 +630,9 @@ public:
 
 		return true;
 	}
-#endif
 
 public:
-	void CopyRecvBuf(CPacket* origin)
+	void CopyRecvBuf(CNetPacket* origin)
 	{
 		int useSize = origin->GetPayloadSize();
 		if (useSize > 0)
@@ -668,3 +661,4 @@ public:
 };
 
 
+#endif

@@ -23,9 +23,14 @@ int wmain(int argc, wchar_t* argv[])
     SYSLOG_LEVEL(CSystemLog::DEBUG_LEVEL);
     LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Main Thread Start\n");
 
+    SYSTEM_INFO si;
+    GetSystemInfo(&si);
+    ::wprintf(L"CPU total: %d\n\n", si.dwNumberOfProcessors);
+
     timeBeginPeriod(1);
     if (!g_Server.Initialize()) return 0;
     if (!g_Monitor.Initialize(&g_Server)) return 0;
+
     HANDLE event = CreateEvent(0, false, false, 0);
     if (event == 0) return 0;
     WaitForSingleObject(event, INFINITE);

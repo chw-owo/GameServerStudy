@@ -129,14 +129,16 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="CLanPacket.cpp" />
     <ClCompile Include="CLanServer.cpp" />
     <ClCompile Include="CLanMonitorServer.cpp" />
     <ClCompile Include="CMonitorData.cpp" />
     <ClCompile Include="CMonitorManager.cpp" />
     <ClCompile Include="CNetMonitorServer.cpp" />
     <ClCompile Include="CNetServer.cpp" />
-    <ClCompile Include="CPacket.cpp" />
-    <ClCompile Include="CRecvPacket.cpp" />
+    <ClCompile Include="CNetPacket.cpp" />
+    <ClCompile Include="CRecvLanPacket.cpp" />
+    <ClCompile Include="CRecvNetPacket.cpp" />
     <ClCompile Include="CSystemLog.cpp" />
     <ClCompile Include="Main.cpp" />
   </ItemGroup>
@@ -145,7 +147,10 @@
     <ClInclude Include="CCrashDump.h" />
     <ClInclude Include="CData.h" />
     <ClInclude Include="CGameData.h" />
-    <ClInclude Include="CJob.h" />
+    <ClInclude Include="CLanSession.h" />
+    <ClInclude Include="CNetJob.h" />
+    <ClInclude Include="CLanJob.h" />
+    <ClInclude Include="CLanPacket.h" />
     <ClInclude Include="CLanServer.h" />
     <ClInclude Include="CLockFreeQueue.h" />
     <ClInclude Include="CLockFreeStack.h" />
@@ -156,14 +161,16 @@
     <ClInclude Include="CNetMonitorServer.h" />
     <ClInclude Include="CNetServer.h" />
     <ClInclude Include="Config.h" />
-    <ClInclude Include="CPacket.h" />
-    <ClInclude Include="CRecvPacket.h" />
+    <ClInclude Include="CNetPacket.h" />
+    <ClInclude Include="CRecvLanPacket.h" />
+    <ClInclude Include="CRecvNetPacket.h" />
     <ClInclude Include="CSystemLog.h" />
     <ClInclude Include="CTlsPool.h" />
     <ClInclude Include="CServerData.h" />
     <ClInclude Include="ErrorCode.h" />
     <ClInclude Include="MonitorProtocol.h" />
-    <ClInclude Include="CSession.h" />
+    <ClInclude Include="CNetSession.h" />
+    <ClInclude Include="Utils.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
