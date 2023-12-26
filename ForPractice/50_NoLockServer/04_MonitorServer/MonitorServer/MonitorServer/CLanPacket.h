@@ -448,6 +448,23 @@ public:
 		_iPayloadReadPos += sizeof(int);
 		return *this;
 	}
+
+	inline CLanPacket& operator >> (long& lValue)
+	{
+		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(long))
+		{
+			_errCode = ERR_GET_LONG_OVER;
+			throw (int)ERR_PACKET;
+			return *this;
+		}
+
+		memcpy_s(&lValue, sizeof(long),
+			&_chpBuffer[_iPayloadReadPos], sizeof(long));
+
+		_iPayloadReadPos += sizeof(long);
+		return *this;
+	}
+
 	inline CLanPacket& operator >> (DWORD& dwValue)
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(DWORD))

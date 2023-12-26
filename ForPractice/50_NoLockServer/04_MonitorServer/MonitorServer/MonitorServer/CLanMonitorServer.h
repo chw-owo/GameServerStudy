@@ -43,17 +43,12 @@ private:
 
 private:
 	static unsigned int WINAPI MonitorThread(void* arg);
-	static unsigned int WINAPI SaveThread(void* arg);
+	HANDLE _monitorThread;
 
 private:
+	unordered_map<unsigned __int64, int> _serverID;
 	bool _serverAlive = true;
 	long _signal = 0;
 
-private:
-	HANDLE _monitorThread;
-	HANDLE _saveThread;
-
-private:
-	unordered_map<unsigned __int64, int> _serverID; // Now Not Used
 };
 

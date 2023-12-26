@@ -3,6 +3,7 @@
 #include <conio.h>
 #include <pdh.h>
 #include <pdhmsg.h>
+#include <strsafe.h>
 #pragma comment(lib,"Pdh.lib")
 
 /*
@@ -20,34 +21,120 @@
 CONST ULONG SAMPLE_INTERVAL_MS = 1000;
 void GetPdhData();
 void BrowsePdhCount();
-
+void GetEthernetData();
 
 int main(void)
 {
     // BrowsePdhCount();
-	GetPdhData();
+	// GetPdhData();
+    GetEthernetData();
 	return 0;
+}
+
+int data[100000];
+
+#define df_PDH_ETHERNET_MAX 8
+//--------------------------------------------------------------
+// 이더넷 하나에 대한 Send,Recv PDH 쿼리 정보.
+//--------------------------------------------------------------
+struct st_ETHERNET
+{
+    bool _bUse;
+    WCHAR _szName[128];
+    PDH_HCOUNTER _pdh_Counter_Network_RecvBytes;
+    PDH_HCOUNTER _pdh_Counter_Network_SendBytes;
+};
+st_ETHERNET _EthernetStruct[df_PDH_ETHERNET_MAX];
+PDH_HQUERY _netQuery;
+
+void GetEthernetData()
+{
+    int iCnt = 0;
+    bool bErr = false;
+    WCHAR* szCur = NULL;
+    WCHAR* szCounters = NULL;
+    WCHAR* szInterfaces = NULL;
+    DWORD dwCounterSize = 0, dwInterfaceSize = 0;
+    WCHAR szQuery[1024] = { 0, };
+    
+    PdhEnumObjectItems(NULL, NULL, L"Network Interface", szCounters, &dwCounterSize, szInterfaces, &dwInterfaceSize, PERF_DETAIL_WIZARD, 0);
+    szCounters = new WCHAR[dwCounterSize];
+    szInterfaces = new WCHAR[dwInterfaceSize];
+   
+    if (PdhEnumObjectItems(NULL, NULL, L"Network Interface", szCounters, &dwCounterSize, szInterfaces, &dwInterfaceSize, PERF_DETAIL_WIZARD, 0) != ERROR_SUCCESS)
+    {
+        delete[] szCounters;
+        delete[] szInterfaces;
+        __debugbreak();
+        return;
+    }
+    iCnt = 0;
+    szCur = szInterfaces;
+    PdhOpenQuery(NULL, NULL, &_netQuery);
+
+    for (; *szCur != L'\0' && iCnt < df_PDH_ETHERNET_MAX; szCur += wcslen(szCur) + 1, iCnt++)
+    {
+        _EthernetStruct[iCnt]._bUse = true;
+        _EthernetStruct[iCnt]._szName[0] = L'\0';
+        wcscpy_s(_EthernetStruct[iCnt]._szName, szCur);
+             
+        szQuery[0] = L'\0';
+        StringCbPrintf(szQuery, sizeof(WCHAR) * 1024, L"\\Network Interface(%s)\\Bytes Received/sec", szCur);
+        ::wprintf(L"recv: %s\n", szQuery);
+        PdhAddCounter(_netQuery, szQuery, NULL, &_EthernetStruct[iCnt]._pdh_Counter_Network_RecvBytes);
+       
+        szQuery[0] = L'\0';
+        StringCbPrintf(szQuery, sizeof(WCHAR) * 1024, L"\\Network Interface(%s)\\Bytes Sent/sec", szCur);
+        ::wprintf(L"send: %s\n", szQuery);
+        PdhAddCounter(_netQuery, szQuery, NULL, &_EthernetStruct[iCnt]._pdh_Counter_Network_SendBytes);
+    }
+    
+    while (1)
+    {
+        float recv = 0;
+        float send = 0;
+
+        for (iCnt = 0; iCnt < df_PDH_ETHERNET_MAX; iCnt++)
+        {
+            if (_EthernetStruct[iCnt]._bUse)
+            {
+                PdhCollectQueryData(_EthernetStruct[iCnt]._pdh_Counter_Network_RecvBytes);
+                PDH_FMT_COUNTERVALUE counterVal1;
+                long status = PdhGetFormattedCounterValue(_EthernetStruct[iCnt]._pdh_Counter_Network_RecvBytes, PDH_FMT_DOUBLE, NULL, &counterVal1);
+                ::wprintf(L"recv: %f\n", counterVal1.doubleValue);
+                if (status == 0) recv += counterVal1.doubleValue;
+
+                PdhCollectQueryData(_EthernetStruct[iCnt]._pdh_Counter_Network_SendBytes);
+                PDH_FMT_COUNTERVALUE counterVal2;
+                status = PdhGetFormattedCounterValue(_EthernetStruct[iCnt]._pdh_Counter_Network_SendBytes, PDH_FMT_DOUBLE, NULL, &counterVal2);
+                ::wprintf(L"send: %f\n", counterVal2.doubleValue);
+                if (status == 0) send += counterVal2.doubleValue;
+            }
+        }
+
+        //::printf("recv: %f\n", recv);
+        //::printf("send: %f\n", send);
+
+        Sleep(1000);
+    }
 }
 
 void GetPdhData()
 {
 	PDH_HQUERY cpuQuery;
+    PDH_HCOUNTER cpuTotal;
 	PdhOpenQuery(NULL, NULL, &cpuQuery);
-
-	PDH_HCOUNTER cpuTotal;
-	PdhAddCounter(cpuQuery, L"\\Processor(_Total)\\% Processor Time", NULL, &cpuTotal);
-	PdhCollectQueryData(cpuQuery);
+	PdhAddCounter(cpuQuery, L"\\Process(PDH)\\Private Bytes", NULL, &cpuTotal);
 
 	while (true)
 	{
 		Sleep(1000);
 
 		PdhCollectQueryData(cpuQuery);
-
 		PDH_FMT_COUNTERVALUE counterVal;
 		PdhGetFormattedCounterValue(cpuTotal, PDH_FMT_DOUBLE, NULL, &counterVal);
 
-		wprintf(L"CPU Usage : %f%%\n", counterVal.doubleValue);
+		wprintf(L"Private Bytes : %f\n", counterVal.doubleValue);
 	}
 }
 

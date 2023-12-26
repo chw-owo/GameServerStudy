@@ -479,6 +479,23 @@ public:
 		return *this;
 	}
 
+
+	inline CNetPacket& operator >> (long& lValue)
+	{
+		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(long))
+		{
+			_errCode = ERR_GET_LONG_OVER;
+			throw (int)ERR_PACKET;
+			return *this;
+		}
+
+		memcpy_s(&lValue, sizeof(long),
+			&_chpBuffer[_iPayloadReadPos], sizeof(long));
+
+		_iPayloadReadPos += sizeof(long);
+		return *this;
+	}
+
 	inline int GetPayloadData(char* chpDest, int iSize)
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < iSize)

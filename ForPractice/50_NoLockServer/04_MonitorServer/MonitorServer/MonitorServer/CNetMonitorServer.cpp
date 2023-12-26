@@ -172,6 +172,74 @@ void CNetMonitorServer::HandleRecv(unsigned __int64 sessionID, CRecvNetPacket* p
 	CRecvNetPacket::Free(packet);
 }
 
+unsigned int __stdcall CNetMonitorServer::SaveThread(void* arg)
+{
+	CNetMonitorServer* pServer = (CNetMonitorServer*)arg;
+	
+	pServer->InitializeDB();
+	while (pServer->_serverAlive)
+	{
+		pServer->SleepForSave();
+		pServer->SetDataToDB();
+	}
+	return 0;
+}
+
+void CNetMonitorServer::SleepForSave()
+{
+	if ((timeGetTime() - _saveOldTick) < _saveTimeGap)
+		Sleep(_saveTimeGap - (timeGetTime() - _saveOldTick));
+	_saveOldTick += _saveTimeGap;
+}
+
+void CNetMonitorServer::InitializeDB()
+{
+	_saveOldTick = timeGetTime();
+	mysql_init(&_conn);
+	_connection = mysql_real_connect(&_conn,
+		"127.0.0.1", "root", "password", "accountdb", 3306, (char*)NULL, 0);
+	if (_connection == NULL)
+	{
+		LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Mysql connection error : %s", mysql_error(&_conn));
+		::printf("Mysql connection error : %s", mysql_error(&_conn));
+	}
+}
+
+void CNetMonitorServer::SendDatasToDB()
+{
+
+	long sum = InterlockedExchange(&data->_sum, 0);
+
+	SYSTEMTIME stTime;
+	GetLocalTime(&stTime);
+	char table[dfTABLE_LEN] = { 0, };
+	sprintf_s(table, "monitorLog_%d%d", stTime.wYear, stTime.wMonth);
+
+	char query[dfQUERY_MAX] = { 0, };
+	sprintf_s(query, dfQUERY_MAX,
+		"INSERT INTO %s"
+		"(%d, %d, %d, %d, %d, %d)"
+		"VALUE (%d, %d, %d, %d, %d, %d)",
+		table, 0, 0, 0, 0, 0, 0,
+		0, 0, 0, 0, 0, 0);
+
+	int query_stat = mysql_query(_connection, query);
+	if (query_stat != 0)
+	{
+		if (mysql_errno(_connection) == 1146)
+		{
+			char createQuery[dfQUERY_MAX] = { 0, };
+			sprintf_s(createQuery, "CREATE TABLE %s LIKE monitorLog_template", table);
+			mysql_query(_connection, createQuery);
+			mysql_query(_connection, query);
+		}
+		else
+		{
+			LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Mysql query error : %s (%d)\n", mysql_error(&conn), ret);
+			::printf("Mysql query error : %s (%d)\n", mysql_error(&conn), ret);
+		}
+	}
+}
 
 unsigned int __stdcall CNetMonitorServer::SendThread(void* arg)
 {
@@ -181,7 +249,7 @@ unsigned int __stdcall CNetMonitorServer::SendThread(void* arg)
 
 	while (pServer->_serverAlive)
 	{
-		pServer->SleepForFrame();
+		pServer->SleepForSend();
 		vector<unsigned __int64>::iterator it = pServer->_sessions.begin();
 		for (; it < pServer->_sessions.end(); it++)
 		{
@@ -189,6 +257,14 @@ unsigned int __stdcall CNetMonitorServer::SendThread(void* arg)
 		}
 	}
 	return 0;
+}
+
+
+void CNetMonitorServer::SleepForSend()
+{
+	if ((timeGetTime() - _sendOldTick) < _sendTimeGap)
+		Sleep(_sendTimeGap - (timeGetTime() - _sendOldTick));
+	_sendOldTick += _sendTimeGap;
 }
 
 void CNetMonitorServer::ReqSendUnicast(unsigned __int64 sessionID, CNetPacket* packet)
@@ -246,24 +322,22 @@ void CNetMonitorServer::SendMonitorPackets(unsigned __int64 sessionID)
 
 void CNetMonitorServer::SetDataToPacket(unsigned __int64 sessionID, BYTE type, BYTE serverNo, CData* data)
 {
-	int now = (int)time(NULL);
+	long val = InterlockedExchange(&data->_val, -1);
+	long timestamp = InterlockedExchange(&data->_timestamp, -1);
+	InterlockedAdd(&data->_sum, val);
+
+	if (val == -1 || timestamp == -1) return;
 
 	CNetPacket* packet = CNetPacket::Alloc();
 	packet->Clear();
 	*packet << (WORD) en_PACKET_SC_MONITOR_TOOL_DATA_UPDATE;
 	*packet << serverNo;
 	*packet << type;
-	*packet << data->_val;
-	*packet << now;
-	//*packet << data->_timestamp;
+	*packet << val;
+	*packet << timestamp;
 
-	printf("%d, %d\n", data->_val, now);
+	// printf("%d, %d\n", val, timestamp);
 	ReqSendUnicast(sessionID, packet);
-}
-
-void CNetMonitorServer::SleepForFrame()
-{
-	Sleep(1000); // TO-DO
 }
 
 void CNetMonitorServer::OnInitialize()

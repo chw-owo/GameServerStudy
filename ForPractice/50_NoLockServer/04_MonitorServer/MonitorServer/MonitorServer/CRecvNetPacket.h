@@ -198,7 +198,21 @@ public:
 		_readPos += sizeof(__int64);
 		return *this;
 	}
+	inline CRecvNetPacket& operator >> (long& lValue)
+	{
+		if (_writePos - _readPos < sizeof(long))
+		{
+			_packet->_errCode = ERR_GET_LONG_OVER;
+			throw (int)ERR_PACKET;
+			return *this;
+		}
 
+		memcpy_s(&lValue, sizeof(long),
+			&_packet->_chpBuffer[_readPos], sizeof(long));
+
+		_readPos += sizeof(long);
+		return *this;
+	}
 	inline int GetPayloadData(char* chpDest, int iSize)
 	{
 		if (_writePos - _readPos < iSize)

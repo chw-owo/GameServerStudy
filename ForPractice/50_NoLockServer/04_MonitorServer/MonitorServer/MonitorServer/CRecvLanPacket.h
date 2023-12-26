@@ -168,6 +168,23 @@ public:
 		_readPos += sizeof(int);
 		return *this;
 	}
+
+	inline CRecvLanPacket& operator >> (long& lValue)
+	{
+		if (_writePos - _readPos < sizeof(long))
+		{
+			_packet->_errCode = ERR_GET_LONG_OVER;
+			throw (int)ERR_PACKET;
+			return *this;
+		}
+
+		memcpy_s(&lValue, sizeof(long),
+			&_packet->_chpBuffer[_readPos], sizeof(long));
+
+		_readPos += sizeof(long);
+		return *this;
+	}
+
 	inline CRecvLanPacket& operator >> (DWORD& dwValue)
 	{
 		if (_writePos - _readPos < sizeof(DWORD))

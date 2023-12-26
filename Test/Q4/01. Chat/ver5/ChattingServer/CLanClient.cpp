@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <tchar.h>
 
-bool CLanClient::NetworkInitialize(const wchar_t* IP, short port, int numOfThreads, int numOfRunnings, bool nagle, bool monitor)
+bool CLanClient::NetworkInitialize(const wchar_t* IP, short port, int numOfThreads, int numOfRunnings, bool nagle, bool monitorServer)
 {
 	// Option Setting ====================================================
 
@@ -12,6 +12,7 @@ bool CLanClient::NetworkInitialize(const wchar_t* IP, short port, int numOfThrea
 	_port = port;
 	_numOfThreads = numOfThreads;
 	_nagle = nagle;
+	_mm = new CMonitorManager(monitorServer);
 
 	// Network Setting ===================================================
 

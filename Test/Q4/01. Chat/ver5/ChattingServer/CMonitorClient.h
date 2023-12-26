@@ -26,8 +26,8 @@ private:
 	void OnDebug(int debugCode, wchar_t* debugMsg);
 
 private:
-	static unsigned int WINAPI PrintThread(void* arg);
-	static unsigned int WINAPI SendThread(void* arg);
+	void SleepForFixedFrame();
+	static unsigned int WINAPI MonitorThread(void* arg);
 
 private:
 	void SetDataToPacket(BYTE type, int val, int time);
@@ -38,8 +38,8 @@ private:
 	CChattingServer* _pChattingServer;
 
 private:
-	HANDLE _printThread;
-	HANDLE _sendThread;
-
+	HANDLE _monitorThread;
+	int _timeGap = 1000;
+	DWORD _oldTick;
 };
 

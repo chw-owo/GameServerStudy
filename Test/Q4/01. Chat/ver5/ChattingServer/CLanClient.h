@@ -2,6 +2,7 @@
 #include "Config.h"
 #include "CLockFreeStack.h"
 #include "CClientSession.h"
+#include "CMonitorManager.h"
 #include <ws2tcpip.h>
 #include <process.h>
 #pragma comment(lib, "ws2_32.lib")
@@ -79,6 +80,9 @@ private:
 public:
 	ValidFlag _releaseFlag;
 	
+public:
+	CMonitorManager* _mm = nullptr;
+
 private:
 	int _recvTPS = 0;
 	int _sendTPS = 0;

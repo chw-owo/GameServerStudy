@@ -2,6 +2,7 @@
 class CData
 {
 public:
-	int _val = 1;
-	int _timestamp = 1;
+	long _sum = 0;
+	long _val = -1;
+	long _timestamp = -1;
 };

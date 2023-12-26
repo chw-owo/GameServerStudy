@@ -34,14 +34,6 @@ bool CLanMonitorServer::Initialize()
 		return false;
 	}
 
-	_saveThread = (HANDLE)_beginthreadex(NULL, 0, SaveThread, this, 0, nullptr);
-	if (_saveThread == NULL)
-	{
-		LOG(L"FightGame", CSystemLog::ERROR_LEVEL, L"%s[%d]: Begin Save Thread Error\n", _T(__FUNCTION__), __LINE__);
-		::wprintf(L"%s[%d]: Begin Save Thread Error\n", _T(__FUNCTION__), __LINE__);
-		return false;
-	}
-
 	// Initialize Compelete
 	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Lan: Server Initialize\n");
 	::wprintf(L"Lan: Server Initialize\n\n");
@@ -93,18 +85,6 @@ unsigned int __stdcall CLanMonitorServer::MonitorThread(void* arg)
 				InterlockedDecrement(&pServer->_signal);
 			}
 		}
-	}
-	return 0;
-}
-
-unsigned int __stdcall CLanMonitorServer::SaveThread(void* arg)
-{
-	CLanMonitorServer* pServer = (CLanMonitorServer*)arg;
-
-	while (pServer->_serverAlive)
-	{
-		Sleep(300000);
-		// TO-DO: DB ¿¬µ¿
 	}
 	return 0;
 }
@@ -242,6 +222,7 @@ void CLanMonitorServer::Handle_DATA_UPDATE(unsigned __int64 sessionID, CRecvLanP
 {
 	BYTE dataType;
 	*packet >> dataType;
+	printf("%d: ", dataType);
 
 	switch (dataType)
 	{
@@ -396,7 +377,11 @@ void CLanMonitorServer::Handle_DATA_UPDATE(unsigned __int64 sessionID, CRecvLanP
 
 void CLanMonitorServer::GetDataFromPacket(CRecvLanPacket* packet, CData* data)
 {
-	*packet >> data->_val;
-	*packet >> data->_timestamp;
-	// printf("%d, %d\n", data->_val, data->_timestamp);
+	long val, timestamp;
+	*packet >> val;
+	*packet >> timestamp;
+	InterlockedExchange(&data->_val, val);
+	InterlockedExchange(&data->_timestamp, timestamp);
+
+	printf("%d, %d\n", val, timestamp);
 }

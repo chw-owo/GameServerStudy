@@ -4,6 +4,14 @@
 #endif
 
 #include <windows.h>
+#pragma comment(lib, "winmm.lib") 
+
+#include <stdio.h>
+#include <conio.h>
+#include <pdh.h>
+#include <pdhmsg.h>
+#pragma comment(lib,"Pdh.lib")
+
 class CNetServer;
 class CLanServer;
 class CLanClient;
@@ -15,12 +23,17 @@ class CMonitorManager
 	friend CLanClient;
 
 private:
-	CMonitorManager(bool monitorTotal);
+	CMonitorManager(bool monitorServer);
 	~CMonitorManager();
 
 private:
 	bool Initialize();
 	void Terminate();
+
+private:
+	void GetCPUData();
+	void GetMemoryData();
+	void GetEthernetData();
 
 public:
 	void UpdateProcessCPUTime(); 
@@ -47,6 +60,8 @@ public:
 	long GetTotalSend();
 	
 private:
+	bool _monitorServer;
+
 	HANDLE _hProcess;
 	int _iNumOfProcessors;
 
@@ -65,4 +80,29 @@ private:
 	ULARGE_INTEGER _ftProcess_LastTime;
 	ULARGE_INTEGER _ftProcess_LastKernel;
 	ULARGE_INTEGER _ftProcess_LastUser;
+
+private:
+	PDH_HQUERY _processMemQuery;
+	PDH_HQUERY _nonpagedMemQuery;
+	PDH_HQUERY _usableMemQuery;
+	PDH_HCOUNTER _processMemTotal;
+	PDH_HCOUNTER _nonpagedMemTotal;
+	PDH_HCOUNTER _usableMemTotal;
+
+
+private:
+#define df_PDH_ETHERNET_MAX 8
+
+	//--------------------------------------------------------------
+	// 이더넷 하나에 대한 Send,Recv PDH 쿼리 정보.
+	//--------------------------------------------------------------
+	struct st_ETHERNET
+	{
+		bool _bUse;
+		WCHAR _szName[128];
+		PDH_HCOUNTER _pdh_Counter_Network_RecvBytes;
+		PDH_HCOUNTER _pdh_Counter_Network_SendBytes;
+	};
+	st_ETHERNET _EthernetStruct[df_PDH_ETHERNET_MAX]; // 랜카드 별 PDH 정보
+	PDH_HQUERY _netQuery;
 };

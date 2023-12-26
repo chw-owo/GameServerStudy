@@ -4,13 +4,6 @@
 #include "CSystemLog.h"
 #include <locale.h>
 
-#ifndef _WINSOCKAPI_
-#define _WINSOCKAPI_
-#endif
-
-#include <windows.h>
-#pragma comment(lib, "winmm.lib") 
-
 CCrashDump g_Dump;
 CChattingServer g_Server;
 CMonitorClient g_Monitor;
@@ -37,5 +30,6 @@ int wmain(int argc, wchar_t* argv[])
     timeEndPeriod(1);
 
     LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Main Thread Terminate\n");
+
     return 0;
 }
