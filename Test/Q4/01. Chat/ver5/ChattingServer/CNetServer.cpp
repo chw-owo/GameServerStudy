@@ -410,7 +410,6 @@ unsigned int __stdcall CNetServer::NetworkThread(void* arg)
 					pNetServer->OnError(ERR_GQCS_RET0, stErrMsg);
 				}
 			}
-
 		}
 		else
 		{

@@ -47,7 +47,7 @@ unsigned int __stdcall CMonitorClient::MonitorThread(void* arg)
 	while (pMonitor->_serverAlive)
 	{
 		while (pMonitor->_serverAlive && !pMonitor->_connected)
-		{	
+		{
 			pMonitor->_connected = pMonitor->NetworkInitialize(dfMONIOTOR_IP, dfMONIOTOR_PORT, totalThreadCnt, runningThreadCnt, false, true);
 			Sleep(500);
 		}
@@ -58,7 +58,7 @@ unsigned int __stdcall CMonitorClient::MonitorThread(void* arg)
 		*packet << (WORD)en_PACKET_SS_MONITOR_LOGIN;
 		*packet << (int)0;
 		pMonitor->ReqSendUnicast(packet);
-	
+
 		while (pMonitor->_serverAlive && pMonitor->_connected)
 		{
 			pMonitor->SleepForFixedFrame();
@@ -82,6 +82,12 @@ unsigned int __stdcall CMonitorClient::MonitorThread(void* arg)
 			long updateTPS = pServer->GetUpdateTPS();
 			long packets = pServer->GetPacketPoolSize();
 			long jobs = pServer->GetJobQSize();
+
+			long acceptTotal = pServer->GetAcceptTotal();
+			long disconnectTotal = pServer->GetDisconnectTotal();
+			long acceptTPS = pServer->GetAcceptTPS();
+			long recvTPS = pServer->GetRecvTPS();
+			long sendTPS = pServer->GetSendTPS();
 
 			float totalCPU = pServer->_mm->GetTotalCPUTime();
 			long nonpaged = pServer->_mm->GetTotalNonpaged();
@@ -122,6 +128,12 @@ unsigned int __stdcall CMonitorClient::MonitorThread(void* arg)
 				L"Chat Packet Pool: %d\n"
 				L"Chat Job Q: %d\n\n"
 
+				L"Chat Accept Total: %d\n"
+				L"Chat Disconnect Total: %d\n"
+				L"Chat Accept TPS: %d\n"
+				L"Chat Recv TPS: %d\n"
+				L"Chat Send TPS: %d\n\n"
+
 				L"Total CPU: %f\n"
 				L"Total Nonpaged: %d\n"
 				L"Total Recv: %d\n"
@@ -134,6 +146,7 @@ unsigned int __stdcall CMonitorClient::MonitorThread(void* arg)
 
 				processCPU, processMem,
 				sessions, players, updateTPS, packets, jobs,
+				acceptTotal, disconnectTotal, acceptTPS, recvTPS, sendTPS,
 				totalCPU, nonpaged, totalRecv, totalSend, totalUsableMem);
 
 			::wprintf(L"%s", text);
@@ -170,7 +183,7 @@ void CMonitorClient::SetDataToPacket(BYTE type, int val, int time)
 {
 	CLanPacket* packet = CLanPacket::Alloc();
 	packet->Clear();
-	*packet << (WORD) en_PACKET_SS_MONITOR_DATA_UPDATE;
+	*packet << (WORD)en_PACKET_SS_MONITOR_DATA_UPDATE;
 	*packet << type;
 	*packet << val;
 	*packet << time;

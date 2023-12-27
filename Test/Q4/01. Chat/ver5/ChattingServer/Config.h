@@ -35,7 +35,7 @@ struct stNetHeader
 #define dfRCV_PACKET_DEF			10000
 #define dfJOB_DEF					10000
 
-#define dfJOB_QUEUE_CNT				1
+#define dfJOB_QUEUE_CNT				2
 #define dfWSARECVBUF_CNT			1
 #define dfWSASENDBUF_CNT			200
 
