@@ -52,7 +52,7 @@ bool CNetServer::NetworkInitialize(const wchar_t* IP, short port, int numOfThrea
 	if (startRet != 0)
 	{
 		wchar_t stErrMsg[dfERR_MAX];
-		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: WSAStartup Error\n", _T(__FUNCTION__), __LINE__);
+		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: WSAStartup Error", _T(__FUNCTION__), __LINE__);
 		OnError(ERR_WSASTARTUP, stErrMsg);
 		return false;
 	}
@@ -63,7 +63,7 @@ bool CNetServer::NetworkInitialize(const wchar_t* IP, short port, int numOfThrea
 	{
 		int err = WSAGetLastError();
 		wchar_t stErrMsg[dfERR_MAX];
-		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Listen sock is INVALID, %d\n", _T(__FUNCTION__), __LINE__, err);
+		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Listen sock is INVALID, %d", _T(__FUNCTION__), __LINE__, err);
 		OnError(ERR_LISTENSOCK_INVALID, stErrMsg);
 		return false;
 	}
@@ -77,7 +77,7 @@ bool CNetServer::NetworkInitialize(const wchar_t* IP, short port, int numOfThrea
 	{
 		int err = WSAGetLastError();
 		wchar_t stErrMsg[dfERR_MAX];
-		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Set Linger Option Error, %d\n", _T(__FUNCTION__), __LINE__, err);
+		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Set Linger Option Error, %d", _T(__FUNCTION__), __LINE__, err);
 		OnError(ERR_SET_LINGER, stErrMsg);
 		return false;
 	}
@@ -89,7 +89,7 @@ bool CNetServer::NetworkInitialize(const wchar_t* IP, short port, int numOfThrea
 	{
 		int err = WSAGetLastError();
 		wchar_t stErrMsg[dfERR_MAX];
-		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Set SendBuf Option Error, %d\n", _T(__FUNCTION__), __LINE__, err);
+		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Set SendBuf Option Error, %d", _T(__FUNCTION__), __LINE__, err);
 		OnError(ERR_SET_SNDBUF_0, stErrMsg);
 		return false;
 	}
@@ -105,7 +105,7 @@ bool CNetServer::NetworkInitialize(const wchar_t* IP, short port, int numOfThrea
 	{
 		int err = WSAGetLastError();
 		wchar_t stErrMsg[dfERR_MAX];
-		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Listen Sock Bind Error, %d\n", _T(__FUNCTION__), __LINE__, err);
+		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Listen Sock Bind Error, %d", _T(__FUNCTION__), __LINE__, err);
 		OnError(ERR_LISTENSOCK_BIND, stErrMsg);
 		return false;
 	}
@@ -116,7 +116,7 @@ bool CNetServer::NetworkInitialize(const wchar_t* IP, short port, int numOfThrea
 	{
 		int err = WSAGetLastError();
 		wchar_t stErrMsg[dfERR_MAX];
-		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Listen Error, %d\n", _T(__FUNCTION__), __LINE__, err);
+		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Listen Error, %d", _T(__FUNCTION__), __LINE__, err);
 		OnError(ERR_LISTEN, stErrMsg);
 		return false;
 	}
@@ -129,7 +129,7 @@ bool CNetServer::NetworkInitialize(const wchar_t* IP, short port, int numOfThrea
 	{
 		int err = WSAGetLastError();
 		wchar_t stErrMsg[dfERR_MAX];
-		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Create IOCP Error, %d\n", _T(__FUNCTION__), __LINE__, err);
+		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Create IOCP Error, %d", _T(__FUNCTION__), __LINE__, err);
 		OnError(ERR_CREATE_IOCP, stErrMsg);
 		return false;
 	}
@@ -140,7 +140,7 @@ bool CNetServer::NetworkInitialize(const wchar_t* IP, short port, int numOfThrea
 	{
 		int err = WSAGetLastError();
 		wchar_t stErrMsg[dfERR_MAX];
-		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Create Accept Thread Error, %d\n", _T(__FUNCTION__), __LINE__, err);
+		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Create Accept Thread Error, %d", _T(__FUNCTION__), __LINE__, err);
 		OnError(ERR_CREATE_ACCEPT_THREAD, stErrMsg);
 		return false;
 	}
@@ -154,7 +154,7 @@ bool CNetServer::NetworkInitialize(const wchar_t* IP, short port, int numOfThrea
 		{
 			int err = WSAGetLastError();
 			wchar_t stErrMsg[dfERR_MAX];
-			swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Create Network Thread Error, %d\n", _T(__FUNCTION__), __LINE__, err);
+			swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Create Network Thread Error, %d", _T(__FUNCTION__), __LINE__, err);
 			OnError(ERR_CREATE_NETWORK_THREAD, stErrMsg);
 			return false;
 		}
@@ -170,7 +170,7 @@ bool CNetServer::NetworkTerminate()
 	if (InterlockedExchange(&_networkAlive, 1) != 0)
 	{
 		wchar_t stErrMsg[dfERR_MAX];
-		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: LanServer Already Terminate\n", _T(__FUNCTION__), __LINE__);
+		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: LanServer Already Terminate", _T(__FUNCTION__), __LINE__);
 		OnError(ERR_ALREADY_TERMINATE, stErrMsg);
 		return false;
 	}
@@ -193,7 +193,7 @@ bool CNetServer::NetworkTerminate()
 	{
 		int err = ::WSAGetLastError();
 		wchar_t stErrMsg[dfERR_MAX];
-		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Socket for Wake is INVALID, %d\n", _T(__FUNCTION__), __LINE__, err);
+		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Socket for Wake is INVALID, %d", _T(__FUNCTION__), __LINE__, err);
 		OnError(ERR_TEMPSOCK_INVALID, stErrMsg);
 		return false;
 	}
@@ -203,7 +203,7 @@ bool CNetServer::NetworkTerminate()
 	{
 		int err = ::WSAGetLastError();
 		wchar_t stErrMsg[dfERR_MAX];
-		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Socket for Wake Connect Error, %d\n", _T(__FUNCTION__), __LINE__, err);
+		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Socket for Wake Connect Error, %d", _T(__FUNCTION__), __LINE__, err);
 		OnError(ERR_TEMPSOCK_CONNECT, stErrMsg);
 		return false;
 	}
@@ -251,7 +251,7 @@ bool CNetServer::SendPacket(unsigned __int64 sessionID, CNetPacket* packet)
 	CNetSession* pSession = AcquireSessionUsage(sessionID);
 	if (pSession == nullptr) return false;
 
-	// ::printf("%d: Send Packet (%016llx - %016llx)\n", GetCurrentThreadId(), sessionID, pSession->GetID());
+	// ::printf("%d: Send NetPacket (%016llx - %016llx)\n", GetCurrentThreadId(), sessionID, pSession->GetID());
 
 	if (packet->IsHeaderEmpty())
 	{
@@ -265,7 +265,7 @@ bool CNetServer::SendPacket(unsigned __int64 sessionID, CNetPacket* packet)
 		if (putRet != dfNETHEADER_LEN)
 		{
 			wchar_t stErrMsg[dfERR_MAX];
-			swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: CNetPacket PutHeaderData Error\n", _T(__FUNCTION__), __LINE__);
+			swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: CNetPacket PutHeaderData Error", _T(__FUNCTION__), __LINE__);
 			OnError(ERR_PACKET_PUT_HEADER, stErrMsg);
 			ReleaseSessionUsage(pSession);
 			return false;
@@ -311,7 +311,7 @@ unsigned int __stdcall CNetServer::AcceptThread(void* arg)
 		if (client_sock == INVALID_SOCKET)
 		{
 			wchar_t stErrMsg[dfERR_MAX];
-			swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Accept Error\n", _T(__FUNCTION__), __LINE__);
+			swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Accept Error", _T(__FUNCTION__), __LINE__);
 			pNetServer->OnError(ERR_ACCEPT, stErrMsg);
 			break;
 		}
@@ -327,7 +327,7 @@ unsigned int __stdcall CNetServer::AcceptThread(void* arg)
 			InterlockedDecrement(&pNetServer->_sessionCnt);
 
 			wchar_t stErrMsg[dfERR_MAX];
-			swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Session Max\n", _T(__FUNCTION__), __LINE__);
+			swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Session Max", _T(__FUNCTION__), __LINE__);
 			pNetServer->OnError(DEB_SESSION_MAX, stErrMsg);
 			continue;
 		}
@@ -339,7 +339,7 @@ unsigned int __stdcall CNetServer::AcceptThread(void* arg)
 			InterlockedDecrement(&pNetServer->_sessionCnt);
 
 			wchar_t stErrMsg[dfERR_MAX];
-			swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: No Empty Index\n", _T(__FUNCTION__), __LINE__);
+			swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: No Empty Index", _T(__FUNCTION__), __LINE__);
 			pNetServer->OnError(DEB_SESSION_MAX, stErrMsg);
 			continue;
 		}
@@ -406,7 +406,7 @@ unsigned int __stdcall CNetServer::NetworkThread(void* arg)
 					err != ERROR_CONNECTION_ABORTED && err != ERROR_NETNAME_DELETED)
 				{
 					wchar_t stErrMsg[dfERR_MAX];
-					swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: GQCS return 0, %d\n", _T(__FUNCTION__), __LINE__, err);
+					swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: GQCS return 0, %d", _T(__FUNCTION__), __LINE__, err);
 					pNetServer->OnError(ERR_GQCS_RET0, stErrMsg);
 				}
 			}
@@ -417,20 +417,22 @@ unsigned int __stdcall CNetServer::NetworkThread(void* arg)
 			switch (pNetOvl->_type)
 			{
 			case NET_TYPE::RECV_COMPLETE:
-				// ::printf("%d: Recv Complete (%016llx)\n", GetCurrentThreadId(), sessionID);
+				// ::printf("RECV_COMPLETE\n");
 				pNetServer->HandleRecvCP(pSession, cbTransferred);
 				break;
 
 			case NET_TYPE::SEND_COMPLETE:
-				// ::printf("%d: Send Complete (%016llx)\n", GetCurrentThreadId(), sessionID);
+				// ::printf("SEND_COMPLETE\n");
 				pNetServer->HandleSendCP(pSession, cbTransferred);
 				break;
 
 			case NET_TYPE::RECV_POST:
+				// ::printf("RECV_POST\n");
 				pNetServer->RecvPost(pSession);
 				break;
 
 			case NET_TYPE::SEND_POST:
+				// ::printf("SEND_POST\n");
 				pNetServer->SendPost(pSession);
 				pNetServer->IncrementUseCount(pSession);
 				break;
@@ -458,7 +460,7 @@ bool CNetServer::HandleRecvCP(CNetSession* pSession, int recvBytes)
 	{
 		Disconnect(pSession->GetID());
 		wchar_t stErrMsg[dfERR_MAX];
-		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Recv Buffer MoveWritePos Error\n", _T(__FUNCTION__), __LINE__);
+		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Recv Buffer MoveWritePos Error", _T(__FUNCTION__), __LINE__);
 		OnError(ERR_RECVBUF_MOVEWRITEPOS, stErrMsg);
 		return false;
 	}
@@ -468,14 +470,14 @@ bool CNetServer::HandleRecvCP(CNetSession* pSession, int recvBytes)
 
 	while (useSize > dfNETHEADER_LEN)
 	{
-		// // ::printf("%016llx: Payload %d\n", pSession->GetID(), recvBuf->GetPayloadReadPos());
+		// ::printf("%016llx: Payload %d\n", pSession->GetID(), recvBuf->GetPayloadReadPos());
 
 		stNetHeader* header = (stNetHeader*)recvBuf->GetPayloadReadPtr();
 		if (header->_code != dfPACKET_CODE)
 		{
 			Disconnect(pSession->GetID());
 			wchar_t stErrMsg[dfERR_MAX];
-			swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Wrong NetPacket Code\n", _T(__FUNCTION__), __LINE__);
+			swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Wrong NetPacket Code", _T(__FUNCTION__), __LINE__);
 			OnDebug(DEB_WRONG_PACKETCODE, stErrMsg);
 			return false;
 		}
@@ -492,13 +494,13 @@ bool CNetServer::HandleRecvCP(CNetSession* pSession, int recvBytes)
 			return false;
 		}
 
-		// // ::printf("%016llx: Header %d\n", pSession->GetID(), recvBuf->GetPayloadReadPos());
+		// ::printf("%016llx: Header %d\n", pSession->GetID(), recvBuf->GetPayloadReadPos());
 
 		if (recvBuf->Decode(*header, recvBuf->GetPayloadReadPtr()) == false)
 		{
 			Disconnect(pSession->GetID());
 			wchar_t stErrMsg[dfERR_MAX];
-			swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Wrong Checksum\n", _T(__FUNCTION__), __LINE__);
+			swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Wrong Checksum", _T(__FUNCTION__), __LINE__);
 			OnDebug(DEB_WRONG_DECODE, stErrMsg);
 			return false;
 		}
@@ -513,7 +515,7 @@ bool CNetServer::HandleRecvCP(CNetSession* pSession, int recvBytes)
 		{
 			Disconnect(pSession->GetID());
 			wchar_t stErrMsg[dfERR_MAX];
-			swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Recv Buffer MoveReadPos Error\n", _T(__FUNCTION__), __LINE__);
+			swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Recv Buffer MoveReadPos Error", _T(__FUNCTION__), __LINE__);
 			OnError(ERR_RECVBUF_MOVEREADPOS, stErrMsg);
 			return false;
 		}
@@ -562,7 +564,7 @@ bool CNetServer::RecvPost(CNetSession* pSession)
 			if (err != WSAECONNRESET && err != WSAECONNABORTED && err != WSAEINTR)
 			{
 				wchar_t stErrMsg[dfERR_MAX];
-				swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Recv Error, %d\n", _T(__FUNCTION__), __LINE__, err);
+				swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Recv Error, %d", _T(__FUNCTION__), __LINE__, err);
 				OnError(ERR_RECV, stErrMsg);
 			}
 			DecrementUseCount(pSession);
@@ -646,7 +648,7 @@ bool CNetServer::SendPost(CNetSession* pSession)
 			if (err != WSAECONNRESET && err != WSAECONNABORTED && err != WSAEINTR)
 			{
 				wchar_t stErrMsg[dfERR_MAX];
-				swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Send Error, %d\n", _T(__FUNCTION__), __LINE__, err);
+				swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Send Error, %d", _T(__FUNCTION__), __LINE__, err);
 				OnError(ERR_SEND, stErrMsg);
 			}
 			InterlockedExchange(&pSession->_sendFlag, 0);
@@ -729,8 +731,6 @@ void CNetServer::HandleRelease(unsigned __int64 sessionID)
 
 	InterlockedIncrement(&_disconnectCnt);
 	InterlockedDecrement(&_sessionCnt);
-
-	// ::printf("%d: Release (%016llx)\n", GetCurrentThreadId(), sessionID);
 
 	OnReleaseClient(sessionID);
 }

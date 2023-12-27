@@ -100,9 +100,10 @@ private:
 	{
 		bool _bUse;
 		WCHAR _szName[128];
+		PDH_HQUERY _recvQuery;
+		PDH_HQUERY _sendQuery;
 		PDH_HCOUNTER _pdh_Counter_Network_RecvBytes;
 		PDH_HCOUNTER _pdh_Counter_Network_SendBytes;
 	};
 	st_ETHERNET _EthernetStruct[df_PDH_ETHERNET_MAX]; // 랜카드 별 PDH 정보
-	PDH_HQUERY _netQuery;
 };

@@ -41,17 +41,18 @@ private:
 	static unsigned int WINAPI SendThread(void* arg);
 	static unsigned int WINAPI SaveThread(void* arg);
 
-private:
+private: // Called in SendThread
 	void SleepForSend();
 	void Handle_REQ_LOGIN(unsigned __int64 sessionID, CRecvNetPacket* packet);
-	void SendMonitorPackets(unsigned __int64 sessionID);
-	void SetDataToPacket(unsigned __int64 sessionID, BYTE type, BYTE serverNo, CData* data);
+	void SendDatasToClient(unsigned __int64 sessionID);
+	void SendDataToClient(unsigned __int64 sessionID, BYTE type, BYTE serverNo, CData* data);
 	void ReqSendUnicast(unsigned __int64 sessionID, CNetPacket* packet);
-	
-private:
+
+private: // Called in SaveThread
 	void SleepForSave();
 	void InitializeDB();
-	void SendDatasToDB();
+	void SaveDatasToDB();
+	void SaveDataToDB(SYSTEMTIME stTime, BYTE type, BYTE serverNo, CData* data);
 
 private:
 	HANDLE _jobThread;
@@ -61,13 +62,14 @@ private:
 private:
 	HANDLE _sendThread;
 	DWORD _sendOldTick;
-	long _sendTimeGap = 300000;
+	long _sendTimeGap = 1000;
 	vector<unsigned __int64> _sessions;
 
 private:
+#define dfTIME_LEN 32
 #define dfTABLE_LEN 32
 #define dfQUERY_MAX 512
-	HANDLE _saveThread;
+	HANDLE _logThread;
 	MYSQL _conn;
 	MYSQL* _connection;
 	DWORD _saveOldTick;

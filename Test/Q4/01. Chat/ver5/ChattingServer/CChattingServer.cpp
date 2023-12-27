@@ -54,11 +54,6 @@ bool CChattingServer::Initialize()
 		return false;
 	}
 
-	// Initialize Compelete
-	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Chat: Server Initialize\n");
-	::wprintf(L"Chat: Server Initialize\n\n");
-
-
 #ifdef _TIMEOUT
 	// Set Timeout Thread
 	_timeoutThread = (HANDLE)_beginthreadex(NULL, 0, TimeoutThread, this, 0, nullptr);

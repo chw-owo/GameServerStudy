@@ -18,7 +18,7 @@ CLanServer::CLanServer()
 	_releaseFlag._releaseFlag = 1;
 }
 
-bool CLanServer::LanworkInitialize(const wchar_t* IP, short port, int numOfThreads, int numOfRunnings, bool nagle, bool monitorServer)
+bool CLanServer::NetworkInitialize(const wchar_t* IP, short port, int numOfThreads, int numOfRunnings, bool nagle, bool monitorServer)
 {
 	// Option Setting ====================================================
 
@@ -51,7 +51,7 @@ bool CLanServer::LanworkInitialize(const wchar_t* IP, short port, int numOfThrea
 	if (startRet != 0)
 	{
 		wchar_t stErrMsg[dfERR_MAX];
-		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: WSAStartup Error\n", _T(__FUNCTION__), __LINE__);
+		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: WSAStartup Error", _T(__FUNCTION__), __LINE__);
 		OnError(ERR_WSASTARTUP, stErrMsg);
 		return false;
 	}
@@ -62,7 +62,7 @@ bool CLanServer::LanworkInitialize(const wchar_t* IP, short port, int numOfThrea
 	{
 		int err = WSAGetLastError();
 		wchar_t stErrMsg[dfERR_MAX];
-		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Listen sock is INVALID, %d\n", _T(__FUNCTION__), __LINE__, err);
+		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Listen sock is INVALID, %d", _T(__FUNCTION__), __LINE__, err);
 		OnError(ERR_LISTENSOCK_INVALID, stErrMsg);
 		return false;
 	}
@@ -76,7 +76,7 @@ bool CLanServer::LanworkInitialize(const wchar_t* IP, short port, int numOfThrea
 	{
 		int err = WSAGetLastError();
 		wchar_t stErrMsg[dfERR_MAX];
-		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Set Linger Option Error, %d\n", _T(__FUNCTION__), __LINE__, err);
+		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Set Linger Option Error, %d", _T(__FUNCTION__), __LINE__, err);
 		OnError(ERR_SET_LINGER, stErrMsg);
 		return false;
 	}
@@ -88,7 +88,7 @@ bool CLanServer::LanworkInitialize(const wchar_t* IP, short port, int numOfThrea
 	{
 		int err = WSAGetLastError();
 		wchar_t stErrMsg[dfERR_MAX];
-		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Set SendBuf Option Error, %d\n", _T(__FUNCTION__), __LINE__, err);
+		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Set SendBuf Option Error, %d", _T(__FUNCTION__), __LINE__, err);
 		OnError(ERR_SET_SNDBUF_0, stErrMsg);
 		return false;
 	}
@@ -104,7 +104,7 @@ bool CLanServer::LanworkInitialize(const wchar_t* IP, short port, int numOfThrea
 	{
 		int err = WSAGetLastError();
 		wchar_t stErrMsg[dfERR_MAX];
-		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Listen Sock Bind Error, %d\n", _T(__FUNCTION__), __LINE__, err);
+		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Listen Sock Bind Error, %d", _T(__FUNCTION__), __LINE__, err);
 		OnError(ERR_LISTENSOCK_BIND, stErrMsg);
 		return false;
 	}
@@ -115,7 +115,7 @@ bool CLanServer::LanworkInitialize(const wchar_t* IP, short port, int numOfThrea
 	{
 		int err = WSAGetLastError();
 		wchar_t stErrMsg[dfERR_MAX];
-		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Listen Error, %d\n", _T(__FUNCTION__), __LINE__, err);
+		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Listen Error, %d", _T(__FUNCTION__), __LINE__, err);
 		OnError(ERR_LISTEN, stErrMsg);
 		return false;
 	}
@@ -123,12 +123,12 @@ bool CLanServer::LanworkInitialize(const wchar_t* IP, short port, int numOfThrea
 	// Thread Setting ===================================================
 
 	// Create IOCP for Lanwork
-	_hLanworkCP = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, _numOfRunnings);
-	if (_hLanworkCP == NULL)
+	_hNetworkCP = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, _numOfRunnings);
+	if (_hNetworkCP == NULL)
 	{
 		int err = WSAGetLastError();
 		wchar_t stErrMsg[dfERR_MAX];
-		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Create IOCP Error, %d\n", _T(__FUNCTION__), __LINE__, err);
+		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Create IOCP Error, %d", _T(__FUNCTION__), __LINE__, err);
 		OnError(ERR_CREATE_IOCP, stErrMsg);
 		return false;
 	}
@@ -139,7 +139,7 @@ bool CLanServer::LanworkInitialize(const wchar_t* IP, short port, int numOfThrea
 	{
 		int err = WSAGetLastError();
 		wchar_t stErrMsg[dfERR_MAX];
-		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Create Accept Thread Error, %d\n", _T(__FUNCTION__), __LINE__, err);
+		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Create Accept Thread Error, %d", _T(__FUNCTION__), __LINE__, err);
 		OnError(ERR_CREATE_ACCEPT_THREAD, stErrMsg);
 		return false;
 	}
@@ -148,12 +148,12 @@ bool CLanServer::LanworkInitialize(const wchar_t* IP, short port, int numOfThrea
 	_networkThreads = new HANDLE[_numOfThreads];
 	for (int i = 0; i < _numOfThreads; i++)
 	{
-		_networkThreads[i] = (HANDLE)_beginthreadex(NULL, 0, LanworkThread, this, 0, nullptr);
+		_networkThreads[i] = (HANDLE)_beginthreadex(NULL, 0, NetworkThread, this, 0, nullptr);
 		if (_networkThreads[i] == NULL)
 		{
 			int err = WSAGetLastError();
 			wchar_t stErrMsg[dfERR_MAX];
-			swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Create Lanwork Thread Error, %d\n", _T(__FUNCTION__), __LINE__, err);
+			swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Create Network Thread Error, %d", _T(__FUNCTION__), __LINE__, err);
 			OnError(ERR_CREATE_NETWORK_THREAD, stErrMsg);
 			return false;
 		}
@@ -164,19 +164,19 @@ bool CLanServer::LanworkInitialize(const wchar_t* IP, short port, int numOfThrea
 	return true;
 }
 
-bool CLanServer::LanworkTerminate()
+bool CLanServer::NetworkTerminate()
 {
 	if (InterlockedExchange(&_networkAlive, 1) != 0)
 	{
 		wchar_t stErrMsg[dfERR_MAX];
-		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: LanServer Already Terminate\n", _T(__FUNCTION__), __LINE__);
+		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: LanServer Already Terminate", _T(__FUNCTION__), __LINE__);
 		OnError(ERR_ALREADY_TERMINATE, stErrMsg);
 		return false;
 	}
 
 	// Terminate Lanwork Threads
 	for (int i = 0; i < _numOfThreads; i++)
-		PostQueuedCompletionStatus(_hLanworkCP, 0, 0, 0);
+		PostQueuedCompletionStatus(_hNetworkCP, 0, 0, 0);
 	WaitForMultipleObjects(_numOfThreads, _networkThreads, true, INFINITE);
 
 	// Terminate Accept Thread
@@ -192,7 +192,7 @@ bool CLanServer::LanworkTerminate()
 	{
 		int err = ::WSAGetLastError();
 		wchar_t stErrMsg[dfERR_MAX];
-		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Socket for Wake is INVALID, %d\n", _T(__FUNCTION__), __LINE__, err);
+		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Socket for Wake is INVALID, %d", _T(__FUNCTION__), __LINE__, err);
 		OnError(ERR_TEMPSOCK_INVALID, stErrMsg);
 		return false;
 	}
@@ -219,7 +219,7 @@ bool CLanServer::LanworkTerminate()
 	}
 
 	WSACleanup();
-	CloseHandle(_hLanworkCP);
+	CloseHandle(_hNetworkCP);
 	CloseHandle(_acceptThread);
 	for (int i = 0; i < _numOfThreads; i++)
 		CloseHandle(_networkThreads[i]);
@@ -262,7 +262,7 @@ bool CLanServer::SendPacket(unsigned __int64 sessionID, CLanPacket* packet)
 		if (putRet != dfLANHEADER_LEN)
 		{
 			wchar_t stErrMsg[dfERR_MAX];
-			swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: CLanPacket PutHeaderData Error\n", _T(__FUNCTION__), __LINE__);
+			swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: CLanPacket PutHeaderData Error", _T(__FUNCTION__), __LINE__);
 			OnError(ERR_PACKET_PUT_HEADER, stErrMsg);
 			ReleaseSessionUsage(pSession);
 			return false;
@@ -273,7 +273,7 @@ bool CLanServer::SendPacket(unsigned __int64 sessionID, CLanPacket* packet)
 	if (SendCheck(pSession))
 	{
 		// SendPost(pSession);
-		PostQueuedCompletionStatus(_hLanworkCP, 1, (ULONG_PTR)pSession->GetID(), (LPOVERLAPPED)&pSession->_sendPostOvl);
+		PostQueuedCompletionStatus(_hNetworkCP, 1, (ULONG_PTR)pSession->GetID(), (LPOVERLAPPED)&pSession->_sendPostOvl);
 	}
 
 	ReleaseSessionUsage(pSession);
@@ -308,7 +308,7 @@ unsigned int __stdcall CLanServer::AcceptThread(void* arg)
 		if (client_sock == INVALID_SOCKET)
 		{
 			wchar_t stErrMsg[dfERR_MAX];
-			swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Accept Error\n", _T(__FUNCTION__), __LINE__);
+			swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Accept Error", _T(__FUNCTION__), __LINE__);
 			pLanServer->OnError(ERR_ACCEPT, stErrMsg);
 			break;
 		}
@@ -324,7 +324,7 @@ unsigned int __stdcall CLanServer::AcceptThread(void* arg)
 			InterlockedDecrement(&pLanServer->_sessionCnt);
 
 			wchar_t stErrMsg[dfERR_MAX];
-			swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Session Max\n", _T(__FUNCTION__), __LINE__);
+			swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Session Max", _T(__FUNCTION__), __LINE__);
 			pLanServer->OnError(DEB_SESSION_MAX, stErrMsg);
 			continue;
 		}
@@ -336,7 +336,7 @@ unsigned int __stdcall CLanServer::AcceptThread(void* arg)
 			InterlockedDecrement(&pLanServer->_sessionCnt);
 
 			wchar_t stErrMsg[dfERR_MAX];
-			swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: No Empty Index\n", _T(__FUNCTION__), __LINE__);
+			swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: No Empty Index", _T(__FUNCTION__), __LINE__);
 			pLanServer->OnError(DEB_SESSION_MAX, stErrMsg);
 			continue;
 		}
@@ -353,8 +353,8 @@ unsigned int __stdcall CLanServer::AcceptThread(void* arg)
 
 		// ::printf("%d: Accept Success (%016llx - %016llx)\n", GetCurrentThreadId(), sessionID, pSession->GetID());
 
-		CreateIoCompletionPort((HANDLE)pSession->_sock, pLanServer->_hLanworkCP, (ULONG_PTR)pSession->GetID(), 0);
-		PostQueuedCompletionStatus(pLanServer->_hLanworkCP, 1, (ULONG_PTR)pSession->GetID(), (LPOVERLAPPED)&pSession->_recvPostOvl);
+		CreateIoCompletionPort((HANDLE)pSession->_sock, pLanServer->_hNetworkCP, (ULONG_PTR)pSession->GetID(), 0);
+		PostQueuedCompletionStatus(pLanServer->_hNetworkCP, 1, (ULONG_PTR)pSession->GetID(), (LPOVERLAPPED)&pSession->_recvPostOvl);
 		pLanServer->OnAcceptClient(sessionID);
 
 	}
@@ -366,7 +366,7 @@ unsigned int __stdcall CLanServer::AcceptThread(void* arg)
 	return 0;
 }
 
-unsigned int __stdcall CLanServer::LanworkThread(void* arg)
+unsigned int __stdcall CLanServer::NetworkThread(void* arg)
 {
 	CLanServer* pLanServer = (CLanServer*)arg;
 	int threadID = GetCurrentThreadId();
@@ -377,7 +377,7 @@ unsigned int __stdcall CLanServer::LanworkThread(void* arg)
 		__int64 sessionID;
 		DWORD cbTransferred;
 
-		int GQCSRet = GetQueuedCompletionStatus(pLanServer->_hLanworkCP,
+		int GQCSRet = GetQueuedCompletionStatus(pLanServer->_hNetworkCP,
 			&cbTransferred, (PULONG_PTR)&sessionID, (LPOVERLAPPED*)&pNetOvl, INFINITE);
 
 		if (pLanServer->_networkAlive == 1) break;
@@ -403,7 +403,7 @@ unsigned int __stdcall CLanServer::LanworkThread(void* arg)
 					err != ERROR_CONNECTION_ABORTED && err != ERROR_NETNAME_DELETED)
 				{
 					wchar_t stErrMsg[dfERR_MAX];
-					swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: GQCS return 0, %d\n", _T(__FUNCTION__), __LINE__, err);
+					swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: GQCS return 0, %d", _T(__FUNCTION__), __LINE__, err);
 					pLanServer->OnError(ERR_GQCS_RET0, stErrMsg);
 				}
 			}
@@ -457,7 +457,7 @@ bool CLanServer::HandleRecvCP(CLanSession* pSession, int recvBytes)
 	{
 		Disconnect(pSession->GetID());
 		wchar_t stErrMsg[dfERR_MAX];
-		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Recv Buffer MoveWritePos Error\n", _T(__FUNCTION__), __LINE__);
+		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Recv Buffer MoveWritePos Error", _T(__FUNCTION__), __LINE__);
 		OnError(ERR_RECVBUF_MOVEWRITEPOS, stErrMsg);
 		return false;
 	}
@@ -477,7 +477,7 @@ bool CLanServer::HandleRecvCP(CLanSession* pSession, int recvBytes)
 		{
 			Disconnect(pSession->GetID());
 			wchar_t stErrMsg[dfERR_MAX];
-			swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Recv Buffer MoveReadPos Error\n", _T(__FUNCTION__), __LINE__);
+			swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Recv Buffer MoveReadPos Error", _T(__FUNCTION__), __LINE__);
 			OnError(ERR_RECVBUF_MOVEREADPOS, stErrMsg);
 			return false;
 		}
@@ -494,7 +494,7 @@ bool CLanServer::HandleRecvCP(CLanSession* pSession, int recvBytes)
 		{
 			Disconnect(pSession->GetID());
 			wchar_t stErrMsg[dfERR_MAX];
-			swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Recv Buffer MoveReadPos Error\n", _T(__FUNCTION__), __LINE__);
+			swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Recv Buffer MoveReadPos Error", _T(__FUNCTION__), __LINE__);
 			OnError(ERR_RECVBUF_MOVEREADPOS, stErrMsg);
 			return false;
 		}
@@ -543,7 +543,7 @@ bool CLanServer::RecvPost(CLanSession* pSession)
 			if (err != WSAECONNRESET && err != WSAECONNABORTED && err != WSAEINTR)
 			{
 				wchar_t stErrMsg[dfERR_MAX];
-				swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Recv Error, %d\n", _T(__FUNCTION__), __LINE__, err);
+				swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Recv Error, %d", _T(__FUNCTION__), __LINE__, err);
 				OnError(ERR_RECV, stErrMsg);
 			}
 			DecrementUseCount(pSession);
@@ -627,7 +627,7 @@ bool CLanServer::SendPost(CLanSession* pSession)
 			if (err != WSAECONNRESET && err != WSAECONNABORTED && err != WSAEINTR)
 			{
 				wchar_t stErrMsg[dfERR_MAX];
-				swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Send Error, %d\n", _T(__FUNCTION__), __LINE__, err);
+				swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Send Error, %d", _T(__FUNCTION__), __LINE__, err);
 				OnError(ERR_SEND, stErrMsg);
 			}
 			InterlockedExchange(&pSession->_sendFlag, 0);
@@ -691,7 +691,7 @@ void CLanServer::DecrementUseCount(CLanSession* pSession)
 	{
 		if (InterlockedCompareExchange(&pSession->_validFlag._flag, _releaseFlag._flag, 0) == 0)
 		{
-			PostQueuedCompletionStatus(_hLanworkCP, 1, (ULONG_PTR)pSession->GetID(), (LPOVERLAPPED)&pSession->_releaseOvl);
+			PostQueuedCompletionStatus(_hNetworkCP, 1, (ULONG_PTR)pSession->GetID(), (LPOVERLAPPED)&pSession->_releaseOvl);
 			return;
 		}
 	}

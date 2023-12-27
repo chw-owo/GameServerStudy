@@ -4,6 +4,8 @@
 #include <tchar.h>
 #include <time.h>
 
+#define __SAVELOG__
+
 bool CNetMonitorServer::Initialize()
 {
 	// Set Network Library
@@ -36,6 +38,13 @@ bool CNetMonitorServer::Initialize()
 		::wprintf(L"%s[%d]: Begin Send Thread Error\n", _T(__FUNCTION__), __LINE__);
 	}
 
+	_logThread = (HANDLE)_beginthreadex(NULL, 0, SaveThread, this, 0, nullptr);
+	if (_logThread == NULL)
+	{
+		LOG(L"FightGame", CSystemLog::ERROR_LEVEL, L"%s[%d]: Begin Send Thread Error\n", _T(__FUNCTION__), __LINE__);
+		::wprintf(L"%s[%d]: Begin Send Thread Error\n", _T(__FUNCTION__), __LINE__);
+	}
+
 	// Initialize Compelete
 	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Net: Server Initialize\n");
 	::wprintf(L"Net: Server Initialize\n\n");
@@ -45,7 +54,6 @@ void CNetMonitorServer::Terminate()
 {
 	// TO-DO
 }
-
 
 void CNetMonitorServer::OnAcceptClient(unsigned __int64 sessionID)
 {
@@ -175,12 +183,13 @@ void CNetMonitorServer::HandleRecv(unsigned __int64 sessionID, CRecvNetPacket* p
 unsigned int __stdcall CNetMonitorServer::SaveThread(void* arg)
 {
 	CNetMonitorServer* pServer = (CNetMonitorServer*)arg;
-	
+	pServer->_saveOldTick = timeGetTime();
+
 	pServer->InitializeDB();
 	while (pServer->_serverAlive)
 	{
 		pServer->SleepForSave();
-		pServer->SetDataToDB();
+		pServer->SaveDatasToDB();
 	}
 	return 0;
 }
@@ -194,10 +203,9 @@ void CNetMonitorServer::SleepForSave()
 
 void CNetMonitorServer::InitializeDB()
 {
-	_saveOldTick = timeGetTime();
 	mysql_init(&_conn);
 	_connection = mysql_real_connect(&_conn,
-		"127.0.0.1", "root", "password", "accountdb", 3306, (char*)NULL, 0);
+		"127.0.0.1", "root", "password", "logdb", 3306, (char*)NULL, 0);
 	if (_connection == NULL)
 	{
 		LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Mysql connection error : %s", mysql_error(&_conn));
@@ -205,23 +213,84 @@ void CNetMonitorServer::InitializeDB()
 	}
 }
 
-void CNetMonitorServer::SendDatasToDB()
+void CNetMonitorServer::SaveDatasToDB()
 {
-
-	long sum = InterlockedExchange(&data->_sum, 0);
-
 	SYSTEMTIME stTime;
 	GetLocalTime(&stTime);
+
+	// Login
+	SaveDataToDB(stTime, dfMONITOR_DATA_TYPE_LOGIN_SERVER_RUN, dfLOGIN_NO, &g_monitor._login.SERVER_RUN);
+	SaveDataToDB(stTime, dfMONITOR_DATA_TYPE_LOGIN_SERVER_CPU, dfLOGIN_NO, &g_monitor._login.SERVER_CPU);
+	SaveDataToDB(stTime, dfMONITOR_DATA_TYPE_LOGIN_SERVER_MEM, dfLOGIN_NO, &g_monitor._login.SERVER_MEM);
+	SaveDataToDB(stTime, dfMONITOR_DATA_TYPE_LOGIN_SESSION, dfLOGIN_NO, &g_monitor._login.SESSION);
+	SaveDataToDB(stTime, dfMONITOR_DATA_TYPE_LOGIN_AUTH_TPS, dfLOGIN_NO, &g_monitor._login.AUTH_TPS);
+	SaveDataToDB(stTime, dfMONITOR_DATA_TYPE_LOGIN_PACKET_POOL, dfLOGIN_NO, &g_monitor._login.PACKET_POOL);
+
+	// Game
+	SaveDataToDB(stTime, dfMONITOR_DATA_TYPE_GAME_SERVER_RUN, dfGAME_NO, &g_monitor._game.SERVER_RUN);
+	SaveDataToDB(stTime, dfMONITOR_DATA_TYPE_GAME_SERVER_CPU, dfGAME_NO, &g_monitor._game.SERVER_CPU);
+	SaveDataToDB(stTime, dfMONITOR_DATA_TYPE_GAME_SERVER_MEM, dfGAME_NO, &g_monitor._game.SERVER_MEM);
+	SaveDataToDB(stTime, dfMONITOR_DATA_TYPE_GAME_SESSION, dfGAME_NO, &g_monitor._game.SESSION);
+	SaveDataToDB(stTime, dfMONITOR_DATA_TYPE_GAME_AUTH_PLAYER, dfGAME_NO, &g_monitor._game.AUTH_PLAYER);
+	SaveDataToDB(stTime, dfMONITOR_DATA_TYPE_GAME_GAME_PLAYER, dfGAME_NO, &g_monitor._game.GAME_PLAYER);
+	SaveDataToDB(stTime, dfMONITOR_DATA_TYPE_GAME_ACCEPT_TPS, dfGAME_NO, &g_monitor._game.ACCEPT_TPS);
+	SaveDataToDB(stTime, dfMONITOR_DATA_TYPE_GAME_PACKET_RECV_TPS, dfGAME_NO, &g_monitor._game.PACKET_RECV_TPS);
+	SaveDataToDB(stTime, dfMONITOR_DATA_TYPE_GAME_PACKET_SEND_TPS, dfGAME_NO, &g_monitor._game.PACKET_SEND_TPS);
+	SaveDataToDB(stTime, dfMONITOR_DATA_TYPE_GAME_DB_WRITE_TPS, dfGAME_NO, &g_monitor._game.DB_WRITE_TPS);
+	SaveDataToDB(stTime, dfMONITOR_DATA_TYPE_GAME_DB_WRITE_MSG, dfGAME_NO, &g_monitor._game.DB_WRITE_MSG);
+	SaveDataToDB(stTime, dfMONITOR_DATA_TYPE_GAME_AUTH_THREAD_FPS, dfGAME_NO, &g_monitor._game.AUTH_THREAD_FPS);
+	SaveDataToDB(stTime, dfMONITOR_DATA_TYPE_GAME_GAME_THREAD_FPS, dfGAME_NO, &g_monitor._game.GAME_THREAD_FPS);
+	SaveDataToDB(stTime, dfMONITOR_DATA_TYPE_GAME_PACKET_POOL, dfGAME_NO, &g_monitor._game.PACKET_POOL);
+
+	// Chat
+	SaveDataToDB(stTime, dfMONITOR_DATA_TYPE_CHAT_SERVER_RUN, dfCHAT_NO, &g_monitor._chat.SERVER_RUN);
+	SaveDataToDB(stTime, dfMONITOR_DATA_TYPE_CHAT_SERVER_CPU, dfCHAT_NO, &g_monitor._chat.SERVER_CPU);
+	SaveDataToDB(stTime, dfMONITOR_DATA_TYPE_CHAT_SERVER_MEM, dfCHAT_NO, &g_monitor._chat.SERVER_MEM);
+	SaveDataToDB(stTime, dfMONITOR_DATA_TYPE_CHAT_SESSION, dfCHAT_NO, &g_monitor._chat.SESSION);
+	SaveDataToDB(stTime, dfMONITOR_DATA_TYPE_CHAT_PLAYER, dfCHAT_NO, &g_monitor._chat.PLAYER);
+	SaveDataToDB(stTime, dfMONITOR_DATA_TYPE_CHAT_UPDATE_TPS, dfCHAT_NO, &g_monitor._chat.UPDATE_TPS);
+	SaveDataToDB(stTime, dfMONITOR_DATA_TYPE_CHAT_PACKET_POOL, dfCHAT_NO, &g_monitor._chat.PACKET_POOL);
+	SaveDataToDB(stTime, dfMONITOR_DATA_TYPE_CHAT_UPDATEMSG_POOL, dfCHAT_NO, &g_monitor._chat.UPDATEMSG_POOL);
+
+	// Server
+	SaveDataToDB(stTime, dfMONITOR_DATA_TYPE_MONITOR_CPU_TOTAL, dfSERVER_NO, &g_monitor._server.CPU_TOTAL);
+	SaveDataToDB(stTime, dfMONITOR_DATA_TYPE_MONITOR_NONPAGED_MEMORY, dfSERVER_NO, &g_monitor._server.NONPAGED_MEMORY);
+	SaveDataToDB(stTime, dfMONITOR_DATA_TYPE_MONITOR_NETWORK_RECV, dfSERVER_NO, &g_monitor._server.NETWORK_RECV);
+	SaveDataToDB(stTime, dfMONITOR_DATA_TYPE_MONITOR_NETWORK_SEND, dfSERVER_NO, &g_monitor._server.NETWORK_SEND);
+	SaveDataToDB(stTime, dfMONITOR_DATA_TYPE_MONITOR_AVAILABLE_MEMORY, dfSERVER_NO, &g_monitor._server.AVAILABLE_MEMORY);
+
+	::printf("[%d-%02d-%02d %02d:%02d:%02d] Save Log To DB Success\n",
+		stTime.wYear, stTime.wMonth, stTime.wDay, stTime.wHour, stTime.wMinute, stTime.wSecond);
+}
+
+void CNetMonitorServer::SaveDataToDB(SYSTEMTIME stTime, BYTE type, BYTE serverNo, CData* data)
+{
+	long sum = InterlockedExchange(&data->_sum, 0);
+	long call = InterlockedExchange(&data->_call, 0);
+	long min = InterlockedExchange(&data->_min, LONG_MAX);
+	long max = InterlockedExchange(&data->_max, LONG_MIN);
+
+	char time[dfTIME_LEN] = { 0, };
+	sprintf_s(time, "%d-%02d-%02d %02d:%02d:%02d",
+		stTime.wYear, stTime.wMonth, stTime.wDay,
+		stTime.wHour, stTime.wMinute, stTime.wSecond);
+
 	char table[dfTABLE_LEN] = { 0, };
-	sprintf_s(table, "monitorLog_%d%d", stTime.wYear, stTime.wMonth);
+	sprintf_s(table, "monitorlog_%d%d", stTime.wYear, stTime.wMonth);
 
 	char query[dfQUERY_MAX] = { 0, };
-	sprintf_s(query, dfQUERY_MAX,
-		"INSERT INTO %s"
-		"(%d, %d, %d, %d, %d, %d)"
-		"VALUE (%d, %d, %d, %d, %d, %d)",
-		table, 0, 0, 0, 0, 0, 0,
-		0, 0, 0, 0, 0, 0);
+	if (call == 0)
+	{
+		sprintf_s(query, dfQUERY_MAX,
+			"INSERT INTO %s (logtime, serverno, type, avr, min, max) VALUES (\"%s\", % d, % d, % d, % d, % d)",
+			table, time, serverNo, type, 0, 0, 0);
+	}
+	else
+	{
+		sprintf_s(query, dfQUERY_MAX,
+			"INSERT INTO %s (logtime, serverno, type, avr, min, max) VALUES (\"%s\", %d, %d, %d, %d, %d)",
+			table, time, serverNo, type, sum / call, min, max);
+	}
 
 	int query_stat = mysql_query(_connection, query);
 	if (query_stat != 0)
@@ -229,14 +298,15 @@ void CNetMonitorServer::SendDatasToDB()
 		if (mysql_errno(_connection) == 1146)
 		{
 			char createQuery[dfQUERY_MAX] = { 0, };
-			sprintf_s(createQuery, "CREATE TABLE %s LIKE monitorLog_template", table);
+
+			sprintf_s(createQuery, "CREATE TABLE %s LIKE monitorlog", table);
 			mysql_query(_connection, createQuery);
 			mysql_query(_connection, query);
 		}
 		else
 		{
-			LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Mysql query error : %s (%d)\n", mysql_error(&conn), ret);
-			::printf("Mysql query error : %s (%d)\n", mysql_error(&conn), ret);
+			LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Mysql query error : %s\n", mysql_error(&_conn));
+			::printf("Mysql query error : %s\n", mysql_error(&_conn));
 		}
 	}
 }
@@ -245,7 +315,7 @@ unsigned int __stdcall CNetMonitorServer::SendThread(void* arg)
 {
 	CNetMonitorServer* pServer = (CNetMonitorServer*)arg;
 	CLockFreeQueue<CNetJob*>** pJobQueues = pServer->_pJobQueues;
-	long undesired = 0;
+	pServer->_sendOldTick = timeGetTime();
 
 	while (pServer->_serverAlive)
 	{
@@ -253,7 +323,7 @@ unsigned int __stdcall CNetMonitorServer::SendThread(void* arg)
 		vector<unsigned __int64>::iterator it = pServer->_sessions.begin();
 		for (; it < pServer->_sessions.end(); it++)
 		{
-			pServer->SendMonitorPackets((*it));
+			pServer->SendDatasToClient((*it));
 		}
 	}
 	return 0;
@@ -276,57 +346,60 @@ void CNetMonitorServer::ReqSendUnicast(unsigned __int64 sessionID, CNetPacket* p
 	}
 }
 
-void CNetMonitorServer::SendMonitorPackets(unsigned __int64 sessionID)
+void CNetMonitorServer::SendDatasToClient(unsigned __int64 sessionID)
 {
 	// Login
-	SetDataToPacket(sessionID, dfMONITOR_DATA_TYPE_LOGIN_SERVER_RUN , dfLOGIN_NO, &g_monitor._login.SERVER_RUN);
-	SetDataToPacket(sessionID, dfMONITOR_DATA_TYPE_LOGIN_SERVER_CPU , dfLOGIN_NO, &g_monitor._login.SERVER_CPU);
-	SetDataToPacket(sessionID, dfMONITOR_DATA_TYPE_LOGIN_SERVER_MEM , dfLOGIN_NO, &g_monitor._login.SERVER_MEM);
-	SetDataToPacket(sessionID, dfMONITOR_DATA_TYPE_LOGIN_SESSION , dfLOGIN_NO, &g_monitor._login.SESSION);
-	SetDataToPacket(sessionID, dfMONITOR_DATA_TYPE_LOGIN_AUTH_TPS , dfLOGIN_NO, &g_monitor._login.AUTH_TPS);
-	SetDataToPacket(sessionID, dfMONITOR_DATA_TYPE_LOGIN_PACKET_POOL , dfLOGIN_NO, &g_monitor._login.PACKET_POOL);
+	SendDataToClient(sessionID, dfMONITOR_DATA_TYPE_LOGIN_SERVER_RUN , dfLOGIN_NO, &g_monitor._login.SERVER_RUN);
+	SendDataToClient(sessionID, dfMONITOR_DATA_TYPE_LOGIN_SERVER_CPU , dfLOGIN_NO, &g_monitor._login.SERVER_CPU);
+	SendDataToClient(sessionID, dfMONITOR_DATA_TYPE_LOGIN_SERVER_MEM , dfLOGIN_NO, &g_monitor._login.SERVER_MEM);
+	SendDataToClient(sessionID, dfMONITOR_DATA_TYPE_LOGIN_SESSION , dfLOGIN_NO, &g_monitor._login.SESSION);
+	SendDataToClient(sessionID, dfMONITOR_DATA_TYPE_LOGIN_AUTH_TPS , dfLOGIN_NO, &g_monitor._login.AUTH_TPS);
+	SendDataToClient(sessionID, dfMONITOR_DATA_TYPE_LOGIN_PACKET_POOL , dfLOGIN_NO, &g_monitor._login.PACKET_POOL);
 	
 	// Game
-	SetDataToPacket(sessionID, dfMONITOR_DATA_TYPE_GAME_SERVER_RUN , dfGAME_NO, &g_monitor._game.SERVER_RUN);
-	SetDataToPacket(sessionID, dfMONITOR_DATA_TYPE_GAME_SERVER_CPU , dfGAME_NO, &g_monitor._game.SERVER_CPU);
-	SetDataToPacket(sessionID, dfMONITOR_DATA_TYPE_GAME_SERVER_MEM , dfGAME_NO, &g_monitor._game.SERVER_MEM);
-	SetDataToPacket(sessionID, dfMONITOR_DATA_TYPE_GAME_SESSION , dfGAME_NO, &g_monitor._game.SESSION);
-	SetDataToPacket(sessionID, dfMONITOR_DATA_TYPE_GAME_AUTH_PLAYER , dfGAME_NO, &g_monitor._game.AUTH_PLAYER);
-	SetDataToPacket(sessionID, dfMONITOR_DATA_TYPE_GAME_GAME_PLAYER , dfGAME_NO, &g_monitor._game.GAME_PLAYER);
-	SetDataToPacket(sessionID, dfMONITOR_DATA_TYPE_GAME_ACCEPT_TPS , dfGAME_NO, &g_monitor._game.ACCEPT_TPS);
-	SetDataToPacket(sessionID, dfMONITOR_DATA_TYPE_GAME_PACKET_RECV_TPS , dfGAME_NO, &g_monitor._game.PACKET_RECV_TPS);
-	SetDataToPacket(sessionID, dfMONITOR_DATA_TYPE_GAME_PACKET_SEND_TPS , dfGAME_NO, &g_monitor._game.PACKET_SEND_TPS);
-	SetDataToPacket(sessionID, dfMONITOR_DATA_TYPE_GAME_DB_WRITE_TPS, dfGAME_NO, &g_monitor._game.DB_WRITE_TPS);
-	SetDataToPacket(sessionID, dfMONITOR_DATA_TYPE_GAME_DB_WRITE_MSG , dfGAME_NO, &g_monitor._game.DB_WRITE_MSG);
-	SetDataToPacket(sessionID, dfMONITOR_DATA_TYPE_GAME_AUTH_THREAD_FPS , dfGAME_NO, &g_monitor._game.AUTH_THREAD_FPS);
-	SetDataToPacket(sessionID, dfMONITOR_DATA_TYPE_GAME_GAME_THREAD_FPS , dfGAME_NO, &g_monitor._game.GAME_THREAD_FPS);
-	SetDataToPacket(sessionID, dfMONITOR_DATA_TYPE_GAME_PACKET_POOL , dfGAME_NO, &g_monitor._game.PACKET_POOL);
+	SendDataToClient(sessionID, dfMONITOR_DATA_TYPE_GAME_SERVER_RUN , dfGAME_NO, &g_monitor._game.SERVER_RUN);
+	SendDataToClient(sessionID, dfMONITOR_DATA_TYPE_GAME_SERVER_CPU , dfGAME_NO, &g_monitor._game.SERVER_CPU);
+	SendDataToClient(sessionID, dfMONITOR_DATA_TYPE_GAME_SERVER_MEM , dfGAME_NO, &g_monitor._game.SERVER_MEM);
+	SendDataToClient(sessionID, dfMONITOR_DATA_TYPE_GAME_SESSION , dfGAME_NO, &g_monitor._game.SESSION);
+	SendDataToClient(sessionID, dfMONITOR_DATA_TYPE_GAME_AUTH_PLAYER , dfGAME_NO, &g_monitor._game.AUTH_PLAYER);
+	SendDataToClient(sessionID, dfMONITOR_DATA_TYPE_GAME_GAME_PLAYER , dfGAME_NO, &g_monitor._game.GAME_PLAYER);
+	SendDataToClient(sessionID, dfMONITOR_DATA_TYPE_GAME_ACCEPT_TPS , dfGAME_NO, &g_monitor._game.ACCEPT_TPS);
+	SendDataToClient(sessionID, dfMONITOR_DATA_TYPE_GAME_PACKET_RECV_TPS , dfGAME_NO, &g_monitor._game.PACKET_RECV_TPS);
+	SendDataToClient(sessionID, dfMONITOR_DATA_TYPE_GAME_PACKET_SEND_TPS , dfGAME_NO, &g_monitor._game.PACKET_SEND_TPS);
+	SendDataToClient(sessionID, dfMONITOR_DATA_TYPE_GAME_DB_WRITE_TPS, dfGAME_NO, &g_monitor._game.DB_WRITE_TPS);
+	SendDataToClient(sessionID, dfMONITOR_DATA_TYPE_GAME_DB_WRITE_MSG , dfGAME_NO, &g_monitor._game.DB_WRITE_MSG);
+	SendDataToClient(sessionID, dfMONITOR_DATA_TYPE_GAME_AUTH_THREAD_FPS , dfGAME_NO, &g_monitor._game.AUTH_THREAD_FPS);
+	SendDataToClient(sessionID, dfMONITOR_DATA_TYPE_GAME_GAME_THREAD_FPS , dfGAME_NO, &g_monitor._game.GAME_THREAD_FPS);
+	SendDataToClient(sessionID, dfMONITOR_DATA_TYPE_GAME_PACKET_POOL , dfGAME_NO, &g_monitor._game.PACKET_POOL);
 	
 	// Chat
-	SetDataToPacket(sessionID, dfMONITOR_DATA_TYPE_CHAT_SERVER_RUN , dfCHAT_NO, &g_monitor._chat.SERVER_RUN);
-	SetDataToPacket(sessionID, dfMONITOR_DATA_TYPE_CHAT_SERVER_CPU , dfCHAT_NO, &g_monitor._chat.SERVER_CPU);
-	SetDataToPacket(sessionID, dfMONITOR_DATA_TYPE_CHAT_SERVER_MEM , dfCHAT_NO, &g_monitor._chat.SERVER_MEM);
-	SetDataToPacket(sessionID, dfMONITOR_DATA_TYPE_CHAT_SESSION , dfCHAT_NO, &g_monitor._chat.SESSION);
-	SetDataToPacket(sessionID, dfMONITOR_DATA_TYPE_CHAT_PLAYER , dfCHAT_NO, &g_monitor._chat.PLAYER);
-	SetDataToPacket(sessionID, dfMONITOR_DATA_TYPE_CHAT_UPDATE_TPS , dfCHAT_NO, &g_monitor._chat.UPDATE_TPS);
-	SetDataToPacket(sessionID, dfMONITOR_DATA_TYPE_CHAT_PACKET_POOL , dfCHAT_NO, &g_monitor._chat.PACKET_POOL);
-	SetDataToPacket(sessionID, dfMONITOR_DATA_TYPE_CHAT_UPDATEMSG_POOL , dfCHAT_NO, &g_monitor._chat.UPDATEMSG_POOL);
+	SendDataToClient(sessionID, dfMONITOR_DATA_TYPE_CHAT_SERVER_RUN , dfCHAT_NO, &g_monitor._chat.SERVER_RUN);
+	SendDataToClient(sessionID, dfMONITOR_DATA_TYPE_CHAT_SERVER_CPU , dfCHAT_NO, &g_monitor._chat.SERVER_CPU);
+	SendDataToClient(sessionID, dfMONITOR_DATA_TYPE_CHAT_SERVER_MEM , dfCHAT_NO, &g_monitor._chat.SERVER_MEM);
+	SendDataToClient(sessionID, dfMONITOR_DATA_TYPE_CHAT_SESSION , dfCHAT_NO, &g_monitor._chat.SESSION);
+	SendDataToClient(sessionID, dfMONITOR_DATA_TYPE_CHAT_PLAYER , dfCHAT_NO, &g_monitor._chat.PLAYER);
+	SendDataToClient(sessionID, dfMONITOR_DATA_TYPE_CHAT_UPDATE_TPS , dfCHAT_NO, &g_monitor._chat.UPDATE_TPS);
+	SendDataToClient(sessionID, dfMONITOR_DATA_TYPE_CHAT_PACKET_POOL , dfCHAT_NO, &g_monitor._chat.PACKET_POOL);
+	SendDataToClient(sessionID, dfMONITOR_DATA_TYPE_CHAT_UPDATEMSG_POOL , dfCHAT_NO, &g_monitor._chat.UPDATEMSG_POOL);
 	
 	// Server
-	SetDataToPacket(sessionID, dfMONITOR_DATA_TYPE_MONITOR_CPU_TOTAL, dfSERVER_NO, &g_monitor._server.CPU_TOTAL);
-	SetDataToPacket(sessionID, dfMONITOR_DATA_TYPE_MONITOR_NONPAGED_MEMORY , dfSERVER_NO, &g_monitor._server.NONPAGED_MEMORY);
-	SetDataToPacket(sessionID, dfMONITOR_DATA_TYPE_MONITOR_NETWORK_RECV , dfSERVER_NO, &g_monitor._server.NETWORK_RECV);
-	SetDataToPacket(sessionID, dfMONITOR_DATA_TYPE_MONITOR_NETWORK_SEND , dfSERVER_NO, &g_monitor._server.NETWORK_SEND);
-	SetDataToPacket(sessionID, dfMONITOR_DATA_TYPE_MONITOR_AVAILABLE_MEMORY , dfSERVER_NO, &g_monitor._server.AVAILABLE_MEMORY);
+	SendDataToClient(sessionID, dfMONITOR_DATA_TYPE_MONITOR_CPU_TOTAL, dfSERVER_NO, &g_monitor._server.CPU_TOTAL);
+	SendDataToClient(sessionID, dfMONITOR_DATA_TYPE_MONITOR_NONPAGED_MEMORY , dfSERVER_NO, &g_monitor._server.NONPAGED_MEMORY);
+	SendDataToClient(sessionID, dfMONITOR_DATA_TYPE_MONITOR_NETWORK_RECV , dfSERVER_NO, &g_monitor._server.NETWORK_RECV);
+	SendDataToClient(sessionID, dfMONITOR_DATA_TYPE_MONITOR_NETWORK_SEND , dfSERVER_NO, &g_monitor._server.NETWORK_SEND);
+	SendDataToClient(sessionID, dfMONITOR_DATA_TYPE_MONITOR_AVAILABLE_MEMORY , dfSERVER_NO, &g_monitor._server.AVAILABLE_MEMORY);
 }
 
-void CNetMonitorServer::SetDataToPacket(unsigned __int64 sessionID, BYTE type, BYTE serverNo, CData* data)
+void CNetMonitorServer::SendDataToClient(unsigned __int64 sessionID, BYTE type, BYTE serverNo, CData* data)
 {
 	long val = InterlockedExchange(&data->_val, -1);
 	long timestamp = InterlockedExchange(&data->_timestamp, -1);
-	InterlockedAdd(&data->_sum, val);
-
 	if (val == -1 || timestamp == -1) return;
+
+	InterlockedAdd(&data->_sum, val);
+	InterlockedIncrement(&data->_call);
+	if (data->_min > val) data->_min = val;
+	if (data->_max < val) data->_max = val;
 
 	CNetPacket* packet = CNetPacket::Alloc();
 	packet->Clear();

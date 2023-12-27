@@ -160,14 +160,12 @@ void CLanMonitorServer::OnSend(unsigned __int64 sessionID, int sendSize)
 
 void CLanMonitorServer::HandleAccept(unsigned __int64 sessionID)
 {
-	// LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Accept: %016llx\n", sessionID);
-	// ::wprintf(L"Accept: %016llx\n", sessionID);
+	// TO-DO
 }
 
 void CLanMonitorServer::HandleRelease(unsigned __int64 sessionID)
 {
-	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Release: %016llx\n", sessionID);
-	::wprintf(L"Release: %016llx\n", sessionID);
+	// TO-DO
 }
 
 void CLanMonitorServer::HandleRecv(unsigned __int64 sessionID, CRecvLanPacket* packet)
@@ -222,7 +220,6 @@ void CLanMonitorServer::Handle_DATA_UPDATE(unsigned __int64 sessionID, CRecvLanP
 {
 	BYTE dataType;
 	*packet >> dataType;
-	printf("%d: ", dataType);
 
 	switch (dataType)
 	{
@@ -382,6 +379,4 @@ void CLanMonitorServer::GetDataFromPacket(CRecvLanPacket* packet, CData* data)
 	*packet >> timestamp;
 	InterlockedExchange(&data->_val, val);
 	InterlockedExchange(&data->_timestamp, timestamp);
-
-	printf("%d, %d\n", val, timestamp);
 }

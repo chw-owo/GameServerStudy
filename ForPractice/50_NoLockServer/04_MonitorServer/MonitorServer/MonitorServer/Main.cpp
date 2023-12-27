@@ -32,8 +32,7 @@ int wmain(int argc, wchar_t* argv[])
 
     HANDLE event = CreateEvent(0, false, false, 0);
     if (event == 0) return 0;
-    WaitForSingleObject(event, INFINITE);
-    
+    WaitForSingleObject(event, INFINITE); 
     timeEndPeriod(1);
 
     LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Main Thread Terminate\n");

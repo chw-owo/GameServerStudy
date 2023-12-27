@@ -18,9 +18,9 @@ protected:
 	~CLanServer() {};
 
 protected:
-	bool LanworkInitialize(
+	bool NetworkInitialize(
 		const wchar_t* IP, short port, int numOfThreads, int numOfRunnings, bool nagle, bool monitorServer = false);
-	bool LanworkTerminate();
+	bool NetworkTerminate();
 
 protected:
 	bool Disconnect(unsigned __int64 sessionID);
@@ -42,10 +42,10 @@ protected:
 	virtual void OnError(int errorCode, wchar_t* errorMsg) = 0;
 	virtual void OnDebug(int debugCode, wchar_t* debugMsg) = 0;
 
-	// Called in Lanwork Library
+	// Called in Network Library
 private:
 	static unsigned int WINAPI AcceptThread(void* arg);
-	static unsigned int WINAPI LanworkThread(void* arg);
+	static unsigned int WINAPI NetworkThread(void* arg);
 
 private:
 	void HandleRelease(unsigned __int64 sessionID);
@@ -75,7 +75,7 @@ private:
 private:
 	HANDLE _acceptThread;
 	HANDLE* _networkThreads;
-	HANDLE _hLanworkCP;
+	HANDLE _hNetworkCP;
 
 public: // TO-DO: private
 #define __ID_BIT__ 47

@@ -22,7 +22,7 @@ bool CLanClient::NetworkInitialize(const wchar_t* IP, short port, int numOfThrea
 	if (startRet != 0)
 	{
 		wchar_t stErrMsg[dfERR_MAX];
-		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: WSAStartup Error\n", _T(__FUNCTION__), __LINE__);
+		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: WSAStartup Error", _T(__FUNCTION__), __LINE__);
 		OnError(ERR_WSASTARTUP, stErrMsg);
 		return false;
 	}
@@ -33,7 +33,7 @@ bool CLanClient::NetworkInitialize(const wchar_t* IP, short port, int numOfThrea
 	{
 		int err = ::WSAGetLastError();
 		wchar_t stErrMsg[dfERR_MAX];
-		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Socket is INVALID, %d\n", _T(__FUNCTION__), __LINE__, err);
+		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Socket is INVALID, %d", _T(__FUNCTION__), __LINE__, err);
 		OnError(ERR_TEMPSOCK_INVALID, stErrMsg);
 		return false;
 	}
@@ -48,7 +48,7 @@ bool CLanClient::NetworkInitialize(const wchar_t* IP, short port, int numOfThrea
 	{
 		int err = WSAGetLastError();
 		wchar_t stErrMsg[dfERR_MAX];
-		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Set Linger Option Error, %d\n", _T(__FUNCTION__), __LINE__, err);
+		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Set Linger Option Error, %d", _T(__FUNCTION__), __LINE__, err);
 		OnError(ERR_SET_LINGER, stErrMsg);
 		return false;
 	}
@@ -60,7 +60,7 @@ bool CLanClient::NetworkInitialize(const wchar_t* IP, short port, int numOfThrea
 	{
 		int err = WSAGetLastError();
 		wchar_t stErrMsg[dfERR_MAX];
-		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Set SendBuf Option Error, %d\n", _T(__FUNCTION__), __LINE__, err);
+		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Set SendBuf Option Error, %d", _T(__FUNCTION__), __LINE__, err);
 		OnError(ERR_SET_SNDBUF_0, stErrMsg);
 		return false;
 	}
@@ -76,7 +76,7 @@ bool CLanClient::NetworkInitialize(const wchar_t* IP, short port, int numOfThrea
 	{
 		int err = ::WSAGetLastError();
 		wchar_t stErrMsg[dfERR_MAX];
-		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Socket Connect Error, %d\n", _T(__FUNCTION__), __LINE__, err);
+		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Socket Connect Error, %d", _T(__FUNCTION__), __LINE__, err);
 		OnError(ERR_TEMPSOCK_CONNECT, stErrMsg);
 		return false;
 	}
@@ -89,7 +89,7 @@ bool CLanClient::NetworkInitialize(const wchar_t* IP, short port, int numOfThrea
 	{
 		int err = WSAGetLastError();
 		wchar_t stErrMsg[dfERR_MAX];
-		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Create IOCP Error, %d\n", _T(__FUNCTION__), __LINE__, err);
+		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Create IOCP Error, %d", _T(__FUNCTION__), __LINE__, err);
 		OnError(ERR_CREATE_IOCP, stErrMsg);
 		return false;
 	}
@@ -103,7 +103,7 @@ bool CLanClient::NetworkInitialize(const wchar_t* IP, short port, int numOfThrea
 		{
 			int err = WSAGetLastError(); 
 			wchar_t stErrMsg[dfERR_MAX];
-			swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Create Network Thread Error, %d\n", _T(__FUNCTION__), __LINE__, err);
+			swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Create Network Thread Error, %d", _T(__FUNCTION__), __LINE__, err);
 			OnError(ERR_CREATE_NETWORK_THREAD, stErrMsg);
 			return false;
 		}
@@ -144,7 +144,7 @@ bool CLanClient::Disconnect()
 	if (InterlockedExchange(&_networkAlive, 1) != 0)
 	{
 		wchar_t stErrMsg[dfERR_MAX];
-		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: LanClient Already Terminate\n", _T(__FUNCTION__), __LINE__);
+		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: LanClient Already Terminate", _T(__FUNCTION__), __LINE__);
 		OnError(ERR_ALREADY_TERMINATE, stErrMsg);
 		return false;
 	}
@@ -169,7 +169,7 @@ bool CLanClient::SendPacket(CLanPacket* packet)
 		if (putRet != dfLANHEADER_LEN)
 		{
 			wchar_t stErrMsg[dfERR_MAX];
-			swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: CPacket PutHeaderData Error\n", _T(__FUNCTION__), __LINE__);
+			swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: CPacket PutHeaderData Error", _T(__FUNCTION__), __LINE__);
 			OnError(ERR_PACKET_PUT_HEADER, stErrMsg);
 			return false;
 		}
@@ -210,7 +210,7 @@ unsigned int __stdcall CLanClient::NetworkThread(void* arg)
 					err != ERROR_CONNECTION_ABORTED && err != ERROR_NETNAME_DELETED && err != ERROR_OPERATION_ABORTED)
 				{
 					wchar_t stErrMsg[dfERR_MAX];
-					swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: GQCS return 0, %d\n", _T(__FUNCTION__), __LINE__, err);
+					swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: GQCS return 0, %d", _T(__FUNCTION__), __LINE__, err);
 					pLanClient->OnError(ERR_GQCS_RET0, stErrMsg);
 				}
 			}
@@ -265,7 +265,7 @@ bool CLanClient::HandleRecvCP(int recvBytes)
 		{
 			Disconnect();
 			wchar_t stErrMsg[dfERR_MAX];
-			swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Recv Buffer MoveReadPos Error\n", _T(__FUNCTION__), __LINE__);
+			swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Recv Buffer MoveReadPos Error", _T(__FUNCTION__), __LINE__);
 			OnError(ERR_RECVBUF_MOVEREADPOS, stErrMsg);
 			return false;
 		}
@@ -282,7 +282,7 @@ bool CLanClient::HandleRecvCP(int recvBytes)
 		{
 			Disconnect();
 			wchar_t stErrMsg[dfERR_MAX];
-			swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Recv Buffer MoveReadPos Error\n", _T(__FUNCTION__), __LINE__);
+			swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Recv Buffer MoveReadPos Error", _T(__FUNCTION__), __LINE__);
 			OnError(ERR_RECVBUF_MOVEREADPOS, stErrMsg);
 			return false;
 		}
@@ -331,7 +331,7 @@ bool CLanClient::RecvPost()
 			if (err != WSAECONNRESET && err != WSAECONNABORTED && err != WSAEINTR)
 			{
 				wchar_t stErrMsg[dfERR_MAX];
-				swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Recv Error, %d\n", _T(__FUNCTION__), __LINE__, err);
+				swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Recv Error, %d", _T(__FUNCTION__), __LINE__, err);
 				OnError(ERR_RECV, stErrMsg);
 			}
 			DecrementUseCount();
@@ -415,7 +415,7 @@ bool CLanClient::SendPost()
 			if (err != WSAECONNRESET && err != WSAECONNABORTED && err != WSAEINTR)
 			{
 				wchar_t stErrMsg[dfERR_MAX];
-				swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Send Error, %d\n", _T(__FUNCTION__), __LINE__, err);
+				swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Send Error, %d", _T(__FUNCTION__), __LINE__, err);
 				OnError(ERR_SEND, stErrMsg);
 			}
 			InterlockedExchange(&_client->_sendFlag, 0);

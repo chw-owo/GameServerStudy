@@ -56,8 +56,7 @@ void CMonitorManager::GetEthernetData()
 	WCHAR* szCur = NULL;
 	WCHAR* szCounters = NULL;
 	WCHAR* szInterfaces = NULL;
-	DWORD dwCounterSize = 0;
-	DWORD dwInterfaceSize = 0;
+	DWORD dwCounterSize = 0, dwInterfaceSize = 0;
 	WCHAR szQuery[1024] = { 0, };
 
 	PdhEnumObjectItems(NULL, NULL, L"Network Interface", szCounters, &dwCounterSize, szInterfaces, &dwInterfaceSize, PERF_DETAIL_WIZARD, 0);
@@ -69,12 +68,10 @@ void CMonitorManager::GetEthernetData()
 		delete[] szCounters;
 		delete[] szInterfaces;
 		__debugbreak();
-		return; // TO-DO
+		return;
 	}
-
 	iCnt = 0;
 	szCur = szInterfaces;
-	PdhOpenQuery(NULL, NULL, &_netQuery);
 
 	for (; *szCur != L'\0' && iCnt < df_PDH_ETHERNET_MAX; szCur += wcslen(szCur) + 1, iCnt++)
 	{
@@ -83,12 +80,14 @@ void CMonitorManager::GetEthernetData()
 		wcscpy_s(_EthernetStruct[iCnt]._szName, szCur);
 
 		szQuery[0] = L'\0';
-		StringCbPrintf(szQuery, sizeof(WCHAR) * 1024, L"\\Network Interface(%s)\\Bytes Received/sec", szCur);
-		PdhAddCounter(_netQuery, szQuery, NULL, &_EthernetStruct[iCnt]._pdh_Counter_Network_RecvBytes);
+		PdhOpenQuery(NULL, NULL, &_EthernetStruct[iCnt]._recvQuery);
+		StringCbPrintf(szQuery, sizeof(WCHAR) * 1024, L"\\Network Interface(%s)\\Bytes Received\/sec", szCur);
+		PdhAddCounter(_EthernetStruct[iCnt]._recvQuery, szQuery, NULL, &_EthernetStruct[iCnt]._pdh_Counter_Network_RecvBytes);
 
 		szQuery[0] = L'\0';
-		StringCbPrintf(szQuery, sizeof(WCHAR) * 1024, L"\\Network Interface(%s)\\Bytes Sent/sec", szCur);
-		PdhAddCounter(_netQuery, szQuery, NULL, &_EthernetStruct[iCnt]._pdh_Counter_Network_SendBytes);
+		PdhOpenQuery(NULL, NULL, &_EthernetStruct[iCnt]._sendQuery);
+		StringCbPrintf(szQuery, sizeof(WCHAR) * 1024, L"\\Network Interface(%s)\\Bytes Sent\/sec", szCur);
+		PdhAddCounter(_EthernetStruct[iCnt]._sendQuery, szQuery, NULL, &_EthernetStruct[iCnt]._pdh_Counter_Network_SendBytes);
 	}
 }
 
@@ -184,10 +183,10 @@ long CMonitorManager::GetTotalRecv()
 	{
 		if (_EthernetStruct[iCnt]._bUse)
 		{
-			PdhCollectQueryData(_EthernetStruct[iCnt]._pdh_Counter_Network_RecvBytes);
 			PDH_FMT_COUNTERVALUE counterVal;
-			long status = PdhGetFormattedCounterValue(_EthernetStruct[iCnt]._pdh_Counter_Network_RecvBytes, PDH_FMT_LONG, NULL, &counterVal);
-			if (status == 0) sum += counterVal.longValue;
+			PdhCollectQueryData(_EthernetStruct[iCnt]._recvQuery);
+			long status = PdhGetFormattedCounterValue(_EthernetStruct[iCnt]._pdh_Counter_Network_RecvBytes, PDH_FMT_DOUBLE, NULL, &counterVal);
+			if (status == 0) sum += counterVal.doubleValue;
 		}
 	}
 	return sum;
@@ -200,10 +199,10 @@ long CMonitorManager::GetTotalSend()
 	{
 		if (_EthernetStruct[iCnt]._bUse)
 		{
-			PdhCollectQueryData(_EthernetStruct[iCnt]._pdh_Counter_Network_SendBytes);
 			PDH_FMT_COUNTERVALUE counterVal;
-			long status = PdhGetFormattedCounterValue(_EthernetStruct[iCnt]._pdh_Counter_Network_SendBytes, PDH_FMT_LONG, NULL, &counterVal);
-			if (status == 0) sum += counterVal.longValue;
+			PdhCollectQueryData(_EthernetStruct[iCnt]._sendQuery);
+			long status = PdhGetFormattedCounterValue(_EthernetStruct[iCnt]._pdh_Counter_Network_SendBytes, PDH_FMT_DOUBLE, NULL, &counterVal);
+			if (status == 0) sum += counterVal.doubleValue;
 		}
 	}
 	return sum;

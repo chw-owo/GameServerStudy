@@ -35,6 +35,7 @@ private:
 
 private:
 	bool _serverAlive = true;
+	bool _connected = false;
 	CChattingServer* _pChattingServer;
 
 private:

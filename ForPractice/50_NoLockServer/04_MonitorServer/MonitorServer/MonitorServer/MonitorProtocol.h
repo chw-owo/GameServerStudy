@@ -16,9 +16,9 @@ CommonProtocol.h 의 채팅,로그인 등 패킷변동사항이 많아서
 // Server No
 // : TO-DO (session ID 별 server No)
 #define dfSERVER_NO		1
-#define dfGAME_NO		1
-#define dfCHAT_NO		1
-#define dfLOGIN_NO		1
+#define dfGAME_NO		2
+#define dfCHAT_NO		3
+#define dfLOGIN_NO		4
 
 enum en_PACKET_TYPE
 {

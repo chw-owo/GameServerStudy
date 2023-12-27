@@ -41,11 +41,12 @@ struct st_ETHERNET
 {
     bool _bUse;
     WCHAR _szName[128];
+    PDH_HQUERY _recvQuery;
+    PDH_HQUERY _sendQuery;
     PDH_HCOUNTER _pdh_Counter_Network_RecvBytes;
     PDH_HCOUNTER _pdh_Counter_Network_SendBytes;
 };
 st_ETHERNET _EthernetStruct[df_PDH_ETHERNET_MAX];
-PDH_HQUERY _netQuery;
 
 void GetEthernetData()
 {
@@ -70,23 +71,24 @@ void GetEthernetData()
     }
     iCnt = 0;
     szCur = szInterfaces;
-    PdhOpenQuery(NULL, NULL, &_netQuery);
-
+ 
     for (; *szCur != L'\0' && iCnt < df_PDH_ETHERNET_MAX; szCur += wcslen(szCur) + 1, iCnt++)
     {
         _EthernetStruct[iCnt]._bUse = true;
         _EthernetStruct[iCnt]._szName[0] = L'\0';
         wcscpy_s(_EthernetStruct[iCnt]._szName, szCur);
              
+        // \Network Interface(Realtek PCIe GbE Family Controller)\Bytes Received/sec
+
         szQuery[0] = L'\0';
-        StringCbPrintf(szQuery, sizeof(WCHAR) * 1024, L"\\Network Interface(%s)\\Bytes Received/sec", szCur);
-        ::wprintf(L"recv: %s\n", szQuery);
-        PdhAddCounter(_netQuery, szQuery, NULL, &_EthernetStruct[iCnt]._pdh_Counter_Network_RecvBytes);
+        PdhOpenQuery(NULL, NULL, &_EthernetStruct[iCnt]._recvQuery);
+        StringCbPrintf(szQuery, sizeof(WCHAR) * 1024, L"\\Network Interface(%s)\\Bytes Received\/sec", szCur);
+        PdhAddCounter(_EthernetStruct[iCnt]._recvQuery, szQuery, NULL, &_EthernetStruct[iCnt]._pdh_Counter_Network_RecvBytes);
        
         szQuery[0] = L'\0';
-        StringCbPrintf(szQuery, sizeof(WCHAR) * 1024, L"\\Network Interface(%s)\\Bytes Sent/sec", szCur);
-        ::wprintf(L"send: %s\n", szQuery);
-        PdhAddCounter(_netQuery, szQuery, NULL, &_EthernetStruct[iCnt]._pdh_Counter_Network_SendBytes);
+        PdhOpenQuery(NULL, NULL, &_EthernetStruct[iCnt]._sendQuery);
+        StringCbPrintf(szQuery, sizeof(WCHAR) * 1024, L"\\Network Interface(%s)\\Bytes Sent\/sec", szCur);
+        PdhAddCounter(_EthernetStruct[iCnt]._sendQuery, szQuery, NULL, &_EthernetStruct[iCnt]._pdh_Counter_Network_SendBytes);
     }
     
     while (1)
@@ -98,17 +100,18 @@ void GetEthernetData()
         {
             if (_EthernetStruct[iCnt]._bUse)
             {
-                PdhCollectQueryData(_EthernetStruct[iCnt]._pdh_Counter_Network_RecvBytes);
                 PDH_FMT_COUNTERVALUE counterVal1;
+                PdhCollectQueryData(_EthernetStruct[iCnt]._recvQuery);
                 long status = PdhGetFormattedCounterValue(_EthernetStruct[iCnt]._pdh_Counter_Network_RecvBytes, PDH_FMT_DOUBLE, NULL, &counterVal1);
-                ::wprintf(L"recv: %f\n", counterVal1.doubleValue);
                 if (status == 0) recv += counterVal1.doubleValue;
 
-                PdhCollectQueryData(_EthernetStruct[iCnt]._pdh_Counter_Network_SendBytes);
+                PdhCollectQueryData(_EthernetStruct[iCnt]._sendQuery);
                 PDH_FMT_COUNTERVALUE counterVal2;
                 status = PdhGetFormattedCounterValue(_EthernetStruct[iCnt]._pdh_Counter_Network_SendBytes, PDH_FMT_DOUBLE, NULL, &counterVal2);
-                ::wprintf(L"send: %f\n", counterVal2.doubleValue);
                 if (status == 0) send += counterVal2.doubleValue;
+
+                ::wprintf(L"recv: %s - %f\n", _EthernetStruct[iCnt]._szName, counterVal1.doubleValue);
+                ::wprintf(L"send: %s - %f\n", _EthernetStruct[iCnt]._szName, counterVal2.doubleValue);
             }
         }
 
