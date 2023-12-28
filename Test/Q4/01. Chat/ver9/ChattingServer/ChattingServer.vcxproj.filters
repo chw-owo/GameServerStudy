@@ -1,0 +1,202 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Common">
+      <UniqueIdentifier>{1f4c465d-af9e-4d2f-ba1d-c24e1244abd8}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Server">
+      <UniqueIdentifier>{37afb12e-2c69-46f4-9c5b-4026189fee7b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Server\MonitorClient">
+      <UniqueIdentifier>{9d84dee8-23c7-41f9-bf00-6b3652609c0a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Server\DebugTool">
+      <UniqueIdentifier>{a57f94ac-3a50-4d97-81b7-83b60f69934a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Server\ChattingServer">
+      <UniqueIdentifier>{fe376647-d573-4347-b1ec-8c8b6e67e11d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Server\ChattingServer\Object">
+      <UniqueIdentifier>{b7fb4350-76d3-40eb-b5e3-d9cc023931c2}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="리소스 파일">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="NetLib">
+      <UniqueIdentifier>{1e646f21-cfff-4bcc-8e14-8ca1ff3bae1a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Network">
+      <UniqueIdentifier>{d6bafcba-f404-4eeb-9511-33559cf875f6}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Monitor">
+      <UniqueIdentifier>{6851edaf-1ca6-443b-bdba-e195ce6b2acc}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Network\LanClient">
+      <UniqueIdentifier>{40efd35d-5a08-406d-a910-cb8e5601253f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Network\LanServer">
+      <UniqueIdentifier>{64f8817c-20c3-4ea3-b55e-f0c6938b244d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Network\NetServer">
+      <UniqueIdentifier>{2f90633b-73de-4bdc-959b-7fc454d06ce0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Objects">
+      <UniqueIdentifier>{f21adfb5-5188-4da9-8058-e2b9a821983b}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Objects\Lan">
+      <UniqueIdentifier>{b3ae2dde-d15a-42ae-8bc8-355d9ab9fcea}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Objects\Net">
+      <UniqueIdentifier>{cf5ee254-ccdf-44ac-ad81-35d87b1bfa39}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Objects\Lan\Packet">
+      <UniqueIdentifier>{27a080dd-522d-4d48-864b-862f87f5518e}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Objects\Lan\Session">
+      <UniqueIdentifier>{653cd73e-c1b0-469f-bdf3-a8824a83d367}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Objects\Lan\Job">
+      <UniqueIdentifier>{50c95ba2-3067-48f3-b88e-3b2ef0e663db}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Objects\Net\Job">
+      <UniqueIdentifier>{08b3459c-0ee3-43c3-961e-61594443cc81}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Objects\Net\Packet">
+      <UniqueIdentifier>{dbad4289-b376-40ca-b75f-afcbe153f0ae}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Objects\Net\Session">
+      <UniqueIdentifier>{9b29501d-fe03-4301-9e28-eb214ab2cb34}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Objects\Common">
+      <UniqueIdentifier>{c33cb294-80dd-46ea-b1b5-e03063244533}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="CChattingServer.cpp">
+      <Filter>Server\ChattingServer</Filter>
+    </ClCompile>
+    <ClCompile Include="CSystemLog.cpp">
+      <Filter>Server\DebugTool</Filter>
+    </ClCompile>
+    <ClCompile Include="Main.cpp">
+      <Filter>Server</Filter>
+    </ClCompile>
+    <ClCompile Include="CMonitorClient.cpp">
+      <Filter>Server\MonitorClient</Filter>
+    </ClCompile>
+    <ClCompile Include="CMonitorManager.cpp">
+      <Filter>NetLib\Monitor</Filter>
+    </ClCompile>
+    <ClCompile Include="CLanPacket.cpp">
+      <Filter>NetLib\Objects\Lan\Packet</Filter>
+    </ClCompile>
+    <ClCompile Include="CRecvLanPacket.cpp">
+      <Filter>NetLib\Objects\Lan\Packet</Filter>
+    </ClCompile>
+    <ClCompile Include="CLanClient.cpp">
+      <Filter>NetLib\Network\LanClient</Filter>
+    </ClCompile>
+    <ClCompile Include="CLanServer.cpp">
+      <Filter>NetLib\Network\LanServer</Filter>
+    </ClCompile>
+    <ClCompile Include="CNetServer.cpp">
+      <Filter>NetLib\Network\NetServer</Filter>
+    </ClCompile>
+    <ClCompile Include="CNetPacket.cpp">
+      <Filter>NetLib\Objects\Net\Packet</Filter>
+    </ClCompile>
+    <ClCompile Include="CRecvNetPacket.cpp">
+      <Filter>NetLib\Objects\Net\Packet</Filter>
+    </ClCompile>
+    <ClCompile Include="CPlayer.cpp">
+      <Filter>Server\ChattingServer\Object</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="CPlayer.h">
+      <Filter>Server\ChattingServer\Object</Filter>
+    </ClInclude>
+    <ClInclude Include="CSector.h">
+      <Filter>Server\ChattingServer\Object</Filter>
+    </ClInclude>
+    <ClInclude Include="CChattingServer.h">
+      <Filter>Server\ChattingServer</Filter>
+    </ClInclude>
+    <ClInclude Include="CCrashDump.h">
+      <Filter>Server\DebugTool</Filter>
+    </ClInclude>
+    <ClInclude Include="CSystemLog.h">
+      <Filter>Server\DebugTool</Filter>
+    </ClInclude>
+    <ClInclude Include="CLanSession.h">
+      <Filter>NetLib\Objects\Lan\Session</Filter>
+    </ClInclude>
+    <ClInclude Include="CLanPacket.h">
+      <Filter>NetLib\Objects\Lan\Packet</Filter>
+    </ClInclude>
+    <ClInclude Include="CommonProtocol.h">
+      <Filter>Server</Filter>
+    </ClInclude>
+    <ClInclude Include="CLockFreeQueue.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="CLockFreeStack.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="CTlsPool.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="CMonitorClient.h">
+      <Filter>Server\MonitorClient</Filter>
+    </ClInclude>
+    <ClInclude Include="CMonitorManager.h">
+      <Filter>NetLib\Monitor</Filter>
+    </ClInclude>
+    <ClInclude Include="CRecvLanPacket.h">
+      <Filter>NetLib\Objects\Lan\Packet</Filter>
+    </ClInclude>
+    <ClInclude Include="CLanClient.h">
+      <Filter>NetLib\Network\LanClient</Filter>
+    </ClInclude>
+    <ClInclude Include="CLanServer.h">
+      <Filter>NetLib\Network\LanServer</Filter>
+    </ClInclude>
+    <ClInclude Include="CNetServer.h">
+      <Filter>NetLib\Network\NetServer</Filter>
+    </ClInclude>
+    <ClInclude Include="CLanJob.h">
+      <Filter>NetLib\Objects\Lan\Job</Filter>
+    </ClInclude>
+    <ClInclude Include="ErrorCode.h">
+      <Filter>NetLib\Objects\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="CNetSession.h">
+      <Filter>NetLib\Objects\Net\Session</Filter>
+    </ClInclude>
+    <ClInclude Include="CNetPacket.h">
+      <Filter>NetLib\Objects\Net\Packet</Filter>
+    </ClInclude>
+    <ClInclude Include="CRecvNetPacket.h">
+      <Filter>NetLib\Objects\Net\Packet</Filter>
+    </ClInclude>
+    <ClInclude Include="CNetJob.h">
+      <Filter>NetLib\Objects\Net\Job</Filter>
+    </ClInclude>
+    <ClInclude Include="CClientSession.h">
+      <Filter>NetLib\Objects\Lan\Session</Filter>
+    </ClInclude>
+    <ClInclude Include="CObjectPool.h">
+      <Filter>Server\ChattingServer\Object</Filter>
+    </ClInclude>
+    <ClInclude Include="CRingBuffer.h">
+      <Filter>NetLib\Objects\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Config.h">
+      <Filter>NetLib</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils.h">
+      <Filter>NetLib</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>
