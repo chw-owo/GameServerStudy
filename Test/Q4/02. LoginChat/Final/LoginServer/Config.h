@@ -30,12 +30,12 @@ struct stNetHeader
 #define dfNETHEADER_LEN				sizeof(stNetHeader)
 #endif
 
-#define dfSESSION_MAX				20000
+#define dfSESSION_MAX				10000
 #define dfADDRESS_LEN				50
 
-#define dfPACKET_DEF				40000
-#define dfRCV_PACKET_DEF			20000
-#define dfJOB_DEF					20000
+#define dfPACKET_DEF				20000
+#define dfRCV_PACKET_DEF			10000
+#define dfJOB_DEF					10000
 
 #define dfJOB_QUEUE_CNT				1
 #define dfWSARECVBUF_CNT			1

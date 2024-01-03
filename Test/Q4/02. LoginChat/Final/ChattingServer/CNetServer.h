@@ -63,7 +63,7 @@ private:
 	inline void DecrementUseCount(CNetSession* pSession);
 
 private:
-	void SleepForFixedSend();
+	inline void SleepForFixedSend();
 
 public: // For Profilings
 	long _Idx = -1;
@@ -107,7 +107,7 @@ public:
 	CLockFreeQueue<CNetJob*>* _pJobQueues[dfJOB_QUEUE_CNT] = { nullptr, };
 	CTlsPool<CNetJob>* _pJobPool;
 
-public:
+private:
 	DWORD _oldTick;
 
 	// For Monitor

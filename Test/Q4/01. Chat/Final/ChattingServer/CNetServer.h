@@ -18,7 +18,7 @@ protected:
 	~CNetServer() {};
 
 protected:
-	bool NetworkInitialize(const wchar_t* IP, short port, long sendTimer, 
+	bool NetworkInitialize(const wchar_t* IP, short port, long sendTime, 
 		int numOfThreads, int numOfRunnings, bool nagle, bool monitorServer = false);
 	bool NetworkTerminate();
 
