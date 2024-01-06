@@ -5,7 +5,7 @@
 #include "CNetPacket.h"
 #include "CTlsPool.h"
 
-class CRecvNetPacket
+class CRecvNetPacket 
 {
 	friend CTlsPool<CRecvNetPacket>;
 
@@ -25,17 +25,18 @@ public:
 	inline static CRecvNetPacket* Alloc(CNetPacket* packet)
 	{
 		CRecvNetPacket* recvNetPacket = _pool.Alloc(packet);
+		packet->_recvPacketQ.Enqueue(recvNetPacket);
 		return recvNetPacket;
 	}
-
-	inline static bool Free(CRecvNetPacket* packet)
+	
+	inline static void Free(CRecvNetPacket* packet)
 	{
-		if (CNetPacket::Free(packet->_packet))
-		{
-			_pool.Free(packet);
-			return true;
-		}
-		return false;
+		CNetPacket::Free(packet->_packet);
+	}
+
+	inline static int GetNodeCount()
+	{
+		return _pool.GetNodeCount();
 	}
 
 public:
@@ -125,8 +126,6 @@ public:
 	{
 		if (_writePos - _readPos < sizeof(short))
 		{
-			::printf("\n%d - %d = %d\n",
-				_writePos, _readPos, _writePos - _readPos);
 			_packet->_errCode = ERR_GET_SHORT_OVER;
 			throw (int)ERR_PACKET;
 			return *this;
@@ -212,7 +211,6 @@ public:
 		_readPos += iSize;
 		return iSize;
 	}
-
 };
 
 #endif

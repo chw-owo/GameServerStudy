@@ -2,7 +2,7 @@
 #ifdef LANSERVER
 
 #include "ErrorCode.h"
-#include "CGroup.h"
+#include "CLanGroup.h"
 #include <stdio.h>
 #include <tchar.h>
 
@@ -35,6 +35,8 @@ bool CLanServer::NetworkInitialize(const wchar_t* IP, short port, long sendTime,
 	_numOfThreads = numOfThreads;
 	_numOfRunnings = numOfRunnings;
 	_sendTime = sendTime;
+
+	_pReleaseQ = new CLockFreeQueue<unsigned __int64>;
 
 	// Network Setting ===================================================
 
@@ -300,7 +302,7 @@ unsigned int __stdcall CLanServer::AcceptThread(void* arg)
 		}
 
 		WCHAR addr[dfADDRESS_LEN] = { L'0' };
-		DWORD size = sizeof(addr);
+		DWORD size = dfADDRESS_LEN;
 		WSAAddressToStringW((SOCKADDR*)&clientaddr, sizeof(clientaddr), NULL, addr, &size);
 
 		// pLanServer->OnConnectRequest(addr);
@@ -449,7 +451,7 @@ unsigned int __stdcall CLanServer::ReleaseThread(void* arg)
 			SOCKET sock = pSession->_sock;
 
 			EnterCriticalSection(&pSession->_groupLock);
-			CGroup* pGroup = pSession->_pGroup;
+			CLanGroup* pGroup = pSession->_pGroup;
 			pSession->Terminate();
 			LeaveCriticalSection(&pSession->_groupLock);
 			if (pGroup != nullptr)
@@ -519,7 +521,7 @@ bool CLanServer::SendPacket(unsigned __int64 sessionID, CLanPacket* packet, bool
 	return true;
 }
 
-bool CLanServer::MoveGroup(unsigned __int64 sessionID, CGroup* pGroup)
+bool CLanServer::MoveGroup(unsigned __int64 sessionID, CLanGroup* pGroup)
 {
 	CLanSession* pSession = AcquireSessionUsage(sessionID);
 	if (pSession == nullptr) return false;
@@ -538,7 +540,7 @@ bool CLanServer::MoveGroup(unsigned __int64 sessionID, CGroup* pGroup)
 	return true;
 }
 
-bool CLanServer::RegisterGroup(CGroup* pGroup)
+bool CLanServer::RegisterGroup(CLanGroup* pGroup)
 {
 	HANDLE thread = (HANDLE)_beginthreadex(NULL, 0, pGroup->UpdateThread, (void*)pGroup, 0, nullptr);
 	if (thread == NULL)
@@ -553,10 +555,10 @@ bool CLanServer::RegisterGroup(CGroup* pGroup)
 	return true;
 }
 
-bool CLanServer::RemoveGroup(CGroup* pGroup)
+bool CLanServer::RemoveGroup(CLanGroup* pGroup)
 {
 	pGroup->SetDead();
-	unordered_map<CGroup*, HANDLE>::iterator it = _groupThreads.find(pGroup);
+	unordered_map<CLanGroup*, HANDLE>::iterator it = _groupThreads.find(pGroup);
 	HANDLE thread = it->second;
 	WaitForSingleObject(thread, INFINITE);
 	_groupThreads.erase(it);
@@ -620,6 +622,7 @@ void CLanServer::HandleRecvCP(CLanSession* pSession, int recvBytes)
 			wchar_t stErrMsg[dfERR_MAX];
 			swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Recv Buffer MoveReadPos Error", _T(__FUNCTION__), __LINE__);
 			OnError(ERR_RECVBUF_MOVEREADPOS, stErrMsg);
+			LeaveCriticalSection(&pSession->_groupLock);
 			return;
 		}
 
@@ -627,7 +630,6 @@ void CLanServer::HandleRecvCP(CLanSession* pSession, int recvBytes)
 	}
 
 	pSession->_recvBuf = CLanPacket::Alloc();
-	pSession->_recvBuf->Clear();
 	pSession->_recvBuf->AddUsageCount(1);
 	pSession->_recvBuf->CopyRecvBuf(recvBuf);
 	CLanPacket::Free(recvBuf);

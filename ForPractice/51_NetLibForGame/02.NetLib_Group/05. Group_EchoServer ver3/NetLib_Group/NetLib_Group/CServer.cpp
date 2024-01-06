@@ -73,6 +73,7 @@ void CServer::OnReleaseClient(unsigned __int64 sessionID)
 
 void CServer::OnRecv(unsigned __int64 sessionID, CPacket* packet)
 {
+	CPacket::Free(packet);
 	// ::printf("%016llx (%d): Main::%s\n", sessionID, GetCurrentThreadId(), __func__);
 }
 
@@ -237,34 +238,4 @@ unsigned int __stdcall CServer::MonitorThread(void* arg)
 	::wprintf(L"Monitor Thread (%d) Terminate\n", GetCurrentThreadId());
 	return 0;
 
-	/*
-::printf(
-	"Echo SendTPS: %d\n"
-	"Echo RecvTPS: %d\n"
-	"Echo EnterTPS: %d\n"
-	"Echo LeaveTPS: %d\n"
-	"Echo ReleaseTPS: %d\n\n",
-	_sendTPS,
-	_recvTPS,
-	_enterTPS,
-	_leaveTPS,
-	_releaseTPS
-);
-*/
-
-/*
-::printf(
-	"Login SendTPS: %d\n"
-	"Login RecvTPS: %d\n"
-	"Login EnterTPS: %d\n"
-	"Login LeaveTPS: %d\n"
-	"Login ReleaseTPS: %d\n\n",
-	_sendTPS,
-	_recvTPS,
-	_enterTPS,
-	_leaveTPS,
-	_releaseTPS
-);
-*/
-	return 0;
 }

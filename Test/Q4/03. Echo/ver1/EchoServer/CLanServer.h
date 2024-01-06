@@ -13,10 +13,10 @@
 #pragma comment(lib, "Synchronization.lib")
 using namespace std;
 
-class CGroup;
+class CLanGroup;
 class CLanServer
 {
-	friend CGroup;
+	friend CLanGroup;
 
 protected:
 	CLanServer();
@@ -31,9 +31,9 @@ protected:
 	bool SendPacket(unsigned __int64 sessionID, CLanPacket* packet, bool disconnect = false);
 
 protected:
-	bool MoveGroup(unsigned __int64 sessionID, CGroup* pGroup);
-	bool RegisterGroup(CGroup* pGroup);
-	bool RemoveGroup(CGroup* pGroup);
+	bool MoveGroup(unsigned __int64 sessionID, CLanGroup* pGroup);
+	bool RegisterGroup(CLanGroup* pGroup);
+	bool RemoveGroup(CLanGroup* pGroup);
 
 protected:
 	virtual void OnInitialize() = 0;
@@ -152,6 +152,6 @@ private:
 	volatile long _sendCnt = 0;
 
 private:
-	unordered_map<CGroup*, HANDLE> _groupThreads;
+	unordered_map<CLanGroup*, HANDLE> _groupThreads;
 };
 #endif

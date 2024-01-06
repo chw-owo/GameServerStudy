@@ -13,12 +13,10 @@ public:
 
 		_recvComplOvl._type = NET_TYPE::RECV_COMPLETE;
 		_sendComplOvl._type = NET_TYPE::SEND_COMPLETE;
-		_recvPostOvl._type = NET_TYPE::RECV_POST;
 		_sendPostOvl._type = NET_TYPE::SEND_POST;
 		_releaseOvl._type = NET_TYPE::RELEASE;
 
 		_recvBuf = CNetPacket::Alloc();
-		_recvBuf->Clear();
 		_recvBuf->AddUsageCount(1);
 	}
 
@@ -46,7 +44,6 @@ public:
 
 		ZeroMemory(&_recvComplOvl._ovl, sizeof(_recvComplOvl._ovl));
 		ZeroMemory(&_sendComplOvl._ovl, sizeof(_sendComplOvl._ovl));
-		ZeroMemory(&_recvPostOvl._ovl, sizeof(_recvPostOvl._ovl));
 		ZeroMemory(&_sendPostOvl._ovl, sizeof(_sendPostOvl._ovl));
 		ZeroMemory(&_releaseOvl._ovl, sizeof(_releaseOvl._ovl));
 	}
@@ -92,14 +89,13 @@ public:
 
 	NetworkOverlapped _recvComplOvl;
 	NetworkOverlapped _sendComplOvl;
-	NetworkOverlapped _recvPostOvl;
 	NetworkOverlapped _sendPostOvl;
 	NetworkOverlapped _releaseOvl;
 
 	volatile ValidFlag _validFlag;
 
 public: // For Group;
-	CGroup* _pGroup = nullptr;
+	CNetGroup* _pGroup = nullptr;
 	CRITICAL_SECTION _groupLock;
 	CLockFreeQueue<CRecvNetPacket*> _OnRecvQ;
 };

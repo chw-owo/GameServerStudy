@@ -4,7 +4,7 @@ CTlsPool<CPacket> CPacket::_pool = CTlsPool<CPacket>(dfPACKET_DEF, false);
 
 int CPacket::Resize(int iBufferSize)
 {
-	if (iBufferSize > dfRBUFFER_MAX_SIZE)
+	if (iBufferSize > dfSPACKET_MAX_SIZE)
 	{
 		_errCode = ERR_RESIZE_OVER_MAX;
 		return ERR_PACKET;

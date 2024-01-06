@@ -80,7 +80,7 @@ private:
 	}
 
 	inline CPacket()
-		: _iBufferSize(dfRBUFFER_DEF_SIZE), _iPayloadSize(0), _iHeaderSize(dfHEADER_LEN),
+		: _iBufferSize(dfSPACKET_DEF_SIZE), _iPayloadSize(0), _iHeaderSize(dfHEADER_LEN),
 		_iPayloadReadPos(dfHEADER_LEN), _iPayloadWritePos(dfHEADER_LEN),
 		_iHeaderReadPos(0), _iHeaderWritePos(0)
 	{
@@ -88,7 +88,7 @@ private:
 	}
 
 	inline CPacket(int headerLen)
-		: _iBufferSize(dfRBUFFER_DEF_SIZE), _iPayloadSize(0), _iHeaderSize(headerLen),
+		: _iBufferSize(dfSPACKET_DEF_SIZE), _iPayloadSize(0), _iHeaderSize(headerLen),
 		_iPayloadReadPos(headerLen), _iPayloadWritePos(headerLen),
 		_iHeaderReadPos(0), _iHeaderWritePos(0)
 	{

@@ -38,10 +38,10 @@ struct stHeader
 #define dfWSARECVBUF_CNT			2
 #define dfWSASENDBUF_CNT			100
 
-#define dfRBUFFER_DEF_SIZE			8192
+#define dfRBUFFER_DEF_SIZE			1024
 #define dfRBUFFER_MAX_SIZE			32768
 
-#define dfSPACKET_DEF_SIZE			2048
-#define dfSPACKET_MAX_SIZE			4096
+#define dfSPACKET_DEF_SIZE			256
+#define dfSPACKET_MAX_SIZE			1024
 
 #define dfMSG_MAX					256

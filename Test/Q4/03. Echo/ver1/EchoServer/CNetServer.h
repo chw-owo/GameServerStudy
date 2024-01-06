@@ -5,25 +5,28 @@
 #include "CLockFreeStack.h"
 #include "CNetSession.h"
 #include "CRecvNetPacket.h"
+#include "CMonitorManager.h"
+
 #include <ws2tcpip.h>
 #include <synchapi.h>
 #include <process.h>
 #include <unordered_map>
+
 #pragma comment(lib, "ws2_32.lib")
 #pragma comment(lib, "Synchronization.lib")
 using namespace std;
 
-class CGroup;
+class CNetGroup;
 class CNetServer
 {
-	friend CGroup;
+	friend CNetGroup;
 
 protected:
 	CNetServer();
 	~CNetServer() {};
 
 protected:
-	bool NetworkInitialize(const wchar_t* IP, short port, long sendTime, int numOfThreads, int numOfRunnings, bool nagle);
+	bool NetworkInitialize(const wchar_t* IP, short port, long sendTime, int numOfThreads, int numOfRunnings, bool nagle, bool monitorServer);
 	bool NetworkTerminate();
 
 protected:
@@ -31,9 +34,9 @@ protected:
 	bool SendPacket(unsigned __int64 sessionID, CNetPacket* packet, bool disconnect = false);
 	
 protected:
-	bool MoveGroup(unsigned __int64 sessionID, CGroup* pGroup);
-	bool RegisterGroup(CGroup* pGroup);
-	bool RemoveGroup(CGroup* pGroup);
+	bool MoveGroup(unsigned __int64 sessionID, CNetGroup* pGroup);
+	bool RegisterGroup(CNetGroup* pGroup);
+	bool RemoveGroup(CNetGroup* pGroup);
 
 protected:
 	virtual void OnInitialize() = 0;
@@ -51,42 +54,16 @@ protected:
 	virtual void OnError(int errorCode, wchar_t* errorMsg) = 0;
 	virtual void OnDebug(int debugCode, wchar_t* debugMsg) = 0;
 
-protected:
-	inline void UpdateMonitorData()
-	{
-		_acceptTPS = InterlockedExchange(&_acceptCnt, 0);
-		_disconnectTPS = InterlockedExchange(&_disconnectCnt, 0);
-		_recvTPS = InterlockedExchange(&_recvCnt, 0);
-		_sendTPS = InterlockedExchange(&_sendCnt, 0);
-
-		_acceptTotal += _acceptTPS;
-		_disconnectTotal += _disconnectTPS;
-		_recvTotal += _recvTPS;
-		_sendTotal += _sendTPS;
-	}
-
-	inline long GetSessionCount() { return _sessionCnt; }
-
-	inline unsigned long long GetAcceptTotal() { return _acceptTotal; }
-	inline unsigned long long GetDisconnectTotal() { return _disconnectTotal; }
-	inline unsigned long long GetRecvTotal() { return _recvTotal; }
-	inline unsigned long long GetSendTotal() { return _sendTotal; }
-
-	inline long GetAcceptTPS() { return _acceptTPS; }
-	inline long GetDisconnectTPS() { return _disconnectTPS; }
-	inline long GetRecvTPS() { return _recvTPS; }
-	inline long GetSendTPS() { return _sendTPS; }
-
 	// Called in Network Library
 private:
 	static unsigned int WINAPI AcceptThread(void* arg);
 	static unsigned int WINAPI NetworkThread(void* arg);
 	static unsigned int WINAPI SendThread(void* arg);
-	static unsigned int WINAPI ReleaseThread(void* arg);
 
 private:
 	inline void HandleRecvCP(CNetSession* pSession, int recvBytes);
 	inline void HandleSendCP(CNetSession* pSession, int sendBytes);
+	inline void HandleRelease(unsigned __int64 sessionID);
 	inline bool RecvPost(CNetSession* pSession);
 	inline bool SendPost(CNetSession* pSession);
 	inline bool SendCheck(CNetSession* pSession);
@@ -130,10 +107,6 @@ public:
 	volatile __int64 _sessionID = 0;
 	unsigned __int64 _indexMask = 0;
 	unsigned __int64 _idMask = 0;
-
-private:
-	long _releaseSignal = 0;
-	CLockFreeQueue<unsigned __int64>* _pReleaseQ;
 	ValidFlag _releaseFlag;
 
 private:
@@ -153,6 +126,38 @@ private:
 	volatile long _sendCnt = 0;
 
 private:
-	unordered_map<CGroup*, HANDLE> _groupThreads;
+	unordered_map<CNetGroup*, HANDLE> _groupThreads;
+
+
+public: // Monitor
+
+	inline void UpdateMonitorData()
+	{
+		_acceptTPS = InterlockedExchange(&_acceptCnt, 0);
+		_disconnectTPS = InterlockedExchange(&_disconnectCnt, 0);
+		_recvTPS = InterlockedExchange(&_recvCnt, 0);
+		_sendTPS = InterlockedExchange(&_sendCnt, 0);
+
+		_acceptTotal += _acceptTPS;
+		_disconnectTotal += _disconnectTPS;
+		_recvTotal += _recvTPS;
+		_sendTotal += _sendTPS;
+	}
+
+	inline long GetSessionCount() { return _sessionCnt; }
+
+	inline unsigned long long GetAcceptTotal() { return _acceptTotal; }
+	inline unsigned long long GetDisconnectTotal() { return _disconnectTotal; }
+	inline unsigned long long GetRecvTotal() { return _recvTotal; }
+	inline unsigned long long GetSendTotal() { return _sendTotal; }
+
+	inline long GetAcceptTPS() { return _acceptTPS; }
+	inline long GetDisconnectTPS() { return _disconnectTPS; }
+	inline long GetRecvTPS() { return _recvTPS; }
+	inline long GetSendTPS() { return _sendTPS; }
+
+public:
+	CMonitorManager* _mm;
+
 };
 #endif

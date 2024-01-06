@@ -490,23 +490,18 @@ unsigned int __stdcall CNetServer::SendThread(void* arg)
 	{
 		pNetServer->SleepForFixedSend();
 		
-		// int send = 0;
-		// int alive = 0;
 		for (int i = 0; i < dfSESSION_MAX; i++)
 		{
 			unsigned __int64 sessionID = pNetServer->_sessions[i]->GetID();
 			CNetSession* pSession = pNetServer->AcquireSessionUsage(sessionID);
 			if (pSession == nullptr) continue;
-			// alive++;
 			
 			if (pNetServer->SendCheck(pSession))
 			{
 				pNetServer->SendPost(pSession);
-				// send++;
 			}
 			pNetServer->ReleaseSessionUsage(pSession);
 		}
-		// ::printf("%d/%d\n", send, alive);
 	}
 
 	wchar_t stErrMsg[dfERR_MAX];
@@ -626,8 +621,6 @@ bool CNetServer::HandleRecvCP(CNetSession* pSession, int recvBytes)
 			return false;
 		}
 
-		// ::printf("%016llx: Header %d\n", pSession->GetID(), recvBuf->GetPayloadReadPos());
-
 		if (recvBuf->Decode(*header, recvBuf->GetPayloadReadPtr()) == false)
 		{
 			Disconnect(pSession->GetID());
@@ -658,7 +651,6 @@ bool CNetServer::HandleRecvCP(CNetSession* pSession, int recvBytes)
 	pSession->_recvBuf = CNetPacket::Alloc();
 	pSession->_recvBuf->Clear();
 	pSession->_recvBuf->AddUsageCount(1);
-
 	pSession->_recvBuf->CopyRecvBuf(recvBuf);
 	CNetPacket::Free(recvBuf);
 

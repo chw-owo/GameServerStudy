@@ -254,7 +254,7 @@ bool CLanClient::HandleRecvCP(int recvBytes)
 
 	while (useSize > dfLANHEADER_LEN)
 	{
-		// // ::printf("%016llx: Payload %d\n", _client->GetID(), recvBuf->GetPayloadReadPos());
+		// ::printf("%016llx: Payload %d\n", _client->GetID(), recvBuf->GetPayloadReadPos());
 
 		stLanHeader* header = (stLanHeader*)recvBuf->GetPayloadReadPtr();
 
@@ -291,9 +291,7 @@ bool CLanClient::HandleRecvCP(int recvBytes)
 	}
 
 	_client->_recvBuf = CLanPacket::Alloc();
-	_client->_recvBuf->Clear();
 	_client->_recvBuf->AddUsageCount(1);
-
 	_client->_recvBuf->CopyRecvBuf(recvBuf);
 	CLanPacket::Free(recvBuf);
 

@@ -2,8 +2,8 @@
 
 // Network Info
 #define dfSERVER_IP				L"0.0.0.0"
-#define dfLOGIN_PORT			8091
-#define dfECHO_PORT				40000
+#define dfLOGIN_PORT			12077
+#define dfECHO_PORT				12078
 #define dfSERVER_DISCONNECT		false
 #define dfTHREAD_MAX			32
 #define dfUSER_MAX				20000

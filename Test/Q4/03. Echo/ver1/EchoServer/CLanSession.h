@@ -18,7 +18,6 @@ public:
 		_releaseOvl._type = NET_TYPE::RELEASE;
 
 		_recvBuf = CLanPacket::Alloc();
-		_recvBuf->Clear();
 		_recvBuf->AddUsageCount(1);
 	}
 
@@ -99,7 +98,7 @@ public:
 	volatile ValidFlag _validFlag;
 
 public: // For Group;
-	CGroup* _pGroup = nullptr;
+	CLanGroup* _pGroup = nullptr;
 	CRITICAL_SECTION _groupLock;
 	CLockFreeQueue<CRecvLanPacket*> _OnRecvQ;
 };

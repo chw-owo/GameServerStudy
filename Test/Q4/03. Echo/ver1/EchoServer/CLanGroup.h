@@ -3,22 +3,20 @@
 #define _WINSOCKAPI_
 #endif
 
-#include "CPacket.h"
-#include "CSession.h"
+#include "CLanPacket.h"
+#include "CLanSession.h"
 #include <vector>
 #include <Windows.h>
 using namespace std;
 
-class CNetServer;
 class CLanServer;
-class CGroup
+class CLanGroup
 {
-	friend CNetServer;
 	friend CLanServer;
 
 	// Call Everywhere
 public:
-	void Setting(CNetServer* pNet, DWORD fps)
+	void Setting(CLanServer* pNet, DWORD fps)
 	{
 		_pNet = pNet;
 		_fps = fps;	
@@ -32,11 +30,11 @@ public:
 		InterlockedIncrement(&_signal);
 	}
 
-	// Called in CGroup's Child Class
+	// Called in CLanGroup's Child Class
 protected:
 	bool Disconnect(unsigned __int64 sessionID);
-	bool SendPacket(unsigned __int64 sessionID, CPacket* packet, bool disconnect = false);
-	void MoveGroup(unsigned __int64 sessionID, CGroup* pGroup);
+	bool SendPacket(unsigned __int64 sessionID, CLanPacket* packet, bool disconnect = false);
+	void MoveGroup(unsigned __int64 sessionID, CLanGroup* pGroup);
 
 protected:
 	virtual void Initialize() = 0;
@@ -53,12 +51,12 @@ protected:
 	virtual void OnLeaveGroup(unsigned __int64 sessionID) = 0;
 
 protected:
-	virtual void OnRecv(unsigned __int64 sessionID, CPacket* packet) = 0;
+	virtual void OnRecv(unsigned __int64 sessionID, CRecvLanPacket* packet) = 0;
 	virtual void OnSend(unsigned __int64 sessionID) = 0;
 	virtual void OnError(int errorCode, wchar_t* errorMsg) = 0;
 	virtual void OnDebug(int debugCode, wchar_t* debugMsg) = 0;
 
-	// Called in CGroup
+	// Called in CLanGroup
 private:
 	static unsigned int WINAPI UpdateThread(void* arg);
 
@@ -70,7 +68,7 @@ private:
 private:
 	bool _alive = true;
 	DWORD _fps = 0;
-	CNetServer* _pNet;
+	CLanServer* _pNet;
 	long _signal = 0;
 	long _undesired = 0;
 

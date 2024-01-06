@@ -19,11 +19,11 @@
 
 #include "ErrorCode.h"
 #include "Config.h"
-#include "CTlsPool.h"
+#include "CLockFreeQueue.h"
 #include <windows.h>
 #include <stdio.h>
 
-class CGroup;
+class CNetGroup;
 class CRecvNetPacket;
 class CNetPacket
 {
@@ -33,27 +33,20 @@ class CNetPacket
 public:
 	static CTlsPool<CNetPacket> _pool;
 
-	inline static CNetPacket* Alloc()
-	{
-		CNetPacket* packet = _pool.Alloc();
-		packet->Clear();
-		return packet;
-	}
-
-	inline static bool Free(CNetPacket* packet)
-	{
-		if (InterlockedDecrement(&packet->_usageCount) == 0)
-		{
-			_pool.Free(packet);
-			return true;
-		}
-		return false;
-	}
+	static CNetPacket* Alloc();
+	static bool Free(CNetPacket* packet);
 
 	inline void AddUsageCount(long usageCount)
 	{
 		InterlockedAdd(&_usageCount, usageCount);
 	}
+
+	void SetGroup(CNetGroup* pGroup)
+	{
+		_pGroup = pGroup;
+	}
+
+	CLockFreeQueue<CRecvNetPacket*> _recvPacketQ;
 
 public:
 	inline static int GetPoolSize()
@@ -63,12 +56,12 @@ public:
 
 	inline static int GetNodeCount()
 	{
-		return _pool.GetNodeCount();
+		return _pool.GetNodeCount() - dfSESSION_MAX;
 	}
 
 protected:
 	inline CNetPacket()
-		: _iBufferSize(dfRBUFFER_DEF_SIZE), _iPayloadSize(0), _iHeaderSize(dfNETHEADER_LEN),
+		: _iBufferSize(dfSPACKET_DEF_SIZE), _iPayloadSize(0), _iHeaderSize(dfNETHEADER_LEN),
 		_iPayloadReadPos(dfNETHEADER_LEN), _iPayloadWritePos(dfNETHEADER_LEN),
 		_iHeaderReadPos(0), _iHeaderWritePos(0)
 	{
@@ -116,11 +109,12 @@ public:
 		_iHeaderWritePos = 0;
 		_usageCount = 0;
 		_encode = 0;
+		_pGroup = nullptr;
 	}
 
 	inline int Resize(int iBufferSize)
 	{
-		if (iBufferSize > dfRBUFFER_MAX_SIZE)
+		if (iBufferSize > dfSPACKET_MAX_SIZE)
 		{
 			_errCode = ERR_RESIZE_OVER_MAX;
 			return ERR_PACKET;
@@ -661,7 +655,7 @@ public:
 	volatile long _encode = 0;
 
 public:
-	CGroup* _pGroup;
+	CNetGroup* _pGroup;
 };
 
 

@@ -1,25 +1,25 @@
-#include "CGroup.h"
-#include "CNetServer.h"
+#include "CLanGroup.h"
+#include "CLanServer.h"
 #include <tchar.h>
 
-bool CGroup::Disconnect(unsigned __int64 sessionID)
+bool CLanGroup::Disconnect(unsigned __int64 sessionID)
 {
 	return _pNet->Disconnect(sessionID);
 }
 
-bool CGroup::SendPacket(unsigned __int64 sessionID, CPacket* packet, bool disconnect)
+bool CLanGroup::SendPacket(unsigned __int64 sessionID, CLanPacket* packet, bool disconnect)
 {
 	return _pNet->SendPacket(sessionID, packet, disconnect);
 }
 
-void CGroup::MoveGroup(unsigned __int64 sessionID, CGroup* pGroup)
+void CLanGroup::MoveGroup(unsigned __int64 sessionID, CLanGroup* pGroup)
 {
 	_pNet->MoveGroup(sessionID, pGroup);
 }
 
-unsigned int __stdcall CGroup::UpdateThread(void* arg)
+unsigned int __stdcall CLanGroup::UpdateThread(void* arg)
 {
-	CGroup* pGroup = (CGroup*)arg;
+	CLanGroup* pGroup = (CLanGroup*)arg;
 	pGroup->Initialize();
 	pGroup->OnInitialize();
 
@@ -49,7 +49,7 @@ unsigned int __stdcall CGroup::UpdateThread(void* arg)
 	return 0;
 }
 
-bool CGroup::SkipForFixedFrame()
+bool CLanGroup::SkipForFixedFrame()
 {
 	static DWORD oldTick = GetTickCount64();
 	if ((GetTickCount64() - oldTick) < (1000 / _fps))
@@ -58,7 +58,7 @@ bool CGroup::SkipForFixedFrame()
 	return false;
 }
 
-void CGroup::NetworkUpdate()
+void CLanGroup::NetworkUpdate()
 {
 	if (_fps == 0)
 		WaitOnAddress(&_signal, &_undesired, sizeof(long), INFINITE);
@@ -78,7 +78,7 @@ void CGroup::NetworkUpdate()
 	for (; it != _sessions.end();)
 	{
 		unsigned __int64 sessionID = *it;
-		CSession* pSession = _pNet->AcquireSessionUsage(sessionID);
+		CLanSession* pSession = _pNet->AcquireSessionUsage(sessionID);
 		if (pSession == nullptr)
 		{
 			OnLeaveGroup(sessionID);
@@ -101,9 +101,9 @@ void CGroup::NetworkUpdate()
 			while (pSession->_OnRecvQ.GetUseSize() > 0)
 			{
 				if (pSession->_pGroup != this) break;
-				CPacket* packet = pSession->_OnRecvQ.Dequeue();
+				CRecvLanPacket* packet = pSession->_OnRecvQ.Dequeue();
 				OnRecv(sessionID, packet);
-				CPacket::Free(packet);
+				CRecvLanPacket::Free(packet);
 				InterlockedDecrement(&_signal);
 			}
 			it++;
@@ -120,7 +120,7 @@ void CGroup::NetworkUpdate()
 	}
 }
 
-void CGroup::RemoveAllSessions()
+void CLanGroup::RemoveAllSessions()
 {
 	vector<unsigned __int64>::iterator it = _sessions.begin();
 	for (; it != _sessions.end(); it++)

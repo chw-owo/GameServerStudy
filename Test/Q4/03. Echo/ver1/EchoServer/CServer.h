@@ -22,7 +22,7 @@ private:
 
 private:
 	void OnReleaseClient(unsigned __int64 sessionID);
-	void OnRecv(unsigned __int64 sessionID, CPacket* packet);
+	void OnRecv(unsigned __int64 sessionID, CRecvNetPacket* packet);
 	void OnSend(unsigned __int64 sessionID);
 	void OnError(int errorCode, wchar_t* errorMsg);
 	void OnDebug(int debugCode, wchar_t* debugMsg);
@@ -30,7 +30,5 @@ private:
 public:
 	CEchoGroup* _pEchoGroup;
 	CLoginGroup* _pLoginGroup;
-	HANDLE _MonitorThread;
-	static unsigned int WINAPI MonitorThread(void* arg);
 };
 

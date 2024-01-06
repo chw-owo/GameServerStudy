@@ -24,7 +24,6 @@ public:
 		_releaseOvl._type = NET_TYPE::RELEASE;
 
 		_recvBuf = CLanPacket::Alloc();
-		_recvBuf->Clear();
 		_recvBuf->AddUsageCount(1);
 	}
 

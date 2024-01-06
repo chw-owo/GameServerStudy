@@ -95,6 +95,7 @@ void CEchoGroup::OnRecv(unsigned __int64 sessionID, CPacket* packet)
 			::wprintf(L"%s[%d] Packet Error\n", _T(__FUNCTION__), __LINE__);
 		}
 	}
+	CPacket::Free(packet);
 }
 
 void CEchoGroup::OnSend(unsigned __int64 sessionID)

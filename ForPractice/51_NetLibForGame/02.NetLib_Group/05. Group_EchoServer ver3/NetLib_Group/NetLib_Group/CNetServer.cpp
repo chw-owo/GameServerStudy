@@ -272,7 +272,7 @@ unsigned int __stdcall CNetServer::AcceptThread(void* arg)
 		}
 
 		WCHAR addr[dfADDRESS_LEN] = { L'0' };
-		DWORD size = sizeof(addr);
+		DWORD size = dfADDRESS_LEN;
 		WSAAddressToStringW((SOCKADDR*)&clientaddr, sizeof(clientaddr), NULL, addr, &size);
 
 		// pNetServer->OnConnectRequest(addr);
@@ -563,15 +563,12 @@ void CNetServer::HandleRecvCP(CSession* pSession, int recvBytes)
 		InterlockedAdd(&pSession->_pGroup->_recvCnt, cnt);
 
 	LeaveCriticalSection(&pSession->_groupLock);
-	
-
 	RecvPost(pSession);
 }
 
 void CNetServer::HandleSendCP(CSession* pSession, int sendBytes)
 {
-	int i = 0;
-	for (; i < pSession->_sendCount; i++)
+	for (int i = 0; i < pSession->_sendCount; i++)
 	{
 		CPacket* packet = pSession->_tempBuf.Dequeue();
 		if (packet == nullptr) break;

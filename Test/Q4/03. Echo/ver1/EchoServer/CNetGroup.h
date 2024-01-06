@@ -3,18 +3,16 @@
 #define _WINSOCKAPI_
 #endif
 
-#include "CPacket.h"
-#include "CSession.h"
+#include "CNetPacket.h"
+#include "CNetSession.h"
 #include <vector>
 #include <Windows.h>
 using namespace std;
 
 class CNetServer;
-class CLanServer;
-class CGroup
+class CNetGroup
 {
 	friend CNetServer;
-	friend CLanServer;
 
 	// Call Everywhere
 public:
@@ -32,11 +30,11 @@ public:
 		InterlockedIncrement(&_signal);
 	}
 
-	// Called in CGroup's Child Class
+	// Called in CNetGroup's Child Class
 protected:
 	bool Disconnect(unsigned __int64 sessionID);
-	bool SendPacket(unsigned __int64 sessionID, CPacket* packet, bool disconnect = false);
-	void MoveGroup(unsigned __int64 sessionID, CGroup* pGroup);
+	bool SendPacket(unsigned __int64 sessionID, CNetPacket* packet, bool disconnect = false);
+	void MoveGroup(unsigned __int64 sessionID, CNetGroup* pGroup);
 
 protected:
 	virtual void Initialize() = 0;
@@ -53,12 +51,12 @@ protected:
 	virtual void OnLeaveGroup(unsigned __int64 sessionID) = 0;
 
 protected:
-	virtual void OnRecv(unsigned __int64 sessionID, CPacket* packet) = 0;
+	virtual void OnRecv(unsigned __int64 sessionID, CRecvNetPacket* packet) = 0;
 	virtual void OnSend(unsigned __int64 sessionID) = 0;
 	virtual void OnError(int errorCode, wchar_t* errorMsg) = 0;
 	virtual void OnDebug(int debugCode, wchar_t* debugMsg) = 0;
 
-	// Called in CGroup
+	// Called in CNetGroup
 private:
 	static unsigned int WINAPI UpdateThread(void* arg);
 

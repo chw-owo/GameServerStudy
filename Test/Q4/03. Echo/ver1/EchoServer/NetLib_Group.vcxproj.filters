@@ -38,12 +38,6 @@
     <Filter Include="Server\Server\Group\Login">
       <UniqueIdentifier>{f4e4f06a-eb58-4f3a-b10c-e2be907043b5}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Server\Server\Group\Login\Object">
-      <UniqueIdentifier>{d36b4cde-1c84-450a-b217-c5b956507477}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="Server\Server\Group\Echo\CEchoUser">
-      <UniqueIdentifier>{4244f4ba-3068-489b-8cd0-afda8077d7db}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Server\MonitorClient">
       <UniqueIdentifier>{fb5c9b13-1fa9-4b7d-8e84-c20ef5f7646c}</UniqueIdentifier>
     </Filter>
@@ -94,6 +88,12 @@
     </Filter>
     <Filter Include="NetLib\Group\NetGroup">
       <UniqueIdentifier>{40de36c1-3f37-4b8a-99db-0b6954f86e5a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Server\Server\Group\Echo\EchoUser">
+      <UniqueIdentifier>{4244f4ba-3068-489b-8cd0-afda8077d7db}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Server\Server\Group\Login\LoginUser">
+      <UniqueIdentifier>{d36b4cde-1c84-450a-b217-c5b956507477}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -178,10 +178,10 @@
       <Filter>Server\Server</Filter>
     </ClInclude>
     <ClInclude Include="CLoginUser.h">
-      <Filter>Server\Server\Group\Login\Object</Filter>
+      <Filter>Server\Server\Group\Login\LoginUser</Filter>
     </ClInclude>
     <ClInclude Include="CEchoUser.h">
-      <Filter>Server\Server\Group\Echo\CEchoUser</Filter>
+      <Filter>Server\Server\Group\Echo\EchoUser</Filter>
     </ClInclude>
     <ClInclude Include="CEchoGroup.h">
       <Filter>Server\Server\Group\Echo</Filter>

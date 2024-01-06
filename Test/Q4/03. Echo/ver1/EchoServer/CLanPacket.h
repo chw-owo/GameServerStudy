@@ -23,7 +23,7 @@
 #include <windows.h>
 #include <stdio.h>
 
-class CGroup;
+class CLanGroup;
 class CRecvLanPacket;
 class CLanPacket
 {
@@ -36,6 +36,7 @@ public:
 	inline static CLanPacket* Alloc()
 	{
 		CLanPacket* packet = _pool.Alloc();
+		packet->Clear();
 		return packet;
 	}
 
@@ -54,6 +55,11 @@ public:
 		InterlockedAdd(&_usageCount, usageCount);
 	}
 
+	void SetGroup(CLanGroup* pGroup)
+	{
+		_pGroup = pGroup;
+	}
+
 public:
 	inline static int GetPoolSize()
 	{
@@ -67,7 +73,7 @@ public:
 
 protected:
 	inline CLanPacket()
-		: _iBufferSize(dfRBUFFER_DEF_SIZE), _iPayloadSize(0), _iHeaderSize(dfLANHEADER_LEN),
+		: _iBufferSize(dfSPACKET_DEF_SIZE), _iPayloadSize(0), _iHeaderSize(dfLANHEADER_LEN),
 		_iPayloadReadPos(dfLANHEADER_LEN), _iPayloadWritePos(dfLANHEADER_LEN),
 		_iHeaderReadPos(0), _iHeaderWritePos(0)
 	{
@@ -114,11 +120,12 @@ public:
 		_iHeaderReadPos = 0;
 		_iHeaderWritePos = 0;
 		_usageCount = 0;
+		_pGroup = nullptr;
 	}
 
 	inline int Resize(int iBufferSize)
 	{
-		if (iBufferSize > dfRBUFFER_MAX_SIZE)
+		if (iBufferSize > dfSPACKET_MAX_SIZE)
 		{
 			_errCode = ERR_RESIZE_OVER_MAX;
 			return ERR_PACKET;
@@ -601,7 +608,7 @@ public:
 	volatile long _usageCount = 0;
 
 public:
-	CGroup* _pGroup;
+	CLanGroup* _pGroup;
 };
 
 

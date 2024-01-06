@@ -44,7 +44,7 @@ void CMonitorManager::GetMemoryData()
 	PdhOpenQuery(NULL, NULL, &_processMemQuery);
 	PdhOpenQuery(NULL, NULL, &_nonpagedMemQuery);
 	PdhOpenQuery(NULL, NULL, &_usableMemQuery);
-	PdhAddCounter(_processMemQuery, L"\\Process(ChattingServer)\\Private Bytes", NULL, &_processMemTotal);
+	PdhAddCounter(_processMemQuery, L"\\Process(EchoServer)\\Private Bytes", NULL, &_processMemTotal);
 	PdhAddCounter(_nonpagedMemQuery, L"\\Memory\\Pool Nonpaged Bytes", NULL, &_nonpagedMemTotal);
 	PdhAddCounter(_usableMemQuery, L"\\Memory\\Available MBytes", NULL, &_usableMemTotal);
 }

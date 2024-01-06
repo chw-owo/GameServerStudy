@@ -58,22 +58,20 @@ void CLoginGroup::OnLeaveGroup(unsigned __int64 sessionID)
 	_usersMap.erase(mapIter);
 }
 
-void CLoginGroup::OnRecv(unsigned __int64 sessionID, CPacket* packet)
+void CLoginGroup::OnRecv(unsigned __int64 sessionID, CRecvNetPacket* packet)
 {
 	unordered_map<unsigned __int64, CLoginUser*>::iterator mapIter = _usersMap.find(sessionID);
 	if (mapIter == _usersMap.end())
 	{
 		LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d]: No Session %llx\n", _T(__FUNCTION__), __LINE__, sessionID);
 		::wprintf(L"%s[%d]: No Session %llx\n", _T(__FUNCTION__), __LINE__, sessionID);
-		CPacket::Free(packet);
+		CRecvNetPacket::Free(packet);
 		return;
 	}
 
 	CLoginUser* user = mapIter->second;
 	WORD msgType;
 	*packet >> msgType;
-
-	// ::printf("%016llx: Login::OnRecv %d\n", sessionID, msgType);
 
 	try
 	{
@@ -99,6 +97,8 @@ void CLoginGroup::OnRecv(unsigned __int64 sessionID, CPacket* packet)
 			::wprintf(L"%s[%d] Packet Error\n", _T(__FUNCTION__), __LINE__);
 		}
 	}
+
+	CRecvNetPacket::Free(packet);
 }
 
 void CLoginGroup::OnSend(unsigned __int64 sessionID)
@@ -118,41 +118,40 @@ void CLoginGroup::OnDebug(int debugCode, wchar_t* debugMsg)
 	::wprintf(L"%s (%d)\n", debugMsg, debugCode);
 }
 
-void CLoginGroup::ReqSendUnicast(CPacket* packet, unsigned __int64 sessionID)
+void CLoginGroup::ReqSendUnicast(CNetPacket* packet, unsigned __int64 sessionID)
 {
 	packet->SetGroup(this);
 	packet->AddUsageCount(1); 
 	if (!SendPacket(sessionID, packet))
 	{
-		CPacket::Free(packet);
+		CNetPacket::Free(packet);
 	}
 }
 
-inline void CLoginGroup::HandlePacket_LOGIN(CPacket* packet, CLoginUser* user)
+inline void CLoginGroup::HandlePacket_LOGIN(CRecvNetPacket* packet, CLoginUser* user)
 {
 	__int64 accountNo;
-	char* sessionKey = new char[dfSESSIONKEY_LEN];
+	char sessionKey[dfSESSIONKEY_LEN];
 	int version;
 	GetCSPacket_REQ_LOGIN(packet, accountNo, sessionKey, version);
-	delete[] sessionKey;
 
 	BYTE status = LoginCheck(user);
 
-	CPacket* sendPacket = CPacket::Alloc();
+	CNetPacket* sendPacket = CNetPacket::Alloc();
 	SetSCPacket_RES_LOGIN(sendPacket, status, accountNo);
 	ReqSendUnicast(sendPacket, user->_sessionID);
 
 	MoveGroup(user->_sessionID, _pEchoGroup);
 }
 
-inline void CLoginGroup::GetCSPacket_REQ_LOGIN(CPacket* packet, __int64& accountNo, char*& sessionKey, int& version)
+inline void CLoginGroup::GetCSPacket_REQ_LOGIN(CRecvNetPacket* packet, __int64& accountNo, char sessionKey[dfSESSIONKEY_LEN], int& version)
 {
 	*packet >> accountNo;
 	packet->GetPayloadData((char*)sessionKey, dfSESSIONKEY_LEN);
 	*packet >> version;
 }
 
-inline void CLoginGroup::SetSCPacket_RES_LOGIN(CPacket* packet, BYTE status, __int64 accountNo)
+inline void CLoginGroup::SetSCPacket_RES_LOGIN(CNetPacket* packet, BYTE status, __int64 accountNo)
 {
 	*packet << (WORD)en_PACKET_CS_GAME_RES_LOGIN;
 	*packet << status;

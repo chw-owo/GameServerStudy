@@ -5,11 +5,11 @@
 #include "CSystemLog.h"
 #include "CommonProtocol.h"
 
-class CChattingServer;
+class CServer;
 class CMonitorClient : public CLanClient
 {
 public:
-	bool Initialize(CChattingServer* pChattingServer);
+	bool Initialize(CServer* pServer);
 	void Terminate();
 
 private:
@@ -36,7 +36,7 @@ private:
 private:
 	bool _serverAlive = true;
 	bool _connected = false;
-	CChattingServer* _pChattingServer;
+	CServer* _pServer;
 
 private:
 	HANDLE _monitorThread;

@@ -103,7 +103,6 @@ void CGroup::NetworkUpdate()
 				if (pSession->_pGroup != this) break;
 				CPacket* packet = pSession->_OnRecvQ.Dequeue();
 				OnRecv(sessionID, packet);
-				CPacket::Free(packet);
 				InterlockedDecrement(&_signal);
 			}
 			it++;
