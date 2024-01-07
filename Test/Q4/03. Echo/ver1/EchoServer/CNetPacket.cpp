@@ -15,9 +15,9 @@ bool CNetPacket::Free(CNetPacket* packet)
 {
 	if (InterlockedDecrement(&packet->_usageCount) == 0)
 	{
-		while (packet->_recvPacketQ.GetUseSize() > 0)
+		while (packet->_recvPackets->GetUseSize() > 0)
 		{
-			CRecvNetPacket* recvPacket = packet->_recvPacketQ.Dequeue();
+			CRecvNetPacket* recvPacket = packet->_recvPackets->Dequeue();
 			CRecvNetPacket::_pool.Free(recvPacket);
 		}
 		CNetPacket::_pool.Free(packet);

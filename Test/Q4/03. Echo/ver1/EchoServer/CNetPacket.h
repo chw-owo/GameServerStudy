@@ -31,8 +31,7 @@ class CNetPacket
 	friend CRecvNetPacket;
 
 public:
-	static CTlsPool<CNetPacket> _pool;
-
+	
 	static CNetPacket* Alloc();
 	static bool Free(CNetPacket* packet);
 
@@ -46,7 +45,8 @@ public:
 		_pGroup = pGroup;
 	}
 
-	CLockFreeQueue<CRecvNetPacket*> _recvPacketQ;
+	CLockFreeQueue<CRecvNetPacket*>* _recvPackets;
+	static CTlsPool<CNetPacket> _pool;
 
 public:
 	inline static int GetPoolSize()
@@ -66,6 +66,7 @@ protected:
 		_iHeaderReadPos(0), _iHeaderWritePos(0)
 	{
 		_chpBuffer = new char[_iBufferSize];
+		_recvPackets = new CLockFreeQueue<CRecvNetPacket*>;
 	}
 
 	inline CNetPacket(int iBufferSize)
@@ -74,11 +75,13 @@ protected:
 		_iHeaderReadPos(0), _iHeaderWritePos(0)
 	{
 		_chpBuffer = new char[_iBufferSize];
+		_recvPackets = new CLockFreeQueue<CRecvNetPacket*>;
 	}
 
 	inline ~CNetPacket()
 	{
 		delete[] _chpBuffer;
+		delete _recvPackets;
 	}
 
 public:

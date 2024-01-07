@@ -1,13 +1,13 @@
-﻿#include "CServer.h"
-#include "CCrashDump.h"
-#include "CSystemLog.h"
-#include "CMonitorClient.h"
-#include <locale.h>
-
+﻿
 #ifndef _WINSOCKAPI_
 #define _WINSOCKAPI_
 #endif
 
+#include "CServer.h"
+#include "CCrashDump.h"
+#include "CSystemLog.h"
+#include "CMonitorClient.h"
+#include <locale.h>
 #include <windows.h>
 #pragma comment(lib, "winmm.lib") 
 

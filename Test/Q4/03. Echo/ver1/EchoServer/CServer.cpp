@@ -78,9 +78,9 @@ void CServer::OnSend(unsigned __int64 sessionID)
 
 void CServer::Terminate()
 {
-	RemoveGroup(_pLoginGroup);
-	RemoveGroup(_pEchoGroup);
-	NetworkTerminate();
+	// RemoveGroup(_pLoginGroup);
+	// RemoveGroup(_pEchoGroup);
+	// NetworkTerminate();
 	LOG(L"FightGame", CSystemLog::SYSTEM_LEVEL, L"Server Terminate.\n");
 	::wprintf(L"Server Terminate.\n");
 }

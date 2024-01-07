@@ -25,7 +25,7 @@ public:
 	inline static CRecvNetPacket* Alloc(CNetPacket* packet)
 	{
 		CRecvNetPacket* recvNetPacket = _pool.Alloc(packet);
-		packet->_recvPacketQ.Enqueue(recvNetPacket);
+		packet->_recvPackets->Enqueue(recvNetPacket);
 		return recvNetPacket;
 	}
 	

@@ -52,12 +52,14 @@ bool CNetServer::NetworkInitialize(const wchar_t* IP, short port, long sendTime,
 
 	// Create Listen Sock
 	_listenSock = socket(AF_INET, SOCK_STREAM, 0);
+
 	if (_listenSock == INVALID_SOCKET)
 	{
 		wchar_t stErrMsg[dfERR_MAX];
 		int err = WSAGetLastError();
 		swprintf_s(stErrMsg, dfERR_MAX, L"%s[%d]: Listen sock is INVALID, %d", _T(__FUNCTION__), __LINE__, err);
 		OnError(ERR_LISTENSOCK_INVALID, stErrMsg);
+		__debugbreak();
 		return false;
 	}
 
