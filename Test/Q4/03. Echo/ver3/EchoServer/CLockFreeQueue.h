@@ -167,4 +167,4 @@ long CLockFreeQueue<T>::_QIDSupplier = 0;
 template<typename T>
 unsigned __int64 CLockFreeQueue<T>::_keyMask = 0b1111111111111111100000000000000000000000000000000000000000000000;
 template<typename T>
-CTlsPool<typename CLockFreeQueue<T>::QueueNode>* CLockFreeQueue<T>::_pQueuePool = new CTlsPool<CLockFreeQueue<T>::QueueNode>(dfQUEUENODE_DEF, true);
+CTlsPool<typename CLockFreeQueue<T>::QueueNode>* CLockFreeQueue<T>::_pQueuePool = new CTlsPool<CLockFreeQueue<T>::QueueNode>(dfQUEUENODE_CNT_DEF, dfQUEUENODE_BUCKET_SIZE, true);

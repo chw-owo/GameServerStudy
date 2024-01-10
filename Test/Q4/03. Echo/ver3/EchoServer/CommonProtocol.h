@@ -1,22 +1,23 @@
 #pragma once
 
 // Network Info
-#define dfSERVER_IP				L"0.0.0.0"
-#define dfLOGIN_PORT			12077
-#define dfECHO_PORT				12078
-#define dfSEND_TIME				30
-#define dfSERVER_DISCONNECT		false
-#define dfTHREAD_MAX			32
-#define dfUSER_MAX				15000
-#define dfTIMEOUT				40000
+#define dfSERVER_IP						L"0.0.0.0"
+#define dfLOGIN_PORT					12077
+#define dfECHO_PORT						12078
+#define dfSEND_TIME						30
+#define dfSERVER_DISCONNECT				false
+#define dfTHREAD_MAX					32
+#define dfTIMEOUT						40000
 
-// Login Server
-#define dfSESSIONKEY_LEN		64
+// Echo & Login Server	
+#define dfUSER_MAX						12000
+#define dfUSERPOOL_BUCKET_SIZE			12000
+#define dfSESSIONKEY_LEN				64
 
 // Monitor Client
-#define dfMONIOTOR_IP			L"127.0.0.1"
-#define dfMONIOTOR_PORT			12001
-#define dfMONITOR_TEXT_LEN		1024
+#define dfMONIOTOR_IP					L"127.0.0.1"
+#define dfMONIOTOR_PORT					12001
+#define dfMONITOR_TEXT_LEN				1024
 
 enum en_PACKET_TYPE
 {
@@ -80,7 +81,7 @@ enum en_PACKET_TYPE
 	//
 	//		INT64		AccountoNo
 	//		LONGLONG	SendTick
-	//	}
+	//	} 
 	//
 	//------------------------------------------------------------
 	en_PACKET_CS_GAME_RES_ECHO,

@@ -19,7 +19,7 @@ protected:
 
 protected:
 	bool Disconnect();
-	bool SendPacket(CLanPacket* packet);
+	bool SendPacket(CLanSendPacket* packet);
 
 protected:
 	virtual void OnInitialize() = 0;
@@ -29,7 +29,7 @@ protected:
 protected:
 	virtual void OnEnterServer() = 0;
 	virtual void OnLeaveServer() = 0;
-	virtual void OnRecv(CRecvLanPacket* packet) = 0;
+	virtual void OnRecv(CLanMsg* packet) = 0;
 	virtual void OnSend(int sendSize) = 0;
 	virtual void OnError(int errorCode, wchar_t* errorMsg) = 0;
 	virtual void OnDebug(int debugCode, wchar_t* debugMsg) = 0;

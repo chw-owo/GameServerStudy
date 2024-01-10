@@ -130,16 +130,16 @@
     <ClCompile Include="CNetServer.cpp">
       <Filter>NetLib\Network\NetServer</Filter>
     </ClCompile>
-    <ClCompile Include="CLanPacket.cpp">
+    <ClCompile Include="CLanRecvPacket.cpp">
       <Filter>NetLib\Objects\Lan\Packet</Filter>
     </ClCompile>
-    <ClCompile Include="CRecvLanPacket.cpp">
+    <ClCompile Include="CLanMsg.cpp">
       <Filter>NetLib\Objects\Lan\Packet</Filter>
     </ClCompile>
-    <ClCompile Include="CNetPacket.cpp">
+    <ClCompile Include="CNetRecvPacket.cpp">
       <Filter>NetLib\Objects\Net\Packet</Filter>
     </ClCompile>
-    <ClCompile Include="CRecvNetPacket.cpp">
+    <ClCompile Include="CNetMsg.cpp">
       <Filter>NetLib\Objects\Net\Packet</Filter>
     </ClCompile>
     <ClCompile Include="CLanGroup.cpp">
@@ -147,6 +147,12 @@
     </ClCompile>
     <ClCompile Include="CNetGroup.cpp">
       <Filter>NetLib\Group\NetGroup</Filter>
+    </ClCompile>
+    <ClCompile Include="CNetSendPacket.cpp">
+      <Filter>NetLib\Objects\Net\Packet</Filter>
+    </ClCompile>
+    <ClCompile Include="CLanSendPacket.cpp">
+      <Filter>NetLib\Objects\Lan\Packet</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -216,10 +222,10 @@
     <ClInclude Include="CLanJob.h">
       <Filter>NetLib\Objects\Lan\Job</Filter>
     </ClInclude>
-    <ClInclude Include="CLanPacket.h">
+    <ClInclude Include="CLanRecvPacket.h">
       <Filter>NetLib\Objects\Lan\Packet</Filter>
     </ClInclude>
-    <ClInclude Include="CRecvLanPacket.h">
+    <ClInclude Include="CLanMsg.h">
       <Filter>NetLib\Objects\Lan\Packet</Filter>
     </ClInclude>
     <ClInclude Include="CLanSession.h">
@@ -231,10 +237,10 @@
     <ClInclude Include="CNetSession.h">
       <Filter>NetLib\Objects\Net\Session</Filter>
     </ClInclude>
-    <ClInclude Include="CNetPacket.h">
+    <ClInclude Include="CNetRecvPacket.h">
       <Filter>NetLib\Objects\Net\Packet</Filter>
     </ClInclude>
-    <ClInclude Include="CRecvNetPacket.h">
+    <ClInclude Include="CNetMsg.h">
       <Filter>NetLib\Objects\Net\Packet</Filter>
     </ClInclude>
     <ClInclude Include="CClientSession.h">
@@ -245,6 +251,12 @@
     </ClInclude>
     <ClInclude Include="CNetGroup.h">
       <Filter>NetLib\Group\NetGroup</Filter>
+    </ClInclude>
+    <ClInclude Include="CNetSendPacket.h">
+      <Filter>NetLib\Objects\Net\Packet</Filter>
+    </ClInclude>
+    <ClInclude Include="CLanSendPacket.h">
+      <Filter>NetLib\Objects\Lan\Packet</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -1,5 +1,6 @@
 #pragma once
-#include "CLanPacket.h"
+#include "CLanSendPacket.h"
+#include "CLanRecvPacket.h"
 #include "CLockFreeQueue.h"
 #include "Utils.h"
 
@@ -23,7 +24,7 @@ public:
 		_sendComplOvl._type = NET_TYPE::SEND_COMPLETE;
 		_releaseOvl._type = NET_TYPE::RELEASE;
 
-		_recvBuf = CLanPacket::Alloc();
+		_recvBuf = CLanRecvPacket::Alloc();
 		_recvBuf->AddUsageCount(1);
 	}
 
@@ -35,16 +36,16 @@ public:
 
 		while (_sendBuf.GetUseSize() > 0)
 		{
-			CLanPacket* packet = _sendBuf.Dequeue();
-			CLanPacket::Free(packet);
+			CLanSendPacket* packet = _sendBuf.Dequeue();
+			CLanSendPacket::Free(packet);
 		}
 		while (_tempBuf.GetUseSize() > 0)
 		{
-			CLanPacket* packet = _tempBuf.Dequeue();
-			CLanPacket::Free(packet);
+			CLanSendPacket* packet = _tempBuf.Dequeue();
+			CLanSendPacket::Free(packet);
 		}
 
-		CLanPacket::Free(_recvBuf);
+		CLanRecvPacket::Free(_recvBuf);
 	}
 
 private:
@@ -57,9 +58,9 @@ public:
 	volatile short _useCount;
 
 	SOCKET _sock;
-	CLanPacket* _recvBuf;
-	CLockFreeQueue<CLanPacket*> _sendBuf;
-	CLockFreeQueue<CLanPacket*> _tempBuf;
+	CLanRecvPacket* _recvBuf;
+	CLockFreeQueue<CLanSendPacket*> _sendBuf;
+	CLockFreeQueue<CLanSendPacket*> _tempBuf;
 	WSABUF _wsaRecvbuf[dfWSARECVBUF_CNT];
 	WSABUF _wsaSendbuf[dfWSASENDBUF_CNT];
 

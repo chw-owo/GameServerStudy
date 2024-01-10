@@ -4,14 +4,14 @@
 /*
 <사용 방법>
 
-1. CNetPacket::Alloc()로 할당, 데이터 삽입 전 Clear()로 초기화.
+1. CLanRecvPacket::Alloc()로 할당, 데이터 삽입 전 Clear()로 초기화.
 
-2. SendNetPacket으로 전송 요청 하기 전 AddUsageCount(n)으로 목적지 수 설정
+2. SendLanPacket으로 전송 요청 하기 전 AddUsageCount(n)으로 목적지 수 설정
    Unicast의 경우 1, Multicast의 경우 목적지 수를 n으로 입력한다.
 
 */
 
-#ifdef NETSERVER
+#ifdef LANSERVER
 
 #ifndef _WINSOCKAPI_
 #define _WINSOCKAPI_
@@ -19,34 +19,46 @@
 
 #include "ErrorCode.h"
 #include "Config.h"
-#include "CLockFreeStack.h"
+#include "CTlsPool.h"
 #include <windows.h>
 #include <stdio.h>
 
-class CNetGroup;
-class CRecvNetPacket;
-class CNetPacket
+class CLanGroup;
+class CLanMsg;
+class CLanRecvPacket
 {
-	friend CTlsPool<CNetPacket>;
-	friend CRecvNetPacket;
+	friend CTlsPool<CLanRecvPacket>;
+	friend CLanMsg;
 
 public:
-	
-	static CNetPacket* Alloc();
-	static bool Free(CNetPacket* packet);
+	static CTlsPool<CLanRecvPacket> _pool;
+
+	inline static CLanRecvPacket* Alloc()
+	{
+		CLanRecvPacket* packet = _pool.Alloc();
+		packet->Clear();
+		return packet;
+	}
+
+	inline static bool Free(CLanRecvPacket* packet)
+	{
+		if (InterlockedDecrement(&packet->_usageCount) == 0)
+		{
+			_pool.Free(packet);
+			return true;
+		}
+		return false;
+	}
 
 	inline void AddUsageCount(long usageCount)
 	{
 		InterlockedAdd(&_usageCount, usageCount);
 	}
 
-	void SetGroup(CNetGroup* pGroup)
+	void SetGroup(CLanGroup* pGroup)
 	{
 		_pGroup = pGroup;
 	}
-
-	CLockFreeStack<CRecvNetPacket*>* _recvPackets;
-	static CTlsPool<CNetPacket> _pool;
 
 public:
 	inline static int GetPoolSize()
@@ -56,45 +68,42 @@ public:
 
 	inline static int GetNodeCount()
 	{
-		return _pool.GetNodeCount() - dfSESSION_MAX;
+		return _pool.GetNodeCount();
 	}
 
 protected:
-	inline CNetPacket()
-		: _iBufferSize(dfSPACKET_DEF_SIZE), _iPayloadSize(0), _iHeaderSize(dfNETHEADER_LEN),
-		_iPayloadReadPos(dfNETHEADER_LEN), _iPayloadWritePos(dfNETHEADER_LEN),
+	inline CLanRecvPacket()
+		: _iBufferSize(dfPACKET_DEF_SIZE), _iPayloadSize(0), _iHeaderSize(dfLANHEADER_LEN),
+		_iPayloadReadPos(dfLANHEADER_LEN), _iPayloadWritePos(dfLANHEADER_LEN),
 		_iHeaderReadPos(0), _iHeaderWritePos(0)
 	{
 		_chpBuffer = new char[_iBufferSize];
-		_recvPackets = new CLockFreeStack<CRecvNetPacket*>;
 	}
 
-	inline CNetPacket(int iBufferSize)
-		: _iBufferSize(iBufferSize), _iPayloadSize(0), _iHeaderSize(dfNETHEADER_LEN),
-		_iPayloadReadPos(dfNETHEADER_LEN), _iPayloadWritePos(dfNETHEADER_LEN),
+	inline CLanRecvPacket(int iBufferSize)
+		: _iBufferSize(iBufferSize), _iPayloadSize(0), _iHeaderSize(dfLANHEADER_LEN),
+		_iPayloadReadPos(dfLANHEADER_LEN), _iPayloadWritePos(dfLANHEADER_LEN),
 		_iHeaderReadPos(0), _iHeaderWritePos(0)
 	{
 		_chpBuffer = new char[_iBufferSize];
-		_recvPackets = new CLockFreeStack<CRecvNetPacket*>;
 	}
 
-	inline ~CNetPacket()
+	inline ~CLanRecvPacket()
 	{
 		delete[] _chpBuffer;
-		delete _recvPackets;
 	}
 
 public:
 	inline int GetBufferSize(void) { return _iBufferSize; }
-	inline int GetNetPacketSize(void) { return _iPayloadWritePos - _iHeaderReadPos; }
-	inline char* GetNetPacketReadPtr(void) { return &_chpBuffer[0]; }
+	inline int GetLanPacketSize(void) { return _iPayloadWritePos - _iHeaderReadPos; }
+	inline char* GetLanPacketReadPtr(void) { return &_chpBuffer[0]; }
 
 	inline bool IsPayloadEmpty(void) { return (_iPayloadWritePos == _iPayloadReadPos); }
 	inline bool IsHeaderEmpty(void) { return (_iHeaderWritePos == _iHeaderReadPos); }
 	inline bool IsEmpty(void) { return (IsPayloadEmpty() && IsHeaderEmpty()); }
 
 	inline short GetPayloadSize(void) { return (short)(_iPayloadWritePos - _iPayloadReadPos); }
-	inline char* GetPayloadPtr(void) { return &_chpBuffer[dfNETHEADER_LEN]; }
+	inline char* GetPayloadPtr(void) { return &_chpBuffer[dfLANHEADER_LEN]; }
 	inline char* GetPayloadReadPtr(void) { return &_chpBuffer[_iPayloadReadPos]; }
 	inline int GetPayloadReadPos(void) { return _iPayloadReadPos; }
 	inline char* GetPayloadWritePtr(void) { return &_chpBuffer[_iPayloadWritePos]; }
@@ -111,13 +120,12 @@ public:
 		_iHeaderReadPos = 0;
 		_iHeaderWritePos = 0;
 		_usageCount = 0;
-		_encode = 0;
 		_pGroup = nullptr;
 	}
 
 	inline int Resize(int iBufferSize)
 	{
-		if (iBufferSize > dfSPACKET_MAX_SIZE)
+		if (iBufferSize > dfPACKET_MAX_SIZE)
 		{
 			_errCode = ERR_RESIZE_OVER_MAX;
 			return ERR_PACKET;
@@ -166,6 +174,7 @@ public:
 			return ERR_PACKET;
 		}
 
+		// ::printf("Write: %d => %d\n", _iPayloadWritePos, _iPayloadWritePos + iSize);
 		_iPayloadWritePos += iSize;
 		return iSize;
 	}
@@ -209,13 +218,13 @@ public:
 
 
 public:
-	inline CNetPacket& operator = (CNetPacket& clSrCNetPacket)
+	inline CLanRecvPacket& operator = (CLanRecvPacket& clSrCLanRecvPacket)
 	{
-		*this = clSrCNetPacket;
+		*this = clSrCLanRecvPacket;
 		return *this;
 	}
 
-	inline CNetPacket& operator << (float fValue)
+	inline CLanRecvPacket& operator << (float fValue)
 	{
 		if (_iBufferSize - _iPayloadWritePos < sizeof(fValue))
 			Resize((int)(_iBufferSize * 1.5f));
@@ -227,7 +236,7 @@ public:
 		_iPayloadWritePos += sizeof(fValue);
 		return *this;
 	}
-	inline CNetPacket& operator << (double dValue)
+	inline CLanRecvPacket& operator << (double dValue)
 	{
 		if (_iBufferSize - _iPayloadWritePos < sizeof(dValue))
 			Resize((int)(_iBufferSize * 1.5f));
@@ -239,7 +248,7 @@ public:
 		_iPayloadWritePos += sizeof(dValue);
 		return *this;
 	}
-	inline CNetPacket& operator << (char chValue)
+	inline CLanRecvPacket& operator << (char chValue)
 	{
 		if (_iBufferSize - _iPayloadWritePos < sizeof(chValue))
 			Resize((int)(_iBufferSize * 1.5f));
@@ -251,7 +260,7 @@ public:
 		_iPayloadWritePos += sizeof(chValue);
 		return *this;
 	}
-	inline CNetPacket& operator << (unsigned char byValue)
+	inline CLanRecvPacket& operator << (unsigned char byValue)
 	{
 		if (_iBufferSize - _iPayloadWritePos < sizeof(byValue))
 			Resize((int)(_iBufferSize * 1.5f));
@@ -263,7 +272,7 @@ public:
 		_iPayloadWritePos += sizeof(byValue);
 		return *this;
 	}
-	inline CNetPacket& operator << (short shValue)
+	inline CLanRecvPacket& operator << (short shValue)
 	{
 		if (_iBufferSize - _iPayloadWritePos < sizeof(shValue))
 			Resize((int)(_iBufferSize * 1.5f));
@@ -275,7 +284,7 @@ public:
 		_iPayloadWritePos += sizeof(shValue);
 		return *this;
 	}
-	inline CNetPacket& operator << (unsigned short wValue)
+	inline CLanRecvPacket& operator << (unsigned short wValue)
 	{
 		if (_iBufferSize - _iPayloadWritePos < sizeof(wValue))
 			Resize((int)(_iBufferSize * 1.5f));
@@ -287,7 +296,7 @@ public:
 		_iPayloadWritePos += sizeof(wValue);
 		return *this;
 	}
-	inline CNetPacket& operator << (int iValue)
+	inline CLanRecvPacket& operator << (int iValue)
 	{
 		if (_iBufferSize - _iPayloadWritePos < sizeof(iValue))
 			Resize((int)(_iBufferSize * 1.5f));
@@ -299,7 +308,7 @@ public:
 		_iPayloadWritePos += sizeof(iValue);
 		return *this;
 	}
-	inline CNetPacket& operator << (long lValue)
+	inline CLanRecvPacket& operator << (long lValue)
 	{
 		if (_iBufferSize - _iPayloadWritePos < sizeof(lValue))
 			Resize((int)(_iBufferSize * 1.5f));
@@ -311,7 +320,7 @@ public:
 		_iPayloadWritePos += sizeof(lValue);
 		return *this;
 	}
-	inline CNetPacket& operator << (__int64 iValue)
+	inline CLanRecvPacket& operator << (__int64 iValue)
 	{
 		if (_iBufferSize - _iPayloadWritePos < sizeof(iValue))
 			Resize((int)(_iBufferSize * 1.5f));
@@ -324,7 +333,7 @@ public:
 		return *this;
 	}
 
-	inline CNetPacket& operator >> (float& fValue)
+	inline CLanRecvPacket& operator >> (float& fValue)
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(float))
 		{
@@ -339,7 +348,7 @@ public:
 		_iPayloadReadPos += sizeof(float);
 		return *this;
 	}
-	inline CNetPacket& operator >> (double& dValue)
+	inline CLanRecvPacket& operator >> (double& dValue)
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(double))
 		{
@@ -354,7 +363,7 @@ public:
 		_iPayloadReadPos += sizeof(double);
 		return *this;
 	}
-	inline CNetPacket& operator >> (char& chValue)
+	inline CLanRecvPacket& operator >> (char& chValue)
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(char))
 		{
@@ -369,7 +378,7 @@ public:
 		_iPayloadReadPos += sizeof(char);
 		return *this;
 	}
-	inline CNetPacket& operator >> (BYTE& byValue)
+	inline CLanRecvPacket& operator >> (BYTE& byValue)
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(BYTE))
 		{
@@ -385,7 +394,7 @@ public:
 		_iPayloadReadPos += sizeof(BYTE);
 		return *this;
 	}
-	inline CNetPacket& operator >> (wchar_t& szValue)
+	inline CLanRecvPacket& operator >> (wchar_t& szValue)
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(wchar_t))
 		{
@@ -400,7 +409,7 @@ public:
 		_iPayloadReadPos += sizeof(wchar_t);
 		return *this;
 	}
-	inline CNetPacket& operator >> (short& shValue)
+	inline CLanRecvPacket& operator >> (short& shValue)
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(short))
 		{
@@ -417,7 +426,7 @@ public:
 		_iPayloadReadPos += sizeof(short);
 		return *this;
 	}
-	inline CNetPacket& operator >> (WORD& wValue)
+	inline CLanRecvPacket& operator >> (WORD& wValue)
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(WORD))
 		{
@@ -432,7 +441,7 @@ public:
 		_iPayloadReadPos += sizeof(WORD);
 		return *this;
 	}
-	inline CNetPacket& operator >> (int& iValue)
+	inline CLanRecvPacket& operator >> (int& iValue)
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(int))
 		{
@@ -447,7 +456,7 @@ public:
 		_iPayloadReadPos += sizeof(int);
 		return *this;
 	}
-	inline CNetPacket& operator >> (DWORD& dwValue)
+	inline CLanRecvPacket& operator >> (DWORD& dwValue)
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(DWORD))
 		{
@@ -462,7 +471,7 @@ public:
 		_iPayloadReadPos += sizeof(DWORD);
 		return *this;
 	}
-	inline CNetPacket& operator >> (__int64& iValue)
+	inline CLanRecvPacket& operator >> (__int64& iValue)
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(__int64))
 		{
@@ -572,66 +581,8 @@ public:
 		return _iBufferSize - _iPayloadWritePos;
 	}
 
-
 public:
-	inline bool Decode(stNetHeader& header, char* payload)
-	{
-		unsigned char checkSum = 0;
-
-		char e_cur = header._checkSum;
-		char p_cur = e_cur ^ (dfPACKET_KEY + 1);
-		header._checkSum = p_cur ^ (header._randKey + 1);
-		char e_prev = e_cur;
-		char p_prev = p_cur;
-
-		for (int i = 0; i < header._len; i++)
-		{
-			e_cur = payload[i];
-			p_cur = e_cur ^ (e_prev + dfPACKET_KEY + 2 + i);
-			payload[i] = p_cur ^ (p_prev + header._randKey + 2 + i);
-			checkSum += payload[i];
-
-			e_prev = e_cur;
-			p_prev = p_cur;
-		}
-
-		checkSum = checkSum % 256;
-		if (header._checkSum != checkSum) return false;
-
-		return true;
-	}
-
-
-	inline bool Encode(stNetHeader& header, char* payload)
-	{
-		if (InterlockedExchange(&_encode, 1) == 1) return false;
-		// 콘텐츠를 멀티로 제작할 경우 event를 통한 완료 확인 및 대기 필요
-
-		unsigned char checkSum = 0;
-		for (int i = 0; i < header._len; i++)
-		{
-			checkSum += payload[i];
-		}
-		header._checkSum = checkSum % 256;
-
-		char d = header._checkSum;
-		char p = d ^ (header._randKey + 1);
-		char e = p ^ (dfPACKET_KEY + 1);
-		header._checkSum = e;
-
-		for (int i = 0; i < header._len; i++)
-		{
-			d = payload[i];
-			p = d ^ (p + header._randKey + 2 + i);
-			e = p ^ (e + dfPACKET_KEY + 2 + i);
-			payload[i] = e;
-		}
-
-		return true;
-	}
-
-public:
-	inline void CopyRecvBuf(CNetPacket* origin)
+	inline void CopyRecvBuf(CLanRecvPacket* origin)
 	{
 		int useSize = origin->GetPayloadSize();
 		if (useSize > 0)
@@ -655,10 +606,9 @@ private:
 public:
 	int _errCode;
 	volatile long _usageCount = 0;
-	volatile long _encode = 0;
 
 public:
-	CNetGroup* _pGroup;
+	CLanGroup* _pGroup;
 };
 
 

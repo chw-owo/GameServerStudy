@@ -1,7 +1,7 @@
 #pragma once
 #include "Config.h"
 #include "CLanClient.h"
-#include "CLanPacket.h"
+#include "CLanSendPacket.h"
 #include "CSystemLog.h"
 #include "CommonProtocol.h"
 
@@ -20,7 +20,7 @@ private:
 private:
 	void OnEnterServer();
 	void OnLeaveServer();
-	void OnRecv(CRecvLanPacket* packet);
+	void OnRecv(CLanMsg* packet);
 	void OnSend(int sendSize);
 	void OnError(int errorCode, wchar_t* errorMsg);
 	void OnDebug(int debugCode, wchar_t* debugMsg);
@@ -31,7 +31,7 @@ private:
 
 private:
 	inline void SetDataToPacket(BYTE type, int val, int time);
-	inline void ReqSendUnicast(CLanPacket* packet);
+	inline void ReqSendUnicast(CLanSendPacket* packet);
 
 private:
 	bool _serverAlive = true;

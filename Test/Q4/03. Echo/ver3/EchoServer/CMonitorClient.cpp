@@ -86,8 +86,10 @@ unsigned int __stdcall CMonitorClient::MonitorThread(void* arg)
 			long recvTPS = pServer->GetRecvTPS();
 			long sendTPS = pServer->GetSendTPS();
 
-			long packetPool = CNetPacket::GetNodeCount();
-			long recvPacketPool = CRecvNetPacket::GetNodeCount();
+			long recvPacketPool = CNetRecvPacket::GetNodeCount();
+			long sendPacketPool = CNetSendPacket::GetNodeCount();
+			long packetPool = recvPacketPool + sendPacketPool;
+			long msgPool = CNetMsg::GetNodeCount();
 
 			float totalCPU = pServer->_mm->GetTotalCPUTime();
 			long nonpaged = pServer->_mm->GetTotalNonpaged();
@@ -131,7 +133,7 @@ unsigned int __stdcall CMonitorClient::MonitorThread(void* arg)
 				L"Echo Recv TPS: %d\n"
 				L"Echo Send TPS: %d\n"
 				L"Echo Packets: %d\n"
-				L"Echo Recv Packets: %d\n\n"
+				L"Echo Recv Msg: %d\n\n"
 
 				L"Total CPU: %f\n"
 				L"Total Nonpaged: %d\n"
@@ -178,7 +180,7 @@ unsigned int __stdcall CMonitorClient::MonitorThread(void* arg)
 
 void CMonitorClient::SetDataToPacket(BYTE type, int val, int time)
 {
-	CLanPacket* packet = CLanPacket::Alloc();
+	CLanSendPacket* packet = CLanSendPacket::Alloc();
 	*packet << (WORD)en_PACKET_SS_MONITOR_DATA_UPDATE;
 	*packet << type;
 	*packet << val;
@@ -186,12 +188,12 @@ void CMonitorClient::SetDataToPacket(BYTE type, int val, int time)
 	ReqSendUnicast(packet);
 }
 
-void CMonitorClient::ReqSendUnicast(CLanPacket* packet)
+void CMonitorClient::ReqSendUnicast(CLanSendPacket* packet)
 {
 	packet->AddUsageCount(1);
 	if (!SendPacket(packet))
 	{
-		CLanPacket::Free(packet);
+		CLanSendPacket::Free(packet);
 	}
 }
 
@@ -226,7 +228,7 @@ void CMonitorClient::OnLeaveServer()
 {
 }
 
-void CMonitorClient::OnRecv(CRecvLanPacket* packet)
+void CMonitorClient::OnRecv(CLanMsg* packet)
 {
 
 }

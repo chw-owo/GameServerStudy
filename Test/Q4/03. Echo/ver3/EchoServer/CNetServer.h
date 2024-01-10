@@ -4,7 +4,7 @@
 
 #include "CLockFreeStack.h"
 #include "CNetSession.h"
-#include "CRecvNetPacket.h"
+#include "CNetMsg.h"
 #include "CMonitorManager.h"
 
 #include <ws2tcpip.h>
@@ -31,7 +31,7 @@ protected:
 
 protected:
 	bool Disconnect(unsigned __int64 sessionID);
-	bool SendPacket(unsigned __int64 sessionID, CNetPacket* packet, bool disconnect = false);
+	bool SendPacket(unsigned __int64 sessionID, CNetSendPacket* packet, bool disconnect = false);
 	
 protected:
 	bool MoveGroup(unsigned __int64 sessionID, CNetGroup* pGroup);
@@ -49,7 +49,7 @@ protected:
 
 protected:
 	virtual void OnReleaseClient(unsigned __int64 sessionID) = 0;
-	virtual void OnRecv(unsigned __int64 sessionID, CRecvNetPacket* packet) = 0;
+	virtual void OnRecv(unsigned __int64 sessionID, CNetMsg* packet) = 0;
 	virtual void OnSend(unsigned __int64 sessionID) = 0;
 	virtual void OnError(int errorCode, wchar_t* errorMsg) = 0;
 	virtual void OnDebug(int debugCode, wchar_t* debugMsg) = 0;

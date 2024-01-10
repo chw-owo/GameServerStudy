@@ -27,26 +27,36 @@ struct stNetHeader
 	unsigned char _checkSum;
 };
 #pragma pack (pop)
-#define dfNETHEADER_LEN				sizeof(stNetHeader)
+#define dfNETHEADER_LEN					sizeof(stNetHeader)
 #endif
 
-#define dfSESSION_MAX				12000
-#define dfADDRESS_LEN				50
+#define dfSESSION_MAX					12000
+#define dfADDRESS_LEN					50
+#define dfWSARECVBUF_CNT				1
+#define dfWSASENDBUF_CNT				200
 
-#define dfPACKET_DEF				1000000
-#define dfRCV_PACKET_DEF			1000000
-#define dfJOB_DEF					15000
+#define dfRCVPACKET_SIZE_DEF			3000
+#define dfSNDPACKET_SIZE_DEF			64
+#define dfPACKET_DEF_SIZE				512
+#define dfPACKET_MAX_SIZE				6000
 
-#define dfJOB_QUEUE_CNT				1
-#define dfWSARECVBUF_CNT			1
-#define dfWSASENDBUF_CNT			200
+#define dfRCVPACKET_CNT_DEF				12000
+#define dfSNDPACKET_CNT_DEF				24000
+#define dfMSG_CNT_DEF					24000
 
-#define dfSPACKET_DEF_SIZE			512
-#define dfSPACKET_MAX_SIZE			2048
+#define dfRCVPACKETPOOL_BUCKET_SIZE		3000
+#define dfSNDPACKETPOOL_BUCKET_SIZE		6000
+#define dfMSGPOOL_BUCEKT_SIZE			6000
+#define dfPOOL_THREAD_MAX				20
 
-#define dfSTACKNODE_DEF				10000
-#define dfQUEUENODE_DEF				10000
-#define dfPOOL_BUCKET_SIZE			2000
-#define dfPOOL_THREAD_MAX			20
+#define dfSTACKNODE_CNT_DEF				100
+#define dfQUEUENODE_CNT_DEF				100
+#define dfSTACKNODE_BUCKET_SIZE			200
+#define dfQUEUENODE_BUCKET_SIZE			200
+
+#define dfJOB_CNT_DEF					0
+#define dfJOBQ_CNT						0
 
 #define dfERR_MAX					256
+
+

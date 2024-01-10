@@ -64,9 +64,9 @@ void CServer::OnReleaseClient(unsigned __int64 sessionID)
 	// ::printf("%016llx (%d): Main::%s\n", sessionID, GetCurrentThreadId(), __func__);
 }
 
-void CServer::OnRecv(unsigned __int64 sessionID, CRecvNetPacket* packet)
+void CServer::OnRecv(unsigned __int64 sessionID, CNetMsg* packet)
 {
-	CRecvNetPacket::Free(packet);
+	CNetMsg::Free(packet);
 	// ::printf("%016llx (%d): Main::%s\n", sessionID, GetCurrentThreadId(), __func__);
 }
 

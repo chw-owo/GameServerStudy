@@ -4,7 +4,7 @@
 /*
 <사용 방법>
 
-1. CLanPacket::Alloc()로 할당, 데이터 삽입 전 Clear()로 초기화.
+1. CLanSendPacket::Alloc()로 할당, 데이터 삽입 전 Clear()로 초기화.
 
 2. SendLanPacket으로 전송 요청 하기 전 AddUsageCount(n)으로 목적지 수 설정
    Unicast의 경우 1, Multicast의 경우 목적지 수를 n으로 입력한다.
@@ -24,23 +24,23 @@
 #include <stdio.h>
 
 class CLanGroup;
-class CRecvLanPacket;
-class CLanPacket
+class CLanMsg;
+class CLanSendPacket
 {
-	friend CTlsPool<CLanPacket>;
-	friend CRecvLanPacket;
+	friend CTlsPool<CLanSendPacket>;
+	friend CLanMsg;
 
 public:
-	static CTlsPool<CLanPacket> _pool;
+	static CTlsPool<CLanSendPacket> _pool;
 
-	inline static CLanPacket* Alloc()
+	inline static CLanSendPacket* Alloc()
 	{
-		CLanPacket* packet = _pool.Alloc();
+		CLanSendPacket* packet = _pool.Alloc();
 		packet->Clear();
 		return packet;
 	}
 
-	inline static bool Free(CLanPacket* packet)
+	inline static bool Free(CLanSendPacket* packet)
 	{
 		if (InterlockedDecrement(&packet->_usageCount) == 0)
 		{
@@ -72,15 +72,15 @@ public:
 	}
 
 protected:
-	inline CLanPacket()
-		: _iBufferSize(dfSPACKET_DEF_SIZE), _iPayloadSize(0), _iHeaderSize(dfLANHEADER_LEN),
+	inline CLanSendPacket()
+		: _iBufferSize(dfPACKET_DEF_SIZE), _iPayloadSize(0), _iHeaderSize(dfLANHEADER_LEN),
 		_iPayloadReadPos(dfLANHEADER_LEN), _iPayloadWritePos(dfLANHEADER_LEN),
 		_iHeaderReadPos(0), _iHeaderWritePos(0)
 	{
 		_chpBuffer = new char[_iBufferSize];
 	}
 
-	inline CLanPacket(int iBufferSize)
+	inline CLanSendPacket(int iBufferSize)
 		: _iBufferSize(iBufferSize), _iPayloadSize(0), _iHeaderSize(dfLANHEADER_LEN),
 		_iPayloadReadPos(dfLANHEADER_LEN), _iPayloadWritePos(dfLANHEADER_LEN),
 		_iHeaderReadPos(0), _iHeaderWritePos(0)
@@ -88,7 +88,7 @@ protected:
 		_chpBuffer = new char[_iBufferSize];
 	}
 
-	inline ~CLanPacket()
+	inline ~CLanSendPacket()
 	{
 		delete[] _chpBuffer;
 	}
@@ -125,7 +125,7 @@ public:
 
 	inline int Resize(int iBufferSize)
 	{
-		if (iBufferSize > dfSPACKET_MAX_SIZE)
+		if (iBufferSize > dfPACKET_MAX_SIZE)
 		{
 			_errCode = ERR_RESIZE_OVER_MAX;
 			return ERR_PACKET;
@@ -218,13 +218,13 @@ public:
 
 
 public:
-	inline CLanPacket& operator = (CLanPacket& clSrCLanPacket)
+	inline CLanSendPacket& operator = (CLanSendPacket& clSrCLanSendPacket)
 	{
-		*this = clSrCLanPacket;
+		*this = clSrCLanSendPacket;
 		return *this;
 	}
 
-	inline CLanPacket& operator << (float fValue)
+	inline CLanSendPacket& operator << (float fValue)
 	{
 		if (_iBufferSize - _iPayloadWritePos < sizeof(fValue))
 			Resize((int)(_iBufferSize * 1.5f));
@@ -236,7 +236,7 @@ public:
 		_iPayloadWritePos += sizeof(fValue);
 		return *this;
 	}
-	inline CLanPacket& operator << (double dValue)
+	inline CLanSendPacket& operator << (double dValue)
 	{
 		if (_iBufferSize - _iPayloadWritePos < sizeof(dValue))
 			Resize((int)(_iBufferSize * 1.5f));
@@ -248,7 +248,7 @@ public:
 		_iPayloadWritePos += sizeof(dValue);
 		return *this;
 	}
-	inline CLanPacket& operator << (char chValue)
+	inline CLanSendPacket& operator << (char chValue)
 	{
 		if (_iBufferSize - _iPayloadWritePos < sizeof(chValue))
 			Resize((int)(_iBufferSize * 1.5f));
@@ -260,7 +260,7 @@ public:
 		_iPayloadWritePos += sizeof(chValue);
 		return *this;
 	}
-	inline CLanPacket& operator << (unsigned char byValue)
+	inline CLanSendPacket& operator << (unsigned char byValue)
 	{
 		if (_iBufferSize - _iPayloadWritePos < sizeof(byValue))
 			Resize((int)(_iBufferSize * 1.5f));
@@ -272,7 +272,7 @@ public:
 		_iPayloadWritePos += sizeof(byValue);
 		return *this;
 	}
-	inline CLanPacket& operator << (short shValue)
+	inline CLanSendPacket& operator << (short shValue)
 	{
 		if (_iBufferSize - _iPayloadWritePos < sizeof(shValue))
 			Resize((int)(_iBufferSize * 1.5f));
@@ -284,7 +284,7 @@ public:
 		_iPayloadWritePos += sizeof(shValue);
 		return *this;
 	}
-	inline CLanPacket& operator << (unsigned short wValue)
+	inline CLanSendPacket& operator << (unsigned short wValue)
 	{
 		if (_iBufferSize - _iPayloadWritePos < sizeof(wValue))
 			Resize((int)(_iBufferSize * 1.5f));
@@ -296,7 +296,7 @@ public:
 		_iPayloadWritePos += sizeof(wValue);
 		return *this;
 	}
-	inline CLanPacket& operator << (int iValue)
+	inline CLanSendPacket& operator << (int iValue)
 	{
 		if (_iBufferSize - _iPayloadWritePos < sizeof(iValue))
 			Resize((int)(_iBufferSize * 1.5f));
@@ -308,7 +308,7 @@ public:
 		_iPayloadWritePos += sizeof(iValue);
 		return *this;
 	}
-	inline CLanPacket& operator << (long lValue)
+	inline CLanSendPacket& operator << (long lValue)
 	{
 		if (_iBufferSize - _iPayloadWritePos < sizeof(lValue))
 			Resize((int)(_iBufferSize * 1.5f));
@@ -320,7 +320,7 @@ public:
 		_iPayloadWritePos += sizeof(lValue);
 		return *this;
 	}
-	inline CLanPacket& operator << (__int64 iValue)
+	inline CLanSendPacket& operator << (__int64 iValue)
 	{
 		if (_iBufferSize - _iPayloadWritePos < sizeof(iValue))
 			Resize((int)(_iBufferSize * 1.5f));
@@ -333,7 +333,7 @@ public:
 		return *this;
 	}
 
-	inline CLanPacket& operator >> (float& fValue)
+	inline CLanSendPacket& operator >> (float& fValue)
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(float))
 		{
@@ -348,7 +348,7 @@ public:
 		_iPayloadReadPos += sizeof(float);
 		return *this;
 	}
-	inline CLanPacket& operator >> (double& dValue)
+	inline CLanSendPacket& operator >> (double& dValue)
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(double))
 		{
@@ -363,7 +363,7 @@ public:
 		_iPayloadReadPos += sizeof(double);
 		return *this;
 	}
-	inline CLanPacket& operator >> (char& chValue)
+	inline CLanSendPacket& operator >> (char& chValue)
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(char))
 		{
@@ -378,7 +378,7 @@ public:
 		_iPayloadReadPos += sizeof(char);
 		return *this;
 	}
-	inline CLanPacket& operator >> (BYTE& byValue)
+	inline CLanSendPacket& operator >> (BYTE& byValue)
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(BYTE))
 		{
@@ -394,7 +394,7 @@ public:
 		_iPayloadReadPos += sizeof(BYTE);
 		return *this;
 	}
-	inline CLanPacket& operator >> (wchar_t& szValue)
+	inline CLanSendPacket& operator >> (wchar_t& szValue)
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(wchar_t))
 		{
@@ -409,7 +409,7 @@ public:
 		_iPayloadReadPos += sizeof(wchar_t);
 		return *this;
 	}
-	inline CLanPacket& operator >> (short& shValue)
+	inline CLanSendPacket& operator >> (short& shValue)
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(short))
 		{
@@ -426,7 +426,7 @@ public:
 		_iPayloadReadPos += sizeof(short);
 		return *this;
 	}
-	inline CLanPacket& operator >> (WORD& wValue)
+	inline CLanSendPacket& operator >> (WORD& wValue)
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(WORD))
 		{
@@ -441,7 +441,7 @@ public:
 		_iPayloadReadPos += sizeof(WORD);
 		return *this;
 	}
-	inline CLanPacket& operator >> (int& iValue)
+	inline CLanSendPacket& operator >> (int& iValue)
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(int))
 		{
@@ -456,7 +456,7 @@ public:
 		_iPayloadReadPos += sizeof(int);
 		return *this;
 	}
-	inline CLanPacket& operator >> (DWORD& dwValue)
+	inline CLanSendPacket& operator >> (DWORD& dwValue)
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(DWORD))
 		{
@@ -471,7 +471,7 @@ public:
 		_iPayloadReadPos += sizeof(DWORD);
 		return *this;
 	}
-	inline CLanPacket& operator >> (__int64& iValue)
+	inline CLanSendPacket& operator >> (__int64& iValue)
 	{
 		if (_iPayloadWritePos - _iPayloadReadPos < sizeof(__int64))
 		{
@@ -582,7 +582,7 @@ public:
 	}
 
 public:
-	inline void CopyRecvBuf(CLanPacket* origin)
+	inline void CopyRecvBuf(CLanSendPacket* origin)
 	{
 		int useSize = origin->GetPayloadSize();
 		if (useSize > 0)

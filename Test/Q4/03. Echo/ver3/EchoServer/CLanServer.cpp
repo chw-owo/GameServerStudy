@@ -490,7 +490,7 @@ bool CLanServer::Disconnect(unsigned __int64 sessionID)
 	return true;
 }
 
-bool CLanServer::SendPacket(unsigned __int64 sessionID, CLanPacket* packet, bool disconnect)
+bool CLanServer::SendPacket(unsigned __int64 sessionID, CLanSendPacket* packet, bool disconnect)
 {
 	CLanSession* pSession = AcquireSessionUsage(sessionID);
 	if (pSession == nullptr) return false;
@@ -567,7 +567,7 @@ bool CLanServer::RemoveGroup(CLanGroup* pGroup)
 
 void CLanServer::HandleRecvCP(CLanSession* pSession, int recvBytes)
 {
-	CLanPacket* recvBuf = pSession->_recvBuf;
+	CLanRecvPacket* recvBuf = pSession->_recvBuf;
 	int moveWriteRet = recvBuf->MovePayloadWritePos(recvBytes);
 	if (moveWriteRet != recvBytes)
 	{
@@ -599,14 +599,14 @@ void CLanServer::HandleRecvCP(CLanSession* pSession, int recvBytes)
 			return;
 		}
 
-		CRecvLanPacket* packet = CRecvLanPacket::Alloc(recvBuf);
+		CLanMsg* packet = CLanMsg::Alloc(recvBuf);
 		recvBuf->AddUsageCount(1);
 		cnt++;
 
 		if (pSession->_pGroup == nullptr)
 		{
 			OnRecv(pSession->GetID(), packet);
-			CRecvLanPacket::Free(packet);
+			CLanMsg::Free(packet);
 		}
 		else
 		{
@@ -629,10 +629,10 @@ void CLanServer::HandleRecvCP(CLanSession* pSession, int recvBytes)
 		useSize = recvBuf->GetPayloadSize();
 	}
 
-	pSession->_recvBuf = CLanPacket::Alloc();
+	pSession->_recvBuf = CLanRecvPacket::Alloc();
 	pSession->_recvBuf->AddUsageCount(1);
 	pSession->_recvBuf->CopyRecvBuf(recvBuf);
-	CLanPacket::Free(recvBuf);
+	CLanRecvPacket::Free(recvBuf);
 
 	InterlockedAdd(&_recvCnt, cnt);
 	if (pSession->_pGroup != nullptr)
@@ -647,7 +647,7 @@ void CLanServer::HandleSendCP(CLanSession* pSession, int sendBytes)
 	int i = 0;
 	for (; i < pSession->_sendCount; i++)
 	{
-		CLanPacket* packet = pSession->_tempBuf.Dequeue();
+		CLanSendPacket* packet = pSession->_tempBuf.Dequeue();
 		if (packet == nullptr) break;
 
 		if (packet->_pGroup == nullptr)
@@ -661,7 +661,7 @@ void CLanServer::HandleSendCP(CLanSession* pSession, int sendBytes)
 			if (ret == 1) WakeByAddressSingle(&pSession->_pGroup->_signal);
 		}
 
-		CLanPacket::Free(packet);
+		CLanSendPacket::Free(packet);
 	}
 
 	InterlockedExchange(&pSession->_sendFlag, 0);
@@ -730,7 +730,7 @@ bool CLanServer::SendPost(CLanSession* pSession)
 	for (; idx < useSize; idx++)
 	{
 		if (idx == dfWSASENDBUF_CNT) break;
-		CLanPacket* packet = pSession->_sendBuf.Dequeue();
+		CLanSendPacket* packet = pSession->_sendBuf.Dequeue();
 		if (packet == nullptr) break;
 
 		pSession->_wsaSendbuf[idx].buf = packet->GetLanPacketReadPtr();

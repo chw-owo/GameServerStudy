@@ -3,7 +3,7 @@
 #define _WINSOCKAPI_
 #endif
 
-#include "CLanPacket.h"
+#include "CLanSendPacket.h"
 #include "CLanSession.h"
 #include <vector>
 #include <Windows.h>
@@ -33,7 +33,7 @@ public:
 	// Called in CLanGroup's Child Class
 protected:
 	bool Disconnect(unsigned __int64 sessionID);
-	bool SendPacket(unsigned __int64 sessionID, CLanPacket* packet, bool disconnect = false);
+	bool SendPacket(unsigned __int64 sessionID, CLanSendPacket* packet, bool disconnect = false);
 	void MoveGroup(unsigned __int64 sessionID, CLanGroup* pGroup);
 
 protected:
@@ -51,7 +51,7 @@ protected:
 	virtual void OnLeaveGroup(unsigned __int64 sessionID) = 0;
 
 protected:
-	virtual void OnRecv(unsigned __int64 sessionID, CRecvLanPacket* packet) = 0;
+	virtual void OnRecv(unsigned __int64 sessionID, CLanMsg* packet) = 0;
 	virtual void OnSend(unsigned __int64 sessionID) = 0;
 	virtual void OnError(int errorCode, wchar_t* errorMsg) = 0;
 	virtual void OnDebug(int debugCode, wchar_t* debugMsg) = 0;

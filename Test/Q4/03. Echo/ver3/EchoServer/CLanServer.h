@@ -4,7 +4,7 @@
 
 #include "CLockFreeStack.h"
 #include "CLanSession.h"
-#include "CRecvLanPacket.h"
+#include "CLanMsg.h"
 #include <ws2tcpip.h>
 #include <synchapi.h>
 #include <process.h>
@@ -28,7 +28,7 @@ protected:
 
 protected:
 	bool Disconnect(unsigned __int64 sessionID);
-	bool SendPacket(unsigned __int64 sessionID, CLanPacket* packet, bool disconnect = false);
+	bool SendPacket(unsigned __int64 sessionID, CLanSendPacket* packet, bool disconnect = false);
 
 protected:
 	bool MoveGroup(unsigned __int64 sessionID, CLanGroup* pGroup);
@@ -46,7 +46,7 @@ protected:
 
 protected:
 	virtual void OnReleaseClient(unsigned __int64 sessionID) = 0;
-	virtual void OnRecv(unsigned __int64 sessionID, CRecvLanPacket* packet) = 0;
+	virtual void OnRecv(unsigned __int64 sessionID, CLanMsg* packet) = 0;
 	virtual void OnSend(unsigned __int64 sessionID) = 0;
 	virtual void OnError(int errorCode, wchar_t* errorMsg) = 0;
 	virtual void OnDebug(int debugCode, wchar_t* debugMsg) = 0;

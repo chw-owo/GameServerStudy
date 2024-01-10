@@ -94,4 +94,4 @@ public:
 };
 
 template<typename T>
-CTlsPool<typename CLockFreeStack<T>::StackNode>* CLockFreeStack<T>::_pStackPool = new CTlsPool<CLockFreeStack<T>::StackNode>(dfSTACKNODE_DEF, false);
+CTlsPool<typename CLockFreeStack<T>::StackNode>* CLockFreeStack<T>::_pStackPool = new CTlsPool<CLockFreeStack<T>::StackNode>(dfSTACKNODE_CNT_DEF, dfSTACKNODE_BUCKET_SIZE, false);

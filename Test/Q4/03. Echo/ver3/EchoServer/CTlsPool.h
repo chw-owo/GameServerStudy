@@ -14,7 +14,17 @@ class CTlsPool
 public:
 	struct stBucket
 	{
-		T* _datas[dfPOOL_BUCKET_SIZE] = { nullptr, };
+		stBucket(long bucketSize)
+		{
+			_datas = (T**)malloc(sizeof(T*) * bucketSize);
+		}
+
+		~stBucket()
+		{
+			free(_datas);
+		}
+
+		T** _datas = nullptr;
 		__int64 _tail = NULL;
 	};
 
@@ -22,7 +32,7 @@ public:
 	class CPool
 	{
 	public:
-		CPool(CTlsPool<T>* mainPool, bool placementNew);
+		CPool(CTlsPool<T>* mainPool, long bucketSize, bool placementNew);
 		~CPool();
 
 	public:
@@ -39,16 +49,17 @@ public:
 
 	private:
 		CTlsPool<T>* _mainPool;
+		long _bucketSize;
+		long _bucketIdx;
 		bool _placementNew;
 		stBucket* _bucket = nullptr;
-		int _bucketIdx = dfPOOL_BUCKET_SIZE + 1;
 		stBucket* _return = nullptr;
-		int _returnIdx = 0;
+		long _returnIdx = 0;
 	};
 
 public:
 	template<typename... Types>
-	CTlsPool(int blockNum, bool placementNew, Types... args);
+	CTlsPool(long blockNum, long bucketSize, bool placementNew, Types... args);
 	~CTlsPool();
 
 public:
@@ -67,6 +78,7 @@ public: // For protect ABA
 
 public:
 	bool _placementNew;
+	long _bucketSize = 0;
 	long _bucketNum = 0;
 	long _curBucketCnt = 0;
 	long _useNodeCnt = 0;
@@ -79,7 +91,7 @@ private:
 public:
 	inline long GetPoolSize()
 	{
-		return _curBucketCnt * dfPOOL_BUCKET_SIZE;
+		return _curBucketCnt * _bucketSize;
 	}
 
 	inline long GetNodeCount()
@@ -89,10 +101,12 @@ public:
 };
 
 template<class T>
-inline CTlsPool<T>::CPool::CPool(CTlsPool<T>* mainPool, bool placementNew)
+inline CTlsPool<T>::CPool::CPool(CTlsPool<T>* mainPool, long bucketSize, bool placementNew)
 	: _mainPool(mainPool), _placementNew(placementNew)
 {
-	_return = new stBucket;
+	_bucketSize = bucketSize;
+	_bucketIdx = _bucketSize + 1;
+	_return = new stBucket(_bucketSize);
 }
 
 template<class T>
@@ -101,13 +115,13 @@ inline CTlsPool<T>::CPool::~CPool()
 	if (_placementNew)
 	{
 		// Free 시 Data의 소멸자를 호출하므로 이때는 호출하면 안된다
-		for (int i = 0; i < dfPOOL_BUCKET_SIZE; i++)
+		for (int i = 0; i < _bucketSize; i++)
 		{
 			free(_return->_datas[i]);
 		}
 		delete _return;
 
-		for (int i = _bucketIdx; i < dfPOOL_BUCKET_SIZE; i++)
+		for (int i = _bucketIdx; i < _bucketSize; i++)
 		{
 			free(_bucket->_datas[i]);
 		}
@@ -116,13 +130,13 @@ inline CTlsPool<T>::CPool::~CPool()
 	else
 	{
 		// Free 시 Data의 소멸자를 호출하지 않으므로 이때 호출해야 된다
-		for (int i = 0; i < dfPOOL_BUCKET_SIZE; i++)
+		for (int i = 0; i < _bucketSize; i++)
 		{
 			delete _return->_datas[i];
 		}
 		delete _return;
 
-		for (int i = _bucketIdx; i < dfPOOL_BUCKET_SIZE; i++)
+		for (int i = _bucketIdx; i < _bucketSize; i++)
 		{
 			delete _bucket->_datas[i];
 		}
@@ -145,7 +159,7 @@ inline void CTlsPool<T>::CPool::ReturnBucket()
 		_return->_tail = pCurTop;
 		if (InterlockedCompareExchange64(&_mainPool->_buckets, pNewTop, pCurTop) == pCurTop)
 		{
-			_return = new stBucket;
+			_return = new stBucket(_bucketSize);
 			return;
 		}
 	}
@@ -155,7 +169,8 @@ template<class T>
 template<typename ...Types>
 inline void CTlsPool<T>::CPool::GetBucket(Types ...args)
 {
-	if (_bucket != nullptr) delete _bucket;
+	if (_bucket != nullptr) 
+		delete _bucket;
 
 	for (;;)
 	{
@@ -184,13 +199,13 @@ template<class T>
 template<typename ...Types>
 inline void CTlsPool<T>::CPool::CreateBucket(Types ...args)
 {
-	_bucket = new stBucket;
+	_bucket = new stBucket(_bucketSize);
 	InterlockedIncrement(&_mainPool->_curBucketCnt);
 
 	if (_placementNew)
 	{
 		// Alloc 시 Data의 생성자를 호출하므로 이때 호출하면 안된다
-		for (int i = 0; i < dfPOOL_BUCKET_SIZE; i++)
+		for (int i = 0; i < _bucketSize; i++)
 		{
 			_bucket->_datas[i] = (T*)malloc(sizeof(T));
 		}
@@ -198,10 +213,21 @@ inline void CTlsPool<T>::CPool::CreateBucket(Types ...args)
 	else
 	{
 		// Alloc 시 Data의 생성자를 호출하지 않으므로 이때 호출해야 된다
-		for (int i = 0; i < dfPOOL_BUCKET_SIZE; i++)
+		if (sizeof...(args) != 0)
 		{
-			_bucket->_datas[i] = new T;
+			for (int i = 0; i < _bucketSize; i++)
+			{
+				_bucket->_datas[i] = new T(args...);
+			}
 		}
+		else
+		{
+			for (int i = 0; i < _bucketSize; i++)
+			{
+				_bucket->_datas[i] = new T;
+			}
+		}
+		
 	}
 }
 
@@ -209,21 +235,30 @@ template<class T>
 template<typename ...Types>
 inline T* CTlsPool<T>::CPool::Alloc(Types ...args)
 {
-	if (_bucketIdx >= dfPOOL_BUCKET_SIZE)
+	if (_bucketIdx >= _bucketSize)
 	{
 		GetBucket(args...);
 		_bucketIdx = 0;
 	}
+	
 	T* data = _bucket->_datas[_bucketIdx];
 	_bucketIdx++;
-	if (_placementNew) new (data) T(args...);
+
+	if (_placementNew)
+	{
+		if (sizeof...(args) != 0)
+			new (data) T(args...);
+		else
+			new (data) T;
+	}
+
 	return data;
 }
 
 template<class T>
 inline void CTlsPool<T>::CPool::Free(T* data)
 {
-	if (_returnIdx >= dfPOOL_BUCKET_SIZE)
+	if (_returnIdx >= _bucketSize)
 	{
 		ReturnBucket();
 		_returnIdx = 0;
@@ -235,7 +270,7 @@ inline void CTlsPool<T>::CPool::Free(T* data)
 
 template<class T>
 template<typename ...Types>
-inline CTlsPool<T>::CTlsPool(int blockNum, bool placementNew, Types ...args) : _placementNew(placementNew)
+inline CTlsPool<T>::CTlsPool(long blockNum, long bucketSize, bool placementNew, Types ...args) : _placementNew(placementNew)
 {
 	_tlsIdx = TlsAlloc();
 
@@ -246,7 +281,8 @@ inline CTlsPool<T>::CTlsPool(int blockNum, bool placementNew, Types ...args) : _
 
 	if (blockNum <= 0) return;
 
-	_bucketNum = (blockNum / dfPOOL_BUCKET_SIZE) + 1;
+	_bucketSize = bucketSize;
+	_bucketNum = (blockNum / _bucketSize) + 1;
 	_curBucketCnt = _bucketNum;
 
 	if (_placementNew)
@@ -254,10 +290,10 @@ inline CTlsPool<T>::CTlsPool(int blockNum, bool placementNew, Types ...args) : _
 		// Alloc 시 Data의 생성자를 호출하므로 이때 호출하면 안된다
 		for (int i = 0; i < _bucketNum; i++)
 		{
-			stBucket* bucket = new stBucket;
+			stBucket* bucket = new stBucket(_bucketSize);
 			if (bucket == nullptr) __debugbreak();
 			bucket->_tail = (__int64)_buckets;
-			for (int j = 0; j < dfPOOL_BUCKET_SIZE; j++)
+			for (int j = 0; j < _bucketSize; j++)
 			{
 				bucket->_datas[j] = (T*)malloc(sizeof(T));
 			}
@@ -274,23 +310,47 @@ inline CTlsPool<T>::CTlsPool(int blockNum, bool placementNew, Types ...args) : _
 	else
 	{
 		// Alloc 시 Data의 생성자를 호출하지 않으므로 이때 호출해야 된다
-		for (int i = 0; i < _bucketNum; i++)
+		if (sizeof...(args) != 0)
 		{
-			stBucket* bucket = new stBucket;
-			if (bucket == nullptr) __debugbreak();
-			bucket->_tail = (__int64)_buckets;
-			for (int j = 0; j < dfPOOL_BUCKET_SIZE; j++)
+			for (int i = 0; i < _bucketNum; i++)
 			{
-				bucket->_datas[j] = new T;
+				stBucket* bucket = new stBucket(_bucketSize);
+				if (bucket == nullptr) __debugbreak();
+				bucket->_tail = (__int64)_buckets;
+				for (int j = 0; j < _bucketSize; j++)
+				{
+					bucket->_datas[j] = new T(args...);
+				}
+
+				__int64 key = InterlockedIncrement64(&_key);
+				key <<= __ADDRESS_BIT__;
+				__int64 pBuckets = (__int64)bucket;
+				pBuckets &= _addressMask;
+				pBuckets |= key;
+
+				_buckets = (__int64)bucket;
 			}
+		}
+		else
+		{
+			for (int i = 0; i < _bucketNum; i++)
+			{
+				stBucket* bucket = new stBucket(_bucketSize);
+				if (bucket == nullptr) __debugbreak();
+				bucket->_tail = (__int64)_buckets;
+				for (int j = 0; j < _bucketSize; j++)
+				{
+					bucket->_datas[j] = new T;
+				}
 
-			__int64 key = InterlockedIncrement64(&_key);
-			key <<= __ADDRESS_BIT__;
-			__int64 pBuckets = (__int64)bucket;
-			pBuckets &= _addressMask;
-			pBuckets |= key;
+				__int64 key = InterlockedIncrement64(&_key);
+				key <<= __ADDRESS_BIT__;
+				__int64 pBuckets = (__int64)bucket;
+				pBuckets &= _addressMask;
+				pBuckets |= key;
 
-			_buckets = (__int64)bucket;
+				_buckets = (__int64)bucket;
+			}
 		}
 	}
 }
@@ -313,7 +373,7 @@ inline CTlsPool<T>::~CTlsPool()
 		while (bucket->_tail != NULL)
 		{
 			__int64 next = bucket->_tail;
-			for (int i = 0; i < dfPOOL_BUCKET_SIZE; i++)
+			for (int i = 0; i < _bucketSize; i++)
 			{
 				free(bucket->_datas[i]);
 			}
@@ -321,7 +381,7 @@ inline CTlsPool<T>::~CTlsPool()
 			bucket = (stBucket*)(next & _addressMask);
 		}
 
-		for (int i = 0; i < dfPOOL_BUCKET_SIZE; i++)
+		for (int i = 0; i < _bucketSize; i++)
 		{
 			free(bucket->_datas[i]);
 		}
@@ -334,7 +394,7 @@ inline CTlsPool<T>::~CTlsPool()
 		while (bucket->_tail != NULL)
 		{
 			__int64 next = bucket->_tail;
-			for (int i = 0; i < dfPOOL_BUCKET_SIZE; i++)
+			for (int i = 0; i < _bucketSize; i++)
 			{
 				delete bucket->_datas[i];
 			}
@@ -342,7 +402,7 @@ inline CTlsPool<T>::~CTlsPool()
 			bucket = (stBucket*)(next & _addressMask);
 		}
 
-		for (int i = 0; i < dfPOOL_BUCKET_SIZE; i++)
+		for (int i = 0; i < _bucketSize; i++)
 		{
 			delete bucket->_datas[i];
 		}
@@ -357,7 +417,7 @@ inline T* CTlsPool<T>::Alloc(Types ...args)
 	CPool* pool = (CPool*)TlsGetValue(_tlsIdx);
 	if (pool == nullptr)
 	{
-		pool = new CPool(this, _placementNew);
+		pool = new CPool(this, _bucketSize, _placementNew);
 		if (pool == nullptr) __debugbreak();
 		long idx = InterlockedIncrement(&_poolIdx);
 
@@ -380,7 +440,7 @@ inline void CTlsPool<T>::Free(T* data)
 	CPool* pool = (CPool*)TlsGetValue(_tlsIdx);
 	if (pool == nullptr)
 	{
-		pool = new CPool(this, _placementNew);
+		pool = new CPool(this, _bucketSize, _placementNew);
 		if (pool == nullptr) __debugbreak();
 		long idx = InterlockedIncrement(&_poolIdx);
 		_pools[idx] = pool;
@@ -403,7 +463,7 @@ inline void CTlsPool<T>::Initialize(Types ...args)
 	CPool* pool = (CPool*)TlsGetValue(_tlsIdx);
 	if (pool == nullptr)
 	{
-		pool = new CPool(this, _placementNew);
+		pool = new CPool(this, _bucketSize, _placementNew);
 		if (pool == nullptr) __debugbreak();
 		long idx = InterlockedIncrement(&_poolIdx);
 		_pools[idx] = pool;

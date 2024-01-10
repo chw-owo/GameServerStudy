@@ -7,7 +7,7 @@ bool CLanGroup::Disconnect(unsigned __int64 sessionID)
 	return _pNet->Disconnect(sessionID);
 }
 
-bool CLanGroup::SendPacket(unsigned __int64 sessionID, CLanPacket* packet, bool disconnect)
+bool CLanGroup::SendPacket(unsigned __int64 sessionID, CLanSendPacket* packet, bool disconnect)
 {
 	return _pNet->SendPacket(sessionID, packet, disconnect);
 }
@@ -101,9 +101,9 @@ void CLanGroup::NetworkUpdate()
 			while (pSession->_OnRecvQ.GetUseSize() > 0)
 			{
 				if (pSession->_pGroup != this) break;
-				CRecvLanPacket* packet = pSession->_OnRecvQ.Dequeue();
+				CLanMsg* packet = pSession->_OnRecvQ.Dequeue();
 				OnRecv(sessionID, packet);
-				CRecvLanPacket::Free(packet);
+				CLanMsg::Free(packet);
 				InterlockedDecrement(&_signal);
 			}
 			it++;

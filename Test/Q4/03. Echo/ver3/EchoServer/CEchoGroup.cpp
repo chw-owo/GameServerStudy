@@ -4,7 +4,7 @@
 CEchoGroup::CEchoGroup(CServer* pNet)
 {
 	Setting((CNetServer*)pNet, 0);
-	_userPool = new CTlsPool<CEchoUser>(dfUSER_MAX, true);
+	_userPool = new CTlsPool<CEchoUser>(dfUSER_MAX, dfUSERPOOL_BUCKET_SIZE, true);
 }
 
 void CEchoGroup::Initialize()
@@ -56,14 +56,14 @@ void CEchoGroup::OnLeaveGroup(unsigned __int64 sessionID)
 	_usersMap.erase(mapIter);
 }
 
-void CEchoGroup::OnRecv(unsigned __int64 sessionID, CRecvNetPacket* packet)
+void CEchoGroup::OnRecv(unsigned __int64 sessionID, CNetMsg* packet)
 {
 	unordered_map<unsigned __int64, CEchoUser*>::iterator mapIter = _usersMap.find(sessionID);
 	if (mapIter == _usersMap.end())
 	{
 		LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d]: No Session %llx\n", _T(__FUNCTION__), __LINE__, sessionID);
 		::wprintf(L"%s[%d]: No Session %llx\n", _T(__FUNCTION__), __LINE__, sessionID);
-		CRecvNetPacket::Free(packet);
+		CNetMsg::Free(packet);
 		return;
 	}
 
@@ -96,7 +96,7 @@ void CEchoGroup::OnRecv(unsigned __int64 sessionID, CRecvNetPacket* packet)
 		}
 	}
 
-	CRecvNetPacket::Free(packet);
+	CNetMsg::Free(packet);
 }
 
 void CEchoGroup::OnSend(unsigned __int64 sessionID)
@@ -116,34 +116,34 @@ void CEchoGroup::OnDebug(int debugCode, wchar_t* debugMsg)
 	::wprintf(L"%s (%d)\n", debugMsg, debugCode);
 }
 
-void CEchoGroup::ReqSendUnicast(CNetPacket* packet, unsigned __int64 sessionID)
+void CEchoGroup::ReqSendUnicast(CNetSendPacket* packet, unsigned __int64 sessionID)
 {
 	packet->SetGroup(this);
 	packet->AddUsageCount(1);
 	if (!SendPacket(sessionID, packet))
 	{
-		CNetPacket::Free(packet);
+		CNetSendPacket::Free(packet);
 	}
 }
 
-inline void CEchoGroup::HandlePacket_ECHO(CRecvNetPacket* packet, CEchoUser* user)
+inline void CEchoGroup::HandlePacket_ECHO(CNetMsg* packet, CEchoUser* user)
 {
 	__int64 accountNo;
 	LONGLONG sendTick;
 	GetCSPacket_REQ_ECHO(packet, accountNo, sendTick);
 
-	CNetPacket* sendPacket = CNetPacket::Alloc();
+	CNetSendPacket* sendPacket = CNetSendPacket::Alloc();
 	SetSCPacket_RES_ECHO(sendPacket, accountNo, sendTick);
 	ReqSendUnicast(sendPacket, user->_sessionID);
 }
 
-inline void CEchoGroup::GetCSPacket_REQ_ECHO(CRecvNetPacket* packet, __int64& accountNo, LONGLONG& sendTick)
+inline void CEchoGroup::GetCSPacket_REQ_ECHO(CNetMsg* packet, __int64& accountNo, LONGLONG& sendTick)
 {
 	*packet >> accountNo;
 	*packet >> sendTick;
 }
 
-inline void CEchoGroup::SetSCPacket_RES_ECHO(CNetPacket* packet, __int64 accountNo, LONGLONG sendTick)
+inline void CEchoGroup::SetSCPacket_RES_ECHO(CNetSendPacket* packet, __int64 accountNo, LONGLONG sendTick)
 {
 	*packet << (WORD)en_PACKET_CS_GAME_RES_ECHO;
 	*packet << accountNo;

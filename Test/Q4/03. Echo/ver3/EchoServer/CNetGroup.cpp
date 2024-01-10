@@ -7,7 +7,7 @@ bool CNetGroup::Disconnect(unsigned __int64 sessionID)
 	return _pNet->Disconnect(sessionID);
 }
 
-bool CNetGroup::SendPacket(unsigned __int64 sessionID, CNetPacket* packet, bool disconnect)
+bool CNetGroup::SendPacket(unsigned __int64 sessionID, CNetSendPacket* packet, bool disconnect)
 {
 	return _pNet->SendPacket(sessionID, packet, disconnect);
 }
@@ -101,7 +101,7 @@ void CNetGroup::NetworkUpdate()
 			while (pSession->_OnRecvQ.GetUseSize() > 0)
 			{
 				if (pSession->_pGroup != this) break;
-				CRecvNetPacket* packet = pSession->_OnRecvQ.Dequeue();
+				CNetMsg* packet = pSession->_OnRecvQ.Dequeue();
 				OnRecv(sessionID, packet);
 				InterlockedDecrement(&_signal);
 			}

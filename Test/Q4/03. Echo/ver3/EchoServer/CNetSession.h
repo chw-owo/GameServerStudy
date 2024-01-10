@@ -1,5 +1,6 @@
 #pragma once
-#include "CNetPacket.h"
+#include "CNetRecvPacket.h"
+#include "CNetSendPacket.h"
 #include "CLockFreeQueue.h"
 #include "Utils.h"
 
@@ -16,13 +17,13 @@ public:
 		_sendPostOvl._type = NET_TYPE::SEND_POST;
 		_releaseOvl._type = NET_TYPE::RELEASE;
 
-		_recvBuf = CNetPacket::Alloc();
+		_recvBuf = CNetRecvPacket::Alloc();
 		_recvBuf->AddUsageCount(1);
 	}
 
 	inline ~CNetSession()
 	{
-		CNetPacket::Free(_recvBuf);
+		CNetRecvPacket::Free(_recvBuf);
 	}
 
 public:
@@ -60,13 +61,13 @@ public:
 
 		while (_sendBuf.GetUseSize() > 0)
 		{
-			CNetPacket* packet = _sendBuf.Dequeue();
-			CNetPacket::Free(packet);
+			CNetSendPacket* packet = _sendBuf.Dequeue();
+			CNetSendPacket::Free(packet);
 		}
 		while (_tempBuf.GetUseSize() > 0)
 		{
-			CNetPacket* packet = _tempBuf.Dequeue();
-			CNetPacket::Free(packet);
+			CNetSendPacket* packet = _tempBuf.Dequeue();
+			CNetSendPacket::Free(packet);
 		}
 	}
 
@@ -81,9 +82,9 @@ public:
 	SOCKET _sock;
 	SOCKADDR_IN _addr;
 
-	CNetPacket* _recvBuf;
-	CLockFreeQueue<CNetPacket*> _sendBuf;
-	CLockFreeQueue<CNetPacket*> _tempBuf;
+	CNetRecvPacket* _recvBuf;
+	CLockFreeQueue<CNetSendPacket*> _sendBuf;
+	CLockFreeQueue<CNetSendPacket*> _tempBuf;
 	WSABUF _wsaRecvbuf[dfWSARECVBUF_CNT];
 	WSABUF _wsaSendbuf[dfWSASENDBUF_CNT];
 
@@ -97,5 +98,5 @@ public:
 public: // For Group;
 	CNetGroup* _pGroup = nullptr;
 	CRITICAL_SECTION _groupLock;
-	CLockFreeQueue<CRecvNetPacket*> _OnRecvQ;
+	CLockFreeQueue<CNetMsg*> _OnRecvQ;
 };

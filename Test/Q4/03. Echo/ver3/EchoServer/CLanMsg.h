@@ -1,52 +1,51 @@
 #pragma once
 #include "Config.h"
 
-#ifdef NETSERVER
-#include "CNetPacket.h"
+#ifdef LANSERVER
+#include "CLanRecvPacket.h"
 #include "CTlsPool.h"
 
-class CRecvNetPacket 
+class CLanMsg
 {
-	friend CTlsPool<CRecvNetPacket>;
+	friend CTlsPool<CLanMsg>;
 
 private:
-	inline CRecvNetPacket() { }
-	inline CRecvNetPacket(CNetPacket* packet) : _packet(packet),
+	inline CLanMsg() { }
+	inline CLanMsg(CLanRecvPacket* packet) : _packet(packet),
 		_readPos(packet->GetPayloadReadPos()), _writePos(packet->GetPayloadWritePos()) { }
 
 public: // TO-DO: private
 	int _readPos = 0;
 	int _writePos = 0;
-	CNetPacket* _packet = nullptr;
+	CLanRecvPacket* _packet = nullptr;
 
 public:
-	static CTlsPool<CRecvNetPacket> _pool;
+	static CTlsPool<CLanMsg> _pool;
 
-	inline static CRecvNetPacket* Alloc(CNetPacket* packet)
+	inline static CLanMsg* Alloc(CLanRecvPacket* packet)
 	{
-		CRecvNetPacket* recvNetPacket = _pool.Alloc(packet);
-		packet->_recvPackets->Push(recvNetPacket);
-		return recvNetPacket;
-	}
-	
-	inline static void Free(CRecvNetPacket* packet)
-	{
-		CNetPacket::Free(packet->_packet);
+		CLanMsg* recvLanPacket = _pool.Alloc(packet);
+		return recvLanPacket;
 	}
 
-	inline static int GetNodeCount()
+	inline static bool Free(CLanMsg* packet)
 	{
-		return _pool.GetNodeCount();
+		if (CLanRecvPacket::Free(packet->_packet))
+		{
+			_pool.Free(packet);
+			return true;
+		}
+		return false;
 	}
 
 public:
-	inline CRecvNetPacket& operator = (CRecvNetPacket& clSrCNetPacket)
+	inline CLanMsg& operator = (CLanMsg& clSrCLanRecvPacket)
 	{
-		*this = clSrCNetPacket;
+		*this = clSrCLanRecvPacket;
 		return *this;
 	}
 
-	inline CRecvNetPacket& operator >> (float& fValue)
+	inline CLanMsg& operator >> (float& fValue)
 	{
 		if (_writePos - _readPos < sizeof(float))
 		{
@@ -61,7 +60,7 @@ public:
 		_readPos += sizeof(float);
 		return *this;
 	}
-	inline CRecvNetPacket& operator >> (double& dValue)
+	inline CLanMsg& operator >> (double& dValue)
 	{
 		if (_writePos - _readPos < sizeof(double))
 		{
@@ -76,7 +75,7 @@ public:
 		_readPos += sizeof(double);
 		return *this;
 	}
-	inline CRecvNetPacket& operator >> (char& chValue)
+	inline CLanMsg& operator >> (char& chValue)
 	{
 		if (_writePos - _readPos < sizeof(char))
 		{
@@ -91,7 +90,7 @@ public:
 		_readPos += sizeof(char);
 		return *this;
 	}
-	inline CRecvNetPacket& operator >> (BYTE& byValue)
+	inline CLanMsg& operator >> (BYTE& byValue)
 	{
 		if (_writePos - _readPos < sizeof(BYTE))
 		{
@@ -107,7 +106,7 @@ public:
 		_readPos += sizeof(BYTE);
 		return *this;
 	}
-	inline CRecvNetPacket& operator >> (wchar_t& szValue)
+	inline CLanMsg& operator >> (wchar_t& szValue)
 	{
 		if (_writePos - _readPos < sizeof(wchar_t))
 		{
@@ -122,10 +121,12 @@ public:
 		_readPos += sizeof(wchar_t);
 		return *this;
 	}
-	inline CRecvNetPacket& operator >> (short& shValue)
+	inline CLanMsg& operator >> (short& shValue)
 	{
 		if (_writePos - _readPos < sizeof(short))
 		{
+			::printf("\n%d - %d = %d\n",
+				_writePos, _readPos, _writePos - _readPos);
 			_packet->_errCode = ERR_GET_SHORT_OVER;
 			throw (int)ERR_PACKET;
 			return *this;
@@ -137,7 +138,7 @@ public:
 		_readPos += sizeof(short);
 		return *this;
 	}
-	inline CRecvNetPacket& operator >> (WORD& wValue)
+	inline CLanMsg& operator >> (WORD& wValue)
 	{
 		if (_writePos - _readPos < sizeof(WORD))
 		{
@@ -152,7 +153,7 @@ public:
 		_readPos += sizeof(WORD);
 		return *this;
 	}
-	inline CRecvNetPacket& operator >> (int& iValue)
+	inline CLanMsg& operator >> (int& iValue)
 	{
 		if (_writePos - _readPos < sizeof(int))
 		{
@@ -167,7 +168,7 @@ public:
 		_readPos += sizeof(int);
 		return *this;
 	}
-	inline CRecvNetPacket& operator >> (DWORD& dwValue)
+	inline CLanMsg& operator >> (DWORD& dwValue)
 	{
 		if (_writePos - _readPos < sizeof(DWORD))
 		{
@@ -182,7 +183,7 @@ public:
 		_readPos += sizeof(DWORD);
 		return *this;
 	}
-	inline CRecvNetPacket& operator >> (__int64& iValue)
+	inline CLanMsg& operator >> (__int64& iValue)
 	{
 		if (_writePos - _readPos < sizeof(__int64))
 		{
@@ -211,6 +212,7 @@ public:
 		_readPos += iSize;
 		return iSize;
 	}
+
 };
 
 #endif

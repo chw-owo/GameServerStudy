@@ -444,7 +444,7 @@ bool CNetServer::Disconnect(unsigned __int64 sessionID)
 	return true;
 }
 
-bool CNetServer::SendPacket(unsigned __int64 sessionID, CNetPacket* packet, bool disconnect)
+bool CNetServer::SendPacket(unsigned __int64 sessionID, CNetSendPacket* packet, bool disconnect)
 {
 	CNetSession* pSession = AcquireSessionUsage(sessionID);
 	if (pSession == nullptr) return false;
@@ -524,7 +524,7 @@ bool CNetServer::RemoveGroup(CNetGroup* pGroup)
 
 void CNetServer::HandleRecvCP(CNetSession* pSession, int recvBytes)
 {
-	CNetPacket* recvBuf = pSession->_recvBuf;
+	CNetRecvPacket* recvBuf = pSession->_recvBuf;
 	int moveWriteRet = recvBuf->MovePayloadWritePos(recvBytes);
 	if (moveWriteRet != recvBytes)
 	{
@@ -575,7 +575,7 @@ void CNetServer::HandleRecvCP(CNetSession* pSession, int recvBytes)
 			return;
 		}
 
-		CRecvNetPacket* recvNetPacket = CRecvNetPacket::Alloc(recvBuf);
+		CNetMsg* recvNetPacket = CNetMsg::Alloc(recvBuf);
 		recvBuf->AddUsageCount(1);
 		cnt++;
 
@@ -604,10 +604,10 @@ void CNetServer::HandleRecvCP(CNetSession* pSession, int recvBytes)
 		useSize = recvBuf->GetPayloadSize();
 	}
 
-	pSession->_recvBuf = CNetPacket::Alloc();
+	pSession->_recvBuf = CNetRecvPacket::Alloc();
 	pSession->_recvBuf->AddUsageCount(1);
 	pSession->_recvBuf->CopyRecvBuf(recvBuf);
-	CNetPacket::Free(recvBuf);
+	CNetRecvPacket::Free(recvBuf);
 
 	InterlockedAdd(&_recvCnt, cnt);
 	if (pSession->_pGroup != nullptr)
@@ -621,7 +621,7 @@ void CNetServer::HandleSendCP(CNetSession* pSession, int sendBytes)
 {
 	for (int i = 0; i < pSession->_sendCount; i++)
 	{
-		CNetPacket* packet = pSession->_tempBuf.Dequeue();
+		CNetSendPacket* packet = pSession->_tempBuf.Dequeue();
 		if (packet == nullptr) break;
 
 		if (packet->_pGroup == nullptr)
@@ -634,7 +634,7 @@ void CNetServer::HandleSendCP(CNetSession* pSession, int sendBytes)
 			long ret = InterlockedIncrement(&pSession->_pGroup->_signal);
 			if (ret == 1) WakeByAddressSingle(&pSession->_pGroup->_signal);
 		}
-		CNetPacket::Free(packet);
+		CNetSendPacket::Free(packet);
 	}
 
 	InterlockedExchange(&pSession->_sendFlag, 0);
@@ -707,7 +707,7 @@ bool CNetServer::SendPost(CNetSession* pSession)
 	for (; idx < useSize; idx++)
 	{
 		if (idx == dfWSASENDBUF_CNT) break;
-		CNetPacket* packet = pSession->_sendBuf.Dequeue();
+		CNetSendPacket* packet = pSession->_sendBuf.Dequeue();
 		if (packet == nullptr) break;
 
 		pSession->_wsaSendbuf[idx].buf = packet->GetNetPacketReadPtr();
