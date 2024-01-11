@@ -4,7 +4,7 @@
 #define dfSERVER_IP						L"0.0.0.0"
 #define dfLOGIN_PORT					12077
 #define dfECHO_PORT						12078
-#define dfSEND_TIME						10
+#define dfSEND_TIME						5
 #define dfSERVER_DISCONNECT				false
 #define dfTHREAD_MAX					32
 #define dfTIMEOUT						40000
