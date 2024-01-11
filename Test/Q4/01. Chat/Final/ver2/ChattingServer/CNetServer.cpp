@@ -553,19 +553,6 @@ unsigned int __stdcall CNetServer::ReleaseThread(void* arg)
 			closesocket(sock);
 			pNetServer->_emptyIdx.Push(sessionIdx);
 
-			int idx = (int)TlsGetValue(pNetServer->_tlsIdx);
-			if (idx == 0)
-			{
-				idx = InterlockedIncrement(&pNetServer->_tlsMax);
-				bool ret = TlsSetValue(pNetServer->_tlsIdx, (LPVOID)idx);
-				if (ret == 0)
-				{
-					int err = GetLastError();
-					::printf("%d\n", err);
-					__debugbreak();
-				}
-			}
-
 			pNetServer->_disconnectCnts[idx]++;
 			InterlockedDecrement(&pNetServer->_sessionCnt);
 

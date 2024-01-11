@@ -5,6 +5,7 @@
 
 #include "CNetSendPacket.h"
 #include "CNetSession.h"
+#include "CRingBuffer.h"
 #include <vector>
 #include <Windows.h>
 using namespace std;
@@ -13,6 +14,15 @@ class CNetServer;
 class CNetGroup
 {
 	friend CNetServer;
+
+public:
+	CNetGroup()
+	{
+		for (int i = 0; i < dfONSENDQ_CNT; i++)
+		{
+			_OnSendQs[i] = new CLockFreeQueue<unsigned __int64>;
+		}
+	}
 
 	// Call Everywhere
 public:
@@ -64,6 +74,7 @@ private:
 	bool SkipForFixedFrame();
 	void NetworkUpdate();
 	void RemoveAllSessions();
+	void EnqueueOnSendQ(unsigned __int64 sessionID);
 
 private:
 	bool _alive = true;
@@ -75,10 +86,9 @@ private:
 private:
 	vector<unsigned __int64> _sessions;
 	CLockFreeQueue<unsigned __int64> _enterSessions;
-	CLockFreeQueue<unsigned __int64> _OnSendQ;
+	CLockFreeQueue<unsigned __int64>* _OnSendQs[dfONSENDQ_CNT];
 
-	// Monitor
-public:
+public: // Monitor
 	inline void UpdateMonitorData()
 	{
 		_enterTPS = InterlockedExchange(&_enterCnt, 0);
@@ -120,4 +130,3 @@ private:
 	volatile long _recvCnt = 0;
 	volatile long _sendCnt = 0;
 };
-

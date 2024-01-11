@@ -375,8 +375,8 @@ unsigned int __stdcall CNetServer::NetworkThread(void* arg)
 				break;
 
 			case NET_TYPE::SEND_POST:
-				pNetServer->SendPost(pSession);
-				break;
+			 	pNetServer->SendPost(pSession);
+			 	break;
 			}
 		}
 
@@ -585,7 +585,7 @@ void CNetServer::HandleRecvCP(CNetSession* pSession, int recvBytes)
 		}
 		else
 		{
-			pSession->_OnRecvQ.Enqueue(recvNetPacket);
+			pSession->_OnRecvQ->Enqueue((char*)&recvNetPacket, sizeof(recvNetPacket));
 			long ret = InterlockedIncrement(&pSession->_pGroup->_signal);
 			if (ret == 1) WakeByAddressSingle(&pSession->_pGroup->_signal);
 		}
@@ -609,9 +609,9 @@ void CNetServer::HandleRecvCP(CNetSession* pSession, int recvBytes)
 	pSession->_recvBuf->CopyRecvBuf(recvBuf);
 	CNetRecvPacket::Free(recvBuf);
 
-	InterlockedAdd(&_recvCnt, cnt);
+	InterlockedIncrement(&_recvCnt);
 	if (pSession->_pGroup != nullptr)
-		InterlockedAdd(&pSession->_pGroup->_recvCnt, cnt);
+		InterlockedIncrement(&pSession->_pGroup->_recvCnt);
 
 	LeaveCriticalSection(&pSession->_groupLock);
 	RecvPost(pSession);
@@ -619,9 +619,11 @@ void CNetServer::HandleRecvCP(CNetSession* pSession, int recvBytes)
 
 void CNetServer::HandleSendCP(CNetSession* pSession, int sendBytes)
 {
-	for (int i = 0; i < pSession->_sendCount; i++)
+	int cnt = 0;
+	for (; cnt < pSession->_sendCount; cnt++)
 	{
-		CNetSendPacket* packet = pSession->_tempBuf.Dequeue();
+		CNetSendPacket* packet;
+		pSession->_tempBuf->Dequeue((char*)&packet, sizeof(packet));
 		if (packet == nullptr) break;
 
 		if (packet->_pGroup == nullptr)
@@ -630,12 +632,15 @@ void CNetServer::HandleSendCP(CNetSession* pSession, int sendBytes)
 		}
 		else
 		{
-			packet->_pGroup->_OnSendQ.Enqueue(pSession->GetID());
+			packet->_pGroup->EnqueueOnSendQ(pSession->GetID());
+			InterlockedIncrement(&packet->_pGroup->_sendCnt);
 			long ret = InterlockedIncrement(&pSession->_pGroup->_signal);
 			if (ret == 1) WakeByAddressSingle(&pSession->_pGroup->_signal);
 		}
 		CNetSendPacket::Free(packet);
 	}
+
+	InterlockedIncrement(&_sendCnt);
 
 	InterlockedExchange(&pSession->_sendFlag, 0);
 	if (_sendTime == 0 && SendCheck(pSession))
@@ -701,24 +706,20 @@ bool CNetServer::SendCheck(CNetSession* pSession)
 
 bool CNetServer::SendPost(CNetSession* pSession)
 {
-	int idx = 0;
+	int cnt = 0;
 	int useSize = pSession->_sendBuf.GetUseSize();
 
-	for (; idx < useSize; idx++)
+	for (; cnt < useSize; cnt++)
 	{
-		if (idx == dfWSASENDBUF_CNT) break;
+		if (cnt == dfWSASENDBUF_CNT) break;
 		CNetSendPacket* packet = pSession->_sendBuf.Dequeue();
 		if (packet == nullptr) break;
 
-		pSession->_wsaSendbuf[idx].buf = packet->GetNetPacketReadPtr();
-		pSession->_wsaSendbuf[idx].len = packet->GetNetPacketSize();
-		pSession->_tempBuf.Enqueue(packet);
-
-		InterlockedIncrement(&_sendCnt);
-		if (packet->_pGroup != nullptr)
-			InterlockedIncrement(&packet->_pGroup->_sendCnt);
+		pSession->_wsaSendbuf[cnt].buf = packet->GetNetPacketReadPtr();
+		pSession->_wsaSendbuf[cnt].len = packet->GetNetPacketSize();
+		pSession->_tempBuf->Enqueue((char*)&packet, sizeof(packet));
 	}
-	pSession->_sendCount = idx;
+	pSession->_sendCount = cnt;
 
 	DWORD sendBytes;
 	ZeroMemory(&pSession->_sendComplOvl._ovl, sizeof(pSession->_sendComplOvl._ovl));
@@ -731,7 +732,7 @@ bool CNetServer::SendPost(CNetSession* pSession)
 
 	IncrementUseCount(pSession);
 	int sendRet = WSASend(pSession->_sock, pSession->_wsaSendbuf,
-		idx, &sendBytes, 0, (LPOVERLAPPED)&pSession->_sendComplOvl, NULL);
+		cnt, &sendBytes, 0, (LPOVERLAPPED)&pSession->_sendComplOvl, NULL);
 
 	// ::printf("Send Request\n");
 
@@ -813,9 +814,9 @@ void CNetServer::DecrementUseCount(CNetSession* pSession)
 
 void CNetServer::HandleRelease(unsigned __int64 sessionID)
 {
-	unsigned __int64 idx = sessionID & _indexMask;
-	idx >>= __ID_BIT__;
-	CNetSession* pSession = _sessions[(long)idx];
+	unsigned __int64 sessionIdx = sessionID & _indexMask;
+	sessionIdx >>= __ID_BIT__;
+	CNetSession* pSession = _sessions[(long)sessionIdx];
 
 	SOCKET sock = pSession->_sock;
 	EnterCriticalSection(&pSession->_groupLock);
@@ -829,8 +830,9 @@ void CNetServer::HandleRelease(unsigned __int64 sessionID)
 	}
 
 	closesocket(sock);
-	_emptyIdx.Push(idx);
+	_emptyIdx.Push(sessionIdx);
 	OnReleaseClient(sessionID);
+
 	InterlockedIncrement(&_disconnectCnt);
 	InterlockedDecrement(&_sessionCnt);
 }

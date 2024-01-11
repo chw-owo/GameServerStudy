@@ -98,11 +98,12 @@ void CNetGroup::NetworkUpdate()
 		}
 		else
 		{
-			while (pSession->_OnRecvQ.GetUseSize() > 0)
+			while (pSession->_OnRecvQ->GetUseSize() > 0)
 			{
 				if (pSession->_pGroup != this) break;
-				CNetMsg* packet = pSession->_OnRecvQ.Dequeue();
-				OnRecv(sessionID, packet);
+				CNetMsg* msg;
+				pSession->_OnRecvQ->Dequeue((char*)&msg, sizeof(msg));
+				OnRecv(sessionID, msg);
 				InterlockedDecrement(&_signal);
 			}
 			it++;
@@ -110,11 +111,14 @@ void CNetGroup::NetworkUpdate()
 		LeaveCriticalSection(&pSession->_groupLock);
 		_pNet->ReleaseSessionUsage(pSession);
 	}
-
-	while (_OnSendQ.GetUseSize() > 0)
+	
+	for (int i = 0; i < dfONSENDQ_CNT; i++)
 	{
-		OnSend(_OnSendQ.Dequeue());
-		InterlockedDecrement(&_signal);
+		while (_OnSendQs[i]->GetUseSize() > 0)
+		{
+			OnSend(_OnSendQs[i]->Dequeue());
+			InterlockedDecrement(&_signal);
+		}
 	}
 }
 
@@ -126,4 +130,11 @@ void CNetGroup::RemoveAllSessions()
 		MoveGroup((*it), nullptr);
 		InterlockedIncrement(&_leaveCnt);
 	}
+}
+
+void CNetGroup::EnqueueOnSendQ(unsigned __int64 sessionID)
+{
+	unsigned __int64 sessionIdx = sessionID & _pNet->_indexMask;
+	long idx = (sessionIdx >> __ID_BIT__) % dfONSENDQ_CNT;
+	_OnSendQs[idx]->Enqueue(sessionID);
 }

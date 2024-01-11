@@ -152,6 +152,7 @@
     <ClCompile Include="CProfiler.cpp" />
     <ClCompile Include="CLanMsg.cpp" />
     <ClCompile Include="CNetMsg.cpp" />
+    <ClCompile Include="CRingBuffer.h" />
     <ClCompile Include="CServer.cpp" />
     <ClCompile Include="CSystemLog.cpp" />
     <ClCompile Include="Main.cpp" />

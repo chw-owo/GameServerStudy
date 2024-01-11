@@ -40,6 +40,13 @@ struct stNetHeader
 #define dfPACKET_DEF_SIZE				512
 #define dfPACKET_MAX_SIZE				6000
 
+#define dfRBUFFER_DEF_SIZE				128
+	
+#define dfSENDBUF_SIZE					200
+#define dfTEMPBUF_SIZE					200
+#define dfONRECVQ_SIZE					3000
+#define dfONSENDQ_CNT					1000
+
 #define dfRCVPACKET_CNT_DEF				12000
 #define dfSNDPACKET_CNT_DEF				24000
 #define dfMSG_CNT_DEF					24000

@@ -154,6 +154,9 @@
     <ClCompile Include="CLanSendPacket.cpp">
       <Filter>NetLib\Objects\Lan\Packet</Filter>
     </ClCompile>
+    <ClCompile Include="CRingBuffer.h">
+      <Filter>NetLib\Common</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CommonProtocol.h">

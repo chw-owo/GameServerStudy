@@ -2,6 +2,7 @@
 #include "CNetRecvPacket.h"
 #include "CNetSendPacket.h"
 #include "CLockFreeQueue.h"
+#include "CRingBuffer.h"
 #include "Utils.h"
 
 class CNetSession
@@ -9,6 +10,9 @@ class CNetSession
 public:
 	inline CNetSession()
 	{
+		_tempBuf = new CRingBuffer(dfTEMPBUF_SIZE);
+		_OnRecvQ = new CRingBuffer(dfONRECVQ_SIZE);
+
 		_validFlag._flag = 0;
 		InitializeCriticalSection(&_groupLock);
 
@@ -23,6 +27,8 @@ public:
 
 	inline ~CNetSession()
 	{
+		delete _tempBuf;
+		delete _OnRecvQ;
 		CNetRecvPacket::Free(_recvBuf);
 	}
 
@@ -31,6 +37,9 @@ public:
 
 	inline void Initialize(unsigned __int64 ID, SOCKET sock, SOCKADDR_IN addr)
 	{
+		_tempBuf->ClearBuffer();
+		_OnRecvQ->ClearBuffer();
+
 		InterlockedExchange(&_sendFlag, 0);
 		InterlockedExchange16(&_validFlag._releaseFlag, 0);
 
@@ -47,6 +56,12 @@ public:
 		ZeroMemory(&_sendComplOvl._ovl, sizeof(_sendComplOvl._ovl));
 		ZeroMemory(&_sendPostOvl._ovl, sizeof(_sendPostOvl._ovl));
 		ZeroMemory(&_releaseOvl._ovl, sizeof(_releaseOvl._ovl));
+
+		while (_sendBuf.GetUseSize() > 0)
+		{
+			CNetSendPacket* packet = _sendBuf.Dequeue();
+			CNetSendPacket::Free(packet);
+		}
 	}
 
 	inline void Terminate()
@@ -58,17 +73,6 @@ public:
 		EnterCriticalSection(&_groupLock);
 		_pGroup = nullptr;
 		LeaveCriticalSection(&_groupLock);
-
-		while (_sendBuf.GetUseSize() > 0)
-		{
-			CNetSendPacket* packet = _sendBuf.Dequeue();
-			CNetSendPacket::Free(packet);
-		}
-		while (_tempBuf.GetUseSize() > 0)
-		{
-			CNetSendPacket* packet = _tempBuf.Dequeue();
-			CNetSendPacket::Free(packet);
-		}
 	}
 
 private:
@@ -84,7 +88,7 @@ public:
 
 	CNetRecvPacket* _recvBuf;
 	CLockFreeQueue<CNetSendPacket*> _sendBuf;
-	CLockFreeQueue<CNetSendPacket*> _tempBuf;
+	CRingBuffer* _tempBuf;
 	WSABUF _wsaRecvbuf[dfWSARECVBUF_CNT];
 	WSABUF _wsaSendbuf[dfWSASENDBUF_CNT];
 
@@ -95,8 +99,8 @@ public:
 
 	volatile ValidFlag _validFlag;
 
-public: // For Group;
+public: // For Group
 	CNetGroup* _pGroup = nullptr;
 	CRITICAL_SECTION _groupLock;
-	CLockFreeQueue<CNetMsg*> _OnRecvQ;
+	CRingBuffer* _OnRecvQ;
 };

@@ -110,24 +110,10 @@ public:
 	ValidFlag _releaseFlag;
 
 private:
-	unsigned long long _acceptTotal = 0;
-	unsigned long long _disconnectTotal = 0;
-	unsigned long long _recvTotal = 0;
-	unsigned long long _sendTotal = 0;
-
-	long _acceptTPS = 0;
-	long _disconnectTPS = 0;
-	long _recvTPS = 0;
-	long _sendTPS = 0;
-
-	volatile long _acceptCnt = 0;
-	volatile long _disconnectCnt = 0;
-	volatile long _recvCnt = 0;
-	volatile long _sendCnt = 0;
-
-private:
 	unordered_map<CNetGroup*, HANDLE> _groupThreads;
 
+public:
+	CMonitorManager* _mm;
 
 public: // Monitor
 
@@ -156,8 +142,20 @@ public: // Monitor
 	inline long GetRecvTPS() { return _recvTPS; }
 	inline long GetSendTPS() { return _sendTPS; }
 
-public:
-	CMonitorManager* _mm;
+private:
+	unsigned long long _acceptTotal = 0;
+	unsigned long long _disconnectTotal = 0;
+	unsigned long long _recvTotal = 0;
+	unsigned long long _sendTotal = 0;
 
+	long _acceptTPS = 0;
+	long _disconnectTPS = 0;
+	long _recvTPS = 0;
+	long _sendTPS = 0;
+
+	volatile long _acceptCnt = 0;
+	volatile long _disconnectCnt = 0;
+	volatile long _recvCnt = 0;
+	volatile long _sendCnt = 0;
 };
 #endif
