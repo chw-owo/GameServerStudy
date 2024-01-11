@@ -55,26 +55,23 @@ bool CServer::OnConnectRequest(WCHAR addr[dfADDRESS_LEN])
 
 void CServer::OnAcceptClient(unsigned __int64 sessionID, WCHAR addr[dfADDRESS_LEN])
 {
-	// ::printf("%016llx (%d): %s\n", sessionID, GetCurrentThreadId(), __func__);
 	MoveGroup(sessionID, _pLoginGroup);
 }
 
 void CServer::OnReleaseClient(unsigned __int64 sessionID)
 {
-	// ::printf("%016llx (%d): Main::%s\n", sessionID, GetCurrentThreadId(), __func__);
+	
 }
 
 void CServer::OnRecv(unsigned __int64 sessionID, CNetMsg* packet)
 {
 	CNetMsg::Free(packet);
-	// ::printf("%016llx (%d): Main::%s\n", sessionID, GetCurrentThreadId(), __func__);
 }
 
 void CServer::OnSend(unsigned __int64 sessionID)
 {
-	// ::printf("%016llx (%d): Main::%s\n", sessionID, GetCurrentThreadId(), __func__);
+	
 }
-
 
 void CServer::Terminate()
 {

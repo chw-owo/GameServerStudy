@@ -1,90 +1,127 @@
-          #pragma once
+#pragma once
+//#ifndef __GODDAMNBUG_ONLINE_PROTOCOL__
+//#define __GODDAMNBUG_ONLINE_PROTOCOL__
 
-// Network Info
-#define dfSERVER_IP						L"0.0.0.0"
-#define dfLOGIN_PORT					12077
-#define dfECHO_PORT						12078
-#define dfSEND_TIME						10
-#define dfSERVER_DISCONNECT				false
-#define dfTHREAD_MAX					32
-#define dfTIMEOUT						40000
+// Chatting Server
+#define dfSERVER_IP				L"0.0.0.0"
+#define dfSERVER_PORT			12050
+#define dfSEND_TIME				50
 
-// Echo & Login Server	
-#define dfUSER_MAX						12000
-#define dfUSERPOOL_BUCKET_SIZE			12000
-#define dfSESSIONKEY_LEN				64
+#define dfSECTOR_CNT_Y			50
+#define dfSECTOR_CNT_X			50
+#define dfPLAYER_MAX			18000
+#define dfTIMEOUT				40000
+#define dfMONITOR_TEXT_LEN		1024
+
+#define dfID_LEN				20
+#define dfNICKNAME_LEN			20
+#define dfSESSIONKEY_LEN		64
+#define dfMSG_MAX				1024
+#define dfTHREAD_MAX			20
 
 // Monitor Client
-#define dfMONIOTOR_IP					L"127.0.0.1"
-#define dfMONIOTOR_PORT					12001
-#define dfMONITOR_TEXT_LEN				1024
+#define dfMONIOTOR_IP			L"127.0.0.1"
+#define dfMONIOTOR_PORT			12001
 
 enum en_PACKET_TYPE
 {
+	////////////////////////////////////////////////////////
+	//
+	//	Client & Server Protocol
+	//
+	////////////////////////////////////////////////////////
+
 	//------------------------------------------------------
-	// Game Server
+	// Chatting Server
 	//------------------------------------------------------
-	en_PACKET_CS_GAME_SERVER = 1000,
+	en_PACKET_CS_CHAT_SERVER = 0,
 
 	//------------------------------------------------------------
-	// 로그인 요청
+	// 채팅서버 로그인 요청
 	//
 	//	{
 	//		WORD	Type
 	//
 	//		INT64	AccountNo
-	//		char	SessionKey[64]
-	//
-	//		int		Version			// 1 
+	//		WCHAR	ID[20]				// null 포함
+	//		WCHAR	Nickname[20]		// null 포함
+	//		char	SessionKey[64];		// 인증토큰
 	//	}
 	//
 	//------------------------------------------------------------
-	en_PACKET_CS_GAME_REQ_LOGIN,
+	en_PACKET_CS_CHAT_REQ_LOGIN,
 
 	//------------------------------------------------------------
-	// 로그인 응답
+	// 채팅서버 로그인 응답
 	//
 	//	{
 	//		WORD	Type
 	//
-	//		BYTE	Status (0: 실패 / 1: 성공)
+	//		BYTE	Status				// 0:실패	1:성공
 	//		INT64	AccountNo
 	//	}
 	//
-	//	지금 더미는 무조건 성공으로 판단하고 있음
-	//	Status 결과를 무시한다는 이야기
-	//
-	//  en_PACKET_CS_GAME_RES_LOGIN define 값 사용.
 	//------------------------------------------------------------
-	en_PACKET_CS_GAME_RES_LOGIN,
-
-
+	en_PACKET_CS_CHAT_RES_LOGIN,
 
 	//------------------------------------------------------------
-	// 테스트용 에코 요청
+	// 채팅서버 섹터 이동 요청
 	//
 	//	{
-	//		WORD		Type
+	//		WORD	Type
 	//
-	//		INT64		AccountoNo
-	//		LONGLONG	SendTick
+	//		INT64	AccountNo
+	//		WORD	SectorX
+	//		WORD	SectorY
 	//	}
 	//
-	//------------------------------------------------------------	
-	en_PACKET_CS_GAME_REQ_ECHO = 5000,
+	//------------------------------------------------------------
+	en_PACKET_CS_CHAT_REQ_SECTOR_MOVE,
 
 	//------------------------------------------------------------
-	// 테스트용 에코 응답 (REQ 를 그대로 돌려줌)
+	// 채팅서버 섹터 이동 결과
 	//
 	//	{
-	//		WORD		Type
+	//		WORD	Type
 	//
-	//		INT64		AccountoNo
-	//		LONGLONG	SendTick
-	//	} 
+	//		INT64	AccountNo
+	//		WORD	SectorX
+	//		WORD	SectorY
+	//	}
 	//
 	//------------------------------------------------------------
-	en_PACKET_CS_GAME_RES_ECHO,
+	en_PACKET_CS_CHAT_RES_SECTOR_MOVE,
+
+	//------------------------------------------------------------
+	// 채팅서버 채팅보내기 요청
+	//
+	//	{
+	//		WORD	Type
+	//
+	//		INT64	AccountNo
+	//		WORD	MessageLen
+	//		WCHAR	Message[MessageLen / 2]		// null 미포함
+	//	}
+	//
+	//------------------------------------------------------------
+	en_PACKET_CS_CHAT_REQ_MESSAGE,
+
+	//------------------------------------------------------------
+	// 채팅서버 채팅보내기 응답  (다른 클라가 보낸 채팅도 이걸로 받음)
+	//
+	//	{
+	//		WORD	Type
+	//
+	//		INT64	AccountNo
+	//		WCHAR	ID[20]						// null 포함
+	//		WCHAR	Nickname[20]				// null 포함
+	//		
+	//		WORD	MessageLen
+	//		WCHAR	Message[MessageLen / 2]		// null 미포함
+	//	}
+	//
+	//------------------------------------------------------------
+	en_PACKET_CS_CHAT_RES_MESSAGE,
 
 	//------------------------------------------------------------
 	// 하트비트
@@ -97,7 +134,7 @@ enum en_PACKET_TYPE
 	// 클라이언트는 이를 30초마다 보내줌.
 	// 서버는 40초 이상동안 메시지 수신이 없는 클라이언트를 강제로 끊어줘야 함.
 	//------------------------------------------------------------	
-	en_PACKET_CS_GAME_REQ_HEARTBEAT,
+	en_PACKET_CS_CHAT_REQ_HEARTBEAT,
 
 
 	//------------------------------------------------------

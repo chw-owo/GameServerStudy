@@ -70,7 +70,7 @@ void CNetGroup::NetworkUpdate()
 		unsigned __int64 sessionID = _enterSessions.Dequeue();
 		_sessions.push_back(sessionID);
 		OnEnterGroup(sessionID);
-		InterlockedIncrement(&_enterCnt);
+		_enterCnt++;
 		InterlockedDecrement(&_signal);
 	}
 
@@ -83,7 +83,7 @@ void CNetGroup::NetworkUpdate()
 		{
 			OnLeaveGroup(sessionID);
 			it = _sessions.erase(it);
-			InterlockedIncrement(&_leaveCnt);
+			_leaveCnt++;
 			InterlockedDecrement(&_signal);
 			continue;
 		}
@@ -93,7 +93,7 @@ void CNetGroup::NetworkUpdate()
 		{
 			OnLeaveGroup(sessionID);
 			it = _sessions.erase(it);
-			InterlockedIncrement(&_leaveCnt);
+			_leaveCnt++;
 			InterlockedDecrement(&_signal);
 		}
 		else
@@ -107,7 +107,6 @@ void CNetGroup::NetworkUpdate()
 			}
 			it++;
 		}
-
 		LeaveCriticalSection(&pSession->_groupLock);
 		_pNet->ReleaseSessionUsage(pSession);
 	}

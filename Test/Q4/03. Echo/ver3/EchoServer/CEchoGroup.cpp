@@ -37,14 +37,12 @@ void CEchoGroup::OnTerminate()
 
 void CEchoGroup::OnEnterGroup(unsigned __int64 sessionID)
 {
-	// ::printf("%016llx (%d): Echo::%s\n", sessionID, GetCurrentThreadId(), __func__);
 	CEchoUser* user = _userPool->Alloc(sessionID);
 	_usersMap.insert(make_pair(sessionID, user));
 }
 
 void CEchoGroup::OnLeaveGroup(unsigned __int64 sessionID)
 {
-	// ::printf("%016llx (%d): Echo::%s\n", sessionID, GetCurrentThreadId(), __func__);
 	unordered_map<unsigned __int64, CEchoUser*>::iterator mapIter = _usersMap.find(sessionID);
 	if (mapIter == _usersMap.end())
 	{
@@ -101,7 +99,7 @@ void CEchoGroup::OnRecv(unsigned __int64 sessionID, CNetMsg* packet)
 
 void CEchoGroup::OnSend(unsigned __int64 sessionID)
 {
-	// ::printf("%016llx (%d): Echo::%s (%d)\n", sessionID, GetCurrentThreadId(), __func__, sendSize);
+	
 }
 
 void CEchoGroup::OnError(int errorCode, wchar_t* errorMsg)

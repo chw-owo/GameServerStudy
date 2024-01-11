@@ -57,6 +57,6 @@ struct stNetHeader
 #define dfJOB_CNT_DEF					0
 #define dfJOBQ_CNT						0
 
-#define dfERR_MAX					256
+#define dfERR_MAX						256
 
 
