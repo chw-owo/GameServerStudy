@@ -1,0 +1,20 @@
+#pragma once
+#include "CData.h"
+class CGameData
+{
+public:
+	CData SERVER_RUN;
+	CData SERVER_CPU;
+	CData SERVER_MEM;
+	CData SESSION;
+	CData AUTH_PLAYER;
+	CData GAME_PLAYER;
+	CData ACCEPT_TPS;
+	CData PACKET_RECV_TPS;
+	CData PACKET_SEND_TPS;
+	CData DB_WRITE_TPS;
+	CData DB_WRITE_MSG;
+	CData AUTH_THREAD_FPS;
+	CData GAME_THREAD_FPS;
+	CData PACKET_POOL;
+};
