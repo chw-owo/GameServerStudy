@@ -1,16 +1,15 @@
 #pragma once
 #include "CNetRecvPacket.h"
 #include "CNetSendPacket.h"
-#include "CLockFreeQueue.h"
 #include "Utils.h"
+#include <queue>
+using namespace std;
 
 class CNetSession
 {
 public:
 	inline CNetSession()
 	{
-		_validFlag._flag = 0;
-
 		_recvComplOvl._type = NET_TYPE::RECV_COMPLETE;
 		_sendComplOvl._type = NET_TYPE::SEND_COMPLETE;
 		_sendPostOvl._type = NET_TYPE::SEND_POST;
@@ -30,13 +29,14 @@ public:
 
 	inline void Initialize(unsigned __int64 ID, SOCKET sock, SOCKADDR_IN addr)
 	{
-		InterlockedExchange(&_sendFlag, 0);
-		InterlockedExchange16(&_validFlag._releaseFlag, 0);
-
 		_ID = ID;
 		_disconnect = false;
 		_sock = sock;
 		_addr = addr;
+
+		_IOCount = 0;
+		_sendFlag = 0;
+		_sendCount = 0;
 
 		ZeroMemory(&_recvComplOvl._ovl, sizeof(_recvComplOvl._ovl));
 		ZeroMemory(&_sendComplOvl._ovl, sizeof(_sendComplOvl._ovl));
@@ -50,16 +50,22 @@ public:
 		_disconnect = true;
 		_sock = INVALID_SOCKET;
 
-		while (_sendBuf.GetUseSize() > 0)
+		while (_sendBuf.size() > 0)
 		{
-			CNetSendPacket* packet = _sendBuf.Dequeue();
+			CNetSendPacket* packet = _sendBuf.front();
+			_sendBuf.pop();
 			CNetSendPacket::Free(packet);
 		}
-		while (_tempBuf.GetUseSize() > 0)
+
+		while (_tempBuf.size() > 0)
 		{
-			CNetSendPacket* packet = _tempBuf.Dequeue();
+			CNetSendPacket* packet = _tempBuf.front();
+			_tempBuf.pop();
 			CNetSendPacket::Free(packet);
 		}
+
+		_recvBuf->Clear();
+		_recvBuf->AddUsageCount(1);
 	}
 
 private:
@@ -67,15 +73,16 @@ private:
 
 public:
 	bool _disconnect = true;
-	volatile long _sendFlag = 0;
-	volatile long _sendCount = 0;
+	volatile long _IOCount;
+	volatile long _sendFlag;
+	volatile long _sendCount;
 
 	SOCKET _sock;
 	SOCKADDR_IN _addr;
 
 	CNetRecvPacket* _recvBuf;
-	CLockFreeQueue<CNetSendPacket*> _sendBuf;
-	CLockFreeQueue<CNetSendPacket*> _tempBuf;
+	queue<CNetSendPacket*> _sendBuf;
+	queue<CNetSendPacket*> _tempBuf;
 	WSABUF _wsaRecvbuf[dfWSARECVBUF_CNT];
 	WSABUF _wsaSendbuf[dfWSASENDBUF_CNT];
 
@@ -84,5 +91,5 @@ public:
 	NetworkOverlapped _sendPostOvl;
 	NetworkOverlapped _releaseOvl;
 
-	volatile ValidFlag _validFlag;
+	SRWLOCK _lock;
 };

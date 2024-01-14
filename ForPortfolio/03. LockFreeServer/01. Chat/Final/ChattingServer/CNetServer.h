@@ -34,8 +34,8 @@ protected:
 	virtual void OnThreadTerminate(wchar_t* threadName) = 0;
 
 protected:
-	virtual bool OnConnectRequest() = 0;
-	virtual void OnAcceptClient(unsigned __int64 sessionID) = 0;
+	virtual bool OnConnectRequest(WCHAR* addr) = 0;
+	virtual void OnAcceptClient(unsigned __int64 sessionID, WCHAR* addr) = 0;
 	virtual void OnReleaseClient(unsigned __int64 sessionID) = 0;
 	virtual void OnRecv(unsigned __int64 sessionID, CNetMsg* packet) = 0;
 	virtual void OnSend(unsigned __int64 sessionID, int sendSize) = 0;
@@ -110,8 +110,7 @@ public:
 public:
 	DWORD _oldTick;
 
-	// For Monitor
-protected:
+public:
 	inline void UpdateMonitorData()
 	{
 		long acceptCnt = 0;

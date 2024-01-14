@@ -13,6 +13,8 @@
 
 #define _MONITOR
 
+// Lock ver
+
 CCrashDump g_Dump;
 CChattingServer g_ChattingServer;
 CMonitorClient g_MonitorClient;

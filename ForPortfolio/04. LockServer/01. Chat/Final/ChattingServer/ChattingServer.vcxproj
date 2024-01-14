@@ -165,9 +165,6 @@
     <ClInclude Include="CObjectPool.h" />
     <ClInclude Include="CNetMsg.h" />
     <ClInclude Include="CLanMsg.h" />
-    <ClInclude Include="CTlsPool.h" />
-    <ClInclude Include="CLockFreeQueue.h" />
-    <ClInclude Include="CLockFreeStack.h" />
     <ClInclude Include="Config.h" />
     <ClInclude Include="CLanRecvPacket.h" />
     <ClInclude Include="CPlayer.h" />

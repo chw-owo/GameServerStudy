@@ -1,8 +1,9 @@
 #pragma once
 #include "CLanRecvPacket.h"
 #include "CLanSendPacket.h"
-#include "CLockFreeQueue.h"
 #include "Utils.h"
+#include <queue>
+using namespace std;
 
 class CClientSession
 {
@@ -12,9 +13,9 @@ public:
 		_disconnect = false;
 		_sock = socket;
 
+		_IOCount = 0;
 		_sendFlag = 0;
-		_sendCount = 0;		
-		_useCount = 0;
+		_sendCount = 0;
 		
 		ZeroMemory(&_recvComplOvl._ovl, sizeof(_recvComplOvl._ovl));
 		ZeroMemory(&_sendComplOvl._ovl, sizeof(_sendComplOvl._ovl));
@@ -26,6 +27,8 @@ public:
 
 		_recvBuf = CLanRecvPacket::Alloc();
 		_recvBuf->AddUsageCount(1);
+
+		InitializeSRWLock(&_lock);
 	}
 
 	inline ~CClientSession()
@@ -34,14 +37,16 @@ public:
 		_disconnect = true;
 		_sock = INVALID_SOCKET;
 
-		while (_sendBuf.GetUseSize() > 0)
+		while (_sendBuf.size() > 0)
 		{
-			CLanSendPacket* packet = _sendBuf.Dequeue();
+			CLanSendPacket* packet = _sendBuf.back();
+			_sendBuf.pop();
 			CLanSendPacket::Free(packet);
 		}
-		while (_tempBuf.GetUseSize() > 0)
+		while (_tempBuf.size() > 0)
 		{
-			CLanSendPacket* packet = _tempBuf.Dequeue();
+			CLanSendPacket* packet = _tempBuf.back();
+			_tempBuf.pop();
 			CLanSendPacket::Free(packet);
 		}
 
@@ -53,18 +58,20 @@ private:
 
 public:
 	bool _disconnect = true;
+	volatile long _IOCount;
 	volatile long _sendFlag;
 	volatile long _sendCount;
-	volatile short _useCount;
 
 	SOCKET _sock;
 	CLanRecvPacket* _recvBuf;
-	CLockFreeQueue<CLanSendPacket*> _sendBuf;
-	CLockFreeQueue<CLanSendPacket*> _tempBuf;
+	queue<CLanSendPacket*> _sendBuf;
+	queue<CLanSendPacket*> _tempBuf;
 	WSABUF _wsaRecvbuf[dfWSARECVBUF_CNT];
 	WSABUF _wsaSendbuf[dfWSASENDBUF_CNT];
 
 	NetworkOverlapped _recvComplOvl;
 	NetworkOverlapped _sendComplOvl;
 	NetworkOverlapped _releaseOvl;
+
+	SRWLOCK _lock;
 };

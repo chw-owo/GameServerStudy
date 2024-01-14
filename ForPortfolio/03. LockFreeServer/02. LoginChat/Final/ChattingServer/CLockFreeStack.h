@@ -42,7 +42,6 @@ private:
 public:
 	inline CLockFreeStack()
 	{
-		_pStackPool = new CTlsPool<StackNode>(0, false);
 		_keyMask = 0b11111111111111111;
 		_addressMask = 0b11111111111111111;
 		_addressMask <<= __ADDRESS_BIT__;

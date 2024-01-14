@@ -11,7 +11,6 @@ enum class NET_TYPE
 	SEND_COMPLETE = 0,
 	RECV_COMPLETE,
 	SEND_POST,
-	RECV_POST,
 	RELEASE
 };
 
@@ -19,16 +18,6 @@ struct NetworkOverlapped
 {
 	OVERLAPPED _ovl;
 	NET_TYPE _type;
-};
-
-union ValidFlag
-{
-	struct
-	{
-		volatile short _releaseFlag;
-		volatile short _useCount;
-	};
-	volatile long _flag;
 };
 
 // For Job =================================================================

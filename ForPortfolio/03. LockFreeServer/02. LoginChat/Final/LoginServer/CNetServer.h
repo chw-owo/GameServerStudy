@@ -4,7 +4,7 @@
 
 #include "CLockFreeStack.h"
 #include "CNetSession.h"
-#include "CRecvNetPacket.h"
+#include "CNetMsg.h"
 #include "CMonitorManager.h"
 #include "CNetJob.h"
 #include <ws2tcpip.h>
@@ -18,13 +18,13 @@ protected:
 	~CNetServer() {};
 
 protected:
-	bool NetworkInitialize(const wchar_t* IP, short port, long sendTimer,
+	bool NetworkInitialize(const wchar_t* IP, short port, long sendTime,
 		int numOfThreads, int numOfRunnings, bool nagle, bool monitorServer = false);
 	bool NetworkTerminate();
 
 protected:
 	bool Disconnect(unsigned __int64 sessionID);
-	bool SendPacket(unsigned __int64 sessionID, CNetPacket* packet);
+	bool SendPacket(unsigned __int64 sessionID, CNetSendPacket* packet);
 	void EnqueueJob(unsigned __int64 sessionID, CNetJob* job);
 	CNetJob* DequeueJob(unsigned __int64 sessionID);
 
@@ -37,7 +37,7 @@ protected:
 	virtual bool OnConnectRequest(WCHAR* addr) = 0;
 	virtual void OnAcceptClient(unsigned __int64 sessionID, WCHAR* addr) = 0;
 	virtual void OnReleaseClient(unsigned __int64 sessionID) = 0;
-	virtual void OnRecv(unsigned __int64 sessionID, CRecvNetPacket* packet) = 0;
+	virtual void OnRecv(unsigned __int64 sessionID, CNetMsg* packet) = 0;
 	virtual void OnSend(unsigned __int64 sessionID, int sendSize) = 0;
 	virtual void OnError(int errorCode, wchar_t* errorMsg) = 0;
 	virtual void OnDebug(int debugCode, wchar_t* debugMsg) = 0;

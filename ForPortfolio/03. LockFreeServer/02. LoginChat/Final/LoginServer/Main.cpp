@@ -13,6 +13,8 @@
 
 #define _MONITOR
 
+// Lock Free ver
+
 CCrashDump g_Dump;
 CLoginServer g_LoginServer;
 CMonitorClient g_MonitorClient;

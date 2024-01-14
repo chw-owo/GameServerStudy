@@ -245,7 +245,7 @@ bool CLanServer::Disconnect(unsigned __int64 sessionID)
 	return true;
 }
 
-bool CLanServer::SendPacket(unsigned __int64 sessionID, CLanPacket* packet)
+bool CLanServer::SendPacket(unsigned __int64 sessionID, CLanSendPacket* packet)
 {
 	CLanSession* pSession = AcquireSessionUsage(sessionID);
 	if (pSession == nullptr) return false;
@@ -451,7 +451,7 @@ unsigned int __stdcall CLanServer::NetworkThread(void* arg)
 
 bool CLanServer::HandleRecvCP(CLanSession* pSession, int recvBytes)
 {
-	CLanPacket* recvBuf = pSession->_recvBuf;
+	CLanRecvPacket* recvBuf = pSession->_recvBuf;
 	int moveWriteRet = recvBuf->MovePayloadWritePos(recvBytes);
 	if (moveWriteRet != recvBytes)
 	{
@@ -484,7 +484,7 @@ bool CLanServer::HandleRecvCP(CLanSession* pSession, int recvBytes)
 
 		// ::printf("%016llx: Header %d\n", pSession->GetID(), recvBuf->GetPayloadReadPos());
 
-		CRecvLanPacket* recvLanPacket = CRecvLanPacket::Alloc(recvBuf);
+		CLanMsg* recvLanPacket = CLanMsg::Alloc(recvBuf);
 		recvBuf->AddUsageCount(1);
 		OnRecv(pSession->GetID(), recvLanPacket);
 		cnt++;
@@ -502,12 +502,10 @@ bool CLanServer::HandleRecvCP(CLanSession* pSession, int recvBytes)
 		useSize = recvBuf->GetPayloadSize();
 	}
 
-	pSession->_recvBuf = CLanPacket::Alloc();
-	pSession->_recvBuf->Clear();
+	pSession->_recvBuf = CLanRecvPacket::Alloc();
 	pSession->_recvBuf->AddUsageCount(1);
-
 	pSession->_recvBuf->CopyRecvBuf(recvBuf);
-	CLanPacket::Free(recvBuf);
+	CLanRecvPacket::Free(recvBuf);
 
 	InterlockedAdd(&_recvCnt, cnt);
 	RecvPost(pSession);
@@ -563,9 +561,9 @@ bool CLanServer::HandleSendCP(CLanSession* pSession, int sendBytes)
 {
 	for (int i = 0; i < pSession->_sendCount; i++)
 	{
-		CLanPacket* packet = pSession->_tempBuf.Dequeue();
+		CLanSendPacket* packet = pSession->_tempBuf.Dequeue();
 		if (packet == nullptr) break;
-		CLanPacket::Free(packet);
+		CLanSendPacket::Free(packet);
 	}
 
 	OnSend(pSession->GetID(), sendBytes);
@@ -594,7 +592,7 @@ bool CLanServer::SendPost(CLanSession* pSession)
 	for (; idx < useSize; idx++)
 	{
 		if (idx == dfWSASENDBUF_CNT) break;
-		CLanPacket* packet = pSession->_sendBuf.Dequeue();
+		CLanSendPacket* packet = pSession->_sendBuf.Dequeue();
 		if (packet == nullptr) break;
 
 		pSession->_wsaSendbuf[idx].buf = packet->GetLanPacketReadPtr();

@@ -46,6 +46,7 @@ unsigned int __stdcall CMonitorClient::MonitorThread(void* arg)
 
 	while (pMonitor->_serverAlive)
 	{
+		/*
 		while (pMonitor->_serverAlive && !pMonitor->_connected)
 		{
 			pMonitor->_connected = pMonitor->NetworkInitialize(dfMONIOTOR_IP, dfMONIOTOR_PORT, totalThreadCnt, runningThreadCnt, false, true);
@@ -53,13 +54,14 @@ unsigned int __stdcall CMonitorClient::MonitorThread(void* arg)
 		}
 		if (!pMonitor->_serverAlive) break;
 
-		CLanPacket* packet = CLanPacket::Alloc();
+		CLanSendPacket* packet = CLanSendPacket::Alloc();
 		packet->Clear();
 		*packet << (WORD)en_PACKET_SS_MONITOR_LOGIN;
 		*packet << (int)0;
 		pMonitor->ReqSendUnicast(packet);
+		*/
 
-		while (pMonitor->_serverAlive && pMonitor->_connected)
+		// while (pMonitor->_serverAlive && pMonitor->_connected)
 		{
 			pMonitor->SleepForFixedFrame();
 
@@ -69,7 +71,6 @@ unsigned int __stdcall CMonitorClient::MonitorThread(void* arg)
 			GetLocalTime(&stTime);
 			int now = (int)time(NULL);
 		
-
 			pLogin->UpdateMonitorData();
 			pLogin->_mm->UpdateProcessCPUTime();
 
@@ -82,12 +83,14 @@ unsigned int __stdcall CMonitorClient::MonitorThread(void* arg)
 
 			// Send Data ==============================================================================
 
+			/*
 			pMonitor->SetDataToPacket(en_MONITOR_DATA_TYPE_LOGIN_SERVER_RUN, loginOn, now);
 			pMonitor->SetDataToPacket(en_MONITOR_DATA_TYPE_LOGIN_SERVER_CPU, loginCPU, now);
 			pMonitor->SetDataToPacket(en_MONITOR_DATA_TYPE_LOGIN_SERVER_MEM, loginMem, now);
 			pMonitor->SetDataToPacket(en_MONITOR_DATA_TYPE_LOGIN_SESSION, loginSessions, now);
 			pMonitor->SetDataToPacket(en_MONITOR_DATA_TYPE_LOGIN_AUTH_TPS, loginAuthTPS, now);
 			pMonitor->SetDataToPacket(en_MONITOR_DATA_TYPE_LOGIN_PACKET_POOL, loginPackets, now);
+			*/
 
 			// Console Monitor ===========================================================================
 
@@ -139,7 +142,7 @@ unsigned int __stdcall CMonitorClient::MonitorThread(void* arg)
 
 void CMonitorClient::SetDataToPacket(BYTE type, int val, int time)
 {
-	CLanPacket* packet = CLanPacket::Alloc();
+	CLanSendPacket* packet = CLanSendPacket::Alloc();
 	packet->Clear();
 	*packet << (WORD)en_PACKET_SS_MONITOR_DATA_UPDATE;
 	*packet << type;
@@ -148,12 +151,12 @@ void CMonitorClient::SetDataToPacket(BYTE type, int val, int time)
 	ReqSendUnicast(packet);
 }
 
-void CMonitorClient::ReqSendUnicast(CLanPacket* packet)
+void CMonitorClient::ReqSendUnicast(CLanSendPacket* packet)
 {
 	packet->AddUsageCount(1);
 	if (!SendPacket(packet))
 	{
-		CLanPacket::Free(packet);
+		CLanSendPacket::Free(packet);
 	}
 }
 
@@ -188,7 +191,7 @@ void CMonitorClient::OnLeaveServer()
 {
 }
 
-void CMonitorClient::OnRecv(CRecvLanPacket* packet)
+void CMonitorClient::OnRecv(CLanMsg* packet)
 {
 
 }

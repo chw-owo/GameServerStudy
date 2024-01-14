@@ -1,6 +1,6 @@
 #include "CLanClient.h"
 #include "ErrorCode.h"
-#include "CRecvLanPacket.h"
+#include "CLanMsg.h"
 #include <stdio.h>
 #include <tchar.h>
 
@@ -151,7 +151,7 @@ bool CLanClient::Disconnect()
 	return true;
 }
 
-bool CLanClient::SendPacket(CLanPacket* packet)
+bool CLanClient::SendPacket(CLanSendPacket* packet)
 {
 	// // ::printf("%d: Send Packet\n", GetCurrentThreadId());
 
@@ -238,7 +238,7 @@ unsigned int __stdcall CLanClient::NetworkThread(void* arg)
 
 bool CLanClient::HandleRecvCP(int recvBytes)
 {
-	CLanPacket* recvBuf = _client->_recvBuf;
+	CLanRecvPacket* recvBuf = _client->_recvBuf;
 	int moveWriteRet = recvBuf->MovePayloadWritePos(recvBytes);
 	if (moveWriteRet != recvBytes)
 	{
@@ -272,7 +272,7 @@ bool CLanClient::HandleRecvCP(int recvBytes)
 
 		// // ::printf("%016llx: Header %d\n", _client->GetID(), recvBuf->GetPayloadReadPos());
 
-		CRecvLanPacket* recvLanPacket = CRecvLanPacket::Alloc(recvBuf);
+		CLanMsg* recvLanPacket = CLanMsg::Alloc(recvBuf);
 		recvBuf->AddUsageCount(1);
 		OnRecv(recvLanPacket);
 		cnt++;
@@ -290,12 +290,11 @@ bool CLanClient::HandleRecvCP(int recvBytes)
 		useSize = recvBuf->GetPayloadSize();
 	}
 
-	_client->_recvBuf = CLanPacket::Alloc();
-	_client->_recvBuf->Clear();
+	_client->_recvBuf = CLanRecvPacket::Alloc();
 	_client->_recvBuf->AddUsageCount(1);
 
 	_client->_recvBuf->CopyRecvBuf(recvBuf);
-	CLanPacket::Free(recvBuf);
+	CLanRecvPacket::Free(recvBuf);
 
 	RecvPost();
 	return true;
@@ -350,9 +349,9 @@ bool CLanClient::HandleSendCP(int sendBytes)
 {
 	for (int i = 0; i < _client->_sendCount; i++)
 	{
-		CLanPacket* packet = _client->_tempBuf.Dequeue();
+		CLanSendPacket* packet = _client->_tempBuf.Dequeue();
 		if (packet == nullptr) break;
-		CLanPacket::Free(packet);
+		CLanSendPacket::Free(packet);
 	}
 
 	OnSend(sendBytes);
@@ -381,7 +380,7 @@ bool CLanClient::SendPost()
 	for (; idx < useSize; idx++)
 	{
 		if (idx == dfWSASENDBUF_CNT) break;
-		CLanPacket* packet = _client->_sendBuf.Dequeue();
+		CLanSendPacket* packet = _client->_sendBuf.Dequeue();
 		if (packet == nullptr) break;
 
 		_client->_wsaSendbuf[idx].buf = packet->GetLanPacketReadPtr();

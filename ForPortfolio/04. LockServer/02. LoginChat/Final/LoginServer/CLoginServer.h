@@ -1,14 +1,13 @@
 #pragma once
-#include "CSystemLog.h"
+
 #include "CommonProtocol.h"
 #include "ErrorCode.h"
-
-#include "CRedis.h"
+#include "CSystemLog.h"
 #include "CNetServer.h"
-#include "CTlsPool.h"
+#include "CObjectPool.h"
+#include "CRedis.h"
 #include "CUser.h"
 
-#include <map>
 #include <unordered_map>
 #include <unordered_set>
 using namespace std;
@@ -46,12 +45,12 @@ private:
 	bool OnConnectRequest(WCHAR* addr);
 	void OnAcceptClient(unsigned __int64 sessionID, WCHAR* addr);
 	void OnReleaseClient(unsigned __int64 sessionID);
-	void OnRecv(unsigned __int64 sessionID, CRecvNetPacket* packet);
+	void OnRecv(unsigned __int64 sessionID, CNetMsg* packet);
 	void OnSend(unsigned __int64 sessionID, int sendSize);
 
 private:
 	static unsigned int WINAPI TimeoutThread(void* arg);
-	void ReqSendUnicast(CNetPacket* packet, unsigned __int64 sessionID);
+	void ReqSendUnicast(CNetSendPacket* packet, unsigned __int64 sessionID);
 	bool InitDBConnect(long& idx);
 
 private:
@@ -62,10 +61,10 @@ private:
 	void SetUserData(CUser* user);
 
 private:
-	inline void HandleCSPacket_REQ_LOGIN(CRecvNetPacket* CSpacket, CUser* user);
-	inline void GetCSPacket_REQ_LOGIN(CRecvNetPacket* packet, __int64& accountNo, char*& sessionKey);
+	inline void HandleCSPacket_REQ_LOGIN(CNetMsg* CSpacket, CUser* user);
+	inline void GetCSPacket_REQ_LOGIN(CNetMsg* packet, __int64& accountNo, char*& sessionKey);
 	inline void SetSCPacket_RES_LOGIN(
-		CNetPacket* packet, __int64 accountNo, BYTE status, WCHAR*& ID, WCHAR*& nickname,
+		CNetSendPacket* packet, __int64 accountNo, BYTE status, WCHAR*& ID, WCHAR*& nickname,
 		WCHAR*& gameIP, unsigned short gamePort, WCHAR*& chatIP, unsigned short chatPort);
 
 public:
@@ -77,7 +76,7 @@ public:
 
 	long GetPacketPoolSize() 
 	{ 
-		return CNetPacket::_pool.GetNodeCount() - dfSESSION_MAX; 
+		return CNetSendPacket::_pool.GetNodeCount() + CNetRecvPacket::_pool.GetNodeCount();
 	}
 
 private:
@@ -89,7 +88,7 @@ private:
 	SRWLOCK _mapLock;
 	unordered_map<unsigned __int64, CUser*> _usersMap;
 	unordered_set<__int64> _accountNos;
-	CTlsPool<CUser>* _pUserPool;
+	CObjectPool<CUser>* _pUserPool;
 
 private:
 	struct cmp

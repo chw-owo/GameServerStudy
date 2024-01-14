@@ -2,14 +2,17 @@
 #include "Config.h"
 #ifdef LANSERVER
 
-#include "CLockFreeStack.h"
-#include "CLanSession.h"
-#include "CRecvLanPacket.h"
 #include "CMonitorManager.h"
+#include "CLanSession.h"
+#include "CLanMsg.h"
 #include "CLanJob.h"
+#include "CObjectPool.h"
+
 #include <ws2tcpip.h>
 #include <process.h>
+#include <unordered_map>
 #pragma comment(lib, "ws2_32.lib")
+using namespace std;
 
 class CLanServer
 {
@@ -24,9 +27,7 @@ protected:
 
 protected:
 	bool Disconnect(unsigned __int64 sessionID);
-	bool SendPacket(unsigned __int64 sessionID, CLanPacket* packet);
-	void EnqueueJob(unsigned __int64 sessionID, CLanJob* job);
-	CLanJob* DequeueJob(unsigned __int64 sessionID);
+	bool SendPacket(unsigned __int64 sessionID, CLanSendPacket* packet);
 
 protected:
 	virtual void OnInitialize() = 0;
@@ -37,7 +38,7 @@ protected:
 	virtual bool OnConnectRequest() = 0;
 	virtual void OnAcceptClient(unsigned __int64 sessionID) = 0;
 	virtual void OnReleaseClient(unsigned __int64 sessionID) = 0;
-	virtual void OnRecv(unsigned __int64 sessionID, CRecvLanPacket* packet) = 0;
+	virtual void OnRecv(unsigned __int64 sessionID, CLanMsg* packet) = 0;
 	virtual void OnSend(unsigned __int64 sessionID, int sendSize) = 0;
 	virtual void OnError(int errorCode, wchar_t* errorMsg) = 0;
 	virtual void OnDebug(int debugCode, wchar_t* debugMsg) = 0;
@@ -56,10 +57,10 @@ private:
 	inline bool SendCheck(CLanSession* pSession);
 
 private:
-	inline CLanSession* AcquireSessionUsage(unsigned __int64 sessionID);
-	inline void ReleaseSessionUsage(CLanSession* pSession);
-	inline void IncrementUseCount(CLanSession* pSession);
-	inline void DecrementUseCount(CLanSession* pSession);
+	CLanSession* AcquireSessionUsage(unsigned __int64 sessionID);
+	void ReleaseSessionUsage(CLanSession* pSession);
+	inline void IncrementIOCount(CLanSession* pSession);
+	inline void DecrementIOCount(CLanSession* pSession);
 
 private:
 	wchar_t _IP[10];
@@ -77,21 +78,11 @@ private:
 	HANDLE* _networkThreads;
 	HANDLE _hNetworkCP;
 
-public: // TO-DO: private
-#define __ID_BIT__ 47
-	CLanSession* _sessions[dfSESSION_MAX] = { nullptr, };
-	CLockFreeStack<long> _emptyIdx;
-	volatile long _sessionCnt = 0;
+public:
+	unordered_map<unsigned __int64, CLanSession*> _sessions;
+	CObjectPool<CLanSession>* _pSessionPool;
 	volatile __int64 _sessionID = 0;
-	unsigned __int64 _indexMask = 0;
-	unsigned __int64 _idMask = 0;
-
-public:
-	CLockFreeQueue<CLanJob*>* _pJobQueues[dfJOB_QUEUE_CNT] = { nullptr, };
-	CTlsPool<CLanJob>* _pJobPool;
-
-public:
-	ValidFlag _releaseFlag;
+	SRWLOCK _sessionsLock;
 
 	// For Monitor
 protected:
@@ -113,7 +104,7 @@ protected:
 
 	inline long GetAcceptTotal() { return _acceptTotal; }
 	inline long GetDisconnectTotal() { return _disconnectTotal; }
-	inline long GetSessionCount() { return _sessionCnt; }
+	inline long GetSessionCount() { return _sessions.size(); }
 
 	inline long GetRecvTPS() { return _recvTPS; }
 	inline long GetSendTPS() { return _sendTPS; }

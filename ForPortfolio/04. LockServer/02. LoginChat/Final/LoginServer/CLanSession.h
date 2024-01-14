@@ -1,28 +1,29 @@
 #pragma once
-#include "CLanPacket.h"
-#include "CLockFreeQueue.h"
+#include "CLanRecvPacket.h"
+#include "CLanSendPacket.h"
 #include "Utils.h"
+#include <queue>
+using namespace std;
 
 class CLanSession
 {
 public:
 	inline CLanSession()
 	{
-		_validFlag._flag = 0;
 		_recvComplOvl._type = NET_TYPE::RECV_COMPLETE;
 		_sendComplOvl._type = NET_TYPE::SEND_COMPLETE;
-		_recvPostOvl._type = NET_TYPE::RECV_POST;
 		_sendPostOvl._type = NET_TYPE::SEND_POST;
 		_releaseOvl._type = NET_TYPE::RELEASE;
 
-		_recvBuf = CLanPacket::Alloc();
-		_recvBuf->Clear();
+		_recvBuf = CLanRecvPacket::Alloc();
 		_recvBuf->AddUsageCount(1);
+
+		InitializeSRWLock(&_lock);
 	}
 
 	inline ~CLanSession()
 	{
-		CLanPacket::Free(_recvBuf);
+		CLanRecvPacket::Free(_recvBuf);
 	}
 
 public:
@@ -30,17 +31,17 @@ public:
 
 	inline void Initialize(unsigned __int64 ID, SOCKET sock, SOCKADDR_IN addr)
 	{
-		InterlockedExchange(&_sendFlag, 0);
-		InterlockedExchange16(&_validFlag._releaseFlag, 0);
-
 		_ID = ID;
 		_disconnect = false;
 		_sock = sock;
 		_addr = addr;
 
+		_IOCount = 0;
+		_sendFlag = 0;
+		_sendCount = 0;
+
 		ZeroMemory(&_recvComplOvl._ovl, sizeof(_recvComplOvl._ovl));
 		ZeroMemory(&_sendComplOvl._ovl, sizeof(_sendComplOvl._ovl));
-		ZeroMemory(&_recvPostOvl._ovl, sizeof(_recvPostOvl._ovl));
 		ZeroMemory(&_sendPostOvl._ovl, sizeof(_sendPostOvl._ovl));
 		ZeroMemory(&_releaseOvl._ovl, sizeof(_releaseOvl._ovl));
 	}
@@ -51,15 +52,17 @@ public:
 		_disconnect = true;
 		_sock = INVALID_SOCKET;
 
-		while (_sendBuf.GetUseSize() > 0)
+		while (_sendBuf.size() > 0)
 		{
-			CLanPacket* packet = _sendBuf.Dequeue();
-			CLanPacket::Free(packet);
+			CLanSendPacket* packet = _sendBuf.back();
+			_sendBuf.pop();
+			CLanSendPacket::Free(packet);
 		}
-		while (_tempBuf.GetUseSize() > 0)
+		while (_tempBuf.size() > 0)
 		{
-			CLanPacket* packet = _tempBuf.Dequeue();
-			CLanPacket::Free(packet);
+			CLanSendPacket* packet = _tempBuf.back();
+			_tempBuf.pop();
+			CLanSendPacket::Free(packet);
 		}
 	}
 
@@ -68,23 +71,23 @@ private:
 
 public:
 	bool _disconnect = true;
+	volatile long _IOCount;
 	volatile long _sendFlag;
 	volatile long _sendCount;
 
 	SOCKET _sock;
 	SOCKADDR_IN _addr;
 
-	CLanPacket* _recvBuf;
-	CLockFreeQueue<CLanPacket*> _sendBuf;
-	CLockFreeQueue<CLanPacket*> _tempBuf;
+	CLanRecvPacket* _recvBuf;
+	queue<CLanSendPacket*> _sendBuf;
+	queue<CLanSendPacket*> _tempBuf;
 	WSABUF _wsaRecvbuf[dfWSARECVBUF_CNT];
 	WSABUF _wsaSendbuf[dfWSASENDBUF_CNT];
 
 	NetworkOverlapped _recvComplOvl;
 	NetworkOverlapped _sendComplOvl;
-	NetworkOverlapped _recvPostOvl;
 	NetworkOverlapped _sendPostOvl;
 	NetworkOverlapped _releaseOvl;
 
-	volatile ValidFlag _validFlag;
+	SRWLOCK _lock;
 };

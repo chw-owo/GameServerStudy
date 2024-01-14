@@ -1,7 +1,9 @@
 #pragma once
-#include "CLanPacket.h"
-#include "CLockFreeQueue.h"
+#include "CLanRecvPacket.h"
+#include "CLanSendPacket.h"
 #include "Utils.h"
+#include <queue>
+using namespace std;
 
 class CClientSession
 {
@@ -11,9 +13,9 @@ public:
 		_disconnect = false;
 		_sock = socket;
 
+		_IOCount = 0;
 		_sendFlag = 0;
 		_sendCount = 0;
-		_useCount = 0;
 
 		ZeroMemory(&_recvComplOvl._ovl, sizeof(_recvComplOvl._ovl));
 		ZeroMemory(&_sendComplOvl._ovl, sizeof(_sendComplOvl._ovl));
@@ -23,9 +25,10 @@ public:
 		_sendComplOvl._type = NET_TYPE::SEND_COMPLETE;
 		_releaseOvl._type = NET_TYPE::RELEASE;
 
-		_recvBuf = CLanPacket::Alloc();
-		_recvBuf->Clear();
+		_recvBuf = CLanRecvPacket::Alloc();
 		_recvBuf->AddUsageCount(1);
+
+		InitializeSRWLock(&_lock);
 	}
 
 	inline ~CClientSession()
@@ -34,18 +37,20 @@ public:
 		_disconnect = true;
 		_sock = INVALID_SOCKET;
 
-		while (_sendBuf.GetUseSize() > 0)
+		while (_sendBuf.size() > 0)
 		{
-			CLanPacket* packet = _sendBuf.Dequeue();
-			CLanPacket::Free(packet);
+			CLanSendPacket* packet = _sendBuf.back();
+			_sendBuf.pop();
+			CLanSendPacket::Free(packet);
 		}
-		while (_tempBuf.GetUseSize() > 0)
+		while (_tempBuf.size() > 0)
 		{
-			CLanPacket* packet = _tempBuf.Dequeue();
-			CLanPacket::Free(packet);
+			CLanSendPacket* packet = _tempBuf.back();
+			_tempBuf.pop();
+			CLanSendPacket::Free(packet);
 		}
 
-		CLanPacket::Free(_recvBuf);
+		CLanRecvPacket::Free(_recvBuf);
 	}
 
 private:
@@ -53,18 +58,20 @@ private:
 
 public:
 	bool _disconnect = true;
+	volatile long _IOCount;
 	volatile long _sendFlag;
 	volatile long _sendCount;
-	volatile short _useCount;
 
 	SOCKET _sock;
-	CLanPacket* _recvBuf;
-	CLockFreeQueue<CLanPacket*> _sendBuf;
-	CLockFreeQueue<CLanPacket*> _tempBuf;
+	CLanRecvPacket* _recvBuf;
+	queue<CLanSendPacket*> _sendBuf;
+	queue<CLanSendPacket*> _tempBuf;
 	WSABUF _wsaRecvbuf[dfWSARECVBUF_CNT];
 	WSABUF _wsaSendbuf[dfWSASENDBUF_CNT];
 
 	NetworkOverlapped _recvComplOvl;
 	NetworkOverlapped _sendComplOvl;
 	NetworkOverlapped _releaseOvl;
+
+	SRWLOCK _lock;
 };

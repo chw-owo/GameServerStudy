@@ -4,7 +4,7 @@
 
 #include "CLockFreeStack.h"
 #include "CLanSession.h"
-#include "CRecvLanPacket.h"
+#include "CLanMsg.h"
 #include "CMonitorManager.h"
 #include "CLanJob.h"
 #include <ws2tcpip.h>
@@ -24,7 +24,7 @@ protected:
 
 protected:
 	bool Disconnect(unsigned __int64 sessionID);
-	bool SendPacket(unsigned __int64 sessionID, CLanPacket* packet);
+	bool SendPacket(unsigned __int64 sessionID, CLanSendPacket* packet);
 	void EnqueueJob(unsigned __int64 sessionID, CLanJob* job);
 	CLanJob* DequeueJob(unsigned __int64 sessionID);
 
@@ -37,7 +37,7 @@ protected:
 	virtual bool OnConnectRequest() = 0;
 	virtual void OnAcceptClient(unsigned __int64 sessionID) = 0;
 	virtual void OnReleaseClient(unsigned __int64 sessionID) = 0;
-	virtual void OnRecv(unsigned __int64 sessionID, CRecvLanPacket* packet) = 0;
+	virtual void OnRecv(unsigned __int64 sessionID, CLanMsg* packet) = 0;
 	virtual void OnSend(unsigned __int64 sessionID, int sendSize) = 0;
 	virtual void OnError(int errorCode, wchar_t* errorMsg) = 0;
 	virtual void OnDebug(int debugCode, wchar_t* debugMsg) = 0;

@@ -1,5 +1,6 @@
 #pragma once
-#include "CLanPacket.h"
+#include "CLanRecvPacket.h"
+#include "CLanSendPacket.h"
 #include "CLockFreeQueue.h"
 #include "Utils.h"
 
@@ -15,14 +16,13 @@ public:
 		_sendPostOvl._type = NET_TYPE::SEND_POST;
 		_releaseOvl._type = NET_TYPE::RELEASE;
 
-		_recvBuf = CLanPacket::Alloc();
-		_recvBuf->Clear();
+		_recvBuf = CLanRecvPacket::Alloc();
 		_recvBuf->AddUsageCount(1);
 	}
 
 	inline ~CLanSession()
 	{
-		CLanPacket::Free(_recvBuf);
+		CLanRecvPacket::Free(_recvBuf);
 	}
 
 public:
@@ -53,13 +53,13 @@ public:
 
 		while (_sendBuf.GetUseSize() > 0)
 		{
-			CLanPacket* packet = _sendBuf.Dequeue();
-			CLanPacket::Free(packet);
+			CLanSendPacket* packet = _sendBuf.Dequeue();
+			CLanSendPacket::Free(packet);
 		}
 		while (_tempBuf.GetUseSize() > 0)
 		{
-			CLanPacket* packet = _tempBuf.Dequeue();
-			CLanPacket::Free(packet);
+			CLanSendPacket* packet = _tempBuf.Dequeue();
+			CLanSendPacket::Free(packet);
 		}
 	}
 
@@ -74,9 +74,9 @@ public:
 	SOCKET _sock;
 	SOCKADDR_IN _addr;
 
-	CLanPacket* _recvBuf;
-	CLockFreeQueue<CLanPacket*> _sendBuf;
-	CLockFreeQueue<CLanPacket*> _tempBuf;
+	CLanRecvPacket* _recvBuf;
+	CLockFreeQueue<CLanSendPacket*> _sendBuf;
+	CLockFreeQueue<CLanSendPacket*> _tempBuf;
 	WSABUF _wsaRecvbuf[dfWSARECVBUF_CNT];
 	WSABUF _wsaSendbuf[dfWSASENDBUF_CNT];
 

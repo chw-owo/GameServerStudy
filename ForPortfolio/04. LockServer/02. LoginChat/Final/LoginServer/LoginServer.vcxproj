@@ -137,15 +137,17 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="CLanClient.cpp" />
-    <ClCompile Include="CLanPacket.cpp" />
+    <ClCompile Include="CLanSendPacket.cpp" />
+    <ClCompile Include="CLanRecvPacket.cpp" />
     <ClCompile Include="CLanServer.cpp" />
     <ClCompile Include="CLoginServer.cpp" />
     <ClCompile Include="CMonitorClient.cpp" />
     <ClCompile Include="CMonitorManager.cpp" />
-    <ClCompile Include="CNetPacket.cpp" />
+    <ClCompile Include="CNetSendPacket.cpp" />
+    <ClCompile Include="CNetRecvPacket.cpp" />
     <ClCompile Include="CNetServer.cpp" />
-    <ClCompile Include="CRecvLanPacket.cpp" />
-    <ClCompile Include="CRecvNetPacket.cpp" />
+    <ClCompile Include="CLanMsg.cpp" />
+    <ClCompile Include="CNetMsg.cpp" />
     <ClCompile Include="CSystemLog.cpp" />
     <ClCompile Include="Main.cpp" />
   </ItemGroup>
@@ -154,24 +156,24 @@
     <ClInclude Include="CCrashDump.h" />
     <ClInclude Include="CLanClient.h" />
     <ClInclude Include="CLanJob.h" />
-    <ClInclude Include="CLanPacket.h" />
+    <ClInclude Include="CLanSendPacket.h" />
+    <ClInclude Include="CLanRecvPacket.h" />
     <ClInclude Include="CLanServer.h" />
     <ClInclude Include="CLanSession.h" />
-    <ClInclude Include="CLockFreeQueue.h" />
-    <ClInclude Include="CLockFreeStack.h" />
     <ClInclude Include="CLoginServer.h" />
     <ClInclude Include="CMonitorClient.h" />
     <ClInclude Include="CMonitorManager.h" />
     <ClInclude Include="CNetJob.h" />
-    <ClInclude Include="CNetPacket.h" />
+    <ClInclude Include="CNetSendPacket.h" />
+    <ClInclude Include="CNetRecvPacket.h" />
     <ClInclude Include="CNetServer.h" />
     <ClInclude Include="CNetSession.h" />
+    <ClInclude Include="CObjectPool.h" />
     <ClInclude Include="CommonProtocol.h" />
     <ClInclude Include="Config.h" />
-    <ClInclude Include="CRecvLanPacket.h" />
-    <ClInclude Include="CRecvNetPacket.h" />
+    <ClInclude Include="CLanMsg.h" />
+    <ClInclude Include="CNetMsg.h" />
     <ClInclude Include="CSystemLog.h" />
-    <ClInclude Include="CTlsPool.h" />
     <ClInclude Include="CUser.h" />
     <ClInclude Include="ErrorCode.h" />
     <ClInclude Include="CRedis.h" />

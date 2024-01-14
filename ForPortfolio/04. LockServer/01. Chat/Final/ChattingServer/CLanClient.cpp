@@ -175,7 +175,7 @@ bool CLanClient::SendPacket(CLanSendPacket* packet)
 		}
 	}
 
-	_client->_sendBuf.Enqueue(packet);
+	_client->_sendBuf.push(packet);
 	if (SendCheck()) SendPost();
 	return true;
 }
@@ -349,7 +349,8 @@ bool CLanClient::HandleSendCP(int sendBytes)
 {
 	for (int i = 0; i < _client->_sendCount; i++)
 	{
-		CLanSendPacket* packet = _client->_tempBuf.Dequeue();
+		CLanSendPacket* packet = _client->_tempBuf.front();
+		_client->_tempBuf.pop();
 		if (packet == nullptr) break;
 		CLanSendPacket::Free(packet);
 	}
@@ -362,9 +363,9 @@ bool CLanClient::HandleSendCP(int sendBytes)
 
 bool CLanClient::SendCheck()
 {
-	if (_client->_sendBuf.GetUseSize() == 0) return false;
+	if (_client->_sendBuf.size() == 0) return false;
 	if (InterlockedExchange(&_client->_sendFlag, 1) == 1) return false;
-	if (_client->_sendBuf.GetUseSize() == 0)
+	if (_client->_sendBuf.size() == 0)
 	{
 		InterlockedExchange(&_client->_sendFlag, 0);
 		return false;
@@ -375,17 +376,18 @@ bool CLanClient::SendCheck()
 bool CLanClient::SendPost()
 {
 	int idx = 0;
-	int useSize = _client->_sendBuf.GetUseSize();
+	int useSize = _client->_sendBuf.size();
 
 	for (; idx < useSize; idx++)
 	{
 		if (idx == dfWSASENDBUF_CNT) break;
-		CLanSendPacket* packet = _client->_sendBuf.Dequeue();
+		CLanSendPacket* packet = _client->_sendBuf.front();
+		_client->_sendBuf.pop();
 		if (packet == nullptr) break;
 
 		_client->_wsaSendbuf[idx].buf = packet->GetLanPacketReadPtr();
 		_client->_wsaSendbuf[idx].len = packet->GetLanPacketSize();
-		_client->_tempBuf.Enqueue(packet);
+		_client->_tempBuf.push(packet);
 	}
 	_client->_sendCount = idx;
 
@@ -435,17 +437,16 @@ void CLanClient::HandleRelease()
 	SOCKET sock = _client->_sock;
 	delete _client;
 	closesocket(sock);
-	// ::printf("%d: Release\n", GetCurrentThreadId());
 }
 
 void CLanClient::IncrementUseCount()
 {
-	InterlockedIncrement16(&_client->_useCount);
+	InterlockedIncrement(&_client->_IOCount);
 }
 
 void CLanClient::DecrementUseCount()
 {
-	short ret = InterlockedDecrement16(&_client->_useCount);
+	short ret = InterlockedDecrement(&_client->_IOCount);
 	if (ret == 0)
 	{
 		PostQueuedCompletionStatus(_hNetworkCP, 1, 0, (LPOVERLAPPED)&_client->_releaseOvl);

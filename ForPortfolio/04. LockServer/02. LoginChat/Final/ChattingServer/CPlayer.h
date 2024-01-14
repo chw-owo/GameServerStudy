@@ -1,6 +1,5 @@
 #pragma once
 #include "CommonProtocol.h"
-#include "CLockFreeQueue.h"
 
 class CPlayer
 {

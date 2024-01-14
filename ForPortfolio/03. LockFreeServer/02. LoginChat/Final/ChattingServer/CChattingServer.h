@@ -41,38 +41,38 @@ private:
 	bool OnConnectRequest(WCHAR* addr);
 	void OnAcceptClient(unsigned __int64 sessionID, WCHAR* addr);
 	void OnReleaseClient(unsigned __int64 sessionID);
-	void OnRecv(unsigned __int64 sessionID, CRecvNetPacket* packet);
+	void OnRecv(unsigned __int64 sessionID, CNetMsg* packet);
 	void OnSend(unsigned __int64 sessionID, int sendSize);
 
 private:
 	inline void HandleTimeout();
 	inline void HandleAccept(unsigned __int64 sessionID);
 	inline void HandleRelease(unsigned __int64 sessionID);
-	inline void HandleRecv(unsigned __int64 sessionID, CRecvNetPacket* packet);
+	inline void HandleRecv(unsigned __int64 sessionID, CNetMsg* packet);
 
 private:
 	static unsigned int WINAPI UpdateThread(void* arg);
 	static unsigned int WINAPI TimeoutThread(void* arg);
 
 private:
-	inline void ReqSendUnicast(CNetPacket* packet, __int64 sessionID);
-	inline void ReqSendAroundSector(CNetPacket* packet, CSector* centerSector, CPlayer* pExpPlayer = nullptr);
+	inline void ReqSendUnicast(CNetSendPacket* packet, __int64 sessionID);
+	inline void ReqSendAroundSector(CNetSendPacket* packet, CSector* centerSector, CPlayer* pExpPlayer = nullptr);
 
 private:
-	inline void HandleCSPacket_REQ_LOGIN(CRecvNetPacket* CSpacket, CPlayer* player);
-	inline void HandleCSPacket_REQ_SECTOR_MOVE(CRecvNetPacket* CSpacket, CPlayer* player);
-	inline void HandleCSPacket_REQ_MESSAGE(CRecvNetPacket* CSpacket, CPlayer* player);
+	inline void HandleCSPacket_REQ_LOGIN(CNetMsg* CSpacket, CPlayer* player);
+	inline void HandleCSPacket_REQ_SECTOR_MOVE(CNetMsg* CSpacket, CPlayer* player);
+	inline void HandleCSPacket_REQ_MESSAGE(CNetMsg* CSpacket, CPlayer* player);
 	inline void HandleCSPacket_REQ_HEARTBEAT(CPlayer* player);
 
 private:
-	inline void GetCSPacket_REQ_LOGIN(CRecvNetPacket* packet, __int64& accountNo, wchar_t ID[dfID_LEN], wchar_t nickname[dfNICKNAME_LEN], char sessionKey[dfSESSIONKEY_LEN]);
-	inline void GetCSPacket_REQ_SECTOR_MOVE(CRecvNetPacket* packet, __int64& accountNo, WORD& sectorX, WORD& sectorY);
-	inline void GetCSPacket_REQ_MESSAGE(CRecvNetPacket* packet, __int64& accountNo, WORD& messageLen, wchar_t message[dfMSG_MAX]);
+	inline void GetCSPacket_REQ_LOGIN(CNetMsg* packet, __int64& accountNo, wchar_t ID[dfID_LEN], wchar_t nickname[dfNICKNAME_LEN], char sessionKey[dfSESSIONKEY_LEN]);
+	inline void GetCSPacket_REQ_SECTOR_MOVE(CNetMsg* packet, __int64& accountNo, WORD& sectorX, WORD& sectorY);
+	inline void GetCSPacket_REQ_MESSAGE(CNetMsg* packet, __int64& accountNo, WORD& messageLen, wchar_t message[dfMSG_MAX]);
 
 private:
-	inline void SetSCNetPacket_RES_LOGIN(CNetPacket* packet, BYTE status, __int64 accountNo);
-	inline void SetSCNetPacket_RES_SECTOR_MOVE(CNetPacket* packet, __int64 accountNo, WORD sectorX, WORD sectorY);
-	inline void SetSCNetPacket_RES_MESSAGE(CNetPacket* packet, __int64 accountNo, wchar_t* ID, wchar_t* nickname, WORD messageLen, wchar_t* message);
+	inline void SetSCNetSendPacket_RES_LOGIN(CNetSendPacket* packet, BYTE status, __int64 accountNo);
+	inline void SetSCNetSendPacket_RES_SECTOR_MOVE(CNetSendPacket* packet, __int64 accountNo, WORD sectorX, WORD sectorY);
+	inline void SetSCNetSendPacket_RES_MESSAGE(CNetSendPacket* packet, __int64 accountNo, wchar_t* ID, wchar_t* nickname, WORD messageLen, wchar_t* message);
 
 private: // For Monitor
 
@@ -88,7 +88,7 @@ private: // For Monitor
 
 	inline long GetPacketPoolSize()
 	{
-		return CNetPacket::_pool.GetNodeCount() - dfSESSION_MAX;
+		return CNetSendPacket::_pool.GetNodeCount() + CNetRecvPacket::_pool.GetNodeCount() - dfSESSION_MAX;
 	}
 
 	inline long GetJobQSize()

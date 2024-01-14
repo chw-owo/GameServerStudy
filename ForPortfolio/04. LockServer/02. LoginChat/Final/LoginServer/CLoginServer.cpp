@@ -13,7 +13,7 @@ bool CLoginServer::Initialize()
 	InitializeSRWLock(&_mapLock);
 	InitializeSRWLock(&_setLock);
 	InitializeSRWLock(&_connLock);
-	_pUserPool = new CTlsPool<CUser>(dfUSER_MAX, true);
+	_pUserPool = new CObjectPool<CUser>(dfUSER_MAX, true);
 
 	// Set IP Address
 	_WanIPs = new WCHAR[dfIP_LEN];
@@ -166,7 +166,7 @@ void CLoginServer::OnReleaseClient(unsigned __int64 sessionID)
 	ReleaseSRWLockExclusive(&_setLock);
 }
 
-void CLoginServer::OnRecv(unsigned __int64 sessionID, CRecvNetPacket* packet)
+void CLoginServer::OnRecv(unsigned __int64 sessionID, CNetMsg* packet)
 {
 	AcquireSRWLockShared(&_mapLock);
 	unordered_map<unsigned __int64, CUser*>::iterator mapIter = _usersMap.find(sessionID);
@@ -174,7 +174,7 @@ void CLoginServer::OnRecv(unsigned __int64 sessionID, CRecvNetPacket* packet)
 	{
 		LOG(L"FightGame", CSystemLog::DEBUG_LEVEL, L"%s[%d]: No Session %lld\n", _T(__FUNCTION__), __LINE__, sessionID);
 		::wprintf(L"%s[%d]: No Session %lld\n", _T(__FUNCTION__), __LINE__, sessionID);
-		CRecvNetPacket::Free(packet);
+		CNetMsg::Free(packet);
 		ReleaseSRWLockShared(&_mapLock);
 		return;
 	}
@@ -214,7 +214,7 @@ void CLoginServer::OnRecv(unsigned __int64 sessionID, CRecvNetPacket* packet)
 		}
 	}
 
-	CRecvNetPacket::Free(packet);
+	CNetMsg::Free(packet);
 	ReleaseSRWLockExclusive(&user->_lock);
 }
 
@@ -248,12 +248,12 @@ unsigned int __stdcall CLoginServer::TimeoutThread(void* arg)
 	return 0;
 }
 
-void CLoginServer::ReqSendUnicast(CNetPacket* packet, unsigned __int64 sessionID)
+void CLoginServer::ReqSendUnicast(CNetSendPacket* packet, unsigned __int64 sessionID)
 {
 	packet->AddUsageCount(1);
 	if (!SendPacket(sessionID, packet))
 	{
-		CNetPacket::Free(packet);
+		CNetSendPacket::Free(packet);
 	}
 }
 
@@ -396,7 +396,7 @@ BYTE CLoginServer::CheckAccountNoValid(__int64 accountNo)
 	return dfLOGIN_STATUS_OK;
 }
 
-inline void CLoginServer::HandleCSPacket_REQ_LOGIN(CRecvNetPacket* CSpacket, CUser* user)
+inline void CLoginServer::HandleCSPacket_REQ_LOGIN(CNetMsg* CSpacket, CUser* user)
 {
 	__int64 accountNo;
 	char* sessionKey = new char[dfSESSIONKEY_LEN];
@@ -420,7 +420,7 @@ inline void CLoginServer::HandleCSPacket_REQ_LOGIN(CRecvNetPacket* CSpacket, CUs
 	WCHAR* chatIP = new WCHAR[dfIP_LEN];
 	GetIPforClient(user, gameIP, chatIP);
 
-	CNetPacket* sendPacket = CNetPacket::Alloc();
+	CNetSendPacket* sendPacket = CNetSendPacket::Alloc();
 	sendPacket->Clear();
 	SetSCPacket_RES_LOGIN(sendPacket, user->_accountNo,
 		status, user->_ID, user->_nickname, gameIP, dfGAME_PORT, chatIP, dfCHAT_PORT);
@@ -430,13 +430,13 @@ inline void CLoginServer::HandleCSPacket_REQ_LOGIN(CRecvNetPacket* CSpacket, CUs
 	delete[] chatIP;
 }
 
-inline void CLoginServer::GetCSPacket_REQ_LOGIN(CRecvNetPacket* packet, __int64& accountNo, char*& sessionKey)
+inline void CLoginServer::GetCSPacket_REQ_LOGIN(CNetMsg* packet, __int64& accountNo, char*& sessionKey)
 {
 	*packet >> accountNo;
 	packet->GetPayloadData((char*)sessionKey, dfSESSIONKEY_LEN);
 }
 
-inline void CLoginServer::SetSCPacket_RES_LOGIN(CNetPacket* packet, __int64 accountNo, BYTE status, WCHAR*& ID, WCHAR*& nickname, WCHAR*& gameIP, unsigned short gamePort, WCHAR*& chatIP, unsigned short chatPort)
+inline void CLoginServer::SetSCPacket_RES_LOGIN(CNetSendPacket* packet, __int64 accountNo, BYTE status, WCHAR*& ID, WCHAR*& nickname, WCHAR*& gameIP, unsigned short gamePort, WCHAR*& chatIP, unsigned short chatPort)
 {
 	WORD type = en_PACKET_CS_LOGIN_RES_LOGIN;
 	*packet << type;

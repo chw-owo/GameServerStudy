@@ -1,9 +1,6 @@
 #pragma once
 #include "CNetServer.h"
 #include "CObjectPool.h"
-#include "CTlsPool.h"
-#include "CLockFreeQueue.h"
-
 #include "CSector.h"
 #include "CPlayer.h"
 #include "CNetJob.h"
@@ -12,6 +9,7 @@
 #include "ErrorCode.h"
 
 #include <unordered_map>
+#include <queue>
 using namespace std;
 
 #include <synchapi.h>
@@ -93,12 +91,7 @@ private: // For Monitor
 
 	inline long GetJobQSize()
 	{
-		int sum = 0;
-		for (int i = 0; i < dfJOB_QUEUE_CNT; i++)
-		{
-			sum += _pJobQueues[i]->GetUseSize();
-		}
-		return sum;
+		return _JobQueue.size();
 	}
 
 	inline long GetUpdateTPS()
@@ -119,6 +112,11 @@ private:
 	__int64 _playerIDGenerator = 0;
 	unordered_map<unsigned __int64, CPlayer*> _playersMap;
 	CObjectPool<CPlayer>* _pPlayerPool;
+
+private:
+	queue<CNetJob*> _JobQueue;
+	CObjectPool<CNetJob>* _pJobPool;
+	SRWLOCK _JobLock;
 
 private:
 	long _signal = 0;

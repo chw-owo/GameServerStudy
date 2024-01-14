@@ -1,28 +1,27 @@
 #pragma once
-#include "CNetPacket.h"
-#include "CLockFreeQueue.h"
+#include "CNetRecvPacket.h"
+#include "CNetSendPacket.h"
 #include "Utils.h"
+#include <queue>
+using namespace std;
 
 class CNetSession
 {
 public:
 	inline CNetSession()
 	{
-		_validFlag._flag = 0;
 		_recvComplOvl._type = NET_TYPE::RECV_COMPLETE;
 		_sendComplOvl._type = NET_TYPE::SEND_COMPLETE;
-		_recvPostOvl._type = NET_TYPE::RECV_POST;
 		_sendPostOvl._type = NET_TYPE::SEND_POST;
 		_releaseOvl._type = NET_TYPE::RELEASE;
 
-		_recvBuf = CNetPacket::Alloc();
-		_recvBuf->Clear();
+		_recvBuf = CNetRecvPacket::Alloc();
 		_recvBuf->AddUsageCount(1);
 	}
 
 	inline ~CNetSession()
 	{
-		CNetPacket::Free(_recvBuf);
+		CNetRecvPacket::Free(_recvBuf);
 	}
 
 public:
@@ -30,21 +29,19 @@ public:
 
 	inline void Initialize(unsigned __int64 ID, SOCKET sock, SOCKADDR_IN addr)
 	{
-		InterlockedExchange(&_sendFlag, 0);
-		InterlockedExchange16(&_validFlag._releaseFlag, 0);
-
 		_ID = ID;
 		_disconnect = false;
 		_sock = sock;
 		_addr = addr;
 
+		_IOCount = 0;
+		_sendFlag = 0;
+		_sendCount = 0;
+
 		ZeroMemory(&_recvComplOvl._ovl, sizeof(_recvComplOvl._ovl));
 		ZeroMemory(&_sendComplOvl._ovl, sizeof(_sendComplOvl._ovl));
-		ZeroMemory(&_recvPostOvl._ovl, sizeof(_recvPostOvl._ovl));
 		ZeroMemory(&_sendPostOvl._ovl, sizeof(_sendPostOvl._ovl));
 		ZeroMemory(&_releaseOvl._ovl, sizeof(_releaseOvl._ovl));
-
-
 	}
 
 	inline void Terminate()
@@ -53,16 +50,22 @@ public:
 		_disconnect = true;
 		_sock = INVALID_SOCKET;
 
-		while (_sendBuf.GetUseSize() > 0)
+		while (_sendBuf.size() > 0)
 		{
-			CNetPacket* packet = _sendBuf.Dequeue();
-			CNetPacket::Free(packet);
+			CNetSendPacket* packet = _sendBuf.front();
+			_sendBuf.pop();
+			CNetSendPacket::Free(packet);
 		}
-		while (_tempBuf.GetUseSize() > 0)
+
+		while (_tempBuf.size() > 0)
 		{
-			CNetPacket* packet = _tempBuf.Dequeue();
-			CNetPacket::Free(packet);
+			CNetSendPacket* packet = _tempBuf.front();
+			_tempBuf.pop();
+			CNetSendPacket::Free(packet);
 		}
+
+		_recvBuf->Clear();
+		_recvBuf->AddUsageCount(1);
 	}
 
 private:
@@ -70,23 +73,23 @@ private:
 
 public:
 	bool _disconnect = true;
+	volatile long _IOCount;
 	volatile long _sendFlag;
 	volatile long _sendCount;
 
 	SOCKET _sock;
 	SOCKADDR_IN _addr;
 
-	CNetPacket* _recvBuf;
-	CLockFreeQueue<CNetPacket*> _sendBuf;
-	CLockFreeQueue<CNetPacket*> _tempBuf;
+	CNetRecvPacket* _recvBuf;
+	queue<CNetSendPacket*> _sendBuf;
+	queue<CNetSendPacket*> _tempBuf;
 	WSABUF _wsaRecvbuf[dfWSARECVBUF_CNT];
 	WSABUF _wsaSendbuf[dfWSASENDBUF_CNT];
 
 	NetworkOverlapped _recvComplOvl;
 	NetworkOverlapped _sendComplOvl;
-	NetworkOverlapped _recvPostOvl;
 	NetworkOverlapped _sendPostOvl;
 	NetworkOverlapped _releaseOvl;
 
-	volatile ValidFlag _validFlag;
+	SRWLOCK _lock;
 };

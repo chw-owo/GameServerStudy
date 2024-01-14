@@ -1,11 +1,14 @@
 #pragma once
 #include "Config.h"
-#include "CLockFreeStack.h"
+#ifdef LANSERVER
+
 #include "CClientSession.h"
 #include "CMonitorManager.h"
+
 #include <ws2tcpip.h>
 #include <process.h>
 #pragma comment(lib, "ws2_32.lib")
+using namespace std;
 
 class CLanClient
 {
@@ -65,6 +68,5 @@ private:
 private:
 	HANDLE* _networkThreads;
 	HANDLE _hNetworkCP;
-	ValidFlag _releaseFlag;
-
 };
+#endif

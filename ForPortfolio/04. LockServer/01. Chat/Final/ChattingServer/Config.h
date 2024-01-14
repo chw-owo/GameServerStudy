@@ -31,6 +31,8 @@ struct stNetHeader
 #endif
 
 #define dfSESSION_MAX				18000
+#define dfADDRESS_LEN				50
+
 #define dfPACKET_DEF				10000
 #define dfRCV_PACKET_DEF			10000
 #define dfJOB_DEF					10000

@@ -31,7 +31,7 @@ void CMonitorClient::SleepForFixedFrame()
 unsigned int __stdcall CMonitorClient::MonitorThread(void* arg)
 {
 	CMonitorClient* pMonitor = (CMonitorClient*)arg;
-	CChattingServer* pChat = pMonitor->_pChattingServer;
+	CChattingServer* pServer = pMonitor->_pChattingServer;
 
 	int totalThreadCnt = 0;
 	int runningThreadCnt = 0;
@@ -46,6 +46,7 @@ unsigned int __stdcall CMonitorClient::MonitorThread(void* arg)
 
 	while (pMonitor->_serverAlive)
 	{
+		/*
 		while (pMonitor->_serverAlive && !pMonitor->_connected)
 		{
 			pMonitor->_connected = pMonitor->NetworkInitialize(dfMONIOTOR_IP, dfMONIOTOR_PORT, totalThreadCnt, runningThreadCnt, false, true);
@@ -53,13 +54,13 @@ unsigned int __stdcall CMonitorClient::MonitorThread(void* arg)
 		}
 		if (!pMonitor->_serverAlive) break;
 
-		CLanPacket* packet = CLanPacket::Alloc();
-		packet->Clear();
+		CLanSendPacket* packet = CLanSendPacket::Alloc();
 		*packet << (WORD)en_PACKET_SS_MONITOR_LOGIN;
 		*packet << (int)0;
 		pMonitor->ReqSendUnicast(packet);
+		*/
 
-		while (pMonitor->_serverAlive && pMonitor->_connected)
+		// while (pMonitor->_serverAlive && pMonitor->_connected)
 		{
 			pMonitor->SleepForFixedFrame();
 
@@ -69,48 +70,50 @@ unsigned int __stdcall CMonitorClient::MonitorThread(void* arg)
 			GetLocalTime(&stTime);
 			int now = (int)time(NULL);
 
-			pChat->_mm->UpdateTotalCPUTime();
-			pChat->UpdateMonitorData();
-			pChat->_mm->UpdateProcessCPUTime();
+			pServer->UpdateMonitorData();
+			pServer->_mm->UpdateProcessCPUTime();
+			pServer->_mm->UpdateTotalCPUTime();
 
-			long chatOn = pChat->_mm->GetProcessOnOff();
-			float chatCPU = pChat->_mm->GetProcessCPUTime();
-			long chatMem = pChat->_mm->GetProcessMemory();
+			long processOn = pServer->_mm->GetProcessOnOff();
+			float processCPU = pServer->_mm->GetProcessCPUTime();
+			long processMem = pServer->_mm->GetProcessMemory();
 
-			long chatSessions = pChat->GetSessionCount();
-			long chatPlayers = pChat->GetPlayerCount();
-			long chatUpdateTPS = pChat->GetUpdateTPS();
-			long chatPackets = pChat->GetPacketPoolSize();
-			long chatJobs = pChat->GetJobPoolSize();
+			long sessions = pServer->GetSessionCount();
+			long players = pServer->GetPlayerCount();
+			long updateTPS = pServer->GetUpdateTPS();
+			long packets = pServer->GetPacketPoolSize();
+			long jobs = pServer->GetJobPoolSize();
 
-			long acceptTotal = pChat->GetAcceptTotal();
-			long disconnectTotal = pChat->GetDisconnectTotal();
-			long acceptTPS = pChat->GetAcceptTPS();
-			long recvTPS = pChat->GetRecvTPS();
-			long sendTPS = pChat->GetSendTPS();
+			long acceptTotal = pServer->GetAcceptTotal();
+			long disconnectTotal = pServer->GetDisconnectTotal();
+			long acceptTPS = pServer->GetAcceptTPS();
+			long recvTPS = pServer->GetRecvTPS();
+			long sendTPS = pServer->GetSendTPS();
 
-			float totalCPU = pChat->_mm->GetTotalCPUTime();
-			long nonpaged = pChat->_mm->GetTotalNonpaged();
-			long totalRecv = pChat->_mm->GetTotalRecv();
-			long totalSend = pChat->_mm->GetTotalSend();
-			long totalUsableMem = pChat->_mm->GetTotalUsableMemory();
+			float totalCPU = pServer->_mm->GetTotalCPUTime();
+			long nonpaged = pServer->_mm->GetTotalNonpaged();
+			long totalRecv = pServer->_mm->GetTotalRecv();
+			long totalSend = pServer->_mm->GetTotalSend();
+			long totalUsableMem = pServer->_mm->GetTotalUsableMemory();
 
 			// Send Data ==============================================================================
 
-			pMonitor->SetDataToPacket(en_MONITOR_DATA_TYPE_CHAT_SERVER_RUN, chatOn, now);
-			pMonitor->SetDataToPacket(en_MONITOR_DATA_TYPE_CHAT_SERVER_CPU, chatCPU, now);
-			pMonitor->SetDataToPacket(en_MONITOR_DATA_TYPE_CHAT_SERVER_MEM, chatMem, now);
-			pMonitor->SetDataToPacket(en_MONITOR_DATA_TYPE_CHAT_SESSION, chatSessions, now);
-			pMonitor->SetDataToPacket(en_MONITOR_DATA_TYPE_CHAT_PLAYER, chatPlayers, now);
-			pMonitor->SetDataToPacket(en_MONITOR_DATA_TYPE_CHAT_UPDATE_TPS, chatUpdateTPS, now);
-			pMonitor->SetDataToPacket(en_MONITOR_DATA_TYPE_CHAT_PACKET_POOL, chatPackets, now);
-			pMonitor->SetDataToPacket(en_MONITOR_DATA_TYPE_CHAT_UPDATEMSG_POOL, chatJobs, now);
+			/*
+			pMonitor->SetDataToPacket(en_MONITOR_DATA_TYPE_CHAT_SERVER_RUN, processOn, now);
+			pMonitor->SetDataToPacket(en_MONITOR_DATA_TYPE_CHAT_SERVER_CPU, processCPU, now);
+			pMonitor->SetDataToPacket(en_MONITOR_DATA_TYPE_CHAT_SERVER_MEM, processMem, now);
+			pMonitor->SetDataToPacket(en_MONITOR_DATA_TYPE_CHAT_SESSION, sessions, now);
+			pMonitor->SetDataToPacket(en_MONITOR_DATA_TYPE_CHAT_PLAYER, players, now);
+			pMonitor->SetDataToPacket(en_MONITOR_DATA_TYPE_CHAT_UPDATE_TPS, updateTPS, now);
+			pMonitor->SetDataToPacket(en_MONITOR_DATA_TYPE_CHAT_PACKET_POOL, packets, now);
+			pMonitor->SetDataToPacket(en_MONITOR_DATA_TYPE_CHAT_UPDATEMSG_POOL, jobs, now);
 
 			pMonitor->SetDataToPacket(en_MONITOR_DATA_TYPE_MONITOR_CPU_TOTAL, totalCPU, now);
 			pMonitor->SetDataToPacket(en_MONITOR_DATA_TYPE_MONITOR_NONPAGED_MEMORY, nonpaged, now);
 			pMonitor->SetDataToPacket(en_MONITOR_DATA_TYPE_MONITOR_NETWORK_RECV, totalRecv, now);
 			pMonitor->SetDataToPacket(en_MONITOR_DATA_TYPE_MONITOR_NETWORK_SEND, totalSend, now);
 			pMonitor->SetDataToPacket(en_MONITOR_DATA_TYPE_MONITOR_AVAILABLE_MEMORY, totalUsableMem, now);
+			*/
 
 			// Console Monitor ===========================================================================
 
@@ -143,8 +146,9 @@ unsigned int __stdcall CMonitorClient::MonitorThread(void* arg)
 				L"==================================================",
 
 				_T(__DATE__), stTime.wHour, stTime.wMinute, stTime.wSecond,
-				chatCPU, chatMem, 
-				chatSessions, chatPlayers, chatUpdateTPS, chatPackets, chatJobs,
+
+				processCPU, processMem,
+				sessions, players, updateTPS, packets, jobs,
 				acceptTotal, disconnectTotal, acceptTPS, recvTPS, sendTPS,
 				totalCPU, nonpaged, totalRecv, totalSend, totalUsableMem);
 
@@ -180,8 +184,7 @@ unsigned int __stdcall CMonitorClient::MonitorThread(void* arg)
 
 void CMonitorClient::SetDataToPacket(BYTE type, int val, int time)
 {
-	CLanPacket* packet = CLanPacket::Alloc();
-	packet->Clear();
+	CLanSendPacket* packet = CLanSendPacket::Alloc();
 	*packet << (WORD)en_PACKET_SS_MONITOR_DATA_UPDATE;
 	*packet << type;
 	*packet << val;
@@ -189,12 +192,12 @@ void CMonitorClient::SetDataToPacket(BYTE type, int val, int time)
 	ReqSendUnicast(packet);
 }
 
-void CMonitorClient::ReqSendUnicast(CLanPacket* packet)
+void CMonitorClient::ReqSendUnicast(CLanSendPacket* packet)
 {
 	packet->AddUsageCount(1);
 	if (!SendPacket(packet))
 	{
-		CLanPacket::Free(packet);
+		CLanSendPacket::Free(packet);
 	}
 }
 
@@ -229,7 +232,7 @@ void CMonitorClient::OnLeaveServer()
 {
 }
 
-void CMonitorClient::OnRecv(CRecvLanPacket* packet)
+void CMonitorClient::OnRecv(CLanMsg* packet)
 {
 
 }

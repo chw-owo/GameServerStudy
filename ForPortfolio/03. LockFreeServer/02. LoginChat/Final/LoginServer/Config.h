@@ -30,10 +30,10 @@ struct stNetHeader
 #define dfNETHEADER_LEN				sizeof(stNetHeader)
 #endif
 
-#define dfSESSION_MAX				10000
+#define dfSESSION_MAX				18000
 #define dfADDRESS_LEN				50
 
-#define dfPACKET_DEF				20000
+#define dfPACKET_DEF				10000
 #define dfRCV_PACKET_DEF			10000
 #define dfJOB_DEF					10000
 
@@ -41,7 +41,14 @@ struct stNetHeader
 #define dfWSARECVBUF_CNT			1
 #define dfWSASENDBUF_CNT			200
 
+#define dfRBUFFER_DEF_SIZE			1024
+#define dfRBUFFER_MAX_SIZE			8192
 #define dfSPACKET_DEF_SIZE			256
 #define dfSPACKET_MAX_SIZE			2048
+
+#define dfSTACKNODE_DEF				1000
+#define dfQUEUENODE_DEF				1000
+#define dfPOOL_THREAD_MAX			20
+#define dfPOOL_BUCKET_SIZE			2000
 
 #define dfERR_MAX					256

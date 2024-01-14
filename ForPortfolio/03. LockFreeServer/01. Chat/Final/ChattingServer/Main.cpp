@@ -4,6 +4,8 @@
 #include "CSystemLog.h"
 #include <locale.h>
 
+// Lock-Free ver
+
 CCrashDump g_Dump;
 CChattingServer g_Server;
 CMonitorClient g_Monitor;

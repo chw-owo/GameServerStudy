@@ -384,6 +384,10 @@ unsigned int __stdcall CNetServer::AcceptThread(void* arg)
 			continue;
 		}
 
+		WCHAR addr[dfADDRESS_LEN] = { L'0', };
+		DWORD size = dfADDRESS_LEN;
+		WSAAddressToStringW((SOCKADDR*)&clientaddr, sizeof(clientaddr), NULL, addr, &size);
+
 		unsigned __int64 sessionID = InterlockedIncrement64(&pNetServer->_sessionID);
 		sessionID &= pNetServer->_idMask;
 		long idx = pNetServer->_emptyIdx.Pop();
@@ -398,7 +402,7 @@ unsigned int __stdcall CNetServer::AcceptThread(void* arg)
 
 		CreateIoCompletionPort((HANDLE)pSession->_sock, pNetServer->_hNetworkCP, (ULONG_PTR)pSession->GetID(), 0);
 		pNetServer->RecvPost(pSession);
-		pNetServer->OnAcceptClient(sessionID);
+		pNetServer->OnAcceptClient(sessionID, addr);
 		pNetServer->DecrementUseCount(pSession);
 	}
 

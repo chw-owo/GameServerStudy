@@ -1,6 +1,6 @@
 #include "CLanClient.h"
 #include "ErrorCode.h"
-#include "CRecvLanPacket.h"
+#include "CLanMsg.h"
 #include <stdio.h>
 #include <tchar.h>
 
@@ -151,7 +151,7 @@ bool CLanClient::Disconnect()
 	return true;
 }
 
-bool CLanClient::SendPacket(CLanPacket* packet)
+bool CLanClient::SendPacket(CLanSendPacket* packet)
 {
 	// // ::printf("%d: Send Packet\n", GetCurrentThreadId());
 
@@ -175,7 +175,7 @@ bool CLanClient::SendPacket(CLanPacket* packet)
 		}
 	}
 
-	_client->_sendBuf.Enqueue(packet);
+	_client->_sendBuf.push(packet);
 	if (SendCheck()) SendPost();
 	return true;
 }
@@ -238,7 +238,7 @@ unsigned int __stdcall CLanClient::NetworkThread(void* arg)
 
 bool CLanClient::HandleRecvCP(int recvBytes)
 {
-	CLanPacket* recvBuf = _client->_recvBuf;
+	CLanRecvPacket* recvBuf = _client->_recvBuf;
 	int moveWriteRet = recvBuf->MovePayloadWritePos(recvBytes);
 	if (moveWriteRet != recvBytes)
 	{
@@ -272,7 +272,7 @@ bool CLanClient::HandleRecvCP(int recvBytes)
 
 		// // ::printf("%016llx: Header %d\n", _client->GetID(), recvBuf->GetPayloadReadPos());
 
-		CRecvLanPacket* recvLanPacket = CRecvLanPacket::Alloc(recvBuf);
+		CLanMsg* recvLanPacket = CLanMsg::Alloc(recvBuf);
 		recvBuf->AddUsageCount(1);
 		OnRecv(recvLanPacket);
 		cnt++;
@@ -290,12 +290,11 @@ bool CLanClient::HandleRecvCP(int recvBytes)
 		useSize = recvBuf->GetPayloadSize();
 	}
 
-	_client->_recvBuf = CLanPacket::Alloc();
-	_client->_recvBuf->Clear();
+	_client->_recvBuf = CLanRecvPacket::Alloc();
 	_client->_recvBuf->AddUsageCount(1);
 
 	_client->_recvBuf->CopyRecvBuf(recvBuf);
-	CLanPacket::Free(recvBuf);
+	CLanRecvPacket::Free(recvBuf);
 
 	RecvPost();
 	return true;
@@ -350,9 +349,10 @@ bool CLanClient::HandleSendCP(int sendBytes)
 {
 	for (int i = 0; i < _client->_sendCount; i++)
 	{
-		CLanPacket* packet = _client->_tempBuf.Dequeue();
+		CLanSendPacket* packet = _client->_tempBuf.front();
+		_client->_tempBuf.pop();
 		if (packet == nullptr) break;
-		CLanPacket::Free(packet);
+		CLanSendPacket::Free(packet);
 	}
 
 	OnSend(sendBytes);
@@ -363,9 +363,9 @@ bool CLanClient::HandleSendCP(int sendBytes)
 
 bool CLanClient::SendCheck()
 {
-	if (_client->_sendBuf.GetUseSize() == 0) return false;
+	if (_client->_sendBuf.size() == 0) return false;
 	if (InterlockedExchange(&_client->_sendFlag, 1) == 1) return false;
-	if (_client->_sendBuf.GetUseSize() == 0)
+	if (_client->_sendBuf.size() == 0)
 	{
 		InterlockedExchange(&_client->_sendFlag, 0);
 		return false;
@@ -376,17 +376,18 @@ bool CLanClient::SendCheck()
 bool CLanClient::SendPost()
 {
 	int idx = 0;
-	int useSize = _client->_sendBuf.GetUseSize();
+	int useSize = _client->_sendBuf.size();
 
 	for (; idx < useSize; idx++)
 	{
 		if (idx == dfWSASENDBUF_CNT) break;
-		CLanPacket* packet = _client->_sendBuf.Dequeue();
+		CLanSendPacket* packet = _client->_sendBuf.front();
+		_client->_sendBuf.pop();
 		if (packet == nullptr) break;
 
 		_client->_wsaSendbuf[idx].buf = packet->GetLanPacketReadPtr();
 		_client->_wsaSendbuf[idx].len = packet->GetLanPacketSize();
-		_client->_tempBuf.Enqueue(packet);
+		_client->_tempBuf.push(packet);
 	}
 	_client->_sendCount = idx;
 
@@ -436,17 +437,16 @@ void CLanClient::HandleRelease()
 	SOCKET sock = _client->_sock;
 	delete _client;
 	closesocket(sock);
-	// ::printf("%d: Release\n", GetCurrentThreadId());
 }
 
 void CLanClient::IncrementUseCount()
 {
-	InterlockedIncrement16(&_client->_useCount);
+	InterlockedIncrement(&_client->_IOCount);
 }
 
 void CLanClient::DecrementUseCount()
 {
-	short ret = InterlockedDecrement16(&_client->_useCount);
+	short ret = InterlockedDecrement(&_client->_IOCount);
 	if (ret == 0)
 	{
 		PostQueuedCompletionStatus(_hNetworkCP, 1, 0, (LPOVERLAPPED)&_client->_releaseOvl);

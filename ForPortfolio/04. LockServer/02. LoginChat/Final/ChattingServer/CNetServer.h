@@ -2,14 +2,17 @@
 #include "Config.h"
 #ifdef NETSERVER
 
-#include "CLockFreeStack.h"
-#include "CNetSession.h"
-#include "CRecvNetPacket.h"
 #include "CMonitorManager.h"
+#include "CNetSession.h"
+#include "CNetMsg.h"
 #include "CNetJob.h"
+#include "CObjectPool.h"
+
 #include <ws2tcpip.h>
 #include <process.h>
+#include <unordered_map>
 #pragma comment(lib, "ws2_32.lib")
+using namespace std;
 
 class CNetServer
 {
@@ -18,15 +21,13 @@ protected:
 	~CNetServer() {};
 
 protected:
-	bool NetworkInitialize(const wchar_t* IP, short port, long sendTimer,
+	bool NetworkInitialize(const wchar_t* IP, short port, long sendTime,
 		int numOfThreads, int numOfRunnings, bool nagle, bool monitorServer = false);
 	bool NetworkTerminate();
 
 protected:
 	bool Disconnect(unsigned __int64 sessionID);
-	bool SendPacket(unsigned __int64 sessionID, CNetPacket* packet);
-	void EnqueueJob(unsigned __int64 sessionID, CNetJob* job);
-	CNetJob* DequeueJob(unsigned __int64 sessionID);
+	bool SendPacket(unsigned __int64 sessionID, CNetSendPacket* packet);
 
 protected:
 	virtual void OnInitialize() = 0;
@@ -37,7 +38,7 @@ protected:
 	virtual bool OnConnectRequest(WCHAR* addr) = 0;
 	virtual void OnAcceptClient(unsigned __int64 sessionID, WCHAR* addr) = 0;
 	virtual void OnReleaseClient(unsigned __int64 sessionID) = 0;
-	virtual void OnRecv(unsigned __int64 sessionID, CRecvNetPacket* packet) = 0;
+	virtual void OnRecv(unsigned __int64 sessionID, CNetMsg* packet) = 0;
 	virtual void OnSend(unsigned __int64 sessionID, int sendSize) = 0;
 	virtual void OnError(int errorCode, wchar_t* errorMsg) = 0;
 	virtual void OnDebug(int debugCode, wchar_t* debugMsg) = 0;
@@ -55,21 +56,13 @@ private:
 	inline bool RecvPost(CNetSession* pSession);
 	inline bool SendPost(CNetSession* pSession);
 	inline bool SendCheck(CNetSession* pSession);
+	void SleepForFixedSend();
 
 private:
 	inline CNetSession* AcquireSessionUsage(unsigned __int64 sessionID);
 	inline void ReleaseSessionUsage(CNetSession* pSession);
-	inline void IncrementUseCount(CNetSession* pSession);
-	inline void DecrementUseCount(CNetSession* pSession);
-
-private:
-	inline void SleepForFixedSend();
-
-public: // For Profilings
-	long _Idx = -1;
-	long _NetUpdate[2] = { 0, 0 };
-	DWORD _netStart = 0;
-	DWORD _netSum = 0;
+	inline void IncrementIOCount(CNetSession* pSession);
+	inline void DecrementIOCount(CNetSession* pSession);
 
 private:
 	wchar_t _IP[10];
@@ -92,40 +85,26 @@ private:
 
 private:
 	long _releaseSignal = 0;
-	CLockFreeQueue<unsigned __int64>* _pReleaseQ;
-	ValidFlag _releaseFlag;
-
-public: // TO-DO: private
-#define __ID_BIT__ 47
-	CNetSession* _sessions[dfSESSION_MAX] = { nullptr, };
-	CLockFreeStack<long> _emptyIdx;
-	volatile __int64 _sessionID = 0;
-	unsigned __int64 _indexMask = 0;
-	unsigned __int64 _idMask = 0;
+	queue<unsigned __int64> _releaseQ;
+	SRWLOCK _releaseLock;
 
 public:
-	CLockFreeQueue<CNetJob*>* _pJobQueues[dfJOB_QUEUE_CNT] = { nullptr, };
-	CTlsPool<CNetJob>* _pJobPool;
+	unordered_map<unsigned __int64, CNetSession*> _sessions;
+	CObjectPool<CNetSession>* _pSessionPool;
+	volatile __int64 _sessionID = 0;
+	SRWLOCK _sessionsLock;
 
-private:
+public:
 	DWORD _oldTick;
 
 	// For Monitor
 public:
 	inline void UpdateMonitorData()
 	{
-		long acceptCnt = 0;
-		long disconnectCnt = 0;
-		long recvCnt = 0;
-		long sendCnt = 0;
-
-		for (int i = 0; i < _tlsMax; i++)
-		{
-			acceptCnt += InterlockedExchange(&_acceptCnts[i], 0);
-			disconnectCnt += InterlockedExchange(&_disconnectCnts[i], 0);
-			recvCnt += InterlockedExchange(&_recvCnts[i], 0);
-			sendCnt += InterlockedExchange(&_sendCnts[i], 0);
-		}
+		long acceptCnt = InterlockedExchange(&_acceptCnt, 0);
+		long disconnectCnt = InterlockedExchange(&_disconnectCnt, 0);
+		long recvCnt = InterlockedExchange(&_recvCnt, 0);
+		long sendCnt = InterlockedExchange(&_sendCnt, 0);
 
 		_acceptTotal += acceptCnt;
 		_disconnectTotal += disconnectCnt;
@@ -136,7 +115,7 @@ public:
 		_sendTPS = sendCnt;
 	}
 
-	inline long GetSessionCount() { return _sessionCnt; }
+	inline long GetSessionCount() { return _sessions.size(); }
 	inline long GetAcceptTotal() { return _acceptTotal; }
 	inline long GetDisconnectTotal() { return _disconnectTotal; }
 
@@ -149,7 +128,6 @@ public:
 	CMonitorManager* _mm = nullptr;
 
 private:
-	long _sessionCnt = 0;
 	long _acceptTotal = 0;
 	long _disconnectTotal = 0;
 
@@ -158,14 +136,9 @@ private:
 	long _recvTPS = 0;
 	long _sendTPS = 0;
 
-#define dfTHREAD_MAX 16
-	volatile long _acceptCnts[dfTHREAD_MAX] = { 0, };
-	volatile long _disconnectCnts[dfTHREAD_MAX] = { 0, };
-	volatile long _recvCnts[dfTHREAD_MAX] = { 0, };
-	volatile long _sendCnts[dfTHREAD_MAX] = { 0, };
-	volatile long _sessionCnts[dfTHREAD_MAX] = { 0, };
-
-	long _tlsMax = 0;
-	long _tlsIdx;
+	volatile long _acceptCnt = 0;
+	volatile long _disconnectCnt = 0;
+	volatile long _recvCnt = 0;
+	volatile long _sendCnt = 0;
 };
 #endif

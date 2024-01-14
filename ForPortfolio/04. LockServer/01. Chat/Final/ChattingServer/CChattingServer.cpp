@@ -298,7 +298,7 @@ void CChattingServer::HandleRecv(unsigned __int64 sessionID, CNetMsg* packet)
 unsigned int __stdcall CChattingServer::UpdateThread(void* arg)
 {
 	CChattingServer* pServer = (CChattingServer*)arg;
-	CLockFreeQueue<CNetJob*>** pJobQueues = pServer->_pJobQueues;
+	queue<CNetJob*> pJobQueues = pServer->_pJobQueues;
 	long undesired = 0;
 
 	while (pServer->_serverAlive)

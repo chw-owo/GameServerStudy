@@ -106,29 +106,17 @@
     <ClInclude Include="CLanClient.h">
       <Filter>NetLib\Network\LanClient</Filter>
     </ClInclude>
-    <ClInclude Include="CLanPacket.h">
-      <Filter>NetLib\Objects\Lan\Packet</Filter>
-    </ClInclude>
     <ClInclude Include="CLanSession.h">
       <Filter>NetLib\Objects\Lan\Session</Filter>
     </ClInclude>
     <ClInclude Include="CLanJob.h">
       <Filter>NetLib\Objects\Lan\Job</Filter>
     </ClInclude>
-    <ClInclude Include="CNetPacket.h">
-      <Filter>NetLib\Objects\Net\Packet</Filter>
-    </ClInclude>
     <ClInclude Include="CNetSession.h">
       <Filter>NetLib\Objects\Net\Session</Filter>
     </ClInclude>
     <ClInclude Include="CNetJob.h">
       <Filter>NetLib\Objects\Net\Job</Filter>
-    </ClInclude>
-    <ClInclude Include="CRecvLanPacket.h">
-      <Filter>NetLib\Objects\Lan\Packet</Filter>
-    </ClInclude>
-    <ClInclude Include="CRecvNetPacket.h">
-      <Filter>NetLib\Objects\Net\Packet</Filter>
     </ClInclude>
     <ClInclude Include="CObjectPool.h">
       <Filter>Server\ChattingServer\Object</Filter>
@@ -157,6 +145,27 @@
     <ClInclude Include="CommonProtocol.h">
       <Filter>Server</Filter>
     </ClInclude>
+    <ClInclude Include="CLanSendPacket.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="CNetSendPacket.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="CLanMsg.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="CNetMsg.h">
+      <Filter>헤더 파일</Filter>
+    </ClInclude>
+    <ClInclude Include="CLanRecvPacket.h">
+      <Filter>NetLib\Objects\Lan\Packet</Filter>
+    </ClInclude>
+    <ClInclude Include="CNetRecvPacket.h">
+      <Filter>NetLib\Objects\Net\Packet</Filter>
+    </ClInclude>
+    <ClInclude Include="CClientSession.h">
+      <Filter>NetLib\Objects\Lan\Session</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="CMonitorManager.cpp">
@@ -171,18 +180,6 @@
     <ClCompile Include="CLanClient.cpp">
       <Filter>NetLib\Network\LanClient</Filter>
     </ClCompile>
-    <ClCompile Include="CLanPacket.cpp">
-      <Filter>NetLib\Objects\Lan\Packet</Filter>
-    </ClCompile>
-    <ClCompile Include="CNetPacket.cpp">
-      <Filter>NetLib\Objects\Net\Packet</Filter>
-    </ClCompile>
-    <ClCompile Include="CRecvLanPacket.cpp">
-      <Filter>NetLib\Objects\Lan\Packet</Filter>
-    </ClCompile>
-    <ClCompile Include="CRecvNetPacket.cpp">
-      <Filter>NetLib\Objects\Net\Packet</Filter>
-    </ClCompile>
     <ClCompile Include="CChattingServer.cpp">
       <Filter>Server\ChattingServer</Filter>
     </ClCompile>
@@ -194,6 +191,16 @@
     </ClCompile>
     <ClCompile Include="Main.cpp">
       <Filter>Server</Filter>
+    </ClCompile>
+    <ClCompile Include="CLanSendPacket.cpp" />
+    <ClCompile Include="CNetSendPacket.cpp" />
+    <ClCompile Include="CLanMsg.cpp" />
+    <ClCompile Include="CNetMsg.cpp" />
+    <ClCompile Include="CLanRecvPacket.cpp">
+      <Filter>NetLib\Objects\Lan\Packet</Filter>
+    </ClCompile>
+    <ClCompile Include="CNetRecvPacket.cpp">
+      <Filter>NetLib\Objects\Net\Packet</Filter>
     </ClCompile>
   </ItemGroup>
 </Project>
