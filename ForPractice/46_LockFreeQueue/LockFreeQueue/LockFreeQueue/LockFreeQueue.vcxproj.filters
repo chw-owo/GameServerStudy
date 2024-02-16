@@ -36,5 +36,8 @@
     <ClInclude Include="LockFreeQueueTester.h">
       <Filter>LockFreeQueueTester</Filter>
     </ClInclude>
+    <ClInclude Include="tmp.h">
+      <Filter>LockFreeQueue</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>

@@ -1,0 +1,157 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="리소스 파일">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="NetLib">
+      <UniqueIdentifier>{0b4bde61-b27e-42cd-ae61-b50ce9bce574}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Objects">
+      <UniqueIdentifier>{be5b6a26-faa2-47de-bcfe-e5eefa13874c}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Objects\Packet">
+      <UniqueIdentifier>{b9c9f67b-3162-4d9c-a032-076720c0c5ee}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Objects\Job">
+      <UniqueIdentifier>{83cb8fc1-d181-4e90-a97b-ced602c0d7d0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Objects\Session">
+      <UniqueIdentifier>{21bd10a3-49ef-4439-a555-fd8f81e7b39a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Common">
+      <UniqueIdentifier>{69be670c-db0a-4e04-a45f-898729b0ba85}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Server">
+      <UniqueIdentifier>{8ebd054e-5a02-451a-8536-2bb74ef3cfaa}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Server\GameServer">
+      <UniqueIdentifier>{9b42eafc-9b46-40ca-b50b-b3d67d197f1a}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Server\DebugTool">
+      <UniqueIdentifier>{82053b33-df33-4d11-9254-172c95efe678}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Common">
+      <UniqueIdentifier>{78803096-6a29-45ea-a33c-a400b807db18}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Network">
+      <UniqueIdentifier>{bc36973a-8140-42b5-a99d-cd8b5b1d4f89}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Network\LanServer">
+      <UniqueIdentifier>{a208f363-1667-43bf-ac5f-0f45b054243d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="NetLib\Monitor">
+      <UniqueIdentifier>{735eb370-c932-4d40-839c-66e4062088a9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Server\GameServer\Objects">
+      <UniqueIdentifier>{12ecf48e-e681-4c88-9745-6d79d80c5516}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="CGameServer.cpp">
+      <Filter>Server\GameServer</Filter>
+    </ClCompile>
+    <ClCompile Include="CProcessCpu.cpp">
+      <Filter>Server\DebugTool</Filter>
+    </ClCompile>
+    <ClCompile Include="CProcessorCpu.cpp">
+      <Filter>Server\DebugTool</Filter>
+    </ClCompile>
+    <ClCompile Include="CProfiler.cpp">
+      <Filter>Server\DebugTool</Filter>
+    </ClCompile>
+    <ClCompile Include="CSystemLog.cpp">
+      <Filter>Server\DebugTool</Filter>
+    </ClCompile>
+    <ClCompile Include="CLanServer.cpp">
+      <Filter>NetLib\Network\LanServer</Filter>
+    </ClCompile>
+    <ClCompile Include="CLanMsg.cpp">
+      <Filter>NetLib\Objects\Packet</Filter>
+    </ClCompile>
+    <ClCompile Include="CLanRecvPacket.cpp">
+      <Filter>NetLib\Objects\Packet</Filter>
+    </ClCompile>
+    <ClCompile Include="CLanSendPacket.cpp">
+      <Filter>NetLib\Objects\Packet</Filter>
+    </ClCompile>
+    <ClCompile Include="CMonitorManager.cpp">
+      <Filter>NetLib\Monitor</Filter>
+    </ClCompile>
+    <ClCompile Include="Main.cpp">
+      <Filter>Server</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="CGameServer.h">
+      <Filter>Server\GameServer</Filter>
+    </ClInclude>
+    <ClInclude Include="CProcessCpu.h">
+      <Filter>Server\DebugTool</Filter>
+    </ClInclude>
+    <ClInclude Include="CProcessorCpu.h">
+      <Filter>Server\DebugTool</Filter>
+    </ClInclude>
+    <ClInclude Include="CProfiler.h">
+      <Filter>Server\DebugTool</Filter>
+    </ClInclude>
+    <ClInclude Include="CCrashDump.h">
+      <Filter>Server\DebugTool</Filter>
+    </ClInclude>
+    <ClInclude Include="CSystemLog.h">
+      <Filter>Server\DebugTool</Filter>
+    </ClInclude>
+    <ClInclude Include="CPlayer.h">
+      <Filter>Server\GameServer\Objects</Filter>
+    </ClInclude>
+    <ClInclude Include="CSector.h">
+      <Filter>Server\GameServer\Objects</Filter>
+    </ClInclude>
+    <ClInclude Include="CLanServer.h">
+      <Filter>NetLib\Network\LanServer</Filter>
+    </ClInclude>
+    <ClInclude Include="CLanMsg.h">
+      <Filter>NetLib\Objects\Packet</Filter>
+    </ClInclude>
+    <ClInclude Include="CLanRecvPacket.h">
+      <Filter>NetLib\Objects\Packet</Filter>
+    </ClInclude>
+    <ClInclude Include="CLanSendPacket.h">
+      <Filter>NetLib\Objects\Packet</Filter>
+    </ClInclude>
+    <ClInclude Include="CLanJob.h">
+      <Filter>NetLib\Objects\Job</Filter>
+    </ClInclude>
+    <ClInclude Include="CLanSession.h">
+      <Filter>NetLib\Objects\Session</Filter>
+    </ClInclude>
+    <ClInclude Include="CLockFreeQueue.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="CLockFreeStack.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="CTlsPool.h">
+      <Filter>Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Config.h">
+      <Filter>NetLib\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="ErrorCode.h">
+      <Filter>NetLib\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="Utils.h">
+      <Filter>NetLib\Common</Filter>
+    </ClInclude>
+    <ClInclude Include="CMonitorManager.h">
+      <Filter>NetLib\Monitor</Filter>
+    </ClInclude>
+    <ClInclude Include="CObjectPool.h">
+      <Filter>Server\GameServer\Objects</Filter>
+    </ClInclude>
+    <ClInclude Include="Protocol.h">
+      <Filter>Server</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

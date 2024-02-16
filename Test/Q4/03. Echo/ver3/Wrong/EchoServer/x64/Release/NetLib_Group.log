@@ -1,0 +1,15 @@
+﻿  CNetServer.cpp
+C:\Users\Dell\Desktop\GameServerStudy\Test\Q4\03. Echo\ver3\Wrong\EchoServer\CNetGroup.h(23,1): warning C4316: 'CLockFreeQueue<unsigned __int64>': 힙에 할당된 개체가 64에 맞추어져 있지 않을 수도 있습니다
+C:\Users\Dell\Desktop\GameServerStudy\Test\Q4\03. Echo\ver3\Wrong\EchoServer\CNetServer.cpp(122,33): warning C4316: 'CNetSession': 힙에 할당된 개체가 64에 맞추어져 있지 않을 수도 있습니다
+C:\Users\Dell\Desktop\GameServerStudy\Test\Q4\03. Echo\ver3\Wrong\EchoServer\CNetServer.cpp(427,33): warning C4018: '<': signed 또는 unsigned가 일치하지 않습니다.
+C:\Users\Dell\Desktop\GameServerStudy\Test\Q4\03. Echo\ver3\Wrong\EchoServer\CNetServer.cpp(834,17): warning C4244: '인수': 'unsigned __int64'에서 'T'(으)로 변환하면서 데이터가 손실될 수 있습니다.
+          with
+          [
+              T=long
+          ]
+  코드를 생성하고 있습니다.
+  2 of 1121 functions ( 0.2%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    1 functions had inline decision re-evaluated but remain unchanged
+  코드를 생성했습니다.
+  NetLib_Group.vcxproj -> C:\Users\Dell\Desktop\GameServerStudy\Test\Q4\03. Echo\ver3\Wrong\x64\Release\EchoServer.exe
